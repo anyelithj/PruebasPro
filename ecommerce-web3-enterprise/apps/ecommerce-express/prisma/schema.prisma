@@ -1,0 +1,1488 @@
+// schema.prisma => única fuente de verdad del modelo relacional (PostgreSQL).
+// SRP: cada "model" de Prisma = una tabla = una responsabilidad de datos.
+// DIP: el resto de la app (services/repositories) depende de PrismaClient (abstracción),
+//      nunca escribe SQL crudo directamente (excepto queries muy puntuales con $queryRaw:
+//      búsqueda full-text y similitud vectorial pgvector, que Prisma no expresa de forma nativa).
+//
+// Alcance (Plan de Trabajo, sprint 0.4 "Schema Prisma completo"): entidades de las FASES 1 a 4
+// (Identity · Catálogo · Commerce Flow · Finanzas/Fidelidad/Engagement), según la matriz de trazabilidad v34,
+// hoja "⚙️ Express TS". Las Notificaciones in-app y el Historial de Búsqueda viven en MongoDB (ver
+// src/module/notification/model y src/module/search/model): son documentos de alta escritura y sin relaciones.
+//
+// Convención de dinero: TODOS los importes son enteros en la unidad mínima de la moneda ("...Cents"),
+// igual que Stripe. Evita errores de redondeo de coma flotante (0.1 + 0.2 !== 0.3) en cálculos financieros.
+
+// "generator client" => le dice a Prisma que genere el cliente TypeScript tipado (@prisma/client)
+generator client {
+  provider        = "prisma-client-js"
+  // "postgresqlExtensions" => habilita declarar extensiones nativas de Postgres (pgvector) en el datasource.
+  // Antes había un segundo "generator" solo para esto, que generaba el MISMO cliente dos veces (duplicado).
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+// "datasource db" => conexión física a la base de datos, leída desde variable de entorno (12-factor app)
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL") // Nunca hardcodear credenciales: siempre vía .env
+  extensions = [pgvector(map: "vector")] // Extensión pgvector: embeddings para búsqueda visual (sprint 2.3 / 3.1)
+}
+
+// =====================================================================
+// ████ FASE 1 — IDENTITY DOMAIN ████
+// =====================================================================
+
+// =====================================================================
+// ENTIDAD: User (Usuario) — Núcleo del dominio Identity
+// =====================================================================
+model User {
+  // "@id" => clave primaria. "@default(uuid())" => UUID generado en la base, no autoincremental
+  // (autoincremental filtra el conteo real de usuarios si se expone el ID; UUID lo evita)
+  id String @id @default(uuid())
+
+  email            String    @unique // "@unique" => constraint UNIQUE a nivel de base de datos
+  passwordHash     String? // Nullable: un usuario que solo usa OAuth2/Web3 no tiene password propio
+  phone            String?   @unique
+  firstName        String
+  lastName         String
+  avatarUrl        String? // Foto de perfil (Cloudinary o la del proveedor OAuth)
+  isVerified       Boolean   @default(false) // Verificación de email/teléfono (flujo de AccountVerification)
+  phoneVerifiedAt  DateTime? // RF-01.1: fecha en que se confirmó el teléfono con el código SMS (null = sin verificar)
+  stripeCustomerId String?   @unique // RF-02.3: Customer de Stripe que guarda los métodos de pago TOKENIZADOS (nunca la tarjeta)
+  isActive         Boolean   @default(true) // Soft-disable: false = cuenta desactivada (no se borra por auditoría)
+  twoFactorEnabled Boolean   @default(false) // 2FA por código OTP al email (sprint 1.1)
+  walletAddress    String?   @unique // Dirección Web3 (wagmi/ethers.js) si el usuario conectó una wallet
+  locale           String    @default("es") @db.VarChar(5) // Idioma preferido (es/en): emails, push y textos generados por el backend
+  deletedAt        DateTime? // GDPR "derecho al olvido": se anonimizan los datos personales y se marca la fecha
+  birthDate        DateTime? @db.Date // RF-13.3 / RF-14.1 cupón y puntos de cumpleaños
+  referralCode     String?   @unique @db.VarChar(16) // RF-14.1 código para referir amigos
+  referredById     String? // RF-14.1 quién lo refirió (puntos al entregarse su primer pedido)
+  isGuest          Boolean   @default(false) // RF-08.1: cuenta creada por el checkout de invitado (sin contraseña; luego entra con enlace mágico)
+
+  // "@relation" define claves foráneas 1-N y N-N explícitas
+  roles              UserRole[] // Relación N-N vía tabla intermedia UserRole (ver abajo)
+  sessions           Session[] // 1 usuario -> N sesiones activas/históricas
+  devices            DeviceFingerprint[] // RF-08.11: dispositivos desde los que opera (detección de multicuenta)
+  oauthLinks         OAuthAccount[] // 1 usuario -> N proveedores OAuth vinculados (Google/Facebook/Apple/GitHub/Discord)
+  verificationTokens VerificationToken[] // Tokens de verificación de email, reset de password y 2FA
+  addresses          Address[] // Libreta de direcciones de envío/facturación
+  products           Product[]               @relation("VendorProducts") // Productos publicados (rol VENDOR)
+  wishlist           WishlistItem[]
+  carts              Cart[]
+  checkoutSessions   CheckoutSession[]
+  orders             Order[]
+  payments           Payment[]
+  refunds            Refund[]                @relation("RefundRequester")
+  reviewedRefunds    Refund[]                @relation("RefundReviewer")
+  invoices           Invoice[]
+  couponRedemptions  CouponRedemption[]
+  loyaltyAccount     LoyaltyAccount? // 1-1: cada usuario tiene a lo sumo una cuenta de fidelidad
+  reviews            Review[]
+  notificationPrefs  NotificationPreference?
+  pushTokens         PushToken[]
+  statusChanges      OrderStatusHistory[]
+
+  createdAt DateTime @default(now()) // Timestamp de auditoría: se setea solo una vez
+  updatedAt DateTime @updatedAt // Prisma la actualiza automáticamente en cada UPDATE
+
+  // "@@map" => nombre real de la tabla en Postgres (convención snake_case en DB, camelCase en TS)
+  @@map("users")
+}
+
+// =====================================================================
+// ENTIDAD: Session (Sesión Autenticada) — Refresh tokens activos/revocados
+// =====================================================================
+model Session {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // onDelete: Cascade => si se borra el User, sus sesiones se borran automáticamente (integridad referencial)
+
+  // Hash SHA-256 del refresh token (nunca el token en claro): si la base se filtra, los tokens no sirven.
+  // Se rota en cada refresh (Refresh Token Rotation): un token reutilizado = posible robo => sesión revocada.
+  refreshTokenHash String   @unique
+  userAgent        String? // Metadata de dispositivo/navegador (para mostrar "sesiones activas" al usuario)
+  ipAddress        String?
+  isRevoked        Boolean  @default(false) // true = sesión cerrada manualmente (logout) o por rotación de token
+  expiresAt        DateTime // Fecha de expiración del refresh token
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId]) // Índice explícito: acelera "obtener todas las sesiones de un usuario"
+  @@map("sessions")
+}
+
+// =====================================================================
+// ENTIDAD: OAuthAccount (Sesión OAuth) — Vínculo con proveedores externos
+// =====================================================================
+// DeviceFingerprint (RF-08.11) => huella del navegador (hash SHA-256 calculado en el cliente) por usuario: detecta
+// varias cuentas operando desde el mismo dispositivo y cambios de IP/país. Nunca guarda los datos crudos del navegador.
+model DeviceFingerprint {
+  id          String   @id @default(uuid())
+  hash        String   @db.Char(64) // SHA-256 hexadecimal
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ipAddress   String?  @db.VarChar(45) // IPv4 o IPv6 de la última vez
+  country     String?  @db.Char(2) // País de la IP (cabecera del CDN/proxy), si se conoce
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  @@unique([hash, userId])
+  @@index([hash])
+  @@map("device_fingerprints")
+}
+
+model OAuthAccount {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  provider          OAuthProvider // Enum tipado: Google | GitHub | Discord (ver enum abajo)
+  providerAccountId String // ID único que el proveedor externo asigna a la cuenta (sub de OIDC). Antes: typo "providerAccantId"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // "@@unique" compuesto => un mismo proveedor no puede vincular 2 veces la misma cuenta externa
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("oauth_accounts")
+}
+
+// "enum" de Prisma => se traduce a un tipo ENUM nativo en Postgres
+enum OAuthProvider {
+  GOOGLE
+  FACEBOOK // RF-01.2
+  APPLE // RF-01.2 (Sign in with Apple: se verifica el id_token firmado por Apple)
+  GITHUB
+  DISCORD
+}
+
+// ProductBadge => insignias comerciales de un producto (RF-04.2); se filtran en el catálogo con ?badge=
+enum ProductBadge {
+  NEW
+  SALE
+  BEST_SELLER
+}
+
+// =====================================================================
+// ENTIDAD: VerificationToken (Verificación de Cuenta) — email, reset de password y OTP 2FA
+// =====================================================================
+model VerificationToken {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  purpose    VerificationPurpose // Para qué sirve el token (un token de reset NO sirve para verificar email)
+  tokenHash  String              @unique // SHA-256 del token/OTP: el valor en claro solo viaja por email
+  attempts   Int                 @default(0) // Intentos fallidos (el OTP de 2FA se bloquea tras 5)
+  expiresAt  DateTime
+  consumedAt DateTime? // Un solo uso: al consumirse queda inválido (previene replay)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, purpose])
+  @@map("verification_tokens")
+}
+
+enum VerificationPurpose {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+  TWO_FACTOR
+  PHONE_VERIFICATION // RF-01.1: código de 6 dígitos enviado por SMS
+  MAGIC_LINK // RF-01.3: enlace de un solo uso para entrar sin contraseña
+}
+
+// =====================================================================
+// ENTIDAD: Role (Rol) — RBAC (Role-Based Access Control)
+// =====================================================================
+model Role {
+  id          String  @id @default(uuid())
+  name        String  @unique // Ej: "ADMIN", "VENDOR", "CUSTOMER" — nombre único, case-sensitive
+  description String?
+
+  // RF-03.1 Jerarquía: un rol HEREDA los permisos de su rol padre (relación 1-N recursiva sobre la misma tabla).
+  // "onDelete: SetNull" => borrar el padre deja a los hijos como raíz (no los borra en cascada)
+  parentId String?
+  parent   Role?   @relation("RoleHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children Role[]  @relation("RoleHierarchy")
+
+  users       UserRole[] // N-N con User
+  permissions RolePermission[] // N-N con Permission
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("roles")
+}
+
+// =====================================================================
+// ENTIDAD: Permission (Permiso) — Acción + Recurso granular
+// =====================================================================
+model Permission {
+  id          String  @id @default(uuid())
+  action      String // Ej: "CREATE", "READ", "UPDATE", "DELETE" (alineado a taxonomía CRUD de la matriz)
+  resource    String // Ej: "product", "order", "user" — sobre qué entidad aplica la acción
+  description String?
+
+  roles RolePermission[] // N-N con Role
+
+  createdAt DateTime @default(now())
+
+  // Un mismo par (action, resource) no puede repetirse => evita permisos duplicados
+  @@unique([action, resource])
+  @@map("permissions")
+}
+
+// =====================================================================
+// TABLAS INTERMEDIAS N-N (patrón estándar de Prisma para relaciones muchos-a-muchos con metadata)
+// =====================================================================
+
+// UserRole => un usuario puede tener varios roles, y un rol pertenece a varios usuarios
+model UserRole {
+  userId String
+  roleId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  assignedAt DateTime @default(now()) // Metadata extra que una tabla N-N "pura" no podría guardar
+
+  // "@@id" compuesta => la combinación (userId, roleId) ES la clave primaria (no se repite el par)
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+// RolePermission => un rol puede tener varios permisos, y un permiso puede estar en varios roles
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// =====================================================================
+// ENTIDAD: Address (Dirección) — perfil completo del usuario (GET /user/:id "con direcciones")
+// =====================================================================
+model Address {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  label         String? // "Casa", "Oficina"
+  recipientName String
+  phone         String
+  line1         String
+  line2         String?
+  city          String
+  state         String
+  postalCode    String
+  country       String  @db.Char(2) // ISO 3166-1 alpha-2 ("CO", "US"); @db.Char(2) => CHAR(2) nativo
+  isDefault     Boolean @default(false)
+
+  checkoutSessions CheckoutSession[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("addresses")
+}
+
+// Preferencias de notificación por canal (Account hub > Settings, sprint 4.3)
+model NotificationPreference {
+  userId    String  @id
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email     Boolean @default(true)
+  push      Boolean @default(true)
+  inApp     Boolean @default(true)
+  marketing Boolean @default(false) // Opt-in explícito (GDPR): el marketing nunca viene activado por defecto
+  whatsapp  Boolean @default(false) // RF-16.1 opt-in: WhatsApp exige consentimiento previo del cliente
+  sms       Boolean @default(false) // RF-16.1 opcional (tiene costo por mensaje)
+
+  updatedAt DateTime @updatedAt
+
+  @@map("notification_preferences")
+}
+
+// Token de dispositivo para push FCM (un usuario puede tener varios dispositivos)
+model PushToken {
+  id       String @id @default(uuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token    String @unique
+  platform String // "web" | "android" | "ios"
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("push_tokens")
+}
+
+// =====================================================================
+// ████ FASE 2 — PRODUCT CATALOG DOMAIN ████
+// =====================================================================
+
+// Category (Categoría) — árbol auto-referenciado (patrón Composite: una categoría contiene subcategorías)
+model Category {
+  id          String  @id @default(uuid())
+  name        String
+  slug        String  @unique // URL amigable para SEO: /categories/ropa-hombre
+  description String?
+  imageUrl    String?
+  position    Int     @default(0) // Orden manual dentro del mismo nivel del árbol
+
+  // Relación auto-referenciada 1-N: "parent" y "children" usan el MISMO nombre de relación
+  parentId String?
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryTree")
+
+  products Product[]
+
+  isActive  Boolean   @default(true)
+  deletedAt DateTime? // Soft delete: la fila se conserva para no romper órdenes/reportes históricos
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([parentId])
+  @@map("categories")
+}
+
+// Brand (Marca)
+model Brand {
+  id           String  @id @default(uuid())
+  name         String  @unique
+  slug         String  @unique
+  description  String?
+  logoUrl      String?
+  logoPublicId String? // public_id de Cloudinary: necesario para borrar/transformar el asset
+  website      String?
+  story        String? // RF-05.1: historia de la marca (texto largo de la landing)
+  country      String? @db.Char(2) // RF-05.1: país de origen, código ISO 3166-1 alfa-2 ("CO", "US")
+  isPremium    Boolean @default(false) // RF-05.3: marca destacada (aparece primero y con insignia "Premium")
+  isExclusive  Boolean @default(false) // RF-05.3: marca exclusiva de la tienda (insignia "Exclusiva")
+
+  products Product[]
+
+  isActive  Boolean   @default(true)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("brands")
+}
+
+// Collection (Colección) — agrupación temática/curada de productos ("Verano 2026", "Black Friday")
+model Collection {
+  id                  String    @id @default(uuid())
+  name                String
+  slug                String    @unique
+  description         String?
+  imageUrl            String?
+  startsAt            DateTime? // Vigencia opcional: colecciones de temporada
+  endsAt              DateTime?
+  // RF-04.2 / RF-05.5: descuento automático (1-90 %) al comprar el LOOK completo (todos los productos activos de la
+  // colección en el mismo carrito); null = la colección no da descuento
+  lookDiscountPercent Int?
+
+  products CollectionProduct[]
+
+  isActive  Boolean   @default(true)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("collections")
+}
+
+// N-N Collection <-> Product con orden manual dentro de la colección
+model CollectionProduct {
+  collectionId String
+  productId    String
+  position     Int    @default(0)
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  product    Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, productId])
+  @@map("collection_products")
+}
+
+enum ProductStatus {
+  DRAFT // Borrador: no visible en la tienda
+  ACTIVE // Publicado
+  ARCHIVED // Archivado (DELETE de la matriz = archivar, nunca borrado físico)
+}
+
+// Product (Producto) — el precio y el stock viven en las VARIANTES (talla/color); el producto es la ficha común
+model Product {
+  id           String         @id @default(uuid())
+  name         String
+  slug         String         @unique
+  description  String
+  status       ProductStatus  @default(DRAFT)
+  currency     String         @default("COP") @db.Char(3) // ISO 4217
+  badges       ProductBadge[] @default([]) // RF-04.2: marcas comerciales manuales (nuevo, oferta, más vendido)
+  preSaleUntil DateTime? // RF-14.4 preventa: hasta esta fecha solo compran los niveles con acceso (Diamante y Platino)
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  brandId    String?
+  brand      Brand?    @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  vendorId   String? // Usuario VENDOR dueño del producto (marketplace)
+  vendor     User?     @relation("VendorProducts", fields: [vendorId], references: [id], onDelete: SetNull)
+
+  // Rango de precio desnormalizado desde las variantes: permite filtrar/ordenar por precio sin JOIN
+  minPriceCents Int @default(0)
+  maxPriceCents Int @default(0)
+
+  // Agregados desnormalizados de reseñas (se recalculan al aprobar/editar reseñas): listados sin AVG() en vivo
+  ratingAvg   Float @default(0)
+  ratingCount Int   @default(0)
+
+  // Embedding visual CLIP (512 dimensiones) calculado por FastAPI; "Unsupported" => tipo nativo que Prisma
+  // no mapea: se lee/escribe con $queryRaw/$executeRaw (búsqueda por imagen con el operador <=> de pgvector)
+  embedding Unsupported("vector(512)")?
+
+  variants     ProductVariant[]
+  images       ProductImage[]
+  collections  CollectionProduct[]
+  wishlistedBy WishlistItem[]
+  reviews      Review[]
+  orderItems   OrderItem[]
+
+  archivedAt DateTime? // Soft delete (status ARCHIVED + fecha)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([status, categoryId])
+  @@index([brandId])
+  @@index([vendorId])
+  @@index([minPriceCents])
+  @@map("products")
+}
+
+// ProductVariant (Variante) — unidad vendible con SKU, precio y stock propios
+model ProductVariant {
+  id                  String  @id @default(uuid())
+  productId           String
+  product             Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku                 String  @unique // Stock Keeping Unit: identificador de inventario
+  name                String // "Rojo / M"
+  attributes          Json    @default("{}") // { "color": "Rojo", "size": "M" } — facetas de filtrado
+  priceCents          Int
+  compareAtPriceCents Int? // Precio "antes" para mostrar descuento tachado
+  stock               Int     @default(0) // Unidades físicas
+  reservedStock       Int     @default(0) // Unidades apartadas por checkouts abiertos (disponible = stock - reservedStock)
+  weightGrams         Int     @default(0) // Base para cotizar el envío
+  isActive            Boolean @default(true)
+
+  images        ProductImage[]
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+  purchaseItems PurchaseOrderItem[] // RF-23.6
+  costLayers    InventoryCostLayer[] // RF-23.3
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+  @@map("product_variants")
+}
+
+// ProductImage — imágenes en Cloudinary (URL + public_id para transformaciones f_auto/q_auto)
+model ProductImage {
+  id        String          @id @default(uuid())
+  productId String
+  product   Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variantId String? // Imagen específica de una variante (ej. el color rojo)
+  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  url       String
+  publicId  String
+  alt       String // Texto alternativo OBLIGATORIO: WCAG 1.1.1 y SEO de imágenes
+  position  Int             @default(0)
+  width     Int?
+  height    Int? // Dimensiones reales: next/image las usa para evitar CLS (Cumulative Layout Shift)
+
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@map("product_images")
+}
+
+// Lista de deseos (Account hub > Wishlist, sprint 4.3)
+model WishlistItem {
+  userId    String
+  productId String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, productId])
+  @@map("wishlist_items")
+}
+
+// =====================================================================
+// ████ FASE 3 — COMMERCE FLOW ████
+// =====================================================================
+
+enum CartStatus {
+  ACTIVE // Carrito en uso (máximo uno por usuario, regla del CartService)
+  CONVERTED // Se convirtió en checkout/orden
+  ABANDONED // Expiró sin compra (insumo para campañas de carrito abandonado)
+}
+
+// Cart (Carrito) — PostgreSQL es la fuente de verdad; Redis cachea la lectura con TTL (patrón Cache-Aside)
+model Cart {
+  id         String     @id @default(uuid())
+  userId     String
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status     CartStatus @default(ACTIVE)
+  expiresAt  DateTime // Se extiende en cada modificación; vencido => ABANDONED
+  remindedAt DateTime? // RF-07.6: último recordatorio de carrito abandonado (null = aún no se recordó)
+
+  items            CartItem[]
+  checkoutSessions CheckoutSession[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status])
+  @@map("carts")
+}
+
+// CartItem (Ítem del Carrito)
+model CartItem {
+  id             String         @id @default(uuid())
+  cartId         String
+  cart           Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variantId      String
+  variant        ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  quantity       Int
+  unitPriceCents Int // Snapshot del precio al agregar (se re-valida al iniciar checkout)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Una variante aparece una sola vez por carrito: agregarla de nuevo suma cantidad
+  @@unique([cartId, variantId])
+  @@map("cart_items")
+}
+
+enum CheckoutStatus {
+  OPEN // Creado con los ítems del carrito y stock reservado
+  ADDRESS_SET // Dirección y tarifa de envío elegidas
+  PAYMENT_PENDING // PaymentIntent de Stripe creado, esperando confirmación
+  COMPLETED // Pago confirmado y orden creada
+  ABANDONED // Cancelado por el usuario (stock liberado)
+  EXPIRED // Venció sin pagar (stock liberado por el job de expiración)
+}
+
+// CheckoutSession (Sesión de Compra) — Saga: cada paso ACTUALIZA la misma sesión (UPDATE, no CREATE)
+model CheckoutSession {
+  id     String         @id @default(uuid())
+  userId String
+  user   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cartId String
+  cart   Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  status CheckoutStatus @default(OPEN)
+
+  // Snapshot inmutable de los ítems (precio/cantidad) al abrir el checkout: el total no cambia si el catálogo cambia
+  items Json
+
+  addressId        String?
+  address          Address?     @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  shippingAddress  Json? // Copia de la dirección (la orden no debe cambiar si el usuario edita su libreta)
+  shippingRateCode String? // Tarifa elegida (ej. "SERVIENTREGA_STANDARD")
+  promotions       Json? // RF-13.10 promociones automáticas aplicadas [{ promotionId, name, discountCents }]
+  pointsRedeemed   Int          @default(0) // RF-07.3 / RF-08.7: puntos de fidelidad canjeados (se descuentan al colocar el pedido)
+  channel          OrderChannel @default(WEB) // RF-09.7: canal por el que llegó la compra
+  channelRef       String?      @db.VarChar(120) // RF-09.7: referencia del canal (publicación social, campaña utm)
+
+  couponId String?
+  coupon   Coupon? @relation(fields: [couponId], references: [id], onDelete: SetNull)
+
+  currency      String @db.Char(3)
+  subtotalCents Int
+  discountCents Int    @default(0)
+  shippingCents Int    @default(0)
+  taxCents      Int    @default(0)
+  totalCents    Int
+
+  expiresAt DateTime // La reserva de stock caduca (por defecto 30 min)
+  order     Order?
+  payments  Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([status, expiresAt])
+  @@map("checkout_sessions")
+}
+
+// OrderChannel (RF-09.7) => canal de origen del pedido (reportes de Social Commerce y marketing)
+enum OrderChannel {
+  WEB // Tienda online (directo u orgánico)
+  SOCIAL // Llegó desde Social Commerce (publicación, tienda social, influencer)
+  MARKETING // Campaña (email, anuncios: utm_medium=email|cpc|...)
+  MANUAL // Creado por el staff (venta asistida)
+}
+
+// Máquina de estados de la orden (patrón State en order.model.ts define las transiciones válidas)
+enum OrderStatus {
+  CONFIRMED
+  PREPARING
+  PACKED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+// Order (Pedido)
+model Order {
+  id          String      @id @default(uuid())
+  orderNumber String      @unique // Número legible para el cliente/soporte: "ORD-20260929-4F2A"
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  status      OrderStatus @default(CONFIRMED)
+
+  checkoutSessionId String          @unique // 1-1: una sesión de checkout genera como máximo una orden (idempotencia)
+  checkoutSession   CheckoutSession @relation(fields: [checkoutSessionId], references: [id], onDelete: Restrict)
+
+  currency        String @db.Char(3)
+  subtotalCents   Int
+  discountCents   Int    @default(0)
+  shippingCents   Int    @default(0)
+  taxCents        Int    @default(0)
+  totalCents      Int
+  shippingAddress Json
+
+  couponId String?
+  coupon   Coupon? @relation(fields: [couponId], references: [id], onDelete: SetNull)
+
+  items         OrderItem[]
+  statusHistory OrderStatusHistory[]
+  payments      Payment[]
+  shipment      Shipment?
+  invoice       Invoice?
+  refunds       Refund[]
+  proofNft      PurchaseProofNft? // RF-29.3 NFT de prueba de compra
+  reviews       Review[]
+  redemptions   CouponRedemption[]
+
+  // RF-09.7 origen del pedido; RF-08.7 puntos canjeados; RF-09.3 entrega reprogramada e instrucciones al mensajero
+  channel               OrderChannel @default(WEB)
+  channelRef            String?      @db.VarChar(120)
+  pointsRedeemed        Int          @default(0)
+  preferredDeliveryDate DateTime?    @db.Date
+  reviewRequestedAt     DateTime? // RF-15.8 cuándo se pidió la reseña tras la entrega
+  deliveryInstructions  String?      @db.VarChar(500)
+
+  placedAt    DateTime  @default(now())
+  cancelledAt DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId, placedAt])
+  @@index([status])
+  @@index([channel])
+  @@map("orders")
+}
+
+// OrderItem — copia desnormalizada del producto (la orden es un documento histórico: no cambia si el producto cambia)
+model OrderItem {
+  id             String          @id @default(uuid())
+  orderId        String
+  order          Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId      String?
+  product        Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
+  variantId      String?
+  variant        ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  productName    String
+  variantName    String
+  sku            String
+  imageUrl       String?
+  unitPriceCents Int
+  quantity       Int
+  totalCents     Int
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+// Bitácora de cambios de estado (Event Sourcing ligero: auditoría completa del ciclo de vida)
+model OrderStatusHistory {
+  id          String       @id @default(uuid())
+  orderId     String
+  order       Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fromStatus  OrderStatus?
+  toStatus    OrderStatus
+  note        String?
+  changedById String?
+  changedBy   User?        @relation(fields: [changedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime     @default(now())
+
+  @@index([orderId])
+  @@map("order_status_history")
+}
+
+enum PaymentStatus {
+  PENDING
+  REQUIRES_ACTION // 3-D Secure u otra acción del cliente
+  SUCCEEDED
+  FAILED
+  CANCELLED // Anulado (voidPayment) antes de capturarse
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+// Payment (Pago) — Stripe es el PSP exclusivo del proyecto (matriz: "PSP exclusivo")
+model Payment {
+  id                String          @id @default(uuid())
+  userId            String
+  user              User            @relation(fields: [userId], references: [id], onDelete: Restrict)
+  checkoutSessionId String
+  checkoutSession   CheckoutSession @relation(fields: [checkoutSessionId], references: [id], onDelete: Restrict)
+  orderId           String? // Se completa cuando el webhook confirma el pago y se crea la orden
+  order             Order?          @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  provider          String        @default("STRIPE") // STRIPE | MANUAL | BANK_TRANSFER | CASH_ON_DELIVERY | CRYPTO
+  details           Json? // RF-08.3/08.9: cotización cripto (token, red, monto, tasa en moneda local) o datos de la transferencia
+  providerPaymentId String        @unique // "pi_..." (PaymentIntent de Stripe)
+  amountCents       Int
+  refundedCents     Int           @default(0)
+  currency          String        @db.Char(3)
+  status            PaymentStatus @default(PENDING)
+  failureReason     String?
+
+  refunds Refund[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([checkoutSessionId])
+  @@map("payments")
+}
+
+// PaymentWebhook (Webhook de Pago) — idempotencia: Stripe puede reenviar el mismo evento varias veces
+model PaymentWebhookEvent {
+  id          String   @id // ID del evento de Stripe ("evt_..."): la PK impide procesarlo dos veces
+  type        String
+  payload     Json
+  processedAt DateTime @default(now())
+
+  @@map("payment_webhook_events")
+}
+
+enum ShipmentStatus {
+  PENDING
+  LABEL_CREATED
+  IN_TRANSIT
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+// Shipping (Envío) + ShippingLabel (Guía): la guía son los campos carrier/trackingNumber/labelUrl
+model Shipment {
+  id                String         @id @default(uuid())
+  orderId           String         @unique // 1-1 con la orden
+  order             Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status            ShipmentStatus @default(PENDING)
+  rateCode          String // Tarifa cotizada (ShippingRate)
+  carrier           String?
+  service           String?
+  trackingNumber    String?        @unique
+  labelUrl          String?
+  costCents         Int
+  estimatedDelivery DateTime?
+  shippedAt         DateTime?
+  deliveredAt       DateTime?
+  delayNotifiedAt   DateTime? // RF-09.6: cuándo se avisó al cliente que el envío va retrasado (una sola vez)
+
+  events ShipmentEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@map("shipments")
+}
+
+// Eventos de rastreo del envío (timeline de "OrderTracking" en el frontend)
+model ShipmentEvent {
+  id          String         @id @default(uuid())
+  shipmentId  String
+  shipment    Shipment       @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  status      ShipmentStatus
+  description String
+  location    String?
+  occurredAt  DateTime       @default(now())
+
+  @@index([shipmentId])
+  @@map("shipment_events")
+}
+
+// =====================================================================
+// ████ FASE 4 — FINANCE, LOYALTY & ENGAGEMENT ████
+// =====================================================================
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED // Generada y firmada (CUFE calculado)
+  ACCEPTED // Validada por la DIAN
+  REJECTED
+  VOIDED // RF-11.3 anulada con nota crédito total
+}
+
+// DianResolution (RF-11.3) => resolución de facturación autorizada por la DIAN: prefijo, rango y vigencia
+model DianResolution {
+  id               String   @id @default(uuid())
+  resolutionNumber String   @unique @db.VarChar(30)
+  prefix           String   @db.VarChar(10)
+  fromNumber       Int
+  toNumber         Int
+  nextNumber       Int // Próximo consecutivo a usar (UPDATE atómico)
+  technicalKey     String
+  validFrom        DateTime @db.Date
+  validTo          DateTime @db.Date
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+
+  invoices Invoice[]
+
+  @@map("dian_resolutions")
+}
+
+// Invoice (Factura electrónica DIAN — Colombia)
+model Invoice {
+  id       String        @id @default(uuid())
+  number   String        @unique // Prefijo + consecutivo autorizado por la DIAN: "SETP990000001"
+  orderId  String        @unique
+  order    Order         @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  userId   String
+  user     User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  status   InvoiceStatus @default(DRAFT)
+  cufe     String?       @unique // Código Único de Factura Electrónica (SHA-384, anexo técnico DIAN)
+  buyer    Json // Datos fiscales del comprador (tipo y número de documento, nombre, email)
+  currency String        @db.Char(3)
+
+  subtotalCents Int
+  taxCents      Int
+  totalCents    Int
+
+  xml          String? @db.Text // Documento UBL 2.1
+  pdfUrl       String?
+  dianResponse Json?
+
+  creditNotes CreditNote[]
+
+  resolutionId String? // RF-11.3 resolución DIAN con la que se numeró
+  resolution   DianResolution? @relation(fields: [resolutionId], references: [id], onDelete: SetNull)
+  emailedAt    DateTime? // RF-11.2 cuándo se envió por correo al comprador
+  voidedAt     DateTime? // RF-11.3 anulación
+
+  issuedAt  DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@map("invoices")
+}
+
+// CreditNote (Nota de Crédito) — documento INMUTABLE vinculado a una factura (no se edita ni borra)
+model CreditNote {
+  id          String        @id @default(uuid())
+  number      String        @unique
+  invoiceId   String
+  invoice     Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  refundId    String?       @unique
+  refund      Refund?       @relation(fields: [refundId], references: [id], onDelete: SetNull)
+  reason      String
+  amountCents Int
+  cude        String?       @unique // Código Único de Documento Electrónico
+  status      InvoiceStatus @default(ISSUED)
+  xml         String?       @db.Text
+
+  issuedAt DateTime @default(now())
+
+  @@index([invoiceId])
+  @@map("credit_notes")
+}
+
+enum RefundResolution {
+  REFUND // Al método de pago original
+  EXCHANGE // Cambio por otra talla o color
+  STORE_CREDIT // Crédito en tienda (cupón personal)
+}
+
+enum ReturnStatus {
+  PICKUP_SCHEDULED // Recolección agendada con la transportadora
+  IN_TRANSIT
+  RECEIVED // Llegó a bodega
+  INSPECTED_OK // Inspección aprobada (se reabastece)
+  INSPECTED_FAILED // Inspección rechazada (no se reabastece)
+}
+
+enum RefundStatus {
+  REQUESTED // Solicitud del cliente con motivo y evidencia
+  APPROVED // Aprobada por soporte/admin
+  REJECTED
+  PROCESSED // Dinero devuelto en Stripe
+  CANCELLED // Cancelada por el cliente mientras estaba pendiente
+}
+
+enum RefundReason {
+  DAMAGED
+  WRONG_ITEM
+  NOT_AS_DESCRIBED
+  NOT_RECEIVED
+  CHANGED_MIND
+  OTHER
+}
+
+// Refund (Devolución / Reembolso)
+model Refund {
+  id                   String           @id @default(uuid())
+  orderId              String
+  order                Order            @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  userId               String
+  user                 User             @relation("RefundRequester", fields: [userId], references: [id], onDelete: Restrict)
+  paymentId            String?
+  payment              Payment?         @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  reason               RefundReason
+  description          String
+  evidenceUrls         String[] // Fotos de evidencia (Cloudinary)
+  amountCents          Int
+  status               RefundStatus     @default(REQUESTED)
+  providerRefundId     String?          @unique // "re_..." de Stripe
+  reviewedById         String?
+  reviewedBy           User?            @relation("RefundReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewNote           String?
+  creditNote           CreditNote?
+  // RF-12.4 resolución elegida por el cliente: reembolso, cambio por otra variante o crédito en tienda
+  resolution           RefundResolution @default(REFUND)
+  exchangeVariantId    String?
+  exchangeOrderId      String? // Pedido de reposición creado al aprobar el cambio
+  storeCreditCode      String? // Cupón personal con el crédito en tienda
+  items                Json? // [{ variantId, quantity }] que vuelven al inventario (null = todo el pedido)
+  // RF-12.2 / 12.8 logística inversa: recolección coordinada con la transportadora
+  returnStatus         ReturnStatus?
+  returnCarrier        String?
+  returnTrackingNumber String?          @unique
+  pickupScheduledAt    DateTime?
+  receivedAt           DateTime?
+  inspection           Json? // RF-12.7 { passed, notes, photoUrls, inspectedById, inspectedAt }
+
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([orderId])
+  @@index([userId, status])
+  @@map("refunds")
+}
+
+enum DiscountType {
+  PERCENTAGE // value = porcentaje entero (10 = 10%)
+  FIXED_AMOUNT // value = monto en centavos
+  FREE_SHIPPING // value se ignora: el envío queda en 0
+}
+
+// Coupon (Cupón)
+model Coupon {
+  id               String        @id @default(uuid())
+  code             String        @unique // Siempre en MAYÚSCULAS (normalizado por el service)
+  description      String?
+  type             DiscountType
+  value            Int
+  minOrderCents    Int           @default(0)
+  maxDiscountCents Int? // Tope del descuento para cupones porcentuales
+  usageLimit       Int? // null = ilimitado
+  usagePerUser     Int           @default(1)
+  usedCount        Int           @default(0)
+  startsAt         DateTime
+  endsAt           DateTime?
+  isActive         Boolean       @default(true)
+  // RF-13.2 alcance: vacío = sin restricción
+  productIds       String[]      @default([])
+  categoryIds      String[]      @default([])
+  brandIds         String[]      @default([])
+  userIds          String[]      @default([]) // Cupón personal (uno o varios clientes)
+  segments         LoyaltyTier[] @default([]) // Segmento por nivel de fidelidad
+  origin           String        @default("MANUAL") @db.VarChar(20) // MANUAL | WELCOME | BIRTHDAY | STORE_CREDIT
+
+  redemptions      CouponRedemption[]
+  checkoutSessions CheckoutSession[]
+  orders           Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("coupons")
+}
+
+// PromotionType => promociones AUTOMÁTICAS (sin código): se aplican solas en el checkout
+enum PromotionType {
+  BUY_X_PAY_Y // RF-13.4 2x1, 3x2, 4x3 (las unidades más baratas salen gratis)
+  PERCENT_OFF // RF-13.7 descuento masivo temporal por categoría, marca o colección
+  TIERED // RF-13.8 escalonado por cantidad [{ minQty, percent }]
+  FLASH // RF-13.8 oferta flash con contador regresivo (porcentaje con fin cercano)
+}
+
+// Promotion (RF-13.4/13.7/13.8/13.9/13.10) => regla automática con alcance, vigencia, prioridad y combinabilidad
+model Promotion {
+  id            String        @id @default(uuid())
+  name          String        @db.VarChar(120)
+  type          PromotionType
+  buyQuantity   Int? // BUY_X_PAY_Y: lleva X...
+  payQuantity   Int? // ...paga Y
+  percent       Int? // PERCENT_OFF / FLASH (1-90)
+  tiers         Json? // TIERED: [{ minQty, percent }]
+  productIds    String[]      @default([])
+  categoryIds   String[]      @default([])
+  brandIds      String[]      @default([])
+  collectionIds String[]      @default([])
+  priority      Int           @default(0) // Mayor = se evalúa primero
+  stackable     Boolean       @default(false) // false => no se combina con otras sobre las mismas unidades
+  campaign      String?       @db.VarChar(30) // RF-13.9 BLACK_FRIDAY_2026, CYBER_MONDAY_2026...
+  startsAt      DateTime
+  endsAt        DateTime
+  isActive      Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  applications PromotionApplication[]
+
+  @@index([isActive, startsAt, endsAt])
+  @@map("promotions")
+}
+
+// PromotionApplication (RF-13.10) => historial de promociones aplicadas por pedido
+model PromotionApplication {
+  id            String    @id @default(uuid())
+  promotionId   String
+  promotion     Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  orderId       String
+  discountCents Int
+  createdAt     DateTime  @default(now())
+
+  @@unique([promotionId, orderId])
+  @@index([orderId])
+  @@map("promotion_applications")
+}
+
+// Uso efectivo de un cupón en una orden pagada (métricas + límite por usuario)
+model CouponRedemption {
+  id            String   @id @default(uuid())
+  couponId      String
+  coupon        Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId       String   @unique
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  discountCents Int
+  createdAt     DateTime @default(now())
+
+  @@index([couponId, userId])
+  @@map("coupon_redemptions")
+}
+
+enum LoyaltyTier {
+  BRONZE
+  SILVER
+  GOLD
+  DIAMOND // RF-14.2 (entre Oro y Platino)
+  PLATINUM
+}
+
+// LoyaltyAccount (Cuenta de Fidelidad)
+model LoyaltyAccount {
+  id             String      @id @default(uuid())
+  userId         String      @unique
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pointsBalance  Int         @default(0) // Puntos canjeables hoy
+  lifetimePoints Int         @default(0) // Puntos históricos: definen el nivel (no bajan al canjear)
+  tier           LoyaltyTier @default(BRONZE)
+
+  transactions LoyaltyTransaction[]
+  badges       NftBadge[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("loyalty_accounts")
+}
+
+enum LoyaltyOperation {
+  ADD
+  SUBTRACT
+}
+
+// Libro mayor de puntos (ledger append-only: el saldo es la suma de movimientos, auditable)
+model LoyaltyTransaction {
+  id           String           @id @default(uuid())
+  accountId    String
+  account      LoyaltyAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  operation    LoyaltyOperation
+  points       Int // Siempre positivo; el signo lo da "operation"
+  remaining    Int              @default(0) // Puntos de este lote aún sin canjear/vencer (consumo FIFO)
+  reason       String // Texto legible (auditoría); para mostrar se usa reasonCode traducido al idioma del usuario
+  reasonCode   String?          @db.VarChar(40) // Código estable del concepto (PURCHASE, REFUND_ADJUSTMENT, EXPIRATION); null = texto libre de un admin
+  reasonParams Json? // Parámetros del concepto (ej. { orderNumber })
+  orderId      String?
+  expiresAt    DateTime? // Solo los ADD vencen (12 meses por defecto)
+  createdAt    DateTime         @default(now())
+
+  @@index([accountId, createdAt])
+  @@index([expiresAt])
+  @@map("loyalty_transactions")
+}
+
+enum BadgeStatus {
+  PENDING
+  MINTED
+  FAILED
+}
+
+// PurchaseProofNft => RF-29.3 NFT de prueba de compra (ERC-721): certifica en la blockchain que el pedido existió y se
+// entregó. La metadata no lleva datos personales: número de pedido, fecha, productos y un hash SHA-256 verificable.
+model PurchaseProofNft {
+  id              String      @id @default(uuid())
+  orderId         String      @unique // Un certificado por pedido
+  order           Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  ownerAddress    String // Wallet del cliente al mintear
+  orderHash       String      @db.Char(64) // SHA-256 del contenido del pedido (verificación)
+  metadataUri     String?
+  contractAddress String?
+  tokenId         String?
+  txHash          String?     @unique
+  status          BadgeStatus @default(PENDING)
+  failureReason   String?
+  mintedAt        DateTime?
+  createdAt       DateTime    @default(now())
+
+  @@map("purchase_proof_nfts")
+}
+
+// NFTBadge (Insignia NFT) — ERC-721 minteado con ethers.js; metadata JSON en IPFS
+model NftBadge {
+  id              String         @id @default(uuid())
+  accountId       String
+  account         LoyaltyAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  tier            LoyaltyTier
+  name            String
+  imageUrl        String
+  metadataUri     String? // ipfs://<CID>
+  contractAddress String?
+  tokenId         String? // uint256 como string (puede exceder Number.MAX_SAFE_INTEGER)
+  txHash          String?        @unique
+  status          BadgeStatus    @default(PENDING)
+  failureReason   String?
+  mintedAt        DateTime?
+  ownerAddress    String? // RF-14.8 wallet dueña actual (cambia al transferir la insignia)
+  transferTxHash  String?        @unique // RF-14.8 última transferencia verificada en la blockchain
+  createdAt       DateTime       @default(now())
+
+  // Un nivel se certifica una sola vez por cuenta
+  @@unique([accountId, tier])
+  @@map("nft_badges")
+}
+
+enum ReviewStatus {
+  PENDING // En cola de moderación
+  APPROVED
+  REJECTED
+}
+
+// Review (Reseña)
+model Review {
+  id                 String       @id @default(uuid())
+  productId          String
+  product            Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId             String
+  user               User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId            String?
+  order              Order?       @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  rating             Int // 1..5 (validado por Zod y por CHECK en la migración)
+  title              String
+  body               String
+  status             ReviewStatus @default(PENDING)
+  sentimentScore     Float        @default(0) // -1 (negativo) .. 1 (positivo)
+  isVerifiedPurchase Boolean      @default(false)
+  moderationNote     String?
+  vendorReply        String?
+  vendorRepliedAt    DateTime?
+  editableUntil      DateTime // Ventana de edición (30 días)
+  photoUrls          String[]     @default([]) // RF-15.2 fotos del cliente (Cloudinary)
+  aspects            Json? // RF-15.2 { quality, accuracy, fit, value } de 1 a 5
+  helpfulCount       Int          @default(0) // RF-15.3 votos "útil"
+  sentimentLabel     String?      @db.VarChar(10) // RF-15.10 POSITIVE | NEUTRAL | NEGATIVE | MIXED
+  emotions           Json? // RF-15.10 { happiness, frustration, surprise, disappointment } 0-1
+
+  helpfulVotes ReviewHelpful[]
+  revisions    ReviewRevision[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Una reseña por producto y usuario
+  @@unique([productId, userId])
+  @@index([productId, status])
+  @@map("reviews")
+}
+
+// ReviewHelpful (RF-15.3) => un voto "útil" por usuario y reseña
+model ReviewHelpful {
+  reviewId  String
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@id([reviewId, userId])
+  @@map("review_helpful_votes")
+}
+
+// ReviewRevision (RF-15.6) => versión anterior de una reseña editada (historial de cambios)
+model ReviewRevision {
+  id       String   @id @default(uuid())
+  reviewId String
+  review   Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  rating   Int
+  title    String
+  body     String
+  editedAt DateTime @default(now())
+
+  @@index([reviewId])
+  @@map("review_revisions")
+}
+
+// UserAchievement (RF-14.9) => logro desbloqueado (código estable definido en loyalty.model.ts)
+model UserAchievement {
+  userId     String
+  code       String   @db.VarChar(40)
+  unlockedAt DateTime @default(now())
+
+  @@id([userId, code])
+  @@map("user_achievements")
+}
+
+// PointsMultiplier (RF-14.9) => evento especial: los puntos por compra se multiplican durante la vigencia
+model PointsMultiplier {
+  id         String   @id @default(uuid())
+  name       String   @db.VarChar(120)
+  multiplier Float // 2 = puntos dobles
+  startsAt   DateTime
+  endsAt     DateTime
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  @@index([isActive, startsAt, endsAt])
+  @@map("points_multipliers")
+}
+
+// =====================================================================
+// ████ FASE 7 — OPERATIONS & INTEGRATIONS ████
+// (Analytics, Dashboard, Inventario-historial, Email, Webhooks, MCP, Marketing, CRM y Audit viven en MongoDB:
+//  documentos de alto volumen sin relaciones. El stock sigue en product_variants: fuente de verdad transaccional.)
+// =====================================================================
+
+// Supplier (Proveedor) — datos, contrato y condiciones comerciales (sprint 7.2)
+model Supplier {
+  id               String    @id @default(uuid())
+  name             String
+  taxId            String    @unique // NIT / identificación tributaria: un proveedor por documento
+  email            String
+  phone            String?
+  contactName      String?
+  address          String?
+  country          String    @default("CO") @db.Char(2) // ISO 3166-1 alfa-2
+  currency         String    @default("COP") @db.Char(3) // Moneda de compra (ISO 4217)
+  paymentTermsDays Int       @default(30) // Plazo de pago (cuentas por pagar)
+  leadTimeDays     Int       @default(7) // Tiempo de reposición: base de la sugerencia de reabastecimiento
+  rating           Float? // Evaluación de desempeño 0..5 (CHECK en la migración); null = sin evaluar
+  contractUrl      String? // Contrato firmado (Cloudinary/almacenamiento externo)
+  contractEndsAt   DateTime? // Alerta de renovación
+  notes            String?
+  isActive         Boolean   @default(true) // DELETE de la matriz = desactivar (se conserva el historial)
+
+  purchaseOrders PurchaseOrder[] // RF-23.6 órdenes de compra del proveedor
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, rating])
+  @@map("suppliers")
+}
+
+// =====================================================================
+// RF-23.3 / 23.5 / 23.6 / 23.8 / 23.9 COMPRAS A PROVEEDORES
+// =====================================================================
+
+// Ciclo de vida de la orden de compra (patrón State): DRAFT -> SENT -> PARTIAL -> RECEIVED ; DRAFT|SENT -> CANCELLED
+enum PurchaseOrderStatus {
+  DRAFT
+  SENT
+  PARTIAL // Recibida en parte
+  RECEIVED
+  CANCELLED
+}
+
+// PurchaseOrder => orden de compra con plazo de pago (cuentas por pagar) y entrega esperada (desempeño del proveedor)
+model PurchaseOrder {
+  id          String              @id @default(uuid())
+  number      String              @unique // "OC-2026-000123" (legible para el proveedor)
+  supplierId  String
+  supplier    Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  status      PurchaseOrderStatus @default(DRAFT)
+  currency    String              @default("COP") @db.Char(3)
+  totalCents  Int                 @default(0)
+  notes       String?
+  expectedAt  DateTime? // Entrega comprometida (a tiempo / tarde en el ranking)
+  sentAt      DateTime?
+  sentVia     String[]            @default([]) // RF-23.9 canales usados: EMAIL, WHATSAPP
+  receivedAt  DateTime?
+  dueAt       DateTime? // RF-23.8 vencimiento del pago = recepción + plazo del proveedor
+  paidAt      DateTime? // null = cuenta por pagar abierta
+  dueAlertAt  DateTime? // Última alerta de vencimiento enviada (una por día como máximo)
+  createdById String?
+
+  items PurchaseOrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([supplierId, createdAt])
+  @@index([status])
+  @@index([paidAt, dueAt])
+  @@map("purchase_orders")
+}
+
+// PurchaseOrderItem => línea de la orden con el control de calidad de la recepción (aceptadas / rechazadas)
+model PurchaseOrderItem {
+  id               String         @id @default(uuid())
+  purchaseOrderId  String
+  purchaseOrder    PurchaseOrder  @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  variantId        String
+  variant          ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  quantity         Int
+  unitCostCents    Int // Costo unitario pactado (comparación de precios entre proveedores)
+  receivedQuantity Int            @default(0) // Aceptadas por calidad (entran al inventario)
+  rejectedQuantity Int            @default(0) // Rechazadas por calidad (no entran)
+  qcNotes          String?
+
+  @@index([purchaseOrderId])
+  @@index([variantId])
+  @@map("purchase_order_items")
+}
+
+// InventoryCostLayer => RF-23.3 capa de costo por entrada. FIFO: el stock actual son las capas MÁS RECIENTES (lo
+// antiguo salió primero); costo promedio = promedio ponderado de todas las capas. Se calcula sin mutar capas.
+model InventoryCostLayer {
+  id              String         @id @default(uuid())
+  variantId       String
+  variant         ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  quantity        Int // Unidades que entraron con este costo
+  unitCostCents   Int
+  purchaseOrderId String?
+  createdAt       DateTime       @default(now())
+
+  @@index([variantId, createdAt])
+  @@map("inventory_cost_layers")
+}
+
+// =====================================================================
+// ████ FASE 9 (en Express) — HIGH PERFORMANCE & EDGE GATEWAY ████
+// (Inventario en tiempo real, analítica HF, WebSocket Gateway y caché no crean tablas: Map en memoria + Redis/MongoDB.)
+// =====================================================================
+
+enum BlockchainTxKind {
+  TRANSFER // Envío de moneda nativa (ETH, MATIC, BNB...)
+  CONTRACT_CALL // Función de escritura de un contrato ERC-20 / ERC-721
+}
+
+enum BlockchainTxStatus {
+  PENDING // Enviada a la mempool, sin confirmar
+  CONFIRMED
+  FAILED // Revertida en cadena o rechazada por el nodo
+  CANCELLED // Reemplazada por una transacción vacía con el mismo nonce (DELETE de la matriz)
+}
+
+// BlockchainTx (Transacción Blockchain) — transacciones y llamadas a contratos firmadas por la cuenta del backend (sprint 9.2)
+model BlockchainTx {
+  id             String             @id @default(uuid())
+  chain          String             @db.VarChar(20) // Clave de ChainConfig: "polygon", "sepolia"...
+  kind           BlockchainTxKind
+  fromAddress    String             @db.VarChar(42)
+  toAddress      String             @db.VarChar(42) // Destinatario o dirección del contrato
+  method         String?            @db.VarChar(40) // Solo CONTRACT_CALL: "transfer", "safeMint"...
+  args           Json? // Argumentos de la llamada (sin datos sensibles)
+  valueWei       String             @default("0") // uint256 como texto (no cabe en BIGINT)
+  nonce          Int?
+  txHash         String?            @unique @db.VarChar(66)
+  status         BlockchainTxStatus @default(PENDING)
+  blockNumber    Int?
+  gasUsed        String?
+  error          String?
+  idempotencyKey String             @unique @db.VarChar(100) // Header Idempotency-Key: un reintento no envía dos veces
+  createdById    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@map("blockchain_transactions")
+}
+
+enum GatewayTxStatus {
+  PROCESSING // Llamada al PSP en curso
+  PENDING // PaymentIntent creado: el cliente debe confirmar el pago (Stripe Elements)
+  FAILED // El PSP no respondió o rechazó la operación tras los reintentos
+  CANCELLED // Pre-autorización anulada
+}
+
+// GatewayTransaction (Transacción del Proxy de Pago) — resiliencia sobre el módulo payment (sprint 9.3)
+model GatewayTransaction {
+  id                String                @id @default(uuid())
+  provider          String                @default("STRIPE") @db.VarChar(20)
+  userId            String
+  checkoutSessionId String
+  paymentId         String? // payments.id cuando el PSP creó el intento
+  status            GatewayTxStatus       @default(PROCESSING)
+  attempts          Int                   @default(0) // Intentos totales contra el PSP (incluye reintentos automáticos)
+  lastError         String?
+  idempotencyKey    String                @unique @db.VarChar(100)
+  retries           GatewayRetryAttempt[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@map("gateway_transactions")
+}
+
+// GatewayRetryAttempt (Reintento) — cada llamada al proxy (inicial o POST /retry) con su resultado y duración
+model GatewayRetryAttempt {
+  id             String             @id @default(uuid())
+  transactionId  String
+  transaction    GatewayTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  attempt        Int
+  status         GatewayTxStatus
+  error          String?
+  durationMs     Int
+  idempotencyKey String             @unique @db.VarChar(100)
+
+  createdAt DateTime @default(now())
+
+  @@index([transactionId])
+  @@map("gateway_retry_attempts")
+}

@@ -1,0 +1,19 @@
+{
+  "name": "eCommerce Web3 · Panel y contenido",
+  "short_name": "eCommerce Web3",
+  "description": "Landings, lookbooks, blog y panel de contenido de la tienda eCommerce Web3.",
+  "lang": "es-CO",
+  "start_url": "landing?utm_source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0f172a",
+  "icons": [
+    { "src": "favicon.ico", "sizes": "48x48", "type": "image/x-icon" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Blog", "url": "blog" },
+    { "name": "Eventos", "url": "events" }
+  ]
+}

@@ -1,0 +1,10 @@
+/* [tsconfig de pruebas]: tipos de Jest + Node (msw/node) | [Tecnología]: jest-preset-angular */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "types": ["jest", "node"],
+    "esModuleInterop": true
+  },
+  "include": ["__tests__/unit/**/*.ts", "__tests__/integration/**/*.ts", "__tests__/utils/**/*.ts", "src/**/*.d.ts", "jest.setup.ts"]
+}

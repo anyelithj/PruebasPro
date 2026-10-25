@@ -1,0 +1,3 @@
+# [pnpm 11 · allowBuilds]: reemplaza "pnpm.onlyBuiltDependencies" de package.json (pnpm 11 ya no lo lee)
+allowBuilds:
+  msw: true # Genera el service worker de los mocks

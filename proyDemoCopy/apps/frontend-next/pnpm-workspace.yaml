@@ -1,0 +1,6 @@
+# [pnpm 11 · allowBuilds]: reemplaza ignoredBuiltDependencies | [Seguridad]: mínimo privilegio en la cadena de suministro
+allowBuilds:
+  sharp: false # Next.js usa sus binarios precompilados
+  unrs-resolver: false
+  msw: true # Genera el service worker de los mocks de pruebas
+  tesseract.js: false # Solo aviso de financiación (los modelos OCR se descargan en runtime)

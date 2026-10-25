@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+// [ISP][SRP] contrato notificaciones — envío multicanal entre backends.
+package notification;
+
+service NotificationService {
+  rpc Send(SendNotificationRequest) returns (SendNotificationReply);
+}
+
+message SendNotificationRequest {
+  string channel = 1;   // "whatsapp" | "telegram" | "email".
+  string to = 2;
+  string message = 3;
+}
+
+message SendNotificationReply {
+  bool delivered = 1;
+  string provider_message_id = 2;
+}

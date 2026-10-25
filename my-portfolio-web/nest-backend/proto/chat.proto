@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+// [ISP][SRP] contrato chat IA — streaming de tokens Ollama/LangChain.
+package chat;
+
+service ChatService {
+  // Streaming server-side: un ChatEvent por token/evento del modelo.
+  rpc Stream(ChatRequest) returns (stream ChatEvent);
+}
+
+message ChatRequest {
+  string message = 1;      // Mensaje del usuario.
+  string session_id = 2;   // Sesión de conversación (historial).
+  string user_id = 3;      // Sujeto autenticado (opcional).
+  string provider = 4;     // "ollama" | "rag".
+}
+
+message ChatEvent {
+  string type = 1;         // "chunk" | "source" | "done" | "error".
+  string content = 2;      // Texto del token o del error.
+  string source = 3;       // Fuente citada (RAG).
+}

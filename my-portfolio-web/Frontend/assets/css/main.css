@@ -1,0 +1,74 @@
+/* ─────────── 1) Google Fonts ─────────── */
+/* ⚠️ Van SIEMPRE antes de cualquier otra regla */
+@import url("https://fonts.googleapis.com/css2?family=Motion+Picture&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Mrs+Sheppards&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Pacifico&display=swap");
+
+/* ─────────── 2) Tailwind (base/components/utilities) ─────────── */
+@import "tailwindcss";
+
+/*
+  Variante `dark:` basada en clase (Tailwind v4).
+  Solo se activa cuando un ancestro tiene la clase `.dark`.
+  Usado por useScopedTheme para aplicar tema únicamente en
+  #about, #projects, #skills, #contact (NO globalmente).
+*/
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ─────────── 3) Variables globales ─────────── */
+:root {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Fira Code', ui-monospace, SFMono-Regular, monospace;
+  /* …todas tus variables de color, radios, sombras, etc. sin cambios… */
+  --color-bg: #0f172a;
+  --color-card: #1e293b;
+  --color-primary: #9333ea;
+  --color-secondary: #06b6d4;
+  --color-accent: #3b82f6;
+  --color-muted: #94a3b8;
+  --color-text: #f8fafc;
+  --color-subtle: #cbd5e1;
+  --color-heading: #f1f5f9;
+  --color-link: #0ea5e9;
+  --darkGradientStart: #7e22ce;
+  --darkGradientEnd: #3b82f6;
+  --light1: #FED84B;
+  --light2: #A562FF;
+  --light3: #F6C1C3;
+  --light4: #F970FE;
+  --gradient-primary: linear-gradient(to right, #9333ea, #3b82f6);
+  --gradient-secundary: linear-gradient(to right, #FED84B, #A562FF, #F6C1C3, #F970FE);
+  --gradient-card-hover: linear-gradient(to bottom right, #1e293b, #334155);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.2);
+  --radius: 0.75rem;
+  --section-padding: 3rem 1.5rem;
+  --heading-size: 2.25rem;
+  --subheading-size: 1.125rem;
+  --body-size: 1rem;
+  --button-padding: 0.75rem 1.5rem;
+  --button-radius: 0.5rem;
+  --button-font-weight: 600;
+  --input-bg: #1e293b;
+  --input-border: #334155;
+  --input-text: #f8fafc;
+  --input-placeholder: #94a3b8;
+}
+
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Fira Code', ui-monospace, SFMono-Regular, monospace;
+  --font-motion: "Motion Picture", cursive;
+  --font-logo:   "Pacifico",       cursive;
+}
+
+/* Sombras para engrosar el logo sin perder degradado */
+.shadow-logo {
+  text-shadow:
+    1px  0   1px rgba(0,0,0,.25),
+   -1px  0   1px rgba(0,0,0,.25),
+    0    1px 1px rgba(0,0,0,.25),
+    0   -1px 1px rgba(0,0,0,.25);
+}

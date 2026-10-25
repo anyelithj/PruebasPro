@@ -1,0 +1,82 @@
+# pyproject.toml (Python, PEP 621 + Poetry 2) => ÚNICA fuente de dependencias de ecommerce-fastapi
+# (reemplaza "pip freeze > requirements.txt" de docs/setup/02_FASTAPI_SETUP.md §2.15: un solo manifiesto, DRY).
+# Uso local:  poetry config virtualenvs.in-project true  &&  poetry install   (reutiliza apps/ecommerce-fastapi/.venv)
+
+# [project] => metadatos estándar PEP 621 (legibles por Poetry, pip, IDEs y Dependabot)
+[project]
+name = "ecommerce-fastapi"
+version = "0.1.0"
+description = "Motor IA/ML del eCommerce Web3 (FastAPI)"
+requires-python = ">=3.12,<3.14"   # 3.12 en Docker; 3.13 en local. Rango soportado por TensorFlow/PyTorch actuales
+# "dependencies" => runtime de producción, agrupado igual que 02_FASTAPI_SETUP.md §2
+dependencies = [
+  # 2.1 Núcleo del framework
+  "fastapi",
+  "uvicorn[standard]",          # Servidor ASGI (uvloop + httptools)
+  "pydantic",
+  "pydantic-settings",          # Config tipada desde variables de entorno (patrón Settings/Options)
+  "python-dotenv",
+  "python-multipart",           # Formularios y subida de archivos (imágenes para visión)
+  # 2.2 Base de datos — SQLAlchemy async + PostgreSQL + Alembic
+  "sqlalchemy[asyncio]",
+  "asyncpg",
+  "alembic",
+  # 2.3 GraphQL
+  "strawberry-graphql[fastapi]",
+  # 2.4 Ciencia de datos base
+  "pandas",
+  "numpy",
+  # 2.5 Forecasting
+  "prophet",
+  "statsmodels",
+  # 2.6 ML clásico
+  "scikit-learn",
+  "xgboost",
+  # 2.7 Deep Learning: SOLO TensorFlow (decisión v35; PyTorch descartado para no tener dos frameworks).
+  # El recomendador two-tower se escribe con capas de Keras (tensorflow-recommenders rompía Poetry y está en mantenimiento)
+  "tensorflow>=2.16",           # Incluye Keras 3
+  "keras-hub",                  # Modelos preentrenados sobre Keras/TF: BERT, RoBERTa, CLIP, ResNet (reemplaza a transformers)
+  # 2.8 Visión por computador ("headless" = OpenCV sin GUI/libGL: la variante correcta para servidores y Docker)
+  "opencv-python-headless",
+  "pillow",
+  # 2.9 NLP / Chatbot — "rasa" se omite: no soporta Python >= 3.11 y duplica el chatbot de LangChain + Ollama
+  "spacy",
+  "nltk",
+  "langchain",
+  "ollama",
+  "httpx",                      # 2.9.1: usado en runtime por tool_executor.py (y por los tests)
+  # 2.10 Precios dinámicos: bandido contextual (Thompson Sampling / LinUCB) con NumPy, sin librería de RL
+  # (stable-baselines3 exige PyTorch y tf-agents está abandonado desde 2023)
+  # 2.11 Búsqueda semántica
+  "faiss-cpu",
+  # 2.12 MLOps
+  "mlflow",
+  "celery",
+  "redis",
+  # 2.13 Utilidades
+  "mail-parser",
+]
+
+# [tool.poetry] => opciones propias de Poetry
+[tool.poetry]
+package-mode = false            # Es un servicio, no una librería publicable: Poetry solo gestiona dependencias
+
+# Grupo "dev" => solo desarrollo/CI; excluido en producción con "poetry install --only main"
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+pytest-asyncio = "*"
+ruff = "*"                      # Linter + formatter (lo invoca lint-staged en el pre-commit)
+
+# [tool.ruff] => configuración del linter/formatter Ruff
+[tool.ruff]
+line-length = 100               # Mismo ancho que .prettierrc.json (consistencia entre lenguajes)
+target-version = "py312"
+extend-exclude = ["migrations", "notebooks"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]  # pycodestyle, pyflakes, isort, pyupgrade, bugbear
+
+# [tool.pytest.ini_options] => configuración de pytest
+[tool.pytest.ini_options]
+testpaths = ["tests"]           # tests/unit, tests/integration, tests/ml
+asyncio_mode = "auto"           # pytest-asyncio: ejecuta tests "async def" sin decorador explícito

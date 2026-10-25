@@ -1,0 +1,143 @@
+# [CI · GitHub Actions]: lint + tipos + tests + build de los 4 proyectos en cada push y pull request (Sprint 0.5)
+# [Patrón]: Pipeline (etapas en orden; la primera que falla detiene el job) · Fan-out (4 jobs en paralelo)
+# [Principios]: Fail Fast · DRY (los jobs usan los mismos scripts de package.json/requirements que en local) · Reproducibilidad (lockfiles congelados)
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# `concurrency` (Actions): un push nuevo a la misma rama cancela la ejecución anterior → no se gastan minutos en commits viejos
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# [Seguridad]: el token del workflow solo puede leer el repositorio (principio de mínimo privilegio)
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "22"
+  PNPM_VERSION: "10.12.1"
+  PYTHON_VERSION: "3.13"
+  HUSKY: "0" # Husky no instala git hooks en CI (no hay commits locales)
+
+jobs:
+  # ───────────────────────── Next.js 16 (apps/frontend-next/) ─────────────────────────
+  frontend:
+    name: Frontend · Next.js
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/frontend-next # Todos los `run` de este job se ejecutan dentro de apps/frontend-next/
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm # [Caché]: reutiliza el store de pnpm entre ejecuciones (clave = hash del lockfile)
+          cache-dependency-path: apps/frontend-next/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile # `--frozen-lockfile`: falla si package.json y el lockfile no coinciden
+      - run: pnpm lint
+      - run: pnpm exec tsc --noEmit
+      - run: pnpm test
+      - run: pnpm build
+        env:
+          AUTH_SECRET: ci-only-not-a-secret # NextAuth exige un secreto para compilar; en CI no se emiten sesiones reales
+          NEXT_TELEMETRY_DISABLED: "1"
+
+  # ───────────────────────── Angular 22 (apps/frontend-angular/) ─────────────────────────
+  # [Mismo pipeline que Next.js]: instalar → lint → tipos de pruebas → Jest → build | Angular 22 exige Node ≥ 22.22.3 ("22" en setup-node = última 22.x)
+  frontend-angular:
+    name: Frontend · Angular
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/frontend-angular
+    steps:
+      - uses: actions/checkout@v4 # Trae también apps/frontend-next/src/app/globals.css (styles.css lo importa)
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: apps/frontend-angular/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      # globals.css de Next.js importa tailwindcss y tw-animate-css desde su propia carpeta → se instalan ahí sin el resto de Next.js
+      - run: npm install --no-save --prefix ../frontend-next tailwindcss@4 tw-animate-css
+      - run: pnpm lint
+      - run: pnpm exec tsc --noEmit -p tsconfig.spec.json
+      - run: pnpm test
+      - run: pnpm build
+
+  # ───────────────────────── NestJS 11 (apps/backend/) ─────────────────────────
+  backend:
+    name: Backend · NestJS
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/backend
+    # [Postgres de servicio]: contenedor efímero para las pruebas y para validar que las migraciones aplican sobre una base vacía
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: languageproject
+        ports: ["5432:5432"]
+        # `--health-cmd`: el job espera a que Postgres acepte conexiones antes de seguir
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_HOST: localhost
+      DATABASE_PORT: "5432"
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      DATABASE_NAME: languageproject
+      DATABASE_SYNCHRONIZE: "false" # En CI el esquema sale SOLO de las migraciones (igual que en producción)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: apps/backend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      # Sin `--fix` (el script `lint` de package.json corrige archivos; en CI solo se verifica)
+      - run: pnpm exec eslint "{src,apps,libs,test}/**/*.ts"
+      - run: pnpm exec tsc --noEmit
+      - run: pnpm migration:run # [Sprint 0.4]: la migración base debe aplicar limpia sobre una base vacía
+      - run: pnpm test
+      - run: pnpm build
+
+  # ───────────────────────── FastAPI (apps/ai-service/) ─────────────────────────
+  ai-service:
+    name: AI service · FastAPI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/ai-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip # [Caché]: reutiliza las descargas de pip (clave = hash de los requirements)
+          cache-dependency-path: apps/ai-service/requirements*.txt
+      # requirements-dev.txt ya incluye requirements.txt | índice CPU de PyTorch: evita bajar ~2 GB de librerías CUDA que CI no usa
+      - run: pip install -r requirements-dev.txt --extra-index-url https://download.pytorch.org/whl/cpu
+      - run: python -m ruff check .
+      - run: python -m pytest -q tests/unit

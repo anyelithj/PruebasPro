@@ -1,0 +1,36 @@
+/* [tsconfig base · Angular 22]: TypeScript estricto + alias por capa | [Principio]: Type-Safe + Clean Architecture (los alias hacen visibles las capas en cada import) */
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "resolveJsonModule": true, // [Sprint 7.1]: diccionarios JSON de @aula/shared-i18n
+    "strict": true, // [Type-Safe]: null checks, any implícito prohibido, etc.
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "ES2022",
+    "module": "preserve",
+    // [Alias]: rutas relativas a este archivo (TS 6 sin baseUrl) · @core (una vez por app) · @shared (UI atómica) · @features (cortes verticales) · @schemas (contratos Zod de cada funcionalidad) · @aula (paquetes compartidos del monorepo: packages/*)
+    "paths": {
+      "@core/*": ["./src/app/core/*"],
+      "@shared/*": ["./src/app/shared/*"],
+      "@features/*": ["./src/app/features/*"],
+      "@schemas/*": ["./src/app/features/*/domain/models"],
+      "@testing/*": ["./__tests__/utils/*"],
+      // [@aula · Sprint 7.1]: paquetes compartidos del monorepo (packages/*: menú, diccionario, temas, valores de dominio) → un solo menú y un solo diccionario para los dos frontends | [Principio]: DRY + SSOT
+      "@aula/*": ["../../packages/*"]
+    }
+  },
+  "angularCompilerOptions": {
+    "enableI18nLegacyMessageIdFormat": false,
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true,
+    "strictTemplates": true // [Type-Safe]: plantillas verificadas por el compilador
+  },
+  "files": [],
+  "references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.spec.json" }]
+}

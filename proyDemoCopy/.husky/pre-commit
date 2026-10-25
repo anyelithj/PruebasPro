@@ -1,0 +1,9 @@
+# [Husky v9 · pre-commit]: antes de cada commit corre lint-staged sobre los archivos en stage (frontend-next, frontend-angular, backend y ai-service) | [Patrón]: Chain of Responsibility (git hook → lint-staged → ESLint/ruff) | [Principio]: Fail Fast
+# Git ejecuta este script con sh desde la raíz del repositorio; un código de salida ≠ 0 cancela el commit
+
+# [Binario de lint-staged]: el de frontend-next o, si no está instalado, el del backend (ambos lo tienen en devDependencies)
+LINT_STAGED=apps/frontend-next/node_modules/.bin/lint-staged
+[ -x "$LINT_STAGED" ] || LINT_STAGED=apps/backend/node_modules/.bin/lint-staged
+
+# `--config`: una sola configuración para todo el repositorio (.lintstagedrc.mjs en la raíz)
+"$LINT_STAGED" --config .lintstagedrc.mjs

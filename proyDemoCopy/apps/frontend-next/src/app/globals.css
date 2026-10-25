@@ -1,0 +1,408 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "../../../../packages/ui-tokens/motion.css"; /* [Sprint 7.1]: @aula/ui-tokens — movimiento reducido compartido con Angular */
+/* `@source` (Tailwind v4): escanea también las plantillas Angular → los Angular Elements (<aula-campana>, <aula-exportar>…) usan las utilidades de ESTA hoja
+   [Bug corregido]: antes Next cargaba además /ng/styles.css (segundo Tailwind completo, inyectado después) y su `.sm:grid-cols-2` pisaba `lg:grid-cols-4` → grids del portal en 2 columnas | [Principio]: SSOT (una sola hoja de utilidades por página) */
+@source "../../../frontend-angular/src/app";
+
+/* [Sistema de diseño de la plataforma]: replica Demohtml/assets/css/style.css | [Patrón]: Design Tokens | [Principio]: SSOT */
+
+/* [Variante dark de Tailwind]: los temas oscuros (dark, alto contraste, deep focus, VR) activan las utilidades `dark:` | [Principio]: DRY */
+@custom-variant dark (&:is(.dark *, .hcontrast *, .deepfocus *, .vr *));
+
+@theme inline {
+  /* [Colores marca]: indigo → violet → fuchsia (gradiente de marca) */
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-dark: var(--primary-dark);
+  --color-primary-light: var(--primary-light);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-destructive: var(--destructive);
+
+  /* [Superficies] */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* [Tonos semánticos adaptables]: fondo suave / texto / borde por intención (marca, aviso, peligro, info) → sustituyen a los pasteles fijos (bg-purple-100…) que no cambiaban con el tema | [Principio]: SSOT */
+  --color-tone-brand: var(--tone-brand);
+  --color-tone-brand-soft: var(--tone-brand-soft);
+  --color-tone-brand-line: var(--tone-brand-line);
+  --color-tone-warning: var(--tone-warning);
+  --color-tone-warning-soft: var(--tone-warning-soft);
+  --color-tone-warning-line: var(--tone-warning-line);
+  --color-tone-danger: var(--tone-danger);
+  --color-tone-danger-soft: var(--tone-danger-soft);
+  --color-tone-danger-line: var(--tone-danger-line);
+  --color-tone-info: var(--tone-info);
+  --color-tone-info-soft: var(--tone-info-soft);
+  --color-tone-info-line: var(--tone-info-line);
+
+  /* [Tipografía]: Inter para body + headings | [Patrón]: Type Scale */
+  --font-sans: var(--font-inter), "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-heading: var(--font-inter), system-ui, sans-serif;
+
+  /* [Radios]: 12 / 20 — match Demohtml */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+}
+
+:root {
+  /* [Paleta de marca]: indigo / violet — hex directos del Demohtml */
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --primary-light: #818cf8;
+  --primary-foreground: #ffffff;
+  --secondary: #8b5cf6;
+  --secondary-foreground: #ffffff;
+  --accent: #06b6d4;
+  --accent-foreground: #ffffff;
+  --success: #9333ea;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --destructive: #ef4444;
+
+  /* [Tema Claro — NeuroLearning]: tokens --nl-* por tema (valores exactos de mi-proyecto-neuro) | [Patrón]: Design Tokens + Theming por clase */
+  --nl-bg: #F4F2FF;
+  --nl-surf: #FFFFFF;
+  --nl-surf2: #EEF0FF;
+  --nl-txt: #1E1B4B;
+  --nl-txt2: #5A6180;
+  --nl-brd: rgba(108, 60, 225, 0.18);
+  --nl-shd: 0 2px 20px rgba(0, 123, 255, 0.08);
+
+  /* [Superficies semánticas (shadcn)]: se enlazan UNA vez a los tokens --nl-* → todas las utilidades (bg-card, text-muted-foreground…) siguen al tema | [Principio]: DRY + SSOT
+     La clase del tema vive en <html> (= :root), así que var(--nl-*) se resuelve con los valores del tema activo */
+  --background: var(--nl-bg);
+  --foreground: var(--nl-txt);
+  --card: var(--nl-surf);
+  --card-foreground: var(--nl-txt);
+  --popover: var(--nl-surf);
+  --popover-foreground: var(--nl-txt);
+  --muted: var(--nl-surf2);
+  --muted-foreground: var(--nl-txt2);
+  --border: var(--nl-brd);
+  --input: var(--nl-brd);
+  --ring: #6366f1;
+
+  /* [Sombras y gradientes globales]: el degradado morado de marca se mantiene igual en TODOS los temas */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 12px 32px rgba(99, 102, 241, 0.18);
+  --gradient-brand: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+  /* [Botones sólidos]: morado y lila sin degradado, iguales en todos los temas | contraste WCAG AA (blanco/morado 5.7:1 · morado oscuro/lila 8.4:1) | [Principio]: SSOT */
+  --btn-solid: #7c3aed;
+  --btn-solid-hover: #6d28d9;
+  --btn-soft: #c4b5fd; /* Lila (violet-300): visible sobre fondos claros y oscuros, no se confunde con blanco */
+  --btn-soft-text: #2e1065; /* Morado muy oscuro sobre lila: 8.4:1 */
+  --btn-soft-hover: #a78bfa; /* Lila más intenso al pasar el mouse: 6:1 con el mismo texto */
+  /* [Gradiente suave translúcido]: funciona sobre fondos claros y oscuros (antes era sólido claro y deslumbraba en modo oscuro) */
+  --gradient-soft: linear-gradient(135deg, rgba(99, 102, 241, 0.14) 0%, rgba(217, 70, 239, 0.1) 100%);
+  --gradient-soft-global: var(--gradient-soft); /* Alias: la landing redefine --gradient-soft dentro de su raíz */
+
+  /* [Tonos semánticos]: `color-mix()` (CSS Color 5) mezcla el color de intención con la superficie/texto DEL TEMA ACTIVO
+     → en claro salen pasteles con texto oscuro; en oscuro/VR/deep focus, fondos profundos con texto claro. Un solo bloque sirve para los 6 temas | [Principio]: DRY + OCP */
+  --tone-brand: color-mix(in oklab, #7c3aed 70%, var(--nl-txt));
+  --tone-brand-soft: color-mix(in oklab, #8b5cf6 16%, var(--nl-surf));
+  --tone-brand-line: color-mix(in oklab, #8b5cf6 45%, var(--nl-surf));
+  --tone-warning: color-mix(in oklab, #d97706 72%, var(--nl-txt));
+  --tone-warning-soft: color-mix(in oklab, #f59e0b 16%, var(--nl-surf));
+  --tone-warning-line: color-mix(in oklab, #f59e0b 45%, var(--nl-surf));
+  --tone-danger: color-mix(in oklab, #e11d48 72%, var(--nl-txt));
+  --tone-danger-soft: color-mix(in oklab, #f43f5e 14%, var(--nl-surf));
+  --tone-danger-line: color-mix(in oklab, #f43f5e 45%, var(--nl-surf));
+  --tone-info: color-mix(in oklab, #0284c7 72%, var(--nl-txt));
+  --tone-info-soft: color-mix(in oklab, #0ea5e9 14%, var(--nl-surf));
+  --tone-info-line: color-mix(in oklab, #0ea5e9 45%, var(--nl-surf));
+}
+
+/* [Tema Oscuro] */
+.dark {
+  --nl-bg: #0A0A1A;
+  --nl-surf: #1A1A2E;
+  --nl-surf2: #16213E;
+  --nl-txt: #F1F0FF;
+  --nl-txt2: rgba(255, 255, 255, 0.55);
+  --nl-brd: rgba(108, 60, 225, 0.2);
+  --nl-shd: 0 2px 20px rgba(0, 0, 0, 0.45);
+  --ring: #818cf8;
+}
+
+/* [Tema Sepia] */
+.sepia {
+  --nl-bg: #F4ECD8;
+  --nl-surf: #EDE0C4;
+  --nl-surf2: #E4D5B4;
+  --nl-txt: #3B2A1A;
+  --nl-txt2: #6B5543;
+  --nl-brd: #C9B89A;
+  --nl-shd: 0 2px 16px rgba(91, 62, 30, 0.12);
+  --ring: #8B5E3C;
+}
+
+/* [Tema Alto Contraste]: borde y foco amarillos para máxima visibilidad | [WCAG 1.4.11] */
+.hcontrast {
+  --nl-bg: #000000;
+  --nl-surf: #111111;
+  --nl-surf2: #1A1A1A;
+  --nl-txt: #FFFFFF;
+  --nl-txt2: #FFFF00;
+  --nl-brd: #FFE000;
+  --nl-shd: 0 2px 16px rgba(255, 224, 0, 0.2);
+  --ring: #FFE000;
+}
+
+/* [Tema Deep Focus] */
+.deepfocus {
+  --nl-bg: #0D1117;
+  --nl-surf: #161B22;
+  --nl-surf2: #1C2333;
+  --nl-txt: #CDD9E5;
+  --nl-txt2: #768390;
+  --nl-brd: #30363D;
+  --nl-shd: 0 2px 20px rgba(0, 0, 0, 0.6);
+  --ring: #58A6FF;
+}
+
+/* [Tema VR Inmersivo] */
+.vr {
+  --nl-bg: #050010;
+  --nl-surf: #0E0520;
+  --nl-surf2: #160A2E;
+  --nl-txt: #E8DFFF;
+  --nl-txt2: #9B8FCC;
+  --nl-brd: #2D1F5E;
+  --nl-shd: 0 2px 20px rgba(108, 60, 225, 0.25);
+  --ring: #BF00FF;
+}
+
+/* [color-scheme]: controles nativos (scrollbar, <select>, date) se pintan oscuros en los temas oscuros */
+.dark, .hcontrast, .deepfocus, .vr { color-scheme: dark; }
+:root, .sepia { color-scheme: light; }
+
+@layer base {
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+  html, body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    font-size: 15px;
+    transition: background-color 0.3s, color 0.3s; /* [UX]: cambio de tema suave (igual a NeuroLearning) */
+  }
+  a {
+    color: var(--primary);
+    text-decoration: none;
+  }
+  a:hover {
+    color: var(--primary-dark);
+  }
+  /* [Focus-visible accesible]: ring index 2, no quita outline en navegación teclado | [WCAG 2.1 AA] */
+  *:focus-visible {
+    outline: 2px solid var(--ring); /* --ring cambia por tema (amarillo en alto contraste) */
+    outline-offset: 2px;
+  }
+  /* [Reduce motion]: respeta preferencia usuario | [WCAG 2.3.3] */
+  /* [Movimiento reducido]: vive en packages/ui-tokens/motion.css (importado arriba) → mismo comportamiento en Next.js y Angular (RF-70) */
+  /* [Escala tipográfica]: títulos con interletrado ajustado y saltos de línea equilibrados (`text-wrap: balance`, CSS Text 4) → sin palabras huérfanas en hero y cabeceras | [UX]: jerarquía visual */
+  h1, h2, h3 {
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+  /* [Párrafos]: `pretty` evita una última línea de una sola palabra (mejora progresiva: navegadores sin soporte lo ignoran) */
+  p { text-wrap: pretty; }
+  /* [Angular Elements]: los custom elements son `display: inline` por defecto → no generan caja y respetan el layout del shell (Next.js y Angular importan esta hoja) */
+  aula-exportar, aula-campana { display: contents; }
+}
+
+/* ─────────────── Utilidades del sistema de diseño ───────────────
+   `@utility` (Tailwind v4): registra clases propias que admiten variantes (hover:, md:…) y @apply | [Patrón]: Design System (tokens + primitivas) | [Principio]: DRY + SSOT
+   [Regla de uniformidad]: botones y chips = pill (rounded-full); campos de texto/select/buscadores = rounded-lg sobre superficie --nl-surf2 */
+
+/* [Gradiente marca] */
+@utility bg-gradient-brand { background: var(--gradient-brand); }
+@utility bg-gradient-soft { background: var(--gradient-soft); }
+@utility text-gradient-brand {
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* [Botón base]: el tamaño va en variables CSS → btn-sm/btn-lg las cambian sin chocar con esta clase (sin depender del orden de utilidades) */
+@utility btn {
+  @apply inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full font-semibold whitespace-nowrap no-underline transition-all select-none;
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  @apply disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50;
+  @apply active:translate-y-0 active:scale-[0.98]; /* [Microinteracción]: «presión» al hacer clic (feedback táctil); motion.css la anula con movimiento reducido */
+  height: var(--btn-h, 2.5rem);
+  padding-inline: var(--btn-px, 1.25rem);
+  font-size: var(--btn-fs, 0.875rem);
+}
+@utility btn-sm { --btn-h: 2rem; --btn-px: 0.875rem; --btn-fs: 0.75rem; }
+@utility btn-lg { --btn-h: 2.75rem; --btn-px: 1.5rem; }
+/* [Variantes de botón]: primaria (morado sólido), contorno, fantasma y peligro */
+@utility btn-primary {
+  background: var(--btn-solid);
+  @apply text-white hover:-translate-y-px hover:bg-(--btn-solid-hover) hover:text-white;
+  /* [Sombra teñida de marca]: el CTA principal «flota» con un halo violeta (más intenso en hover) → destaca sobre botones secundarios sin cambiar su color | [UX]: jerarquía de acciones */
+  box-shadow: 0 1px 2px rgba(46, 16, 101, 0.2), 0 4px 12px -2px rgba(124, 58, 237, 0.35);
+  &:hover { box-shadow: 0 2px 4px rgba(46, 16, 101, 0.2), 0 8px 20px -4px rgba(124, 58, 237, 0.5); }
+}
+@utility btn-outline { @apply border border-border bg-card text-foreground hover:border-primary hover:text-primary; }
+@utility btn-ghost { @apply bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground; }
+@utility btn-danger { @apply bg-destructive text-white hover:text-white hover:opacity-90; }
+
+/* [Campo de formulario]: input, select, textarea y buscadores comparten forma y tono (sin ancho: lo decide quien lo usa) */
+@utility control {
+  @apply min-h-10 rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground transition-colors placeholder:text-muted-foreground;
+  @apply focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40;
+  @apply disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-destructive;
+}
+
+/* [Obligatorios en rojo · 2026-10-19]: un campo requerido vacío se marca cuando el usuario ya pasó por él (`:user-invalid`, CSS nativo: no molesta
+   al abrir el formulario) o cuando intentó guardar (`form[data-tried]`) | vale para input, select y textarea de Next.js y de Angular (las dos apps cargan esta hoja)
+   [A11y]: además del color, el mensaje del formulario dice qué falta (WCAG 1.4.1) */
+.control:user-invalid,
+form[data-tried] .control:invalid,
+form[data-tried] .control[aria-invalid="true"] {
+  border-color: var(--destructive);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--destructive) 45%, transparent);
+}
+/* [--radius-cta · 2026-10-23 · 4.º pase]: radio de los botones de ACCESO (Comenzar gratis, Iniciar sesión, Registrarse, Crear cuenta) en landing, navbar y formularios
+   | `.btn-cta` va FUERA de @layer → gana a `rounded-full` del @utility btn sin `!important` (cascada de capas CSS) */
+:root { --radius-cta: 10px; }
+.btn-cta { border-radius: var(--radius-cta); }
+
+/* [no-spin · 2026-10-23 · 4.º pase]: oculta las flechas nativas de <input type="number"> donde la UI pone sus propios botones − / + (stepper)
+   — las flechas del teclado siguen funcionando | `::-webkit-*-spin-button` (Chrome/Edge/Safari) + `appearance: textfield` (Firefox) */
+.no-spin::-webkit-outer-spin-button,
+.no-spin::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.no-spin { -moz-appearance: textfield; appearance: textfield; }
+/* [Asterisco de obligatorio]: en rojo en todos los formularios (`.req` = marca visual; el campo lleva `required`) */
+.req { color: var(--destructive); font-weight: 700; }
+
+/* [Chip de filtro]: pill; activo con aria-pressed="true" o aria-current="page" → degradado de marca (estado accesible = estado visual) */
+@utility chip {
+  @apply inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-border bg-transparent px-4 py-1.5 text-xs font-semibold whitespace-nowrap text-muted-foreground no-underline transition-all hover:border-primary hover:text-primary;
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  &[aria-pressed="true"], &[aria-current="page"] {
+    background: var(--gradient-brand);
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.35);
+  }
+}
+
+/* [Insignia]: pill pequeña; el color lo ponen los tonos (bg-tone-*-soft text-tone-*) */
+@utility badge { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold whitespace-nowrap; }
+
+/* [Tarjeta de superficie]: igual a NLCard del original (radio 14, borde y sombra del tema) */
+@utility surface { @apply rounded-[14px] border border-border bg-card shadow-[var(--nl-shd)] transition-[border-color,box-shadow,transform] duration-200; }
+/* [Animación de entrada de sección]: igual a NeuroLearning; se anula con prefers-reduced-motion (regla base) */
+@utility fade-in { animation: nl-fade-in 0.3s ease both; }
+/* [Tipografía monoespaciada para cifras]: precios y métricas alineados */
+@utility eeg-mono { font-family: "Roboto Mono", ui-monospace, SFMono-Regular, Consolas, monospace; }
+
+/* [Gráficas Recharts siguen el tema]: ejes, cuadrícula, leyenda y tooltip usan los tokens (antes: blanco/gris fijos que desentonaban en oscuro, sepia o VR) | [Principio]: DRY (una regla para todas las gráficas) */
+.recharts-cartesian-axis-tick-value,
+.recharts-polar-angle-axis-tick-value,
+.recharts-legend-item-text { fill: var(--muted-foreground); color: var(--muted-foreground) !important; }
+.recharts-cartesian-grid line,
+.recharts-cartesian-axis-line,
+.recharts-cartesian-axis-tick-line { stroke: var(--border); }
+.recharts-default-tooltip {
+  background: var(--popover) !important; /* `!important`: Recharts escribe estilos en línea */
+  border: 1px solid var(--border) !important;
+  border-radius: 10px;
+  color: var(--popover-foreground);
+  box-shadow: var(--nl-shd);
+}
+.recharts-tooltip-cursor { fill: var(--muted); }
+
+@keyframes nl-fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* [Brazos del avatar]: balanceo sutil del avatar humanoide del perfil */
+@keyframes nl-arm-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(2px); }
+}
+
+/* [Avisos (toasts) · 2026-10-23]: UN diseño para los dos shells (Toaster de Next.js y <aula-toaster> de Angular leen esta hoja)
+   Tarjeta con franja de color, icono en círculo, título + mensaje y barra que se vacía hasta que el aviso se cierra solo
+   [Patrón]: Design Tokens (--toast-c por tipo vía data-kind) | [Principio]: DRY | [A11y]: el tipo también va en el título (no solo color) · animaciones solo con motion-safe */
+.toast {
+  --toast-c: var(--tone-brand);
+  position: relative;
+  overflow: hidden;
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--toast-c);
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--foreground);
+  padding: 0.75rem 0.875rem 0.875rem;
+  box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.25);
+}
+.toast[data-kind="error"] { --toast-c: var(--tone-danger); }
+.toast[data-kind="warning"] { --toast-c: var(--tone-warning); }
+.toast[data-kind="info"] { --toast-c: var(--muted-foreground); }
+.toast-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  color: var(--toast-c);
+  background: color-mix(in oklab, var(--toast-c) 14%, transparent);
+}
+.toast-title { display: block; font-size: 0.875rem; font-weight: 700; color: var(--toast-c); }
+.toast-msg { display: block; margin-top: 0.125rem; font-size: 0.8125rem; color: var(--muted-foreground); }
+.toast-close { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 0.5rem; color: var(--muted-foreground); }
+.toast-close:hover { background: var(--muted); color: var(--foreground); }
+.toast-bar { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: var(--toast-c); transform-origin: left; }
+@media (prefers-reduced-motion: no-preference) {
+  .toast { animation: toast-in 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2); }
+  .toast-bar { animation: toast-timer var(--toast-ms, 4000ms) linear forwards; }
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes toast-timer {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+/* [Barra de navegación en curso · 2026-10-23]: indeterminada (Angular: cambio de pantalla) */
+@keyframes nav-progress {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(300%); }
+}

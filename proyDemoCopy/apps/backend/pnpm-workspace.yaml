@@ -1,0 +1,8 @@
+# [pnpm 11 · allowBuilds]: qué dependencias pueden ejecutar scripts de instalación (por defecto ninguna) | [Seguridad]: mínimo privilegio en la cadena de suministro
+allowBuilds:
+  bcrypt: true # Binario nativo para el hash de contraseñas
+  msgpackr-extract: true # Binario nativo opcional (Bull/BullMQ)
+  unrs-resolver: true # Binario nativo del resolvedor de eslint-plugin-import
+  '@nestjs/core': false # Solo aviso de financiación
+  '@swc/core': false # El binario llega como dependencia opcional por plataforma; su postinstall solo lo verifica
+  '@scarf/scarf': false # Telemetría de descargas

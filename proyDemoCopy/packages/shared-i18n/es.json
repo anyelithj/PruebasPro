@@ -1,0 +1,797 @@
+{
+  "common": {
+    "notifications": "Notificaciones",
+    "close": "Cerrar",
+    "toastTitle": {"success": "¡Listo!", "error": "No se pudo completar", "warning": "Atención", "info": "Aviso"},
+    "saved": "Registro guardado con éxito.",
+    "updated": "Registro editado con éxito.",
+    "deleted": "Registro eliminado.",
+    "required": "Este campo es obligatorio",
+    "max": "Máximo {n} caracteres",
+    "invalid": "Valor no válido",
+    "slug": "Solo minúsculas, números y guiones (ej: ingles-a1)",
+    "result": {
+      "success": "¡Listo!",
+      "error": "No se pudo guardar",
+      "close": "Cerrar",
+      "continue": "Continuar",
+      "courseCreated": "El curso «{title}» se creó con éxito.",
+      "courseUpdated": "El curso «{title}» se actualizó con éxito.",
+      "courseError": "No se pudo guardar el curso: {reason}",
+      "examCreated": "El examen «{title}» se creó con éxito.",
+      "examUpdated": "El examen «{title}» se actualizó con éxito.",
+      "examError": "No se pudo guardar el examen: {reason}",
+      "resourceCreated": {
+        "one": "Se creó {n} recurso con éxito (queda en borrador).",
+        "other": "Se crearon {n} recursos con éxito (quedan en borrador)."
+      },
+      "resourceUpdated": "El recurso se actualizó con éxito.",
+      "resourceError": "No se pudo guardar el recurso: {reason}",
+      "resourcePartial": "Se crearon {ok} de {total} recursos. Fallaron: {failed}",
+      "resourceGroupSaved": "Tema «{topic}» guardado: {created} nuevos y {updated} actualizados."
+    }
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "courses": "Cursos",
+    "exams": "Exámenes",
+    "feedback": "Feedback IA",
+    "tutor": "Tutor IA",
+    "writing": "Corrector de redacciones",
+    "studyPlan": "Plan de estudio",
+    "progress": "Progreso",
+    "profile": "Mi perfil",
+    "management": "Gestión",
+    "students": "Estudiantes",
+    "reports": "Reportes",
+    "resources": "Recursos",
+    "help": "Ayuda",
+    "jobs": "Tareas automáticas",
+    "certificates": "Certificados",
+    "activities": "Actividades",
+    "games": "Juegos",
+    "practice": "Práctica",
+    "vocabulary": "Vocabulario",
+    "translator": "Traductor",
+    "music": "Música",
+    "dialogues": "Diálogos",
+    "polyglot": "Poliglota",
+    "grammar": "Gramática",
+    "mainNav": "Navegación principal",
+    "openMenu": "Abrir menú",
+    "closeMenu": "Cerrar menú",
+    "hideSidebar": "Contraer menú lateral",
+    "showSidebar": "Expandir menú lateral"
+  },
+  "roles": {
+    "estudiante": "Estudiante",
+    "docente": "Docente",
+    "admin": "Administrador"
+  },
+  "toolbar": {
+    "changeTheme": "Cambiar tema",
+    "changeLanguage": "Cambiar idioma",
+    "themes": {
+      "light": "Claro",
+      "dark": "Oscuro",
+      "sepia": "Sepia",
+      "hcontrast": "Alto Contraste",
+      "deepfocus": "Deep Focus",
+      "vr": "VR Inmersivo"
+    },
+    "themesShort": {
+      "light": "Claro",
+      "dark": "Oscuro",
+      "sepia": "Sepia",
+      "hcontrast": "Contraste",
+      "deepfocus": "Focus",
+      "vr": "VR"
+    },
+    "languages": {
+      "es": "Español",
+      "en": "Inglés"
+    }
+  },
+  "languageNames": {
+    "EN": "Inglés",
+    "FR": "Francés",
+    "DE": "Alemán",
+    "ES": "Español",
+    "PT": "Portugués",
+    "ZH": "Chino mandarín",
+    "RU": "Ruso"
+  },
+  "topbar": {
+    "search": "Buscar cursos…",
+    "searchLabel": "Buscar en la plataforma",
+    "notifications": "Notificaciones",
+    "markAllRead": "Marcar todas como leídas",
+    "noNotifications": "No tienes notificaciones.",
+    "notificationsError": "No se pudieron cargar las notificaciones.",
+    "viewAll": "Ver todas",
+    "cart": "Carrito",
+    "cartEmpty": "Tu carrito está vacío.",
+    "remove": "Quitar {title}",
+    "total": "Total",
+    "checkout": "Finalizar compra",
+    "checkoutSoon": "Pago seguro con Stripe (modo de prueba: no se cobra dinero real).",
+    "profileMenu": "Menú de perfil",
+    "myProfile": "Mi perfil",
+    "myProgress": "Mi progreso",
+    "myPayments": "Mis pagos",
+    "myWallet": "Mi billetera",
+    "myCertificates": "Mis certificados"
+  },
+  "resources": {
+    "title": "📚 Recursos de estudio",
+    "subtitle": "Vocabulario, reglas, ejemplos y ejercicios publicados por tus docentes — {count}",
+    "count": {
+      "one": "{n} recurso",
+      "other": "{n} recursos"
+    },
+    "polyglot": "Poliglota",
+    "polyglotHint": "compara el vocabulario de un tema en los siete idiomas",
+    "kindsLabel": "Tipo de recurso",
+    "all": "Todos",
+    "language": "Idioma",
+    "level": "Nivel",
+    "allLanguages": "Todos",
+    "allLevels": "Todos",
+    "filter": "Filtrar",
+    "empty": "Aún no hay recursos publicados con estos filtros.",
+    "loadError": "No se pudieron cargar los recursos: {error}",
+    "topics": {
+      "one": "{n} tema",
+      "other": "{n} temas"
+    },
+    "topicsLabel": "Temas de estudio",
+    "openTopic": "Abrir el tema «{topic}» ({count})",
+    "back": "Volver a recursos",
+    "topicSubtitle": "{language} · Nivel {level} · {count}"
+  },
+  "publicNav": {
+    "features": "Características",
+    "roles": "Roles",
+    "courses": "Cursos",
+    "how": "Cómo funciona",
+    "contact": "Contacto",
+    "login": "Iniciar sesión",
+    "register": "Registrarse",
+    "home": "Inicio",
+    "levels": "Niveles",
+    "pricing": "Planes",
+    "faq": "FAQ"
+  },
+  "landing": {
+    "pill": "7 idiomas · Niveles MCER A1–C2",
+    "titleA": "Aprende idiomas con ",
+    "titleB": "práctica guiada e IA local",
+    "lead": "Inglés, francés, alemán, español, portugués, chino mandarín y ruso. Gramática, vocabulario, comprensión, expresión escrita y oral con correcciones explicadas en español y seguimiento de tu progreso por nivel.",
+    "start": "Comenzar gratis →",
+    "stats": [
+      {
+        "value": "7",
+        "label": "Idiomas"
+      },
+      {
+        "value": "A1–C2",
+        "label": "Niveles MCER"
+      },
+      {
+        "value": "Local",
+        "label": "IA en tu equipo"
+      }
+    ],
+    "card1Title": "Práctica B1 completada",
+    "card1Sub": "Francés · Gramática",
+    "card2Title": "Corrección lista",
+    "card2Sub": "Repasa: present perfect",
+    "coursesEyebrow": "Cursos de idiomas",
+    "coursesTitle": "Elige el idioma que quieres aprender",
+    "coursesLead": "Cursos por niveles MCER de A1 a C2 con gramática, vocabulario, lectura, escucha, escritura y conversación.",
+    "coursesLevels": "Niveles disponibles",
+    "coursesCta": "Ver cursos",
+    "coursesCount": {
+      "one": "{n} curso publicado",
+      "other": "{n} cursos publicados"
+    },
+    "courses": {
+      "EN": {
+        "name": "Inglés",
+        "text": "El idioma de los negocios, la ciencia y los viajes: conversación, gramática y preparación de exámenes."
+      },
+      "FR": {
+        "name": "Francés",
+        "text": "Pronunciación, conjugación y cultura francófona, desde las primeras frases hasta el debate."
+      },
+      "DE": {
+        "name": "Alemán",
+        "text": "Casos, orden de la frase y vocabulario práctico para estudiar o trabajar en países de habla alemana."
+      },
+      "ES": {
+        "name": "Español",
+        "text": "Español como lengua extranjera, con las variantes de España y de América Latina."
+      },
+      "PT": {
+        "name": "Portugués",
+        "text": "Portugués de Brasil y de Portugal, con énfasis en comprensión oral y conversación."
+      },
+      "ZH": {
+        "name": "Chino mandarín",
+        "text": "Pinyin, tonos y caracteres frecuentes con práctica guiada desde cero."
+      },
+      "RU": {
+        "name": "Ruso",
+        "text": "Alfabeto cirílico, casos y conversación cotidiana paso a paso."
+      }
+    },
+    "featuresEyebrow": "Características",
+    "featuresTitle": "Todo lo que necesitas para aprender un idioma",
+    "featuresLead": "Contenido estructurado por idioma, nivel MCER y competencia, con IA solo donde aporta valor.",
+    "features": [
+      {
+        "title": "Práctica por nivel MCER",
+        "text": "Ejercicios de A1 a C2 que se ajustan a los errores que cometes, no a suposiciones."
+      },
+      {
+        "title": "Correcciones explicadas",
+        "text": "Cada error incluye la regla, un ejemplo y la traducción al español."
+      },
+      {
+        "title": "Progreso por competencia",
+        "text": "Sigue tu avance en gramática, vocabulario, lectura, escucha, escritura y expresión oral."
+      },
+      {
+        "title": "Repaso inteligente",
+        "text": "Repetición espaciada y práctica intercalada a partir de tus errores recurrentes."
+      },
+      {
+        "title": "Exámenes de práctica",
+        "text": "Pruebas originales por idioma, nivel y competencia para preparar certificaciones. No son exámenes oficiales."
+      },
+      {
+        "title": "Roles diferenciados",
+        "text": "Experiencia adaptada para estudiantes, docentes de idiomas y administradores."
+      }
+    ],
+    "rolesEyebrow": "Roles del sistema",
+    "rolesTitle": "Una experiencia para cada usuario",
+    "rolesLead": "Funcionalidades diseñadas según el rol dentro de la plataforma de idiomas.",
+    "roles": [
+      {
+        "badge": "Estudiante",
+        "title": "Aprende a tu ritmo",
+        "text": "Practica el idioma y el nivel que elijas con correcciones claras.",
+        "items": [
+          "Practicar por idioma, nivel y competencia",
+          "Recibir correcciones explicadas en español",
+          "Ver tu progreso por nivel MCER",
+          "Repasar tus errores frecuentes"
+        ],
+        "cta": "Acceder como estudiante"
+      },
+      {
+        "badge": "Docente",
+        "title": "Enseña con datos",
+        "text": "Crea prácticas y supervisa el avance de tus estudiantes.",
+        "items": [
+          "Crear prácticas y exámenes por nivel",
+          "Revisar y aprobar contenido generado",
+          "Ver errores recurrentes por competencia",
+          "Dashboard docente con métricas"
+        ],
+        "cta": "Acceder como docente"
+      },
+      {
+        "badge": "Administrador",
+        "title": "Gestiona la plataforma",
+        "text": "Control de usuarios y del contenido curricular.",
+        "items": [
+          "Gestionar estudiantes y docentes",
+          "Administrar exámenes y contenido",
+          "Supervisar la plataforma",
+          "Dashboard administrador"
+        ],
+        "cta": "Acceder como admin"
+      }
+    ],
+    "howEyebrow": "Cómo funciona",
+    "howTitle": "Aprende un idioma en 3 pasos",
+    "steps": [
+      {
+        "title": "Regístrate",
+        "text": "Crea tu cuenta y elige el idioma que quieres aprender."
+      },
+      {
+        "title": "Practica a tu nivel",
+        "text": "Resuelve ejercicios de tu nivel MCER en la competencia que quieras reforzar."
+      },
+      {
+        "title": "Corrige y repasa",
+        "text": "Entiende cada error y repásalo en el momento adecuado para no olvidarlo."
+      }
+    ],
+    "ctaTitle": "Empieza a aprender idiomas con {brand}",
+    "ctaText": "Siete idiomas, seis niveles MCER y correcciones que se entienden.",
+    "ctaButton": "Crear cuenta gratis →",
+    "footerAbout": "Plataforma para aprender idiomas por niveles MCER, con IA local usada solo cuando aporta valor.",
+    "footerProduct": "Producto",
+    "footerAccount": "Cuenta",
+    "footerContact": "Contacto",
+    "footerRights": "Proyecto educativo y de portafolio.",
+    "levelsEyebrow": "Niveles MCER",
+    "levelsTitle": "De tus primeras frases a la maestría",
+    "levelsLead": "El Marco Común Europeo de Referencia ordena el aprendizaje en seis niveles; cada curso indica el suyo.",
+    "levels": {
+      "A1": "Acceso: presentarte y frases de uso inmediato.",
+      "A2": "Plataforma: rutinas, compras y conversaciones sencillas.",
+      "B1": "Umbral: viajes, opiniones y textos claros.",
+      "B2": "Avanzado: debates, artículos y fluidez con nativos.",
+      "C1": "Dominio operativo: textos complejos y uso profesional.",
+      "C2": "Maestría: matices, ironía y precisión casi nativa."
+    },
+    "aiEyebrow": "IA local y privacidad",
+    "aiTitle": "La IA corre en el servidor de la plataforma, no en la nube",
+    "aiLead": "Usamos modelos abiertos con Ollama solo cuando aportan valor; primero el contenido aprobado por docentes.",
+    "aiPoints": [
+      {
+        "title": "Tus textos no salen a terceros",
+        "text": "Corrector, tutor y Agente Guía usan modelos locales: sin enviar tus redacciones a servicios externos."
+      },
+      {
+        "title": "Contenido revisado primero",
+        "text": "El tutor responde con el currículo aprobado; la IA solo redacta y siempre se marca como tal."
+      },
+      {
+        "title": "Certificados verificables",
+        "text": "La huella del PDF se ancla en la red de pruebas Sepolia: cualquiera comprueba que no se alteró."
+      }
+    ],
+    "pricingEyebrow": "Planes",
+    "pricingTitle": "Empieza gratis, paga solo por el curso que quieras",
+    "pricingLead": "Sin suscripciones: cada curso de pago se compra una vez y es tuyo.",
+    "plans": [
+      {
+        "id": "free",
+        "name": "Gratis",
+        "price": "US$0",
+        "text": "Para empezar hoy.",
+        "items": [
+          "Cursos gratuitos completos",
+          "Exámenes y retroalimentación",
+          "Tutor IA y Agente Guía"
+        ],
+        "cta": "Crear cuenta gratis"
+      },
+      {
+        "id": "course",
+        "name": "Curso",
+        "price": "Pago único",
+        "text": "Para avanzar a fondo en un idioma.",
+        "items": [
+          "Material completo del curso",
+          "Certificado verificable al 100 %",
+          "Foro de cada lección"
+        ],
+        "cta": "Elegir un curso"
+      }
+    ],
+    "paymentNote": "Pagos con tarjeta (Stripe) o con ETH de la red de pruebas Sepolia. En este entorno de demostración no se cobra dinero real.",
+    "faqEyebrow": "Preguntas frecuentes",
+    "faqTitle": "Resolvemos tus dudas",
+    "faqMore": "Ver todas en el Centro de ayuda →",
+    "faqFallback": [
+      {
+        "q": "¿La plataforma cobra dinero real?",
+        "a": "No en este entorno: los pagos usan el modo de prueba de Stripe y ETH de prueba de Sepolia."
+      },
+      {
+        "q": "¿Cuándo recibo mi certificado?",
+        "a": "Al completar el 100 % del curso lo solicitas en «Mis certificados» y descargas el PDF verificable."
+      },
+      {
+        "q": "¿Qué diferencia hay entre el Tutor IA y el Agente Guía?",
+        "a": "El tutor enseña el idioma; el Agente Guía explica cómo usar la plataforma y cita el manual."
+      }
+    ],
+    "langTitle": "Aprende {lang} por niveles MCER",
+    "langLead": "Cursos de {lang} de A1 a C2 con correcciones explicadas, exámenes de práctica y certificado verificable.",
+    "langOthers": "Otros idiomas",
+    "verifyCertificate": "Verificar un certificado",
+    "terms": "Términos y privacidad"
+  },
+  "auth": {
+    "asideTitle": "Bienvenido de nuevo",
+    "asideText": "Continúa tu camino de aprendizaje. Tu cerebro está listo para crecer.",
+    "asidePoints": [
+      "Siete idiomas, niveles MCER de A1 a C2",
+      "Correcciones explicadas por IA que corre en nuestro servidor",
+      "Certificados verificables con código QR"
+    ],
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "or": "o continúa con",
+    "orRegister": "o regístrate con",
+    "login": {
+      "title": "Iniciar sesión",
+      "subtitle": "Accede a tu cuenta de {brand}.",
+      "formLabel": "Formulario de inicio de sesión",
+      "remember": "Recordarme",
+      "forgot": "¿Olvidaste tu contraseña?",
+      "submit": "Iniciar sesión",
+      "submitting": "Ingresando…",
+      "noAccount": "¿No tienes cuenta?",
+      "registerLink": "Regístrate"
+    },
+    "register": {
+      "title": "Crear cuenta",
+      "subtitle": "Regístrate gratis en {brand}.",
+      "formLabel": "Formulario de registro",
+      "firstName": "Nombre",
+      "lastName": "Apellido",
+      "confirm": "Confirmar",
+      "termsA": "Acepto los ",
+      "termsLink": "términos y la política de privacidad",
+      "submit": "Crear cuenta",
+      "submitting": "Creando cuenta…",
+      "hasAccount": "¿Ya tienes cuenta?",
+      "loginLink": "Inicia sesión"
+    },
+    "forgot": {
+      "title": "Recuperar contraseña",
+      "subtitle": "Ingresa el correo y se enviará un enlace para crear una nueva contraseña.",
+      "formLabel": "Formulario de recuperación de contraseña",
+      "submit": "Enviar enlace",
+      "submitting": "Enviando…",
+      "resend": "Reenviar enlace",
+      "sent": "Si el correo está registrado, recibirás un enlace para restablecer la contraseña. Revisa también la carpeta de spam.",
+      "error": "No se pudo enviar el enlace. Inténtalo de nuevo.",
+      "tooMany": "Demasiados intentos. Espera un minuto e inténtalo de nuevo.",
+      "remembered": "¿Ya recuerdas?"
+    },
+    "reset": {
+      "title": "Nueva contraseña",
+      "subtitle": "Define una contraseña fuerte (mínimo 8 caracteres, mayúscula, minúscula y dígito).",
+      "formLabel": "Formulario de restablecimiento de contraseña",
+      "newPassword": "Nueva contraseña",
+      "confirm": "Confirmar contraseña",
+      "submit": "Actualizar contraseña",
+      "submitting": "Actualizando…",
+      "success": "Contraseña actualizada. Redirigiendo a inicio de sesión…",
+      "error": "No se pudo actualizar la contraseña.",
+      "invalid": "El enlace no es válido o ya expiró. Solicita uno nuevo.",
+      "missingTitle": "Enlace incompleto",
+      "missingA": "El enlace no contiene el código de recuperación. Solicita uno nuevo desde ",
+      "missingLink": "recuperar contraseña",
+      "requestNew": "Solicitar un enlace nuevo",
+      "remembered": "¿Recuerdas tu contraseña?"
+    },
+    "magic": {
+      "label": "Entrar sin contraseña: te enviamos un enlace",
+      "placeholder": "Correo electrónico",
+      "send": "Enviar enlace",
+      "sending": "Enviando…",
+      "sent": "Si el correo está registrado, recibirás un enlace válido 15 minutos.",
+      "error": "No se pudo enviar el enlace",
+      "invalid": "El enlace de acceso no es válido o ya se usó. Pide uno nuevo."
+    },
+    "oauth": {
+      "connecting": "Conectando…",
+      "withProvider": "Iniciar sesión con {provider}",
+      "error": "Error iniciando OAuth"
+    },
+    "validation": {
+      "emailRequired": "El correo es obligatorio",
+      "emailInvalid": "Formato de correo inválido",
+      "passwordMin": "La contraseña debe tener al menos 8 caracteres",
+      "passwordRule": "Debe incluir mayúscula, minúscula y número",
+      "passwordMax": "Máximo 128 caracteres",
+      "firstNameRequired": "El nombre es obligatorio",
+      "firstNameMax": "Nombre demasiado largo",
+      "lastNameRequired": "El apellido es obligatorio",
+      "lastNameMax": "Apellido demasiado largo",
+      "mismatch": "Las contraseñas no coinciden",
+      "terms": "Debes aceptar los términos"
+    }
+  },
+  "management": {
+    "title": "Gestión",
+    "subtitleAdmin": "Administra usuarios, exámenes, cursos y recursos de aprendizaje desde un único panel.",
+    "subtitleTeacher": "Administra tus exámenes y los recursos de aprendizaje.",
+    "tabsLabel": "Pestañas de gestión",
+    "tabs": {
+      "users": "Usuarios",
+      "exams": "Exámenes",
+      "courses": "Cursos",
+      "content": "Recursos",
+      "activities": "Actividades"
+    },
+    "row": {
+      "view": "Ver",
+      "edit": "Editar",
+      "publish": "Publicar",
+      "unpublish": "Despublicar",
+      "published": "«{title}» publicado: ya lo ven los estudiantes.",
+      "unpublished": "«{title}» despublicado: vuelve a borrador.",
+      "delete": "Eliminar",
+      "deleteConfirm": "¿Seguro que quieres eliminar «{title}»? Esta acción no se puede deshacer.",
+      "deleting": "Eliminando…",
+      "cancel": "Cancelar"
+    }
+  },
+  "courses": {
+    "title": "🌐 Cursos de idiomas",
+    "subtitle": "{heading} · niveles MCER A1–C2 — {count}",
+    "count": {
+      "one": "{n} curso",
+      "other": "{n} cursos"
+    },
+    "allLanguages": "Todos los idiomas",
+    "filtersLabel": "Filtros de cursos",
+    "languagesLabel": "Idiomas",
+    "searchLabel": "Buscar curso",
+    "searchPlaceholder": "Buscar curso (ej. Francés B1)…",
+    "search": "Buscar",
+    "all": "Todos",
+    "empty": "No hay cursos en esta selección.",
+    "noResults": "Sin resultados para “{q}”.",
+    "loadError": "No se pudo cargar el catálogo — {error}.",
+    "loadErrorHint": "Verifica que el backend esté disponible en /api/v1/courses.",
+    "pagination": "Paginación de cursos",
+    "materials": {
+      "title": "📚 Temario del curso",
+      "empty": "Este curso aún no tiene material.",
+      "openPdf": "Abrir PDF en pestaña nueva",
+      "upload": "Adjuntar material",
+      "uploadHint": "Solo administradores. Video MP4/WebM, PDF o imagen (PNG/JPG/WebP/GIF), máx. {mb} MB.",
+      "uploading": "Subiendo… {pct}%",
+      "remove": "Quitar",
+      "locked": "🔒 Compra el curso o inscríbete (si es gratuito) para ver sus videos, PDF, imágenes y demás recursos.",
+      "syllabus": "Temario",
+      "lesson": "Lección {n} de {total}",
+      "prev": "← Anterior",
+      "next": "Siguiente →",
+      "markDone": "Marcar completa",
+      "done": "Completado",
+      "current": "En curso",
+      "pending": "Pendiente",
+      "progressLabel": "Progreso del curso",
+      "adminNoProgress": "Vista de administrador: el progreso solo se registra para usuarios inscritos.",
+      "manage": "Gestionar material",
+      "lockedStep": "Bloqueado",
+      "lockedHint": "Completa la lección anterior para desbloquear esta.",
+      "back": "← Volver al temario",
+      "resources": "Recursos",
+      "resVideos": "🎞️ Videos",
+      "resPdfs": "📄 PDF",
+      "resImages": "🖼️ Imágenes",
+      "resDone": "✓ Lecciones completadas",
+      "start": "▶ Iniciar curso",
+      "resume": "▶ Continuar clase",
+      "review": "↺ Repasar desde el inicio",
+      "lessonNav": "Navegación de la lección",
+      "breadcrumb": "Ruta de la lección",
+      "reader": {
+        "title": "🔊 Lectura en voz alta",
+        "hint": "Pulsa una frase para leer desde ahí (la palabra leída se resalta). Selecciona una palabra o un párrafo para traducirlo.",
+        "loading": "Extrayendo el texto del PDF…",
+        "ocr": "Leyendo el PDF escaneado con OCR… página {page} de {total}",
+        "noText": "Este PDF no tiene texto seleccionable (probablemente es un escaneo).",
+        "loadError": "No se pudo leer el texto del PDF.",
+        "noTts": "Tu navegador no admite lectura en voz alta.",
+        "play": "▶ Leer",
+        "pause": "⏸ Pausa",
+        "resume": "▶ Continuar",
+        "stop": "⏹ Detener",
+        "speed": "Velocidad",
+        "noVoice": "No hay voz instalada para este idioma; se usa la predeterminada.",
+        "translateAll": "🌐 Traducir todo al {lang}",
+        "listen": "🔊 Escuchar",
+        "selection": "Traducción de la selección",
+        "close": "Cerrar",
+        "translateOff": "🌐 Ocultar traducción",
+        "translating": "Traduciendo…",
+        "translateUnavailable": "El traductor integrado del navegador no está disponible aquí.",
+        "openTranslate": "Abrir en Google Translate ↗",
+        "textLabel": "Texto del PDF"
+      }
+    },
+    "card": {
+      "view": "Ver {title}",
+      "levelTitle": "Nivel MCER {level}",
+      "level": "Nivel {level}",
+      "students": "est.",
+      "locked": "Curso bloqueado: requiere compra",
+      "progress": "Progreso del curso: {pct}%",
+      "lab": "Lab",
+      "goLab": "Ir al Lab: {lab}",
+      "labLocked": "Inicia el curso para acceder al Lab"
+    },
+    "price": {
+      "free": "✅ GRATIS",
+      "freeLabel": "Curso gratuito",
+      "promo": "Promoción",
+      "equiv": "💎 Equiv. {tokens} TNA",
+      "original": "Precio original {price}",
+      "probono": "Beca ProBono",
+      "apply": "Aplicar"
+    },
+    "actions": {
+      "certificate": "◈ Certificado",
+      "continue": "▶ Continuar",
+      "enterFree": "Inscribirse gratis",
+      "enrolling": "Inscribiendo…",
+      "buy": "🛒 Comprar",
+      "inCart": "✓ En el carrito",
+      "start": "▶ Empezar",
+      "favorite": "★ Favorito",
+      "like": "👍 Me gusta",
+      "love": "❤ Me encanta"
+    }
+  },
+  "adminCourses": {
+    "count": {
+      "one": "{n} curso en la plataforma.",
+      "other": "{n} cursos en la plataforma."
+    },
+    "create": "+ Crear curso",
+    "loadError": "No se pudieron cargar los cursos: {error}",
+    "empty": "Aún no hay cursos. Crea el primero con “+ Crear curso”.",
+    "columns": {
+      "title": "Curso",
+      "language": "Idioma",
+      "level": "Nivel",
+      "price": "Precio",
+      "status": "Estado",
+      "actions": "Acciones"
+    },
+    "editTitle": "Editar curso",
+    "editSubtitle": "Mismo formulario que el alta: cambia lo que necesites y guarda.",
+    "submitEdit": "Guardar cambios",
+    "submittingEdit": "Guardando…",
+    "published": "Publicado",
+    "draft": "Borrador",
+    "free": "Gratis",
+    "newTitle": "Nuevo curso",
+    "newSubtitle": "Completa los datos del curso. Solo un administrador puede crearlo.",
+    "back": "Volver a cursos",
+    "fields": {
+      "title": "Título",
+      "slug": "Slug (URL)",
+      "slugHint": "Se completa solo a partir del título; puedes ajustarlo.",
+      "access": "Tipo de curso",
+      "accessFree": "Gratuito",
+      "accessPaid": "De pago",
+      "pricePaidRequired": "Un curso de pago necesita un precio mayor que 0.",
+      "description": "Descripción",
+      "descriptionHint": "Qué aprenderá el estudiante. Las primeras frases se usan como resumen en la tarjeta del curso.",
+      "language": "Idioma",
+      "level": "Nivel MCER",
+      "instructor": "Instructor",
+      "instructorTitle": "Título del instructor",
+      "tags": "Etiquetas",
+      "tagsHint": "Marca los temas que trabaja el curso (máx. 10). Sirven para buscarlo y se muestran en la tarjeta.",
+      "lab": "Laboratorio",
+      "labNone": "Sin laboratorio",
+      "labHint": "Espacio de práctica que se habilita al empezar el curso (botón «Lab» en la tarjeta).",
+      "price": "Precio (USD)",
+      "originalPrice": "Precio original (USD)",
+      "durationHours": "Duración (horas)",
+      "durationHint": "Horas totales estimadas. Por defecto 40 h.",
+      "modality": "Modalidad",
+      "isProBono": "Disponible con Beca ProBono",
+      "isPublished": "Publicado"
+    },
+    "submit": "Crear curso",
+    "submitting": "Creando…",
+    "materials": {
+      "title": "Material del curso",
+      "hint": "Adjunta videos, audios, PDF, imágenes y documentos (Word, Excel, PowerPoint, TXT) o enlaces externos. Máx. {mb} MB por archivo. Se suben al guardar el curso.",
+      "add": "+ Adjuntar archivo",
+      "titleLabel": "Título del material",
+      "remove": "Quitar {name}",
+      "tooBig": "«{name}» supera {mb} MB.",
+      "badType": "«{name}» no es un formato admitido (video, audio, PDF, imagen o documento).",
+      "uploading": "Subiendo material {n} de {total}…",
+      "partialFail": "El curso se guardó, pero no se pudieron subir: {names}. Vuelve a adjuntarlos desde «Editar».",
+      "linkLabel": "Enlace externo (YouTube, artículo, podcast…)",
+      "linkAdd": "+ Añadir enlace",
+      "linkInvalid": "Escribe un enlace válido (https://…)."
+    },
+    "fixFields": "Revisa los campos marcados.",
+    "saveError": "No se pudo guardar el curso.",
+    "ai": {
+      "title": "Generar con IA",
+      "hint": "La IA local propone título, descripción en Markdown (objetivos y temario) y etiquetas según idioma y nivel. Revísalo antes de guardar.",
+      "topic": "Enfoque (opcional)",
+      "topicPlaceholder": "Ej. Inglés para viajes, conversación de negocios",
+      "run": "Generar ficha",
+      "running": "Generando… (puede tardar 1–2 min)",
+      "useImported": "Usar el contenido importado como base",
+      "done": "Ficha generada: revisa el título, la descripción y las etiquetas."
+    },
+    "import": {
+      "title": "Importar contenido del curso",
+      "done": "Contenido importado en la descripción (Markdown)."
+    }
+  },
+  "profile": {
+    "title": "👤 Mi Perfil",
+    "intro": "Datos personales, preferencias y seguridad de tu cuenta. Todo se guarda en tu cuenta (el avatar, en este navegador).",
+    "viewProgress": "Ver progreso",
+    "firstName": "Nombre",
+    "lastName": "Apellido",
+    "email": "Correo electrónico",
+    "emailHint": "El correo no se edita aquí.",
+    "phone": "Teléfono",
+    "phoneHint": "Opcional. Con indicativo del país (p. ej. +57).",
+    "phoneInvalid": "Teléfono no válido: solo números, espacios, guiones y + inicial.",
+    "bio": "Biografía",
+    "bioPlaceholder": "Cuéntanos qué idiomas aprendes y por qué…",
+    "timezone": "Zona horaria",
+    "preferredLanguage": "Idioma preferido",
+    "section": "Sección / Grupo",
+    "sectionPlaceholder": "Ej: 11-1",
+    "save": "Guardar datos",
+    "saving": "Guardando…",
+    "saved": "Datos actualizados correctamente.",
+    "saveError": "No se pudo guardar el perfil.",
+    "fixFields": "Revisa los campos marcados.",
+    "avatarTitle": "Avatar del Usuario",
+    "avatarIntro": "Personaliza tu representación. Los cambios se guardan en este navegador.",
+    "preview": "Vista previa",
+    "localNote": "Guardado en este navegador",
+    "eyes": "Color de ojos",
+    "skin": "Tono de piel",
+    "hair": "Cabello",
+    "clothes": "Ropa base",
+    "accessory": "Accesorio",
+    "saveAvatar": "Guardar avatar",
+    "avatarSaved": "Avatar guardado.",
+    "options": {
+      "violet": "Violeta",
+      "cyan": "Cian",
+      "green": "Verde",
+      "amber": "Ámbar",
+      "red": "Rojo",
+      "gray": "Gris",
+      "light": "Claro",
+      "mediumLight": "Medio claro",
+      "medium": "Medio",
+      "dark": "Oscuro",
+      "veryDark": "Muy oscuro",
+      "darkStraight": "Oscuro liso",
+      "brown": "Castaño",
+      "blond": "Rubio",
+      "grayHair": "Canoso",
+      "black": "Negro",
+      "casual": "Casual (violeta)",
+      "academic": "Académico (azul)",
+      "sport": "Deportivo (verde)",
+      "formal": "Formal (gris)",
+      "creative": "Creativo (coral)",
+      "none": "Ninguno",
+      "glasses": "Gafas de lectura",
+      "headphones": "Audífonos",
+      "cap": "Gorra",
+      "vr": "Casco VR"
+    },
+    "preferredLanguages": {
+      "es": "Español",
+      "en": "Inglés",
+      "pt": "Portugués"
+    },
+    "enrolledCourses": "Cursos inscritos",
+    "level": "Nivel MCER",
+    "noLevel": "Sin nivel aún",
+    "sectionHint": "Grupo o salón al que perteneces (ej. 11-1). Tu docente lo usa para filtrar estudiantes.",
+    "passwordTitle": "Cambiar contraseña",
+    "currentPassword": "Contraseña actual",
+    "newPassword": "Nueva contraseña",
+    "confirmPassword": "Repetir nueva contraseña",
+    "passwordRule": "Mínimo 8 caracteres, con mayúscula, minúscula y número.",
+    "passwordMismatch": "Las contraseñas no coinciden.",
+    "changePassword": "Actualizar contraseña",
+    "passwordChanged": "Contraseña actualizada."
+  }
+}

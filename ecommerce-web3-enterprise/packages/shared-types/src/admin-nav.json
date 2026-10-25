@@ -1,0 +1,552 @@
+{
+  "$comment": "admin-nav.json => menú ÚNICO del panel de administración (Shared Kernel / Configuration as Data). Lo leen Next.js (AdminSidebar.tsx) y Nuxt (AdminSidebar.vue): el usuario ve el mismo menú, mismos íconos y mismo orden sin importar qué aplicación sirve la pantalla (microfrontends transparentes). app = qué aplicación sirve la ruta; adminOnly = oculto al rol VENDOR; description = subtítulo de la página (lo muestra el encabezado de las pantallas de Nuxt); match = prefijos extra que marcan el ítem como activo (ej. /cms- cubre páginas, landings, eventos, lookbooks y colecciones); icons = trazos SVG 24x24 (contenido estático del repositorio). text = textos de la interfaz del panel; roles = nombre visible de cada rol. Orden: «General» primero y luego «Mi cuenta» (pedido del usuario 2026-10-11). Visibilidad: el grupo «account» lo ve todo usuario con sesión; el resto, ADMIN (el VENDOR ve además los ítems de Nuxt sin adminOnly).",
+  "groups": [
+    {
+      "key": "general",
+      "label": {
+        "es": "General",
+        "en": "General"
+      },
+      "items": [
+        {
+          "key": "overview",
+          "app": "next",
+          "path": "/dashboard",
+          "icon": "home",
+          "rf": "RF-24.5",
+          "label": {
+            "es": "Panel principal",
+            "en": "Main dashboard"
+          }
+        },
+        {
+          "key": "analytics",
+          "app": "next",
+          "path": "/dashboard/analytics",
+          "icon": "chart",
+          "adminOnly": true,
+          "rf": "RF-24",
+          "label": {
+            "es": "Analítica",
+            "en": "Analytics"
+          }
+        },
+        {
+          "key": "aiAssistant",
+          "app": "next",
+          "path": "/dashboard/ai-assistant",
+          "icon": "bot",
+          "adminOnly": true,
+          "rf": "RF-17",
+          "label": {
+            "es": "Asistente IA",
+            "en": "AI assistant"
+          }
+        }
+      ]
+    },
+    {
+      "key": "account",
+      "label": {
+        "es": "Mi cuenta",
+        "en": "My account"
+      },
+      "items": [
+        {
+          "key": "accOverview",
+          "app": "next",
+          "path": "/account",
+          "icon": "profile",
+          "rf": "RF-02",
+          "label": {
+            "es": "Mi perfil",
+            "en": "My profile"
+          }
+        },
+        {
+          "key": "accOrders",
+          "app": "next",
+          "path": "/account/orders",
+          "icon": "cart",
+          "rf": "RF-09",
+          "label": {
+            "es": "Mis pedidos",
+            "en": "My orders"
+          }
+        },
+        {
+          "key": "accWishlist",
+          "app": "next",
+          "path": "/account/wishlist",
+          "icon": "heart",
+          "rf": "RF-02.7",
+          "label": {
+            "es": "Lista de deseos",
+            "en": "Wishlist"
+          }
+        },
+        {
+          "key": "accReviews",
+          "app": "next",
+          "path": "/account/reviews",
+          "icon": "star",
+          "rf": "RF-15",
+          "label": {
+            "es": "Mis reseñas",
+            "en": "My reviews"
+          }
+        },
+        {
+          "key": "accLoyalty",
+          "app": "next",
+          "path": "/account/loyalty",
+          "icon": "badge",
+          "rf": "RF-14",
+          "label": {
+            "es": "Fidelidad y NFT",
+            "en": "Loyalty & NFTs"
+          }
+        },
+        {
+          "key": "accNotifications",
+          "app": "next",
+          "path": "/account/notifications",
+          "icon": "bell",
+          "rf": "RF-16",
+          "label": {
+            "es": "Notificaciones",
+            "en": "Notifications"
+          }
+        },
+        {
+          "key": "chatbot",
+          "app": "next",
+          "path": "/chat",
+          "icon": "chat",
+          "rf": "RF-17",
+          "label": {
+            "es": "Chatbot IA",
+            "en": "AI chatbot"
+          }
+        },
+        {
+          "key": "recommendations",
+          "app": "next",
+          "path": "/recommendations",
+          "icon": "sparkle",
+          "rf": "RF-18",
+          "label": {
+            "es": "Recomendaciones para ti",
+            "en": "Recommended for you"
+          }
+        }
+      ]
+    },
+    {
+      "key": "sales",
+      "label": {
+        "es": "Ventas",
+        "en": "Sales"
+      },
+      "items": [
+        {
+          "key": "orders",
+          "app": "next",
+          "path": "/dashboard/orders",
+          "icon": "cart",
+          "rf": "RF-09",
+          "label": {
+            "es": "Pedidos de clientes",
+            "en": "Customer orders"
+          }
+        },
+        {
+          "key": "customers",
+          "app": "next",
+          "path": "/dashboard/customers",
+          "icon": "users",
+          "adminOnly": true,
+          "rf": "RF-22",
+          "label": {
+            "es": "Clientes",
+            "en": "Customers"
+          }
+        }
+      ]
+    },
+    {
+      "key": "catalog",
+      "label": {
+        "es": "Catálogo",
+        "en": "Catalog"
+      },
+      "items": [
+        {
+          "key": "products",
+          "app": "next",
+          "path": "/dashboard/products",
+          "icon": "tag",
+          "rf": "RF-04",
+          "label": {
+            "es": "Productos",
+            "en": "Products"
+          }
+        },
+        {
+          "key": "inventory",
+          "app": "next",
+          "path": "/dashboard/inventory",
+          "icon": "box",
+          "adminOnly": true,
+          "rf": "RF-23",
+          "label": {
+            "es": "Inventario",
+            "en": "Inventory"
+          }
+        },
+        {
+          "key": "media",
+          "app": "next",
+          "path": "/dashboard/media",
+          "icon": "image",
+          "rf": "RF-26",
+          "label": {
+            "es": "Imágenes y archivos",
+            "en": "Images & files"
+          }
+        }
+      ]
+    },
+    {
+      "key": "marketing",
+      "label": {
+        "es": "Marketing y contenido",
+        "en": "Marketing & content"
+      },
+      "items": [
+        {
+          "key": "marketing",
+          "app": "next",
+          "path": "/dashboard/marketing",
+          "icon": "megaphone",
+          "adminOnly": true,
+          "rf": "RF-21",
+          "label": {
+            "es": "Campañas y correos",
+            "en": "Campaigns & emails"
+          }
+        },
+        {
+          "key": "content",
+          "app": "nuxt",
+          "path": "/cms-page",
+          "match": [
+            "/cms-"
+          ],
+          "icon": "template",
+          "description": {
+            "es": "Páginas, landings, eventos, lookbooks y colecciones en un solo listado, con el mismo editor visual para todos.",
+            "en": "Pages, landings, events, lookbooks and collections in one list, with the same visual editor for all of them."
+          },
+          "rf": "RF-25",
+          "label": {
+            "es": "Contenido del sitio",
+            "en": "Site content"
+          }
+        },
+        {
+          "key": "socialProducts",
+          "app": "nuxt",
+          "path": "/social/products",
+          "icon": "globe",
+          "description": {
+            "es": "Productos publicados en Instagram, TikTok y Facebook: publica, sincroniza y retira.",
+            "en": "Products published on Instagram, TikTok and Facebook: publish, sync and remove."
+          },
+          "rf": "RF-19.2",
+          "label": {
+            "es": "Publicaciones sociales",
+            "en": "Social posts"
+          }
+        },
+        {
+          "key": "socialAnalytics",
+          "app": "nuxt",
+          "path": "/social/analytics",
+          "icon": "chart",
+          "description": {
+            "es": "Alcance, clics y ventas por red social y por publicación.",
+            "en": "Reach, clicks and sales per social network and per post."
+          },
+          "rf": "RF-19.5",
+          "label": {
+            "es": "Analítica social",
+            "en": "Social analytics"
+          }
+        },
+        {
+          "key": "influencers",
+          "app": "nuxt",
+          "path": "/social/influencers",
+          "icon": "star",
+          "description": {
+            "es": "Ranking de influencers, códigos de referido y comisiones.",
+            "en": "Influencer ranking, referral codes and commissions."
+          },
+          "rf": "RF-19.6",
+          "label": {
+            "es": "Influencers",
+            "en": "Influencers"
+          }
+        },
+        {
+          "key": "socialChannels",
+          "app": "nuxt",
+          "path": "/social/channels",
+          "adminOnly": true,
+          "icon": "store",
+          "description": {
+            "es": "Catálogo sincronizado con Facebook, Instagram, Marketplace, WhatsApp y TikTok Shop; pedidos de esas redes y fotos de clientes (UGC) para moderar.",
+            "en": "Catalog synced with Facebook, Instagram, Marketplace, WhatsApp and TikTok Shop; orders from those networks and customer photos (UGC) to moderate."
+          },
+          "rf": "RF-19.1",
+          "label": {
+            "es": "Canales y UGC",
+            "en": "Channels & UGC"
+          }
+        },
+        {
+          "key": "liveShopping",
+          "app": "nuxt",
+          "path": "/social/live",
+          "icon": "play",
+          "description": {
+            "es": "Transmisiones de compra en vivo en varias redes a la vez, con productos y producto fijado en tiempo real.",
+            "en": "Live shopping streams on several networks at once, with products and a real-time pinned product."
+          },
+          "rf": "RF-19.9",
+          "label": {
+            "es": "Live Shopping",
+            "en": "Live Shopping"
+          }
+        }
+      ]
+    },
+    {
+      "key": "settings",
+      "label": {
+        "es": "Configuración de la tienda",
+        "en": "Store settings"
+      },
+      "items": [
+        {
+          "key": "payments",
+          "app": "nuxt",
+          "path": "/config/payments",
+          "icon": "receipt",
+          "adminOnly": true,
+          "description": {
+            "es": "Pasarelas de pago, billeteras cripto y moneda de la tienda.",
+            "en": "Payment gateways, crypto wallets and store currency."
+          },
+          "rf": "RF-27.1",
+          "label": {
+            "es": "Pagos y moneda",
+            "en": "Payments & currency"
+          }
+        },
+        {
+          "key": "shipping",
+          "app": "nuxt",
+          "path": "/config/shipping",
+          "icon": "truck",
+          "adminOnly": true,
+          "description": {
+            "es": "Transportadoras, tarifas por peso y tasas de impuesto por región.",
+            "en": "Carriers, weight-based rates and tax rates per region."
+          },
+          "rf": "RF-27.4",
+          "label": {
+            "es": "Envío e impuestos",
+            "en": "Shipping & taxes"
+          }
+        },
+        {
+          "key": "settings",
+          "app": "next",
+          "path": "/dashboard/settings",
+          "icon": "shield",
+          "adminOnly": true,
+          "rf": "RF-03",
+          "label": {
+            "es": "Equipo e integraciones",
+            "en": "Team & integrations"
+          }
+        },
+        {
+          "key": "notifications",
+          "app": "nuxt",
+          "path": "/pwa/notifications",
+          "icon": "bell",
+          "description": {
+            "es": "Avisos push del navegador: suscripción y envío de pruebas.",
+            "en": "Browser push notifications: subscription and test sends."
+          },
+          "rf": "RF-28.3",
+          "label": {
+            "es": "Notificaciones push",
+            "en": "Push notifications"
+          }
+        },
+        {
+          "key": "offline",
+          "app": "nuxt",
+          "path": "/pwa/cache",
+          "icon": "layers",
+          "adminOnly": true,
+          "description": {
+            "es": "Caché del dispositivo para usar la tienda sin conexión: tamaño y limpieza.",
+            "en": "Device cache to use the store offline: size and cleanup."
+          },
+          "rf": "RF-28",
+          "label": {
+            "es": "App y modo sin conexión",
+            "en": "App & offline mode"
+          }
+        }
+      ]
+    }
+  ],
+  "text": {
+    "panel": {
+      "es": "Panel",
+      "en": "Panel"
+    },
+    "menu": {
+      "es": "Menú principal",
+      "en": "Main menu"
+    },
+    "search": {
+      "es": "Buscar en el menú…",
+      "en": "Search the menu…"
+    },
+    "noResults": {
+      "es": "Sin resultados",
+      "en": "No results"
+    },
+    "collapse": {
+      "es": "Ocultar menú",
+      "en": "Hide menu"
+    },
+    "expand": {
+      "es": "Mostrar menú",
+      "en": "Show menu"
+    },
+    "openMenu": {
+      "es": "Abrir menú",
+      "en": "Open menu"
+    },
+    "closeMenu": {
+      "es": "Cerrar menú",
+      "en": "Close menu"
+    },
+    "store": {
+      "es": "Ver tienda",
+      "en": "View store"
+    },
+    "notifications": {
+      "es": "Notificaciones",
+      "en": "Notifications"
+    },
+    "online": {
+      "es": "En línea",
+      "en": "Online"
+    },
+    "loading": {
+      "es": "Cargando…",
+      "en": "Loading…"
+    },
+    "breadcrumb": {
+      "es": "Ruta de navegación",
+      "en": "Breadcrumb"
+    },
+    "themeDark": {
+      "es": "Modo oscuro",
+      "en": "Dark mode"
+    },
+    "themeLight": {
+      "es": "Modo claro",
+      "en": "Light mode"
+    },
+    "cart": {
+      "es": "Carrito",
+      "en": "Cart"
+    },
+    "chat": {
+      "es": "Abrir chat",
+      "en": "Open chat"
+    }
+  },
+  "roles": {
+    "ADMIN": {
+      "es": "Administrador",
+      "en": "Administrator"
+    },
+    "VENDOR": {
+      "es": "Vendedor",
+      "en": "Vendor"
+    },
+    "CUSTOMER": {
+      "es": "Cliente",
+      "en": "Customer"
+    }
+  },
+  "icons": {
+    "home": "<path d=\"M3 11 12 4l9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9Z\"/>",
+    "chart": "<path d=\"M4 20V10m6 10V4m6 16v-7m4 7H2\"/>",
+    "bot": "<rect x=\"4\" y=\"8\" width=\"16\" height=\"11\" rx=\"3\"/><path d=\"M12 4v4M9 13h.01M15 13h.01M9 16h6\"/>",
+    "cart": "<path d=\"M3 7h18l-2 13H5L3 7Z\"/><path d=\"M8 7a4 4 0 0 1 8 0\"/>",
+    "users": "<circle cx=\"9\" cy=\"8\" r=\"3.5\"/><path d=\"M2 20a7 7 0 0 1 14 0M16 4.5a3.5 3.5 0 0 1 0 7M22 20a7 7 0 0 0-4-6.3\"/>",
+    "tag": "<path d=\"M3 12V4h8l9 9-8 8-9-9Z\"/><circle cx=\"7.5\" cy=\"7.5\" r=\"1.5\"/>",
+    "box": "<path d=\"m12 3 9 4.5v9L12 21l-9-4.5v-9L12 3Zm0 9 9-4.5M12 12 3 7.5M12 12v9\"/>",
+    "image": "<rect x=\"3\" y=\"4\" width=\"18\" height=\"16\" rx=\"2\"/><circle cx=\"9\" cy=\"10\" r=\"2\"/><path d=\"m21 16-5-5-9 9\"/>",
+    "megaphone": "<path d=\"M3 11v2a1 1 0 0 0 1 1h3l9 5V5L7 10H4a1 1 0 0 0-1 1Zm16-2a3 3 0 0 1 0 6\"/>",
+    "template": "<rect x=\"3\" y=\"4\" width=\"18\" height=\"16\" rx=\"2\"/><path d=\"M3 9h18M9 9v11\"/>",
+    "globe": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18\"/>",
+    "star": "<path d=\"m12 3 2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6-4.5-4.2 6.1-.7L12 3Z\"/>",
+    "receipt": "<path d=\"M6 3h12v18l-3-2-3 2-3-2-3 2V3Zm3 5h6m-6 4h6\"/>",
+    "truck": "<path d=\"M3 6h11v10H3zM14 10h4l3 3v3h-7\"/><circle cx=\"7\" cy=\"18\" r=\"2\"/><circle cx=\"17\" cy=\"18\" r=\"2\"/>",
+    "shield": "<path d=\"M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z\"/>",
+    "bell": "<path d=\"M6 16V11a6 6 0 0 1 12 0v5l2 2H4l2-2Zm4 4a2 2 0 0 0 4 0\"/>",
+    "layers": "<path d=\"m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5\"/>",
+    "view": "<path d=\"M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/>",
+    "edit": "<path d=\"M16.9 3.6a2.1 2.1 0 0 1 3 3L8 18.5 4 20l1.5-4L16.9 3.6Z\"/><path d=\"m15 5.5 3.5 3.5\"/>",
+    "delete": "<path d=\"M4 7h16M10 11v6m4-6v6M6 7l1 13h10l1-13M9 7V4h6v3\"/>",
+    "archive": "<rect x=\"3\" y=\"4\" width=\"18\" height=\"4\" rx=\"1\"/><path d=\"M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8m-9 4h4\"/>",
+    "open": "<path d=\"M14 4h6v6m0-6-9 9m7 1v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5\"/>",
+    "send": "<path d=\"m22 2-7 20-4-9-9-4 20-7Zm0 0L11 13\"/>",
+    "play": "<path d=\"M7 4v16l13-8L7 4Z\"/>",
+    "history": "<path d=\"M3 12a9 9 0 1 0 3-6.7L3 8m0-5v5h5m4-1v5l3 3\"/>",
+    "move": "<path d=\"M7 20V4M3 8l4-4 4 4m6-4v16m-4-4 4 4 4-4\"/>",
+    "profile": "<circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21a8 8 0 0 1 16 0\"/>",
+    "check": "<path d=\"m5 12 5 5 9-10\"/>",
+    "close": "<path d=\"M6 6l12 12M18 6 6 18\"/>",
+    "refresh": "<path d=\"M20 11a8 8 0 0 0-14.9-3M4 4v4h4m-4 5a8 8 0 0 0 14.9 3M20 20v-4h-4\"/>",
+    "download": "<path d=\"M12 4v11m-5-5 5 5 5-5M4 20h16\"/>",
+    "plus": "<path d=\"M12 5v14M5 12h14\"/>",
+    "alert": "<path d=\"M12 4 2 20h20L12 4Zm0 6v4m0 3h.01\"/>",
+    "undo": "<path d=\"M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3\"/>",
+    "chat": "<path d=\"M21 12a8 8 0 0 1-11.8 7L4 20l1-4.6A8 8 0 1 1 21 12Z\"/>",
+    "heart": "<path d=\"M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z\"/>",
+    "badge": "<circle cx=\"12\" cy=\"9\" r=\"6\"/><path d=\"m9 14-1 7 4-2 4 2-1-7\"/>",
+    "pin": "<path d=\"M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11Z\"/><circle cx=\"12\" cy=\"10\" r=\"2.5\"/>",
+    "gear": "<circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6a7 7 0 0 0 0 2.4l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2Z\"/>",
+    "sparkle": "<path d=\"M12 3v4m0 10v4M3 12h4m10 0h4M6 6l2.5 2.5m7 7L18 18M6 18l2.5-2.5m7-7L18 6\"/>",
+    "search": "<circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"m20 20-4-4\"/>",
+    "menu": "<path d=\"M4 6h16M4 12h16M4 18h16\"/>",
+    "collapse": "<path d=\"M18.75 19.5l-7.5-7.5 7.5-7.5m-6 15L5.25 12l7.5-7.5\"/>",
+    "chevron": "<path d=\"m6 9 6 6 6-6\"/>",
+    "store": "<path d=\"M4 10v10h16V10M3 6l2-3h14l2 3v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0V6Zm7 14v-5h4v5\"/>",
+    "logout": "<path d=\"M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3\"/><path d=\"m10 17-5-5 5-5\"/><path d=\"M5 12h11\"/>"
+  }
+}

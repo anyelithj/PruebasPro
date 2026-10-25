@@ -1,0 +1,11 @@
+/* [@aula/ui-tokens/motion.css · Sprint 7.1 · RF-70]: respeta «reducir movimiento» del sistema operativo en Next.js y Angular (los dos cargan globals.css, que importa este archivo)
+   [Patrón]: Design Token (preferencia de accesibilidad) | [Principio]: DRY + SSOT | [A11y]: WCAG 2.3.3 «Animation from Interactions»
+   `!important`: anula cualquier animación o transición declarada después, incluidas las de utilidades de Tailwind y de librerías */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important; /* Animaciones infinitas (tarjetas flotantes de la landing) se detienen */
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

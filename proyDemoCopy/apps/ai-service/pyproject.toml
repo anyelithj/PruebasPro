@@ -1,0 +1,16 @@
+# [pyproject · ai-service]: configuración de herramientas de Python (ruff) | [Patrón]: Configuration as Code | [Principio]: SSOT (las dependencias siguen en requirements*.txt)
+# [Política de dependencias · Sprint 7.19 · RNF-32]: una librería por función — requirements.txt no se modifica; ruff (regla TID251) impide importar las alternativas no canónicas
+
+[tool.ruff.lint]
+extend-select = ["TID251"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"requests".msg = "Usa httpx (asíncrono, API única)."
+"aiohttp".msg = "Usa httpx."
+"jwt".msg = "Usa python-jose (valida el JWT de NestJS)."
+"passlib".msg = "Usa bcrypt directamente."
+"fpdf".msg = "Usa reportlab (fpdf y fpdf2 chocan entre sí)."
+"openai".msg = "IA local: httpx → Ollama (sin APIs de pago)."
+"flask".msg = "El servicio de IA es FastAPI."
+"django".msg = "El servicio de IA es FastAPI."
+"mysql".msg = "La base de datos es PostgreSQL."

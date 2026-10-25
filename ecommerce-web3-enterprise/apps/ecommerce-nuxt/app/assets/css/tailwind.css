@@ -1,0 +1,40 @@
+/* tailwind.css => entrada de Tailwind en Nuxt (@nuxtjs/tailwindcss la toma de app/assets/css) + tema claro/oscuro.
+   Misma escala y mismas reglas que app/globals.css de Next.js: la tienda y el panel se ven iguales en ambos temas. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Escala slate en canales RGB (tailwind.config.ts la lee): ".dark" la invierte => text-slate-600, bg-slate-100...
+     se adaptan sin agregar "dark:" en cada componente */
+  :root {
+    --slate-50: 248 250 252; --slate-100: 241 245 249; --slate-200: 226 232 240; --slate-300: 203 213 225;
+    --slate-400: 148 163 184; --slate-500: 100 116 139; --slate-600: 71 85 105; --slate-700: 51 65 85;
+    --slate-800: 30 41 59; --slate-900: 15 23 42; --slate-950: 2 6 23;
+    --surface: 255 255 255; /* Fondo de tarjetas/barras (bg-white) */
+  }
+  .dark {
+    color-scheme: dark; /* Controles nativos (select, scrollbar, date) también oscuros */
+    --slate-50: 2 6 23; --slate-100: 30 41 59; --slate-200: 51 65 85; --slate-300: 71 85 105;
+    --slate-400: 100 116 139; --slate-500: 148 163 184; --slate-600: 203 213 225; --slate-700: 226 232 240;
+    --slate-800: 241 245 249; --slate-900: 248 250 252; --slate-950: 255 255 255;
+    --surface: 15 23 42;
+  }
+  /* .scale-fixed => zonas SIEMPRE oscuras (menú lateral): conservan la escala slate original en .dark (igual que Next) */
+  .dark .scale-fixed {
+    --slate-50: 248 250 252; --slate-100: 241 245 249; --slate-200: 226 232 240; --slate-300: 203 213 225;
+    --slate-400: 148 163 184; --slate-500: 100 116 139; --slate-600: 71 85 105; --slate-700: 51 65 85;
+    --slate-800: 30 41 59; --slate-900: 15 23 42; --slate-950: 2 6 23;
+  }
+  body {
+    @apply bg-white text-slate-900;
+  }
+  /* "bg-white" no se remapea (text-white sobre botones de color sigue blanco): solo su fondo cambia en oscuro.
+     ponytail: los fondos claros de color (bg-red-50...) quedan claros en oscuro; agregar dark: si molesta */
+  .dark .bg-white {
+    background-color: rgb(var(--surface));
+  }
+  .dark [class*="bg-white/"] {
+    background-color: rgb(var(--surface) / 0.9);
+  }
+}

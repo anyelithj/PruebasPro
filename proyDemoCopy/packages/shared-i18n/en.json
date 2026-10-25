@@ -1,0 +1,797 @@
+{
+  "common": {
+    "notifications": "Notifications",
+    "close": "Close",
+    "toastTitle": {"success": "Done!", "error": "Could not complete", "warning": "Heads up", "info": "Notice"},
+    "saved": "Record saved successfully.",
+    "updated": "Record updated successfully.",
+    "deleted": "Record deleted.",
+    "required": "This field is required",
+    "max": "Maximum {n} characters",
+    "invalid": "Invalid value",
+    "slug": "Only lowercase letters, numbers and hyphens (e.g. english-a1)",
+    "result": {
+      "success": "Done!",
+      "error": "Could not save",
+      "close": "Close",
+      "continue": "Continue",
+      "courseCreated": "The course “{title}” was created successfully.",
+      "courseUpdated": "The course “{title}” was updated successfully.",
+      "courseError": "The course could not be saved: {reason}",
+      "examCreated": "The exam “{title}” was created successfully.",
+      "examUpdated": "The exam “{title}” was updated successfully.",
+      "examError": "The exam could not be saved: {reason}",
+      "resourceCreated": {
+        "one": "{n} resource was created successfully (saved as draft).",
+        "other": "{n} resources were created successfully (saved as drafts)."
+      },
+      "resourceUpdated": "The resource was updated successfully.",
+      "resourceError": "The resource could not be saved: {reason}",
+      "resourcePartial": "{ok} of {total} resources were created. Failed: {failed}",
+      "resourceGroupSaved": "Topic “{topic}” saved: {created} new and {updated} updated."
+    }
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "courses": "Courses",
+    "exams": "Exams",
+    "feedback": "AI Feedback",
+    "tutor": "AI tutor",
+    "writing": "Writing corrector",
+    "studyPlan": "Study plan",
+    "progress": "Progress",
+    "profile": "My profile",
+    "management": "Management",
+    "students": "Students",
+    "reports": "Reports",
+    "resources": "Resources",
+    "help": "Help",
+    "jobs": "Background jobs",
+    "certificates": "Certificates",
+    "activities": "Activities",
+    "games": "Games",
+    "practice": "Practice",
+    "vocabulary": "Vocabulary",
+    "translator": "Translator",
+    "music": "Music",
+    "dialogues": "Dialogues",
+    "polyglot": "Polyglot",
+    "grammar": "Grammar",
+    "mainNav": "Main navigation",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "hideSidebar": "Collapse sidebar",
+    "showSidebar": "Expand sidebar"
+  },
+  "roles": {
+    "estudiante": "Student",
+    "docente": "Teacher",
+    "admin": "Administrator"
+  },
+  "toolbar": {
+    "changeTheme": "Change theme",
+    "changeLanguage": "Change language",
+    "themes": {
+      "light": "Light",
+      "dark": "Dark",
+      "sepia": "Sepia",
+      "hcontrast": "High Contrast",
+      "deepfocus": "Deep Focus",
+      "vr": "Immersive VR"
+    },
+    "themesShort": {
+      "light": "Light",
+      "dark": "Dark",
+      "sepia": "Sepia",
+      "hcontrast": "Contrast",
+      "deepfocus": "Focus",
+      "vr": "VR"
+    },
+    "languages": {
+      "es": "Spanish",
+      "en": "English"
+    }
+  },
+  "languageNames": {
+    "EN": "English",
+    "FR": "French",
+    "DE": "German",
+    "ES": "Spanish",
+    "PT": "Portuguese",
+    "ZH": "Mandarin Chinese",
+    "RU": "Russian"
+  },
+  "topbar": {
+    "search": "Search courses…",
+    "searchLabel": "Search the platform",
+    "notifications": "Notifications",
+    "markAllRead": "Mark all as read",
+    "noNotifications": "You have no notifications.",
+    "notificationsError": "Notifications could not be loaded.",
+    "viewAll": "View all",
+    "cart": "Cart",
+    "cartEmpty": "Your cart is empty.",
+    "remove": "Remove {title}",
+    "total": "Total",
+    "checkout": "Checkout",
+    "checkoutSoon": "Secure payment with Stripe (test mode: no real money is charged).",
+    "profileMenu": "Profile menu",
+    "myProfile": "My profile",
+    "myProgress": "My progress",
+    "myPayments": "My payments",
+    "myWallet": "My wallet",
+    "myCertificates": "My certificates"
+  },
+  "resources": {
+    "title": "📚 Study resources",
+    "subtitle": "Vocabulary, rules, examples and exercises published by your teachers — {count}",
+    "count": {
+      "one": "{n} resource",
+      "other": "{n} resources"
+    },
+    "polyglot": "Polyglot",
+    "polyglotHint": "compare a topic’s vocabulary across the seven languages",
+    "kindsLabel": "Resource type",
+    "all": "All",
+    "language": "Language",
+    "level": "Level",
+    "allLanguages": "All",
+    "allLevels": "All",
+    "filter": "Filter",
+    "empty": "There are no published resources with these filters yet.",
+    "loadError": "Resources could not be loaded: {error}",
+    "topics": {
+      "one": "{n} topic",
+      "other": "{n} topics"
+    },
+    "topicsLabel": "Study topics",
+    "openTopic": "Open the topic “{topic}” ({count})",
+    "back": "Back to resources",
+    "topicSubtitle": "{language} · Level {level} · {count}"
+  },
+  "publicNav": {
+    "features": "Features",
+    "roles": "Roles",
+    "courses": "Courses",
+    "how": "How it works",
+    "contact": "Contact",
+    "login": "Log in",
+    "register": "Sign up",
+    "home": "Home",
+    "levels": "Levels",
+    "pricing": "Plans",
+    "faq": "FAQ"
+  },
+  "landing": {
+    "pill": "7 languages · CEFR levels A1–C2",
+    "titleA": "Learn languages with ",
+    "titleB": "guided practice and local AI",
+    "lead": "English, French, German, Spanish, Portuguese, Mandarin Chinese and Russian. Grammar, vocabulary, comprehension, writing and speaking with explained corrections and progress tracking by level.",
+    "start": "Start for free →",
+    "stats": [
+      {
+        "value": "7",
+        "label": "Languages"
+      },
+      {
+        "value": "A1–C2",
+        "label": "CEFR levels"
+      },
+      {
+        "value": "Local",
+        "label": "AI on your device"
+      }
+    ],
+    "card1Title": "B1 practice completed",
+    "card1Sub": "French · Grammar",
+    "card2Title": "Correction ready",
+    "card2Sub": "Review: present perfect",
+    "coursesEyebrow": "Language courses",
+    "coursesTitle": "Choose the language you want to learn",
+    "coursesLead": "Courses by CEFR level from A1 to C2 with grammar, vocabulary, reading, listening, writing and speaking.",
+    "coursesLevels": "Available levels",
+    "coursesCta": "View courses",
+    "coursesCount": {
+      "one": "{n} published course",
+      "other": "{n} published courses"
+    },
+    "courses": {
+      "EN": {
+        "name": "English",
+        "text": "The language of business, science and travel: conversation, grammar and exam preparation."
+      },
+      "FR": {
+        "name": "French",
+        "text": "Pronunciation, conjugation and francophone culture, from your first sentences to debate."
+      },
+      "DE": {
+        "name": "German",
+        "text": "Cases, word order and practical vocabulary to study or work in German-speaking countries."
+      },
+      "ES": {
+        "name": "Spanish",
+        "text": "Spanish as a foreign language, with the varieties of Spain and Latin America."
+      },
+      "PT": {
+        "name": "Portuguese",
+        "text": "Brazilian and European Portuguese, focused on listening and conversation."
+      },
+      "ZH": {
+        "name": "Mandarin Chinese",
+        "text": "Pinyin, tones and frequent characters with guided practice from scratch."
+      },
+      "RU": {
+        "name": "Russian",
+        "text": "Cyrillic alphabet, cases and everyday conversation step by step."
+      }
+    },
+    "featuresEyebrow": "Features",
+    "featuresTitle": "Everything you need to learn a language",
+    "featuresLead": "Content structured by language, CEFR level and skill, with AI only where it adds value.",
+    "features": [
+      {
+        "title": "Practice by CEFR level",
+        "text": "A1 to C2 exercises that adapt to the mistakes you make, not to assumptions."
+      },
+      {
+        "title": "Explained corrections",
+        "text": "Every mistake includes the rule, an example and a translation."
+      },
+      {
+        "title": "Progress by skill",
+        "text": "Track your progress in grammar, vocabulary, reading, listening, writing and speaking."
+      },
+      {
+        "title": "Smart review",
+        "text": "Spaced repetition and interleaved practice based on your recurring mistakes."
+      },
+      {
+        "title": "Practice exams",
+        "text": "Original tests by language, level and skill to prepare for certifications. They are not official exams."
+      },
+      {
+        "title": "Tailored roles",
+        "text": "An experience adapted for students, language teachers and administrators."
+      }
+    ],
+    "rolesEyebrow": "System roles",
+    "rolesTitle": "An experience for every user",
+    "rolesLead": "Features designed around each role in the language platform.",
+    "roles": [
+      {
+        "badge": "Student",
+        "title": "Learn at your pace",
+        "text": "Practice the language and level you choose with clear corrections.",
+        "items": [
+          "Practice by language, level and skill",
+          "Get explained corrections",
+          "See your progress by CEFR level",
+          "Review your frequent mistakes"
+        ],
+        "cta": "Enter as a student"
+      },
+      {
+        "badge": "Teacher",
+        "title": "Teach with data",
+        "text": "Create practice and follow your students' progress.",
+        "items": [
+          "Create practice and exams by level",
+          "Review and approve generated content",
+          "See recurring mistakes by skill",
+          "Teacher dashboard with metrics"
+        ],
+        "cta": "Enter as a teacher"
+      },
+      {
+        "badge": "Administrator",
+        "title": "Manage the platform",
+        "text": "Control of users and curriculum content.",
+        "items": [
+          "Manage students and teachers",
+          "Administer exams and content",
+          "Oversee the platform",
+          "Admin dashboard"
+        ],
+        "cta": "Enter as admin"
+      }
+    ],
+    "howEyebrow": "How it works",
+    "howTitle": "Learn a language in 3 steps",
+    "steps": [
+      {
+        "title": "Sign up",
+        "text": "Create your account and choose the language you want to learn."
+      },
+      {
+        "title": "Practice at your level",
+        "text": "Solve exercises at your CEFR level in the skill you want to strengthen."
+      },
+      {
+        "title": "Correct and review",
+        "text": "Understand each mistake and review it at the right time so you don't forget it."
+      }
+    ],
+    "ctaTitle": "Start learning languages with {brand}",
+    "ctaText": "Seven languages, six CEFR levels and corrections you can understand.",
+    "ctaButton": "Create a free account →",
+    "footerAbout": "A platform to learn languages by CEFR levels, with local AI used only when it adds value.",
+    "footerProduct": "Product",
+    "footerAccount": "Account",
+    "footerContact": "Contact",
+    "footerRights": "Educational and portfolio project.",
+    "levelsEyebrow": "CEFR levels",
+    "levelsTitle": "From your first sentences to mastery",
+    "levelsLead": "The Common European Framework of Reference orders learning in six levels; every course states its own.",
+    "levels": {
+      "A1": "Breakthrough: introduce yourself and everyday phrases.",
+      "A2": "Waystage: routines, shopping and simple conversations.",
+      "B1": "Threshold: travel, opinions and clear texts.",
+      "B2": "Vantage: debates, articles and fluency with natives.",
+      "C1": "Effective proficiency: complex texts and professional use.",
+      "C2": "Mastery: nuance, irony and near-native precision."
+    },
+    "aiEyebrow": "Local AI and privacy",
+    "aiTitle": "AI runs on the platform server, not in the cloud",
+    "aiLead": "We use open models with Ollama only when they add value; teacher-approved content comes first.",
+    "aiPoints": [
+      {
+        "title": "Your texts stay with us",
+        "text": "Corrector, tutor and Guide Agent use local models: your writing is not sent to external services."
+      },
+      {
+        "title": "Reviewed content first",
+        "text": "The tutor answers with the approved curriculum; AI only drafts and is always labelled as such."
+      },
+      {
+        "title": "Verifiable certificates",
+        "text": "The PDF fingerprint is anchored on the Sepolia test network: anyone can check it was not altered."
+      }
+    ],
+    "pricingEyebrow": "Plans",
+    "pricingTitle": "Start free, pay only for the course you want",
+    "pricingLead": "No subscriptions: each paid course is bought once and it is yours.",
+    "plans": [
+      {
+        "id": "free",
+        "name": "Free",
+        "price": "US$0",
+        "text": "To start today.",
+        "items": [
+          "Complete free courses",
+          "Exams and feedback",
+          "AI tutor and Guide Agent"
+        ],
+        "cta": "Create a free account"
+      },
+      {
+        "id": "course",
+        "name": "Course",
+        "price": "One-off payment",
+        "text": "To go deep into one language.",
+        "items": [
+          "Full course material",
+          "Verifiable certificate at 100 %",
+          "Forum for every lesson"
+        ],
+        "cta": "Choose a course"
+      }
+    ],
+    "paymentNote": "Pay by card (Stripe) or with ETH on the Sepolia test network. This is a demo environment: no real money is charged.",
+    "faqEyebrow": "FAQ",
+    "faqTitle": "Your questions, answered",
+    "faqMore": "See all in the Help center →",
+    "faqFallback": [
+      {
+        "q": "Does the platform charge real money?",
+        "a": "Not in this environment: payments use Stripe test mode and Sepolia test ETH."
+      },
+      {
+        "q": "When do I get my certificate?",
+        "a": "When you complete 100 % of the course you request it in \"My certificates\" and download the verifiable PDF."
+      },
+      {
+        "q": "What is the difference between the AI tutor and the Guide Agent?",
+        "a": "The tutor teaches the language; the Guide Agent explains how to use the platform and cites the manual."
+      }
+    ],
+    "langTitle": "Learn {lang} by CEFR level",
+    "langLead": "{lang} courses from A1 to C2 with explained corrections, practice exams and a verifiable certificate.",
+    "langOthers": "Other languages",
+    "verifyCertificate": "Verify a certificate",
+    "terms": "Terms and privacy"
+  },
+  "auth": {
+    "asideTitle": "Welcome back",
+    "asideText": "Continue your learning journey. Your brain is ready to grow.",
+    "asidePoints": [
+      "Seven languages, CEFR levels from A1 to C2",
+      "AI-explained corrections running on our own server",
+      "Verifiable certificates with a QR code"
+    ],
+    "email": "Email",
+    "password": "Password",
+    "or": "or continue with",
+    "orRegister": "or sign up with",
+    "login": {
+      "title": "Log in",
+      "subtitle": "Access your {brand} account.",
+      "formLabel": "Login form",
+      "remember": "Remember me",
+      "forgot": "Forgot your password?",
+      "submit": "Log in",
+      "submitting": "Logging in…",
+      "noAccount": "Don't have an account?",
+      "registerLink": "Sign up"
+    },
+    "register": {
+      "title": "Create account",
+      "subtitle": "Sign up for free at {brand}.",
+      "formLabel": "Registration form",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "confirm": "Confirm",
+      "termsA": "I accept the ",
+      "termsLink": "terms and privacy policy",
+      "submit": "Create account",
+      "submitting": "Creating account…",
+      "hasAccount": "Already have an account?",
+      "loginLink": "Log in"
+    },
+    "forgot": {
+      "title": "Recover password",
+      "subtitle": "Enter your email and we will send you a link to create a new password.",
+      "formLabel": "Password recovery form",
+      "submit": "Send link",
+      "submitting": "Sending…",
+      "resend": "Resend link",
+      "sent": "If the email is registered, you will receive a link to reset your password. Check your spam folder too.",
+      "error": "The link could not be sent. Please try again.",
+      "tooMany": "Too many attempts. Wait a minute and try again.",
+      "remembered": "Remembered it?"
+    },
+    "reset": {
+      "title": "New password",
+      "subtitle": "Choose a strong password (at least 8 characters, uppercase, lowercase and a digit).",
+      "formLabel": "Password reset form",
+      "newPassword": "New password",
+      "confirm": "Confirm password",
+      "submit": "Update password",
+      "submitting": "Updating…",
+      "success": "Password updated. Redirecting to log in…",
+      "error": "The password could not be updated.",
+      "invalid": "The link is invalid or has expired. Request a new one.",
+      "missingTitle": "Incomplete link",
+      "missingA": "The link does not contain the recovery code. Request a new one from ",
+      "missingLink": "recover password",
+      "requestNew": "Request a new link",
+      "remembered": "Remember your password?"
+    },
+    "magic": {
+      "label": "Sign in without a password: we email you a link",
+      "placeholder": "Email",
+      "send": "Send link",
+      "sending": "Sending…",
+      "sent": "If the email is registered, you will receive a link valid for 15 minutes.",
+      "error": "The link could not be sent",
+      "invalid": "The sign-in link is not valid or was already used. Request a new one."
+    },
+    "oauth": {
+      "connecting": "Connecting…",
+      "withProvider": "Log in with {provider}",
+      "error": "Could not start OAuth"
+    },
+    "validation": {
+      "emailRequired": "Email is required",
+      "emailInvalid": "Invalid email format",
+      "passwordMin": "Password must be at least 8 characters",
+      "passwordRule": "Must include an uppercase letter, a lowercase letter and a number",
+      "passwordMax": "Maximum 128 characters",
+      "firstNameRequired": "First name is required",
+      "firstNameMax": "First name is too long",
+      "lastNameRequired": "Last name is required",
+      "lastNameMax": "Last name is too long",
+      "mismatch": "Passwords do not match",
+      "terms": "You must accept the terms"
+    }
+  },
+  "management": {
+    "title": "Management",
+    "subtitleAdmin": "Manage users, exams, courses and learning resources from a single panel.",
+    "subtitleTeacher": "Manage your exams and learning resources.",
+    "tabsLabel": "Management tabs",
+    "tabs": {
+      "users": "Users",
+      "exams": "Exams",
+      "courses": "Courses",
+      "content": "Resources",
+      "activities": "Activities"
+    },
+    "row": {
+      "view": "View",
+      "edit": "Edit",
+      "publish": "Publish",
+      "unpublish": "Unpublish",
+      "published": "“{title}” published: students can see it now.",
+      "unpublished": "“{title}” unpublished: back to draft.",
+      "delete": "Delete",
+      "deleteConfirm": "Are you sure you want to delete “{title}”? This cannot be undone.",
+      "deleting": "Deleting…",
+      "cancel": "Cancel"
+    }
+  },
+  "courses": {
+    "title": "🌐 Language courses",
+    "subtitle": "{heading} · CEFR levels A1–C2 — {count}",
+    "count": {
+      "one": "{n} course",
+      "other": "{n} courses"
+    },
+    "allLanguages": "All languages",
+    "filtersLabel": "Course filters",
+    "languagesLabel": "Languages",
+    "searchLabel": "Search course",
+    "searchPlaceholder": "Search course (e.g. French B1)…",
+    "search": "Search",
+    "all": "All",
+    "empty": "There are no courses in this selection.",
+    "noResults": "No results for “{q}”.",
+    "loadError": "The catalog could not be loaded — {error}.",
+    "loadErrorHint": "Check that the backend is available at /api/v1/courses.",
+    "pagination": "Course pagination",
+    "materials": {
+      "title": "📚 Course syllabus",
+      "empty": "This course has no material yet.",
+      "openPdf": "Open PDF in a new tab",
+      "upload": "Attach material",
+      "uploadHint": "Admins only. MP4/WebM video, PDF or image (PNG/JPG/WebP/GIF), max. {mb} MB.",
+      "uploading": "Uploading… {pct}%",
+      "remove": "Remove",
+      "locked": "🔒 Buy the course or enroll (if it is free) to see its videos, PDFs, images and other resources.",
+      "syllabus": "Syllabus",
+      "lesson": "Lesson {n} of {total}",
+      "prev": "← Previous",
+      "next": "Next →",
+      "markDone": "Mark as complete",
+      "done": "Completed",
+      "current": "In progress",
+      "pending": "Pending",
+      "progressLabel": "Course progress",
+      "adminNoProgress": "Admin view: progress is only recorded for enrolled users.",
+      "manage": "Manage material",
+      "lockedStep": "Locked",
+      "lockedHint": "Complete the previous lesson to unlock this one.",
+      "back": "← Back to syllabus",
+      "resources": "Resources",
+      "resVideos": "🎞️ Videos",
+      "resPdfs": "📄 PDFs",
+      "resImages": "🖼️ Images",
+      "resDone": "✓ Lessons completed",
+      "start": "▶ Start course",
+      "resume": "▶ Continue lesson",
+      "review": "↺ Review from the start",
+      "lessonNav": "Lesson navigation",
+      "breadcrumb": "Lesson breadcrumb",
+      "reader": {
+        "title": "🔊 Read aloud",
+        "hint": "Click a sentence to read from there (the spoken word is highlighted). Select a word or paragraph to translate it.",
+        "loading": "Extracting the PDF text…",
+        "ocr": "Reading the scanned PDF with OCR… page {page} of {total}",
+        "noText": "This PDF has no selectable text (it is probably a scan).",
+        "loadError": "The PDF text could not be read.",
+        "noTts": "Your browser does not support read aloud.",
+        "play": "▶ Read",
+        "pause": "⏸ Pause",
+        "resume": "▶ Resume",
+        "stop": "⏹ Stop",
+        "speed": "Speed",
+        "noVoice": "No voice is installed for this language; the default one is used.",
+        "translateAll": "🌐 Translate all to {lang}",
+        "listen": "🔊 Listen",
+        "selection": "Selection translation",
+        "close": "Close",
+        "translateOff": "🌐 Hide translation",
+        "translating": "Translating…",
+        "translateUnavailable": "The browser's built-in translator is not available here.",
+        "openTranslate": "Open in Google Translate ↗",
+        "textLabel": "PDF text"
+      }
+    },
+    "card": {
+      "view": "View {title}",
+      "levelTitle": "CEFR level {level}",
+      "level": "Level {level}",
+      "students": "stu.",
+      "locked": "Locked course: purchase required",
+      "progress": "Course progress: {pct}%",
+      "lab": "Lab",
+      "goLab": "Go to Lab: {lab}",
+      "labLocked": "Start the course to access the Lab"
+    },
+    "price": {
+      "free": "✅ FREE",
+      "freeLabel": "Free course",
+      "promo": "Promotion",
+      "equiv": "💎 Equiv. {tokens} TNA",
+      "original": "Original price {price}",
+      "probono": "ProBono Scholarship",
+      "apply": "Apply"
+    },
+    "actions": {
+      "certificate": "◈ Certificate",
+      "continue": "▶ Continue",
+      "enterFree": "Enroll for free",
+      "enrolling": "Enrolling…",
+      "buy": "🛒 Buy",
+      "inCart": "✓ In cart",
+      "start": "▶ Start",
+      "favorite": "★ Favorite",
+      "like": "👍 Like",
+      "love": "❤ Love"
+    }
+  },
+  "adminCourses": {
+    "count": {
+      "one": "{n} course on the platform.",
+      "other": "{n} courses on the platform."
+    },
+    "create": "+ Create course",
+    "loadError": "Courses could not be loaded: {error}",
+    "empty": "There are no courses yet. Create the first one with “+ Create course”.",
+    "columns": {
+      "title": "Course",
+      "language": "Language",
+      "level": "Level",
+      "price": "Price",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "editTitle": "Edit course",
+    "editSubtitle": "Same form as creation: change what you need and save.",
+    "submitEdit": "Save changes",
+    "submittingEdit": "Saving…",
+    "published": "Published",
+    "draft": "Draft",
+    "free": "Free",
+    "newTitle": "New course",
+    "newSubtitle": "Fill in the course details. Only an administrator can create it.",
+    "back": "Back to courses",
+    "fields": {
+      "title": "Title",
+      "slug": "Slug (URL)",
+      "slugHint": "Filled in automatically from the title; you can adjust it.",
+      "access": "Course type",
+      "accessFree": "Free",
+      "accessPaid": "Paid",
+      "pricePaidRequired": "A paid course needs a price greater than 0.",
+      "description": "Description",
+      "descriptionHint": "What the student will learn. The first sentences are used as the summary on the course card.",
+      "language": "Language",
+      "level": "CEFR level",
+      "instructor": "Instructor",
+      "instructorTitle": "Instructor title",
+      "tags": "Tags",
+      "tagsHint": "Tick the topics the course covers (max. 10). They help search and show on the card.",
+      "lab": "Lab",
+      "labNone": "No lab",
+      "labHint": "Practice space unlocked when the course starts (“Lab” button on the card).",
+      "price": "Price (USD)",
+      "originalPrice": "Original price (USD)",
+      "durationHours": "Duration (hours)",
+      "durationHint": "Estimated total hours. Default 40 h.",
+      "modality": "Modality",
+      "isProBono": "Available with ProBono Scholarship",
+      "isPublished": "Published"
+    },
+    "submit": "Create course",
+    "submitting": "Creating…",
+    "materials": {
+      "title": "Course material",
+      "hint": "Attach videos, audio, PDFs, images and documents (Word, Excel, PowerPoint, TXT) or external links. Max {mb} MB per file. Uploaded when the course is saved.",
+      "add": "+ Attach file",
+      "titleLabel": "Material title",
+      "remove": "Remove {name}",
+      "tooBig": "“{name}” exceeds {mb} MB.",
+      "badType": "“{name}” is not a supported format (video, audio, PDF, image or document).",
+      "uploading": "Uploading material {n} of {total}…",
+      "partialFail": "The course was saved, but these could not be uploaded: {names}. Attach them again from “Edit”.",
+      "linkLabel": "External link (YouTube, article, podcast…)",
+      "linkAdd": "+ Add link",
+      "linkInvalid": "Enter a valid link (https://…)."
+    },
+    "fixFields": "Check the highlighted fields.",
+    "saveError": "The course could not be saved.",
+    "ai": {
+      "title": "Generate with AI",
+      "hint": "The local AI suggests a title, a Markdown description (objectives and syllabus) and tags from the language and level. Review it before saving.",
+      "topic": "Focus (optional)",
+      "topicPlaceholder": "e.g. English for travel, business conversation",
+      "run": "Generate",
+      "running": "Generating… (may take 1–2 min)",
+      "useImported": "Use the imported content as a base",
+      "done": "Draft generated: review the title, description and tags."
+    },
+    "import": {
+      "title": "Import course content",
+      "done": "Content imported into the description (Markdown)."
+    }
+  },
+  "profile": {
+    "title": "👤 My Profile",
+    "intro": "Personal data, preferences and account security. Everything is saved to your account (the avatar, in this browser).",
+    "viewProgress": "View progress",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "email": "Email",
+    "emailHint": "The email cannot be edited here.",
+    "phone": "Phone",
+    "phoneHint": "Optional. Include the country code (e.g. +1).",
+    "phoneInvalid": "Invalid phone: only digits, spaces, dashes and a leading +.",
+    "bio": "Biography",
+    "bioPlaceholder": "Tell us which languages you are learning and why…",
+    "timezone": "Time zone",
+    "preferredLanguage": "Preferred language",
+    "section": "Section / Group",
+    "sectionPlaceholder": "E.g. 11-1",
+    "save": "Save data",
+    "saving": "Saving…",
+    "saved": "Data updated successfully.",
+    "saveError": "The profile could not be saved.",
+    "fixFields": "Check the highlighted fields.",
+    "avatarTitle": "User Avatar",
+    "avatarIntro": "Customize your representation. Changes are saved in this browser.",
+    "preview": "Preview",
+    "localNote": "Saved in this browser",
+    "eyes": "Eye color",
+    "skin": "Skin tone",
+    "hair": "Hair",
+    "clothes": "Base clothing",
+    "accessory": "Accessory",
+    "saveAvatar": "Save avatar",
+    "avatarSaved": "Avatar saved.",
+    "options": {
+      "violet": "Violet",
+      "cyan": "Cyan",
+      "green": "Green",
+      "amber": "Amber",
+      "red": "Red",
+      "gray": "Gray",
+      "light": "Light",
+      "mediumLight": "Medium light",
+      "medium": "Medium",
+      "dark": "Dark",
+      "veryDark": "Very dark",
+      "darkStraight": "Dark straight",
+      "brown": "Brown",
+      "blond": "Blond",
+      "grayHair": "Gray",
+      "black": "Black",
+      "casual": "Casual (violet)",
+      "academic": "Academic (blue)",
+      "sport": "Sport (green)",
+      "formal": "Formal (gray)",
+      "creative": "Creative (coral)",
+      "none": "None",
+      "glasses": "Reading glasses",
+      "headphones": "Headphones",
+      "cap": "Cap",
+      "vr": "VR headset"
+    },
+    "preferredLanguages": {
+      "es": "Spanish",
+      "en": "English",
+      "pt": "Portuguese"
+    },
+    "enrolledCourses": "Enrolled courses",
+    "level": "CEFR level",
+    "noLevel": "No level yet",
+    "sectionHint": "Group or classroom you belong to (e.g. 11-1). Your teacher uses it to filter students.",
+    "passwordTitle": "Change password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmPassword": "Repeat new password",
+    "passwordRule": "At least 8 characters, with uppercase, lowercase and a digit.",
+    "passwordMismatch": "Passwords do not match.",
+    "changePassword": "Update password",
+    "passwordChanged": "Password updated."
+  }
+}

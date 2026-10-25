@@ -1,0 +1,885 @@
+{
+  "common": {
+    "skipToContent": "Skip to main content",
+    "close": "Close",
+    "loading": "Loading…",
+    "empty": "No records",
+    "pagination": "Pagination",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {page} of {total}",
+    "actions": "Actions",
+    "all": "All",
+    "delete": "Delete",
+    "edit": "Edit",
+    "save": "Save",
+    "view": "View",
+    "new": "New",
+    "back": "Back"
+  },
+  "nav": {
+    "main": "Main navigation",
+    "home": "Home",
+    "landings": "Promotions",
+    "lookbooks": "Lookbooks",
+    "collections": "Collections",
+    "categories": "Categories",
+    "events": "Events",
+    "blog": "Blog",
+    "panel": "Dashboard",
+    "signIn": "Sign in",
+    "register": "Sign up",
+    "breadcrumb": "Breadcrumb"
+  },
+  "footer": {
+    "green": "Low-energy site: cached pages and no third-party trackers",
+    "privacy": "Your data is handled under our privacy policy."
+  },
+  "error": {
+    "notFound": "Page not found",
+    "notFoundHint": "The link may be broken or the content is no longer published.",
+    "generic": "Something went wrong",
+    "genericHint": "Please try again in a few seconds.",
+    "home": "Go home"
+  },
+  "auth": {
+    "title": "Dashboard sign in",
+    "subtitle": "Use your store admin or vendor account.",
+    "email": "Email",
+    "password": "Password",
+    "code": "Verification code",
+    "codeHint": "6 digits from your authenticator app",
+    "submit": "Sign in",
+    "verify": "Verify",
+    "invalid": "Invalid credentials or locked account",
+    "noPanel": "Your account cannot access the dashboard",
+    "logout": "Sign out"
+  },
+  "admin": {
+    "title": "Admin panel",
+    "viewSite": "View site",
+    "backToDashboard": "Back to dashboard",
+    "menu": "Dashboard menu",
+    "groups": {
+      "cms": "CMS",
+      "social": "Social commerce",
+      "pwa": "PWA",
+      "config": "Settings"
+    },
+    "nav": {
+      "pages": "Site content",
+      "lookbooks": "Lookbooks",
+      "collections": "Collections",
+      "socialProducts": "Posts",
+      "socialAnalytics": "Social analytics",
+      "influencers": "Influencers",
+      "cache": "Cache",
+      "notifications": "Notifications",
+      "payments": "Payments and currency",
+      "shipping": "Shipping and taxes"
+    },
+    "backToStore": "Back to store",
+    "collapse": "Hide menu",
+    "expand": "Show menu",
+    "userMenu": {
+      "label": "Account menu",
+      "account": "My account",
+      "orders": "My orders",
+      "wishlist": "Wishlist",
+      "loyalty": "Loyalty & NFTs",
+      "recommendations": "Recommended for you",
+      "assistant": "AI chatbot",
+      "settings": "Settings",
+      "signOut": "Sign out",
+      "dashboard": "Admin panel"
+    }
+  },
+  "cms": {
+    "editorTitle": "Content editor",
+    "kindsLabel": "Content type",
+    "kinds": {
+      "page": "page",
+      "landing": "landing",
+      "lookbook": "lookbook",
+      "event": "event",
+      "collection": "collection"
+    },
+    "kindsPlural": {
+      "page": "Pages",
+      "landing": "Landings",
+      "event": "Events",
+      "lookbook": "Lookbooks",
+      "collection": "Collections"
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "PUBLISHED": "Published",
+      "ARCHIVED": "Archived"
+    },
+    "new": "New {kind}",
+    "newTitle": "Create {kind}",
+    "editTitle": "Edit {kind}",
+    "saved": "Content saved",
+    "archive": "Archive",
+    "archived": "Archived",
+    "confirmArchive": "Archive “{title}”? It will no longer be visible.",
+    "leave": "You have unsaved changes. Leave anyway?",
+    "updated": "Updated",
+    "canvas": "Editor canvas",
+    "fields": {
+      "title": "Title",
+      "slug": "URL (slug)",
+      "slugHint": "Lowercase, numbers and hyphens",
+      "summary": "Summary",
+      "status": "Status",
+      "locale": "Language",
+      "headline": "Headline",
+      "ctaLabel": "Button text",
+      "ctaUrl": "Button link",
+      "couponCode": "Coupon",
+      "offerEnds": "Offer ends",
+      "startsAt": "Starts",
+      "endsAt": "Ends",
+      "location": "Location",
+      "online": "Online event",
+      "eventUrl": "Event link",
+      "season": "Season",
+      "seoTitle": "SEO title",
+      "seoTitleHint": "Up to 70 characters",
+      "seoDescription": "Meta description",
+      "seoDescriptionHint": "Up to 160 characters",
+      "name": "Name",
+      "description": "Description",
+      "imageUrl": "Image URL",
+      "active": "Active",
+      "lookDiscount": "Complete look discount (%)",
+      "lookDiscountHint": "1 to 90. Applied at checkout when the cart has every product of the collection. Empty = no discount.",
+      "kind": "Type"
+    },
+    "media": {
+      "title": "Images",
+      "upload": "Upload image",
+      "uploading": "Uploading…",
+      "cover": "Upload cover",
+      "alt": "Alt text",
+      "altRequired": "Every image needs alt text",
+      "invalid": "Format not allowed or larger than 5 MB",
+      "uploadError": "The image could not be uploaded"
+    },
+    "products": {
+      "title": "Featured products",
+      "search": "Search products",
+      "placeholder": "Name or SKU",
+      "selected": "Selected products",
+      "remove": "Remove {name}",
+      "found": "{count} results",
+      "choose": "Choose"
+    },
+    "lookbook": {
+      "tagHint": "Click a photo to tag a product",
+      "tagTitle": "Tag product",
+      "removeTag": "Remove tag {n}",
+      "viewProduct": "View product {n} in photo {photo}"
+    },
+    "collection": {
+      "products": "{count} products",
+      "until": "until {date}",
+      "lookDiscount": "Get the complete look and save {percent}%"
+    },
+    "toolbar": {
+      "label": "Editor tools",
+      "desktop": "Desktop",
+      "tablet": "Tablet",
+      "mobile": "Mobile",
+      "undo": "Undo",
+      "redo": "Redo",
+      "preview": "Preview",
+      "unsaved": "Unsaved changes",
+      "saved": "All saved"
+    },
+    "blocks": {
+      "layout": "Layout",
+      "basic": "Basic",
+      "hero": "Hero",
+      "heroTitle": "New collection",
+      "heroText": "Discover this season's pieces",
+      "cta": "Shop now",
+      "columns": "Two columns",
+      "title": "Title",
+      "text": "Write your content here.",
+      "textBlock": "Text",
+      "image": "Image",
+      "imageAlt": "Describe the image",
+      "caption": "Caption",
+      "button": "Button",
+      "quote": "Testimonial",
+      "author": "Customer",
+      "notice": "Notice",
+      "noticeText": "Free shipping on orders over $200,000"
+    },
+    "contentHint": "Pages, landings, events, lookbooks and collections in one place: same list and same editor for all of them.",
+    "newKind": {
+      "page": "New page",
+      "landing": "New landing",
+      "event": "New event",
+      "lookbook": "New lookbook",
+      "collection": "New collection"
+    },
+    "viewPublic": "View published",
+    "kindFilter": "Type"
+  },
+  "landing": {
+    "listTitle": "Promotions",
+    "listDescription": "Current deals and launches.",
+    "empty": "No active promotions",
+    "cta": "See offer",
+    "coupon": "Use coupon",
+    "endsAt": "Offer ends on {date}",
+    "endsIn": "Ends in",
+    "ended": "Offer ended",
+    "units": {
+      "days": "days",
+      "hours": "hours",
+      "minutes": "min",
+      "seconds": "sec"
+    },
+    "testimonials": "What our customers say",
+    "leadTitle": "Get the offer by email",
+    "email": "Email",
+    "name": "Name (optional)",
+    "consent": "I agree to the processing of my data to receive communications",
+    "subscribe": "Subscribe",
+    "thanks": "Thanks! Check your inbox.",
+    "leadError": "We could not register your email. Try again.",
+    "tooMany": "Too many attempts. Wait a few minutes."
+  },
+  "lookbook": {
+    "title": "Lookbooks",
+    "description": "Style inspiration with shoppable products.",
+    "empty": "No lookbooks published yet"
+  },
+  "collection": {
+    "title": "Collections",
+    "description": "Seasonal picks and special editions.",
+    "empty": "No active collections",
+    "new": "New collection",
+    "edit": "Edit collection"
+  },
+  "category": {
+    "title": "Categories",
+    "description": "Browse the catalog by category.",
+    "subcategories": "Subcategories"
+  },
+  "events": {
+    "title": "Events",
+    "description": "Launches, fairs and live streams.",
+    "empty": "No events to show",
+    "online": "Online",
+    "upcoming": "View upcoming",
+    "past": "View past events",
+    "startsIn": "Starts in",
+    "join": "Join event"
+  },
+  "blog": {
+    "title": "Blog",
+    "description": "Guides, trends and sustainability.",
+    "empty": "No posts match these filters",
+    "filters": "Blog filters",
+    "categories": "Categories",
+    "tags": "Tags",
+    "all": "All",
+    "related": "You may also like",
+    "listView": "List view",
+    "gridView": "Grid view"
+  },
+  "social": {
+    "feed": "Social posts",
+    "new": "New post",
+    "publish": "Save",
+    "published": "Post sent",
+    "draftSaved": "Draft saved",
+    "detail": "Post details",
+    "confirmDelete": "Delete this post?",
+    "deleted": "Post deleted",
+    "publishedAt": "Published on {date}",
+    "scheduledFor": "Scheduled for {date}",
+    "linkCopied": "Link copied",
+    "status": {
+      "DRAFT": "Draft",
+      "SCHEDULED": "Scheduled",
+      "PUBLISHING": "Publishing",
+      "PUBLISHED": "Published",
+      "FAILED": "Failed"
+    },
+    "metrics": {
+      "impressions": "Impressions",
+      "clicks": "Clicks",
+      "purchases": "Purchases"
+    },
+    "fields": {
+      "caption": "Caption",
+      "mediaUrl": "Image URL",
+      "mediaUrlHint": "HTTPS: networks download the image",
+      "mediaAlt": "Alt text",
+      "platforms": "Networks",
+      "platformsHint": "No networks = store feed only",
+      "handle": "Influencer handle",
+      "influencer": "Influencer name",
+      "referral": "Referral code",
+      "scheduledAt": "Schedule for",
+      "draft": "Save as draft",
+      "format": "Format",
+      "linkUrl": "Shopping link",
+      "linkUrlHint": "UTM is added to attribute the sale to the Story"
+    },
+    "analytics": {
+      "title": "Performance by network",
+      "platform": "Network",
+      "posts": "Posts"
+    },
+    "influencer": {
+      "commission": "Estimated commission",
+      "commissions": "Commissions",
+      "rate": "Rate",
+      "total": "Total due",
+      "estimateHint": "Estimate: purchases × average tagged product price × rate.",
+      "summary": "{posts} posts · {clicks} clicks · {purchases} purchases",
+      "ranking": "Top influencers",
+      "none": "No influencer posts yet",
+      "purchases": "{count} purchases"
+    },
+    "checkout": {
+      "title": "Social checkout",
+      "description": "Create shoppable links with UTM and referral code for your networks.",
+      "product": "Product",
+      "productId": "Selected product",
+      "campaign": "Campaign",
+      "campaignHint": "E.g. black-friday",
+      "generate": "Generate and copy link",
+      "links": "Generated links",
+      "empty": "No links generated yet"
+    },
+    "sentiment": {
+      "title": "Social media sentiment",
+      "period": "Period",
+      "days": "{n} days",
+      "labels": {
+        "positive": "Positive",
+        "neutral": "Neutral",
+        "negative": "Negative",
+        "mixed": "Mixed"
+      },
+      "emotions": "Emotions",
+      "emotionNames": {
+        "happiness": "Happiness",
+        "frustration": "Frustration",
+        "surprise": "Surprise",
+        "disappointment": "Disappointment"
+      },
+      "causes": "Causes of negative sentiment",
+      "noCauses": "No negative causes detected"
+    },
+    "formats": {
+      "FEED": "Post",
+      "STORY": "Story (24 h)"
+    },
+    "channels": {
+      "title": "Catalog on social networks",
+      "hint": "Prices, photos and inventory are published to each channel; every sale reduces the single stock and is reflected everywhere.",
+      "sync": "Sync",
+      "syncResult": "{channel}: {synced} published, {failed} with errors",
+      "noneConfigured": "No channels configured",
+      "channel": "Channel",
+      "state": "Status",
+      "listed": "Listed SKUs",
+      "errors": "Errors",
+      "lastSync": "Last sync",
+      "configured": "Connected",
+      "notConfigured": "No credentials",
+      "names": {
+        "META": "Meta Commerce",
+        "TIKTOK_SHOP": "TikTok Shop"
+      },
+      "covers": {
+        "META": "Facebook Shop · Instagram Shopping · Marketplace · WhatsApp",
+        "TIKTOK_SHOP": "Official TikTok store"
+      },
+      "ordersHint": "Orders paid inside Facebook, Instagram or TikTok arrive by webhook (/webhook/channel) and become regular orders: same warehouse, invoice and shipping."
+    },
+    "ugc": {
+      "title": "Customer content (UGC)",
+      "status": "Status",
+      "statuses": {
+        "PENDING": "To review",
+        "APPROVED": "Approved",
+        "REJECTED": "Rejected"
+      },
+      "importTitle": "Import Instagram mentions",
+      "hashtag": "Hashtag (optional)",
+      "import": "Import",
+      "pickProduct": "Choose the product",
+      "imported": "{count} posts imported for review",
+      "empty": "No content in this status",
+      "approve": "Approve",
+      "reject": "Reject",
+      "approved": "Content approved",
+      "rejected": "Content rejected",
+      "photoBy": "Photo by {author}",
+      "sources": {
+        "CUSTOMER": "Customer",
+        "INSTAGRAM": "Instagram",
+        "TIKTOK": "TikTok"
+      }
+    },
+    "live": {
+      "new": "Schedule a stream",
+      "create": "Schedule",
+      "created": "Stream scheduled",
+      "list": "Streams",
+      "empty": "No streams yet",
+      "fields": {
+        "title": "Title",
+        "description": "Description",
+        "embedUrl": "Player URL for the store",
+        "embedHint": "E.g. https://www.youtube.com/embed/ID of the live",
+        "streams": "Links on each network (multistream)",
+        "scheduledAt": "Date and time"
+      },
+      "statuses": {
+        "SCHEDULED": "Scheduled",
+        "LIVE": "Live",
+        "ENDED": "Ended"
+      },
+      "view": "View in store",
+      "start": "Start",
+      "started": "You're live!",
+      "end": "End",
+      "ended": "Stream ended",
+      "pin": "Pin product on screen",
+      "pinned": "{name} pinned for viewers",
+      "clicks": "{n} product clicks"
+    }
+  },
+  "pwa": {
+    "install": {
+      "title": "Install the app",
+      "available": "Install the app to open it faster and use it offline.",
+      "installed": "The app is already installed on this device.",
+      "dismissed": "You can install it anytime from the browser menu.",
+      "unsupported": "Your browser does not offer direct install. Follow the steps below.",
+      "action": "Install",
+      "later": "Not now",
+      "banner": "Install the app: faster and works offline",
+      "iosTitle": "On iPhone or iPad (Safari)",
+      "ios1": "Tap the Share button.",
+      "ios2": "Choose “Add to Home Screen”."
+    },
+    "offline": {
+      "banner": "Offline: showing saved content",
+      "title": "You are offline",
+      "description": "Check your connection. Pages you already visited are still available.",
+      "retry": "Retry",
+      "pending": "{n} actions will be sent when you're back online.",
+      "synced": "Pending actions synced"
+    },
+    "push": {
+      "title": "Push notifications",
+      "description": "Get order, shipping and promotion alerts on this device. Turn them off anytime.",
+      "label": "Receive notifications on this device",
+      "blocked": "Notifications are blocked in your browser settings.",
+      "unsupported": "This browser does not support push notifications.",
+      "denied": "Notification permission was not granted.",
+      "error": "The subscription could not be changed."
+    },
+    "cache": {
+      "title": "Device cache",
+      "refresh": "Refresh",
+      "clearAll": "Free up space",
+      "clear": "Clear",
+      "usage": "Usage: {used} of {quota}",
+      "name": "Cache",
+      "strategy": "Strategy",
+      "entries": "Entries",
+      "empty": "No caches (the Service Worker runs in production)"
+    },
+    "update": {
+      "available": "A new version is available",
+      "action": "Update"
+    }
+  },
+  "config": {
+    "saved": "Settings saved",
+    "payment": {
+      "title": "Payment methods",
+      "stripeEnabled": "Accept cards with Stripe",
+      "publishableKey": "Stripe publishable key",
+      "publishableHint": "Starts with pk_. The secret key is configured on the server only.",
+      "descriptor": "Statement descriptor",
+      "descriptorHint": "Up to 22 characters",
+      "crypto": "Crypto payments",
+      "cryptoEnabled": "Accept crypto payments",
+      "network": "Network",
+      "wallet": "Receiving wallet",
+      "addWallet": "Add wallet",
+      "cod": "Cash on delivery",
+      "bank": "Bank transfer",
+      "bankEnabled": "Accept bank transfers",
+      "bankName": "Bank",
+      "accountType": "Account type",
+      "accountNumber": "Account number",
+      "holder": "Account holder",
+      "holderId": "Holder tax ID"
+    },
+    "shipping": {
+      "title": "Carriers",
+      "carrier": "Carrier {n}",
+      "code": "Code",
+      "name": "Name",
+      "eta": "Estimated days",
+      "base": "Base rate",
+      "perKg": "Rate per kg",
+      "enabled": "Enabled",
+      "add": "Add carrier",
+      "free": "Free shipping from",
+      "freeHint": "Empty = no free shipping",
+      "phone": "Support phone",
+      "trackingUrl": "Tracking URL",
+      "trackingHint": "Use {'{'}tracking{'}'} where the tracking number goes",
+      "pickup": "Store pickup",
+      "pickupEnabled": "Offer store pickup (free)",
+      "pickupAddress": "Store address",
+      "statsTitle": "Carrier performance",
+      "statsPeriod": "Last days",
+      "statsEmpty": "No shipments in this period yet.",
+      "statsShipments": "Shipments",
+      "statsOnTime": "On time",
+      "statsAvgDays": "Avg. days",
+      "statsReturned": "Returned",
+      "statsDelayed": "Delayed",
+      "statsCost": "Cost"
+    },
+    "tax": {
+      "title": "Taxes",
+      "included": "Prices already include tax",
+      "region": "Region",
+      "percent": "Rate (%)",
+      "add": "Add rate"
+    },
+    "currency": {
+      "title": "Currency",
+      "default": "Default currency",
+      "iso": "3-letter ISO code (COP, USD)",
+      "supported": "Accepted currencies",
+      "supportedHint": "Comma separated"
+    },
+    "returns": {
+      "title": "Returns policy",
+      "windowDays": "Window (days after delivery)",
+      "requirePhotos": "Require product photos"
+    },
+    "help": {
+      "title": "Help center",
+      "contactEmail": "Support email",
+      "whatsapp": "WhatsApp",
+      "hours": "Opening hours",
+      "category": "Category",
+      "question": "Question",
+      "answer": "Answer",
+      "add": "Add question"
+    }
+  },
+  "validation": {
+    "required": "This field is required",
+    "min3": "At least 3 characters",
+    "email": "Invalid email",
+    "slug": "Only lowercase letters, numbers and hyphens",
+    "url": "Invalid URL",
+    "https": "Must start with https://",
+    "endAfterStart": "End must be after start",
+    "consent": "You must accept to continue",
+    "referral": "3–30 characters A-Z, 0-9 or hyphen",
+    "number": "Must be a number",
+    "positive": "Must be 0 or more",
+    "currency": "3-letter code",
+    "stripeKey": "Must be a pk_test_ or pk_live_ publishable key",
+    "wallet": "Invalid wallet address",
+    "lookDiscount": "Enter a percentage between 1 and 90",
+    "min10": "Write at least 10 characters"
+  },
+  "store": {
+    "home": {
+      "metaTitle": "Shop",
+      "heroTitle": "Fashion, fragrances and accessories with Web3 rewards",
+      "heroText": "Clothing, footwear, perfumes, bags, watches and sunglasses. Shop, earn points and collect NFT badges. Shipping across Colombia.",
+      "shopNow": "Shop now",
+      "loyalty": "Loyalty program",
+      "featured": "New release",
+      "viewCollection": "View collection",
+      "shopByCategory": "Shop by category",
+      "pointsInvite": "Earn points and NFT collectibles with every purchase",
+      "pointsRule": "1 point for every {amount}. Level up and claim your badge on the blockchain.",
+      "join": "Join for free",
+      "eyebrow": "Fashion · Accessories · Web3",
+      "benefitsTitle": "Why shop here",
+      "categoriesText": "Clothing, footwear and accessories to complete your style.",
+      "explore": "Explore",
+      "featuredText": "The newest arrivals.",
+      "benefits": {
+        "shipping": {
+          "title": "Nationwide shipping",
+          "text": "Real-time tracking"
+        },
+        "payments": {
+          "title": "Pay your way",
+          "text": "Card, bank transfer or crypto"
+        },
+        "rewards": {
+          "title": "Points & NFTs",
+          "text": "Rewards on every purchase"
+        },
+        "returns": {
+          "title": "Easy returns",
+          "text": "Request them from your account"
+        }
+      }
+    },
+    "search": {
+      "label": "Search products",
+      "placeholder": "Search products, brands or categories",
+      "submit": "Search",
+      "voice": "Search by voice",
+      "voiceError": "We couldn't hear you. Please try again.",
+      "qr": "Scan a QR or barcode",
+      "qrNotFound": "We couldn't find a code in the photo.",
+      "image": "Search with a photo"
+    },
+    "nav": {
+      "viewAll": "View all {name}"
+    },
+    "account": {
+      "dashboard": "Admin dashboard",
+      "myAccount": "My account",
+      "orders": "My orders",
+      "signOut": "Sign out"
+    },
+    "catalog": {
+      "title": "All products",
+      "results": "Results for “{q}”",
+      "count": "{count} products",
+      "sort": "Sort",
+      "apply": "Apply",
+      "sorts": {
+        "newest": "Newest",
+        "price_asc": "Price: low to high",
+        "price_desc": "Price: high to low",
+        "rating": "Top rated"
+      },
+      "emptyTitle": "No results",
+      "emptyText": "Try other words or remove some filters.",
+      "badge": "Show",
+      "allBadges": "All",
+      "didYouMean": "Did you mean"
+    },
+    "product": {
+      "soldOut": "Sold out",
+      "from": "From {price}",
+      "rating": "{value} out of 5",
+      "quantity": "Quantity",
+      "available": "{count} available",
+      "unavailable": "Combination not available",
+      "addToCart": "Add to cart",
+      "added": "{name} was added to your cart",
+      "description": "Description",
+      "thumbnails": "Product images",
+      "viewImage": "View image {n}",
+      "badges": {
+        "NEW": "New",
+        "SALE": "Sale",
+        "BEST_SELLER": "Best seller"
+      },
+      "viewDetail": "View details"
+    },
+    "cart": {
+      "title": "Your cart",
+      "badge": "Cart: {count} items",
+      "emptyTitle": "Your cart is empty",
+      "emptyText": "Browse the catalog and add your favorites.",
+      "browse": "Browse products",
+      "priceChanged": "The price changed since you added it",
+      "unavailable": "Only {count} left",
+      "quantityOf": "Quantity of {name}",
+      "decrease": "Remove one",
+      "increase": "Add one",
+      "remove": "Remove",
+      "subtotal": "Subtotal ({count} items)",
+      "shippingNote": "Shipping and taxes are calculated at checkout.",
+      "checkout": "Checkout",
+      "priceDropped": "Price dropped! Was {before}",
+      "lowStock": "Only {count} left!",
+      "coupon": "Discount code",
+      "points": "Use points (you have {balance}; up to {max})",
+      "pointsValue": "Points discount: {value}",
+      "oneClick": "Buy in one click"
+    },
+    "footer": {
+      "shop": "Shop",
+      "account": "My account",
+      "content": "Content",
+      "legal": "Secure payments with Stripe · DIAN e-invoicing.",
+      "language": "Language",
+      "links": {
+        "allProducts": "All products",
+        "categories": "Categories",
+        "influencers": "Influencers",
+        "myAccount": "My account",
+        "orders": "My orders",
+        "wishlist": "Wishlist",
+        "loyalty": "Loyalty program",
+        "promotions": "Promotions",
+        "blog": "Blog",
+        "events": "Events",
+        "lookbooks": "Lookbooks",
+        "helpCenter": "FAQ",
+        "contact": "Contact us",
+        "live": "Live shopping"
+      },
+      "help": "Help"
+    },
+    "visual": {
+      "title": "Search with a photo",
+      "subtitle": "Upload or take a photo and we'll show you similar products. The photo isn't stored.",
+      "pick": "Choose or take a photo",
+      "previewAlt": "Photo you are searching for",
+      "detected": "What we recognized",
+      "colors": "Dominant colors",
+      "searching": "Looking for similar products…",
+      "emptyTitle": "No similar products found",
+      "emptyText": "Try another photo or browse the catalog."
+    },
+    "reviews": {
+      "title": "Customer reviews",
+      "count": "{count} reviews",
+      "empty": "No reviews yet. Be the first!",
+      "gallery": "Customer photos",
+      "photoAlt": "Photo by {author}, {rating} stars",
+      "sortLabel": "Sort by",
+      "sortHelpful": "Most helpful",
+      "sortNewest": "Newest",
+      "verified": "Verified purchase",
+      "edited": "Edited",
+      "history": "See previous versions",
+      "vendorReply": "Store reply:",
+      "helpful": "Helpful ({count})",
+      "loginToVote": "Sign in to vote",
+      "write": "Write your review",
+      "rating": "Overall rating",
+      "aspectsLegend": "Rate each aspect (optional)",
+      "aspects": {
+        "quality": "Quality",
+        "accuracy": "As described",
+        "fit": "Fit",
+        "value": "Value for money"
+      },
+      "titleField": "Title",
+      "body": "Your opinion",
+      "photos": "Photos (up to 6)",
+      "uploading": "Uploading photos…",
+      "photosCount": "{count} photos attached",
+      "submit": "Post review",
+      "sent": "Thanks! Your review was submitted",
+      "loginToWrite": "Sign in to write a review"
+    },
+    "promo": {
+      "flashEnds": "{name} ends on {date}",
+      "preSale": "Exclusive pre-sale for Diamond and Platinum tiers until {date}",
+      "share": "Share:",
+      "sharePoints": "You earned {points} points for sharing!"
+    },
+    "live": {
+      "title": "Live Shopping",
+      "metaDescription": "Shop live: products presented in real time with exclusive deals.",
+      "empty": "No streams scheduled",
+      "now": "Live now",
+      "upcoming": "Coming soon",
+      "ended": "Stream ended",
+      "products": "{n} products",
+      "watchOn": "Watch on {platform}",
+      "productsTitle": "Products in this stream",
+      "pinned": "Showing now"
+    },
+    "ugc": {
+      "title": "How our customers use it",
+      "empty": "Be the first to share how you use this product.",
+      "share": "Share your photo or video",
+      "caption": "Comment (optional)",
+      "file": "Photo or video",
+      "uploading": "Uploading…",
+      "moderation": "We review it before publishing.",
+      "sent": "Thanks! We'll publish it after review",
+      "photoBy": "Photo by {author}"
+    },
+    "forYou": {
+      "title": {
+        "HISTORY": "Picked for you",
+        "CONTEXT": "Trending right now",
+        "POPULAR": "Store favorites"
+      },
+      "reason": {
+        "HISTORY": "Based on your recent purchases.",
+        "CONTEXT": "Popular in your area in the {daypart}.",
+        "POPULAR": "Our top-rated products."
+      },
+      "dayparts": {
+        "MORNING": "morning",
+        "AFTERNOON": "afternoon",
+        "EVENING": "evening",
+        "NIGHT": "night"
+      }
+    },
+    "help": {
+      "title": "Help center",
+      "subtitle": "Quick answers about orders, shipping, payments and returns.",
+      "metaDescription": "Store FAQ: orders, shipping, payments, exchanges and returns.",
+      "search": "Search help",
+      "searchPlaceholder": "E.g. how long does shipping take?",
+      "results": "{n} results",
+      "empty": "We couldn't find an answer. Write to us and we'll help.",
+      "contactTitle": "Need more help?",
+      "writeUs": "Write to us"
+    },
+    "contact": {
+      "title": "Contact us",
+      "subtitle": "We reply within 24 business hours.",
+      "seeFaq": "See FAQ",
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone (optional)",
+      "topic": "Topic",
+      "topics": {
+        "ORDER": "My order",
+        "PRODUCT": "A product",
+        "RETURN": "Exchange or return",
+        "PAYMENT": "Payments",
+        "OTHER": "Other"
+      },
+      "orderNumber": "Order number (optional)",
+      "orderHint": "You'll find it in the confirmation email (ORD-...)",
+      "message": "Message",
+      "send": "Send message",
+      "sent": "Thanks! We received your message and sent you a confirmation email."
+    }
+  },
+  "brand": {
+    "title": "Brands",
+    "description": "Our brands: premium, exclusive and their story.",
+    "premium": "Premium",
+    "exclusive": "Exclusive",
+    "origin": "Origin: {country}",
+    "website": "Official website",
+    "story": "Our story",
+    "products": "{count} products",
+    "logoAlt": "{name} logo",
+    "emptyTitle": "No products yet",
+    "emptyText": "Come back soon: this brand is preparing new arrivals."
+  }
+}

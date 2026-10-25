@@ -1,0 +1,146 @@
+# docker-compose.prod.yml => servidor de PRODUCCIÓN (un VPS Linux con Docker). Guía paso a paso: docs/setup/infDocker_y_servidor.md
+# Diferencias con el de desarrollo (SRP: un archivo por entorno):
+#   - Imágenes de producción (stage "production"): las publica la CD en ghcr.io o se construyen en el servidor.
+#   - Solo el gateway expone puertos al exterior; Postgres, MongoDB y Redis quedan en la red interna (no accesibles desde internet).
+#   - MongoDB con usuario y contraseña; límites de memoria por servicio (un servicio desbordado no tumba a los demás).
+# Uso (desde la raíz del repo clonado en el servidor):
+#   docker compose -f infra/docker/docker-compose.prod.yml --env-file infra/docker/.env pull     # imágenes de ghcr.io
+#   docker compose -f infra/docker/docker-compose.prod.yml --env-file infra/docker/.env up -d
+#   (o "build" en vez de "pull" para construir en el servidor)
+
+# "name" => nombre fijo del proyecto: la red se llama siempre "ecommerce-prod_ecommerce-net" (la usan los comandos de la guía)
+name: ecommerce-prod
+
+# "x-..." => bloque de extensión reutilizable con anclas YAML (&/<<: *) => DRY en la política de reinicio y logs
+x-common: &common
+  restart: unless-stopped # Se levanta solo tras un reinicio del servidor o una caída
+  networks: [ecommerce-net]
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" } # Rota los logs: el disco no se llena con el tiempo
+
+services:
+  postgres:
+    <<: *common
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Define POSTGRES_USER en infra/docker/.env} # ":?" => falla si falta (sin claves por defecto en producción)
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-ecommerce_db}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      retries: 5
+
+  mongodb:
+    <<: *common
+    image: mongo:7
+    command: ["--wiredTigerCacheSizeGB", "0.25"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:?Define MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?Define MONGO_PASSWORD}
+    volumes: [mongodata:/data/db]
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      retries: 5
+
+  redis:
+    <<: *common
+    image: redis:7-alpine
+    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "volatile-lru"]
+    mem_limit: 192m
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries: 5
+
+  ecommerce-express:
+    <<: *common
+    image: ghcr.io/${GHCR_OWNER:-local}/ecommerce-express:${IMAGE_TAG:-latest}
+    build: { context: ../.., dockerfile: apps/ecommerce-express/Dockerfile, target: production }
+    env_file: [../../apps/ecommerce-express/.env]
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=320 # Heap de V8 por debajo del límite del contenedor: el GC trabaja antes de un OOM
+    mem_limit: 448m
+    depends_on:
+      postgres: { condition: service_healthy }
+      mongodb: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  ecommerce-next:
+    <<: *common
+    image: ghcr.io/${GHCR_OWNER:-local}/ecommerce-next:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: apps/ecommerce-next/Dockerfile
+      target: production
+      args: # Solo aplican al construir en el servidor; la CD las toma de las variables del repositorio
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-}
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:-}
+    env_file: [../../apps/ecommerce-next/.env]
+    environment:
+      INTERNAL_API_URL: http://ecommerce-express:4000/api/v1 # Server Components => red interna, sin salir a internet
+      NODE_OPTIONS: --max-old-space-size=384
+    mem_limit: 512m
+    depends_on: [ecommerce-express]
+
+  # Servicios de fases posteriores: se encienden con "--profile fastapi | rust | nuxt" cuando estén implementados
+  ecommerce-fastapi:
+    <<: *common
+    profiles: ["fastapi"]
+    image: ghcr.io/${GHCR_OWNER:-local}/ecommerce-fastapi:${IMAGE_TAG:-latest}
+    build: { context: ../.., dockerfile: apps/ecommerce-fastapi/Dockerfile, target: production }
+    env_file: [../../apps/ecommerce-fastapi/.env]
+    mem_limit: 1g # Modelos de ML en memoria
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  ecommerce-rust:
+    <<: *common
+    profiles: ["rust"]
+    image: ghcr.io/${GHCR_OWNER:-local}/ecommerce-rust:${IMAGE_TAG:-latest}
+    build: { context: ../.., dockerfile: apps/ecommerce-rust/Dockerfile, target: production }
+    env_file: [../../apps/ecommerce-rust/.env]
+    mem_limit: 128m # Binario nativo: consumo mínimo
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  ecommerce-nuxt:
+    <<: *common
+    profiles: ["nuxt"]
+    image: ghcr.io/${GHCR_OWNER:-local}/ecommerce-nuxt:${IMAGE_TAG:-latest}
+    build: { context: ../.., dockerfile: apps/ecommerce-nuxt/Dockerfile, target: production }
+    env_file: [../../apps/ecommerce-nuxt/.env]
+    mem_limit: 384m
+
+  # Única puerta de entrada desde internet (puerto 80). HTTPS: ver la guía (certificado gratuito de Let's Encrypt)
+  gateway:
+    <<: *common
+    image: nginx:1.27-alpine
+    ports: ["${GATEWAY_PORT:-80}:80", "443:443"]
+    volumes:
+      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../nginx/tls:/etc/nginx/tls:ro # tls.conf (HTTPS) se crea en el servidor a partir de tls.conf.example
+      - /etc/letsencrypt:/etc/letsencrypt:ro # Certificados de certbot en el host
+    mem_limit: 64m
+    depends_on: [ecommerce-next, ecommerce-express]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/gateway/health"]
+      interval: 30s
+      retries: 3
+
+networks:
+  ecommerce-net:
+    driver: bridge
+
+volumes:
+  pgdata:
+  mongodata:

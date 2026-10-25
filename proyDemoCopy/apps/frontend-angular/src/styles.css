@@ -1,0 +1,10 @@
+/* [Estilos globales · Angular 22]: reutiliza el sistema de diseño del shell Next.js (6 temas, tokens de color, utilidades btn/badge/control/tone) | [Principio]: DRY + SSOT (un solo archivo de tokens para los dos frontends) | [Tecnología]: Tailwind CSS 4 + tw-animate-css
+   [Nota]: el archivo importado ya trae `@import "tailwindcss"` y `tw-animate-css`; Tailwind escanea las plantillas de ESTE proyecto (cwd) y genera solo las clases usadas aquí
+   ponytail: import relativo al shell Next.js; si los tokens se mueven a packages/ui-tokens, cambiar solo esta línea */
+@import '../../frontend-next/src/app/globals.css';
+
+/* [Tipografía]: Next.js define --font-inter con next/font; en las pantallas Angular no existe → sin esto toda la declaración font-family cae a serif
+   `:where(:root)` (especificidad 0): dentro de Next.js gana su variable real (Inter auto-alojada) · aquí usa Inter si está instalada o Segoe UI/system-ui */
+:where(:root) {
+  --font-inter: 'Inter';
+}

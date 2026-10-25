@@ -1,0 +1,22 @@
+// inventory.route.ts => inventario (montado en /api/v1/inventory): solo administradores.
+// "/movement" se declara antes que "/:id" por claridad (métodos distintos, no colisionan).
+import { Router } from "express";
+import { inventoryController } from "../controller/inventory.controller";
+import { jwtAuthGuard, requireRoles } from "../../auth/guard/auth.guard";
+import { Roles } from "../../../shared/constants/roles.constants";
+
+export const inventoryRouter = Router();
+inventoryRouter.use(jwtAuthGuard, requireRoles(Roles.ADMIN));
+
+inventoryRouter.post("/movement", inventoryController.createStockMovement);
+// RF-23.7 auditoría por QR (rutas fijas antes de "/:id")
+inventoryRouter.post("/qr", inventoryController.qrLabels);
+inventoryRouter.post("/audit", inventoryController.startAudit);
+inventoryRouter.get("/audit", inventoryController.listAudits);
+inventoryRouter.get("/audit/:id", inventoryController.getAudit);
+inventoryRouter.post("/audit/:id/scan", inventoryController.scanAudit);
+inventoryRouter.post("/audit/:id/close", inventoryController.closeAudit);
+inventoryRouter.delete("/movement/:id", inventoryController.deleteStockMovementById);
+inventoryRouter.get("/", inventoryController.listInventorys);
+inventoryRouter.get("/:id", inventoryController.getInventoryById);
+inventoryRouter.patch("/:id", inventoryController.updateInventory);

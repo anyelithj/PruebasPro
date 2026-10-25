@@ -1,0 +1,275 @@
+﻿================================================================================
+PARAGRAPHS / HEADINGS
+================================================================================
+[0] (Normal) INSTITUCI�N UNIVERSITARIA
+[1] (Normal) FACULTAD DE INGENIER�A DE SISTEMAS
+[5] (Normal) Desarrollo de un sistema de evaluaci�n digital basado en microservicios e IA
+[8] (Normal) PRESENTA:
+[13] (Normal) ASESOR:
+[16] (Normal) Junio 2026
+[17] (Normal) �NDICE GENERAL
+[20] (Normal) 1.	Resumen
+[21] (Normal) 2.	Introducci�n
+[22] (List Paragraph) Motivaci�n y Problem�tica
+[23] (List Paragraph) Justificaci�n
+[24] (List Paragraph) Descripci�n de la Empresa
+[25] (List Paragraph) Alcance
+[26] (List Paragraph) Objetivos (General y Espec�ficos)
+[27] (Normal) 3.	Fundamentaci�n Neuro-Tecnol�gica (Revisi�n de Literatura)
+[28] (Normal) 4.	Metodolog�a de Implementaci�n �gil (Estrategia Metodol�gica)
+[29] (List Paragraph) Fases del Proyecto (Scrum)
+[30] (List Paragraph) Implementaci�n T�cnica
+[31] (Normal) 5.	Resultados y Discusi�n
+[32] (List Paragraph) Productos y Entregables
+[33] (List Paragraph) Discusi�n de Implicaci�n y Contrastaci�n
+[34] (List Paragraph) Cumplimiento de Objetivos y Limitaciones
+[35] (List Paragraph) Aprendizaje y Recomendaciones
+[51] (Normal) �NDICE DE TABLAS (Autom�tico)
+[53] (Normal) �NDICE DE FIGURAS (Autom�tico)
+[55] (Normal) RESUMEN
+[56] (Normal) Este informe documenta el proceso de dise�o, planeaci�n e implementaci�n de la secci�n de evaluaciones inteligente de un aplicativo neuroeducativo, desarrollado en el marco de la practica empresarial 
+[57] (No Spacing) Este trabajo presenta el desarrollo de un sistema de evaluaci�n que se integra en una plataforma de aprendizaje avanzada. Ante el desaf�o de las evaluaciones est�ticas y poco motivadoras, en el que of
+[59] (No Spacing) El cronograma de la pr�ctica abarc� desde la identificaci�n del problema el 11 de marzo de 2026 hasta el modelado t�cnico final el 30 de mayo de 2026. Por lo tanto, el enfoque se centr� en la entrega 
+[60] (No Spacing) Adem�s, la integraci�n del m�dulo de registro y autenticaci�n, asegura la trazabilidad y la persistencia de los datos generados por el sistema, para la incorporaci�n de componentes de IA para personal
+[62] (Normal) Palabras clave: Neuroeducaci�n, inteligencia artificial, microservicios, evaluaci�n adaptativa, Next.js, FastAPI, NestJS, PostgreSQL, API Gateway, JWT, Scrum, Metodolog�as agiles, procesamiento de len
+[68] (Normal) INTRODUCCI�N
+[70] (No Spacing) La pr�ctica empresarial se llev� a cabo en el contexto de un aplicativo neuroeduactivo, orientado a potencial los procesos de aprendizaje mediante herramientas digitales adaptativas. El proyecto surge
+[72] (No Spacing) Transformar la evaluaci�n en un proceso de crecimiento a trav�s de la IA permite que la empresa se posicione a la vanguardia de la neuroeducaci�n.
+[74] (Normal) Corporaci�n es una organizaci�n dedicada a la innovaci�n educativa, conformada por profesionales que trabajan en el apoyo a comunidades en situaci�n de vulnerabilidad mediante estrategias basadas en l
+[75] (No Spacing) Por razones de confidencialidad y tiempos de ejecuci�n, el proyecto se enfoca espec�ficamente en el m�dulo de evaluaci�n, recomendaci�n y gesti�n de acceso. El alcance incluye la arquitectura, la l�gi
+[77] (No Spacing) Crear un prototipo funcional del m�dulo de pruebas que utilice inteligencia artificial para recomendar temas pedag�gicos.
+[79] (No Spacing) Dise�ar una arquitectura escalable basada en microservicios utilizando NestJS y FastAPI.
+[81] (No Spacing) Crear prototipos enfocados en la experiencia de la interacci�n con el agente de asistencia IA.
+[83] (No Spacing) Documentar la estructura y funcionamiento del sistema mediante modelo de entidad relaci�n y diagramas de UML.
+[95] (Normal) REVISI�N DE LITERATURA / ANTECEDENTES
+[96] (Normal) La soluci�n que presentamos se basa en la fusi�n de la inteligencia artificial con las ciencias cognitivas, enmarcada en lo que la literatura actual describe como los tres paradigmas de la IA en educa
+[97] (Normal) Desde la perspectiva de la neuroeducaci�n, estudios recientes subrayan que la integraci�n de sistemas inteligentes puede optimizar los procesos de ense�anza-aprendizaje, aline�ndose con los patrones d
+[98] (Normal) Desde un punto de vista t�cnico, la transici�n hacia agentes de IA aut�nomos en 2025 representa un avance significativo en comparaci�n con los bots est�ticos, permitiendo una personalizaci�n que se aj
+[99] (Normal) Finalmente, los antecedentes en tecnolog�as educativas indican que el futuro se orienta hacia entornos h�bridos y escalables (Zhang & Aslan, 2021). Por lo tanto, el desarrollo de este m�dulo de evalua
+[104] (Heading 1) MARCO TE�RICO
+[105] (Heading 2) NEUROEDUCACI�N
+[107] (Normal) La Neuroeducaci�n es un campo fascinante que combina descubrimientos de la neurociencia cognitiva con la teor�a y pr�ctica educativa, todo con el fin de mejorar los procesos de ense�anza y aprendizaje
+[108] (Normal) Recientes evidencias emp�ricas respaldan el impacto positivo de la Neuroeducaci�n en el rendimiento de los estudiantes. Por ejemplo, Caballero y Llorent (2022) llevaron a cabo un estudio cuasi-experim
+[110] (Normal) En contextos formativos cl�nicos, los aportes de la neuroeducaci�n tambi�n se han extendido a la simulaci�n cl�nica y a la toma de decisiones durante las pr�cticas profesionales, como se evidencia en 
+[111] (Heading 2) ARQUITECTURA DE MICROSERVICIOS
+[112] (Heading 2) 
+[113] (Normal) La arquitectura de microservicios se basa en organizar una aplicaci�n como un conjunto de peque�os servicios aut�nomos que est�n d�bilmente acoplados, lo que permite desplegarlos de manera independien
+[114] (Normal) Varios estudios sistem�ticos han analizado los atributos de calidad de esta arquitectura. Por ejemplo, Li et al. (2021) llevaron a cabo una revisi�n exhaustiva de 72 estudios primarios y resumieron se
+[115] (Normal) Desde un enfoque pr�ctico, Waseem, Liang y Shahin (2021) realizaron un estudio sobre el dise�o, monitoreo y prueba de sistemas de microservicios, donde reportaron que la combinaci�n de Domain Driven D
+[116] (Normal) En lo que respecta a la evoluci�n de los servicios, estudios recientes han mostrado que la evoluci�n de las APIs entre microservicios es uno de los desaf�os m�s significativos, seg�n un estudio public
+[117] (Normal) Para la creaci�n de microservicios, Valderas Torres y Pelechano (2020) sugieren un enfoque que se basa en la coreograf�a de fragmentos BPMN, lo que permite un alto nivel de desacoplamiento entre los s
+[118] (Heading 2) API GATEWAY
+[120] (Normal) El API Gateway act�a como el �nico punto de entrada hacia los microservicios. Se encarga de manejar aspectos transversales como la autenticaci�n, la autorizaci�n, el enrutamiento, la transformaci�n, l
+[121] (Normal) Investigaciones recientes han explorado m�s a fondo el dise�o y la seguridad de este componente. Un estudio publicado en Advances in Engineering Software en 2020 (S0965997820304452) sugiere una estrat
+[122] (Heading 2) NEXT.JS Y TAILWINDCSS
+[123] (Normal) Next.js es un framework de React que ofrece caracter�sticas como SSR/SSG, enrutamiento basado en archivos y optimizaci�n autom�tica. Por otro lado, TailwindCSS proporciona utilidades CSS at�micas que 
+[124] (Heading 2) NESTJS
+[125] (Normal) Este es un framework de Node.js que se construye sobre TypeScript. Es modular, cuenta con inyecci�n de dependencias y separa las responsabilidades entre controladores, servicios y repositorios, lo que
+[126] (Heading 2) FASTAPI
+[127] (Normal) FastAPI es un framework de Python de alto rendimiento que se basa en ASGI, utiliza type hints y Pydantic, y ofrece documentaci�n autom�tica a trav�s de OpenAPI. Es perfecto para microservicios anal�ti
+[128] (Heading 2) POSTGRESSQL
+[129] (Normal) Se trata de un sistema de gesti�n de bases de datos relacional, de c�digo abierto y que cumple con el est�ndar ACID. Ofrece soporte para JSONB, �ndices GIN/GiST, particionamiento y extensiones.
+[130] (Heading 2) JSON WEB TOKENS(JWT)
+[131] (Normal) Los JWT son un est�ndar abierto (RFC 7519) que permite la representaci�n de claims firmados entre dos partes. Son ideales para la autenticaci�n sin estado, lo que los hace muy adecuados para sistemas 
+[133] (Heading 2) SCRUM
+[134] (Normal) Scrum es un marco �gil que se basa en un enfoque iterativo e incremental, donde juegan un papel clave el Product Owner, el Scrum Master y el Equipo de Desarrollo. Incluye eventos como el Sprint, la pl
+[135] (Normal) Recientemente, la literatura ha destacado la efectividad de combinar Scrum con pr�cticas de pruebas continuas. Un estudio publicado en el Journal of Systems and Software en 2026 (S0164121226000634), q
+[136] (Heading 2) UML
+[138] (Normal) El Lenguaje de Modelado Unificado (UML) es un lenguaje gr�fico que ha sido estandarizado por el Object Management Group para ayudar a especificar, visualizar y documentar los artefactos de los sistema
+[139] (Normal) La investigaci�n actual est� abordando nuevos desaf�os y aplicaciones de UML. Un estudio publicado en el Journal of Systems and Software en 2025 (S0164121225003784) analiza la posibilidad de utilizar 
+[141] (Heading 1) ESTADO DEL ARTE
+[142] (Normal) LEVANTAMIENTO DE REQUERIMIENTOS
+[143] (Normal) PROCESO DE LEVANTAMIENTO DE REQUERIMIENTOS
+[144] (Normal) El levantamiento de requerimientos se llev� a cabo durante la fase 1 del proyecto desde el 11 de marzo al 6 de abril de 2026. Para ello, se emplearon varias t�cnicas complementarias:
+[145] (List Paragraph) Se llevaron a cabo entrevistas estructuradas con los stakeholders del proyecto y la directiva de la organizaci�n, orientadas a identificar las necesidades pedag�gicas, las limitaciones de los sistemas
+[146] (List Paragraph) Se realiz� un an�lisis comparativo de plataformas EdTech, donde se examinaron las funcionalidades de evaluaci�n de cinco plataformas EdTech como son Google Classroom, classroom.oi, Moodle, Kahoot y Qu
+[147] (List Paragraph) Se revis� la literatura cient�fica en neuroeducaci�n y sistemas de evaluaci�n inteligente, con el fin de alinear los requerimientos con las �ltimas tendencias en aprendizaje personalizado y retroalime
+[148] (Normal) REQUERIMIENTOS FUNCIONALES
+[150] (Normal) Requerimientos No Funcionales
+[152] (Normal) HISTORIAS DE USUARIO 
+Las historias de usuario contiene la siguiente estructura est�ndar de la metodolog�a SCRUM, en el que se detalla el usuario, la funcionalidad que necesita y el valor que aporta a
+[153] (Normal) PRODUCT BACKLOG
+[155] (Normal) Historias de Usuario Detalladas
+[156] (Normal) Registro de Usuario
+[158] (Normal) Creaci�n de Evaluaci�n por Docente
+[160] (Normal) Retroalimentaci�n Personalizada del Agente IA
+[162] (Normal) Resultados para Docente
+[167] (Heading 1) PLAN DE PRUEBAS
+[168] (Heading 2) OBJETIVO
+[169] (List Paragraph) El objetivo es asegurar que la secci�n de evaluaciones y los componentes asociados del sistema cumpla correctamente con todos los requerimientos funcionales y no funcionales, garantizando la calidad d
+[171] (Heading 2) OBJETIVOS ESPECIFICOS
+[172] (List Paragraph) Comprobar el correcto funcionamiento del m�dulo de autenticaci�n y autorizaci�n en JWT para el estudiante, docente y administrador.
+[173] (List Paragraph) Probar los flujos completos correspondiente a la creaci�n, inicializaci�n de la prueba, calificaci�n autom�tica y el feedback inteligente en las evaluaciones.
+[174] (List Paragraph) Verificar la comunicaci�n REST y gRPC entre los microservicios desarrollados en NestJS y FastAPI para la calificaci�n IA y el agente.
+[175] (List Paragraph) Medir el rendimiento del sistema b�sico en condiciones de carga concurrente asegurando los tiempos de respuesta adecuados y cumplir m�tricas Core Web Vitals y tiempos de respuesta API.
+[176] (List Paragraph) Verificar el cumplimiento de accesibilidad WCAG 2.1 AA en la interfaz desarrollada a partir de Next.js.
+[177] (List Paragraph) Confirmar la persistencia, integridad y trazabilidad de la informaci�n almacenada en PostgreSQL y Redis.
+[178] (List Paragraph) Validar la experiencia de usuario (UX) y la usabilidad de la plataforma de acuerdo a las interfaces correspondientes a los prototipos de Figma aprobados.
+[181] (Heading 2) ESTRATEGIA GENERAL
+[182] (Normal) La estrategia de pruebas se basar� en la pir�mide de pruebas, priorizando las pruebas unitarias seguidas de pruebas de integraci�n y finalmente pruebas funcionales o E2E.
+[183] (Normal) El proceso de pruebas se desarrollar� en tres niveles principales que son:
+Pruebas unitarias: verificar cada componente de forma independiente, incluyendo funciones, servicios y l�gica de negocio impl
+[184] (Normal) Pruebas de integraci�n: revisar la interacci�n entre m�dulos, microservicios, bases de datos y APIs REST y gRPC, garantizando que la interacci�n entre los distintos componentes sea la correcta.
+[185] (Normal) Pruebas funcionales o End-to-end (E2E): evidenciar los flujos completos desde la perspectiva del usuario, incluyendo autenticaci�n, gesti�n de evaluaciones, calificaci�n autom�tica y feedback por part
+[187] (Heading 2) ALCANCE
+[189] (List Paragraph) El plan de pruebas abarcar� los siguientes componentes y funcionalidades del sistema:
+[191] (List Paragraph) Pruebas unitarias de las funciones puras, de los servicios NestJS y de la l�gica de c�lculo que se encuentra implementada en FastAPI.
+[192] (List Paragraph) Pruebas de integraci�n entre los controladores, los servicios, el ORM TypeORM y las bases de datos PostgreSQL y Redis.
+[193] (List Paragraph) Validaciones de la comunicaci�n entre microservicios mediante protocolos REST y gRPC.
+[194] (List Paragraph) Pruebas funcionales E2E de los flujos completos de la autenticaci�n, de la creaci�n de las evaluaciones, de la resoluci�n, de la calificaci�n autom�tica y de la generaci�n de feedback inteligente.
+[195] (List Paragraph) Comprobaci�n de la persistencia, la integridad y la trazabilidad de los datos acad�micos y de los registros de actividad.
+[196] (List Paragraph) Evaluaciones de rendimiento por carga concurrente y an�lisis de los tiempos de respuesta de las APIs y del front-end.
+[197] (List Paragraph) Validaci�n de m�tricas de Core Web Vitals en la interfaz de Next.js.
+[198] (List Paragraph) Pruebas de seguridad asociadas a JWT, control de permisos e inyecci�n SQL.
+[199] (List Paragraph) Verificaci�n de la accesibilidad WCAG 2.1 AA.
+[200] (List Paragraph) Validaci�n de la usabilidad y de la experiencia de usuario seg�n los prototipos aprobados mediante Figma.
+[204] (Normal) DISE�O DE BASE DE DATOS Y DIAGRAMAS UML
+[205] (Normal) Esta secci�n presenta la documentaci�n gr�fica completa del sistema, elaborada en formato draw.io y exportada como im�genes de alta resoluci�n. Los diagramas cubren el m�dulo de Gesti�n de Acceso y la
+[207] (Normal) Proceso de Dise�o
+[208] (Normal) El dise�o de la base de datos se adhiri� al proceso formal de modelado en tres niveles: modelo conceptual (Diagrama Entidad-Relaci�n), modelo l�gico (Modelo Relacional normalizado) y el modelo f�sico 
+[209] (Normal) Modelo Entidad-Relaci�n
+[210] (Normal) El modelo ER identifica las siguientes entidades fundamentales del dominio, sus atributos y las relaciones que se establecen entre ellos. El diagrama completo se puede encontrar en el Anexo
+[213] (Normal) Correcto funcionamiento del Agente IA
+[215] (Normal) ESTRATEGIA METODOL�GICA Y DESARROLLO
+[216] (No Spacing) Para este proyecto, se opt� por la metodolog�a Scrum como marco metodol�gico principal. Esta metodolog�a permiti� dividir el trabajo en ciclos iterativos, lo que garantiz� entregas funcionales constan
+[218] (No Spacing) Artefactos y Ceremonias
+[220] (No Spacing) Para garantizar la transparencia y el progreso del proyecto, se implementaron los siguientes elementos:
+[221] (No Spacing) Product Backlog: Una lista priorizada de historias de usuario centradas en los m�dulos de acceso y evaluaciones creaci�n, respuesta, calificaci�n y feedback inteligente.
+[222] (No Spacing) Sprints de dos semanas: ciclos de desarrollo que incluyen entregables verificables al final de cada iteraci�n.
+[223] (No Spacing) Daily meetings: Reuniones diarias para identificar obst�culos y ver los avances.
+[224] (No Spacing) sprint reviews y retrospectivas: para evaluar el avance del producto y reflexi�n sobre las mejoras de los procesos al t�rmino de cada sprint.
+[225] (No Spacing) Definition of Done (DoD): Para que una tarea se considere finalizada, se pidi� que sea el c�digo implementado y revisado, pruebas funcionales aprobadas, documentaci�n t�cnica actualizada y validaci�n 
+[228] (No Spacing) Fases de Desarrollo y Cronograma
+[229] (No Spacing) La ejecuci�n se estructur� en cinco fases estrat�gicas:
+[231] (No Spacing) Fase 1- Identificaci�n y An�lisis (11 Mar � 06 Abr): Aqu� se definieron los requerimientos y se evalu� la problem�tica, estableciendo el Product Backlog.
+[233] (No Spacing) Fase 2 - Dise�o y Prueba Piloto (06 Abr � 24 Abr): Creaci�n de interfaces en Figma del login, registro y evaluaciones.
+[235] (No Spacing) Fase 3 - Modelado y Documentaci�n (27 Abr � 30 Abr): Se generaron de historias de usuarios, diagramas Entidad-Relaci�n (ER), modelos relacionales, y diagramas de normalizaci�n y de clases (UML) para a
+[236] (No Spacing) Fase 4 � Desarrollo e implementaci�n T�cnica (04 May � 22 May): construcci�n de la arquitectura de microservicios:
+[237] (No Spacing) Backend central NestJS: Implementaci�n del servicio de gesti�n de acceso con autenticaci�n JWT y l�gica de negocio.
+[238] (No Spacing) Backend de IA FastAPI: integraci�n de modelos para la calificaci�n autom�tica y el agente de asistencia IA, encargado de general feedback y recomendaciones pedag�gicas.
+[239] (No Spacing) Fase 5 � Testing Integral y Cierre (22 May � 30 May): Ejecuci�n de pruebas funcionales de integraci�n entre NestJS y FastAPI y pruebas de usuario sobre la interfaz. Finalizaci�n de la documentaci�n t�
+[241] (No Spacing) Implementaci�n T�cnica: Se utiliza de NestJS como el backend principal, por su estructura modular, robusta para la gesti�n de usuarios y l�gica de negocio, y FastAPI como un microservicio especializad
+[243] (Normal) .
+[244] (Normal) DOCUMENTACI�N SCRUM
+[245] (Normal) Sprints
+[246] (Normal) Sprint 1: Gesti�n de Acceso. Del 11 al 24 de marzo de 2026.
+[247] (Normal) Objetivo: Implementar el m�dulo de login-registro como base de persistencia y trazabilidad de los datos neuroeducativos.
+[248] (Normal) Historias de usuario: 01, 02 y 03.
+[249] (Normal) Velocidad: 11 puntos completados.
+[250] (Normal) El sprint entrega autenticaci�n JWT funcional, registro de usuarios y recuperaci�n de contrase�a.
+[251] (Normal) Impedimento resuelto: La configuraci�n de bcrypt llev� tiempo.
+[252] (Normal) Sprint 2: Creaci�n y Respuesta de Evaluaciones. Del 25 de marzo al 24 de abril de 2026.
+[253] (Normal) Objetivo: Implementar los flujos de creaci�n de evaluaciones manuales y con IA, publicaci�n y respuesta.
+[254] (Normal) Historias de usuario:  04 hasta 08.
+[255] (Normal) Velocidad: 31 puntos completados.
+[256] (Normal) El petrolero de IA crea evaluaciones en un promedio de 8 segundos.
+[257] (Normal) Impedimento resuelto: Diferencias de configuraci�n CORS de NestJS y FastAPI.
+[258] (Normal) Sprint 3: Calificaci�n Autom�tica, Retroalimentaci�n con IA. Del 25 de abril al 22 de mayo de 2026.
+[259] (Normal) Objetivo: Implementar calificaci�n autom�tica con FastAPI y la entrega en la retroalimentaci�n humanizada del petrolero de IA.
+[260] (Normal) Historias de usuarios:  09 hasta 12.
+[261] (Normal) Velocidad: 36 puntos completados.
+[262] (Normal) Tiempo medio de creaci�n de la retroalimentaci�n de 11 segundos.
+[263] (Normal) No existi� impedimento.
+[264] (Normal) Sprint 4: Pruebas y Cierre. Del 22 de mayo al 30 de mayo de 2026.
+[265] (Normal) Objetivo: Ejecutar pruebas funcionales, de integraci�n y usabilidad sobre el m�dulo. Entregar documentaci�n t�cnica.
+[267] (Normal) Reuniones Diarias
+[268] (Normal) Las reuniones diarias se llevaron a cabo cada d�a h�bil durante los sprints activos, con una duraci�n m�xima de 15 minutos, en la cual cada miembro del equipo atend�a a las tres preguntas con las que 
+[269] (Normal) Definici�n de Terminado
+[270] (Normal) Una historia de usuario se consider� terminada cuando se cumpl�an todos los siguientes criterios:
+[271] (Normal) - C�digo implementado, revisado mediante request de integraci�n y fusionado en la rama principal.
+[272] (Normal) - Pruebas unitarias escritas con una cobertura m�nima del 80 por ciento para el servicio que correspond�a.
+[273] (Normal) - Pruebas funcionales ejecutadas y superadas, conforme a los criterios de aceptaci�n definidos.
+[274] (Normal) - Documentaci�n t�cnica actualizada con contratos de API en Swagger, los comentarios en el c�digo y el archivo de README.
+[275] (Normal) - Pantallas f�ciles de usar validadas en Figma y aprobadas anteriormente a la codificaci�n del frontend.
+[276] (Normal) - Integraci�n verificada con endpoint accesible desde Next.js sin errores de CORS ni de autenticaci�n.
+[277] (Normal) - Datos persistidos correctamente en PostgreSQL seg�n el esquema relacional definido.
+[278] (Normal) RESULTADOS y DISCUSI�N
+[279] (No Spacing) 1. Productos y Entregables:
+[281] (No Spacing) Documentaci�n de an�lisis historias de usuario, producto Backlog y criterios de aceptaci�n.
+[282] (No Spacing) Documentaci�n T�cnica diagramas UML y modelos relacionales que respaldan la base de datos.
+[283] (No Spacing) Dise�os de interfaces en Figma que validan la experiencia del usuario para el Login, registro, creaci�n de evaluaciones, respuesta y visualizaci�n del feelback generado por el asistente de la IA.
+[284] (No Spacing) Arquitectura de microservicios servicios definida en NestJS y FastAPI con API REST definidos y validados.
+[285] (No Spacing) M�dulos de gesti�n de acceso login y registro servicio en NestJS con autenticaci�n JWT, manejo de sesiones y persistencia y trazabilidad de datos.
+[286] (No Spacing) Implementaci�n funcional de la secci�n de evaluaciones con sus respuestas, calificaci�n autom�tica y un feedback proporcionada por el agente de asistencia IA y acceso integrada con el stack tecnol�gic
+[289] (No Spacing) 2. Discusi�n de Implicaci�n y Contrastaci�n
+[291] (No Spacing) Los resultados han logrado transformar una evaluaci�n est�tica en una herramienta diagnostica efectiva. El feedback proporcionado por el agente de asistencia IA reduce la carga cognitiva con comparaci
+[293] (No Spacing) 3. Cumplimiento de Objetivos y Limitaciones
+[294] (No Spacing) Se logr� cumplir con todos los objetivos establecidos para el periodo de pr�ctica, alcanzando un 100%. La principal limitaci�n fue el tiempo, lo que dificult� la integraci�n de los 18 ejes globales de
+[296] (No Spacing) 4. Aprendizaje y Recomendaciones
+[298] (No Spacing) Se fortaleci� el conocimiento en arquitecturas modernas y se aplic� de manera pr�ctica la neurociencia en el desarrollo de software.
+[300] (No Spacing) Se aconseja a la empresa que contin�e con el despliegue de los ejes restantes, siguiendo el modelo de microservicios que se entreg�, documentaci�n los contratos API con SWagger/OpenAPI desde el inicio
+[312] (Normal (Web)) REFERENCIAS
+[314] (Normal) Belcic, I., & Stryker, C. (2025, May 2). Agentes de IA en 2025: expectativas frente a realidad.�Ibm.com. https://www.ibm.com/es-es/think/insights/ai-agents-2025-expectations-vs-reality
+[315] (Normal) Burbano-Enr�quez, B., Moncayo-Cueva, H., & Andrade-Zuleta, A. (2025). Neuroeducation and the influence of AI on early childhood education: A systematic review.�Multidisciplinary Reviews,�9(6), 2026238
+[316] (Normal) Jin, Z., Yin, J., Tian, Q., Zhou, X., Li, Y., Yang, T., & Luo, J. (2026). Can large language models teach creativity? Cognitive gains, affective gaps, and distinct neural patterns.�Computers in Human 
+[317] (Normal) Ouyang, F., & Jiao, P. (2021). Artificial intelligence in education: The three paradigms.�Computers and Education: Artificial Intelligence,�2(100020), 100020. https://doi.org/10.1016/j.caeai.2021.1000
+[318] (Normal) Xu, X., Cao, X., & Wu, Q. (2026). Impact of educational agents on student�s learning outcomes: a meta-analysis.�Frontiers in Psychology,�17(1707196), 1707196. https://doi.org/10.3389/fpsyg.2026.170719
+[319] (Normal) Zhang, K., & Aslan, A. B. (2021). AI technologies for education: Recent research & future directions.�Computers and Education: Artificial Intelligence,�2(100025), 100025. https://doi.org/10.1016/j.cae
+[320] (Normal) (N.d.). Researchgate.net. Retrieved May 3, 2026, from https://www.researchgate.net/publication/398458499_Neuroeducation_and_the_influence_of_AI_on_early_childhood_education_A_systematic_review
+[322] (Normal) Beal, C., & Hontvedt, M. (2023). Video-based mind maps in higher education: A design-based research study of pre-service teachers� co-construction of shared knowledge.�Learning Culture and Social Inte
+[323] (Normal) Chan, P., Van Gerven, T., Dubois, J.-L., & Bernaerts, K. (2021). Virtual chemical laboratories: A systematic literature review of research, technologies and instructional design.�Computers and Educati
+[324] (Normal) Conijn, R., Cook, C., van Zaanen, M., & Van Waes, L. (2022). Early prediction of writing quality using keystroke logging.�International Journal of Artificial Intelligence in Education,�32(4), 835�866.
+[325] (Normal) Crompton, H., & Sykora, C. (2021). Developing instructional technology standards for educators: A design-based research study.�Computers and Education Open,�2(100044), 100044. https://doi.org/10.1016/
+[326] (Normal) Friedman, N., Fekete, T., Gal, K., & Shriki, O. (2019). EEG-based prediction of cognitive load in intelligence tests.�Frontiers in Human Neuroscience,�13(191), 191. https://doi.org/10.3389/fnhum.2019.
+[327] (Normal) Henderson, M. L., & Schroeder, N. L. (2021). A Systematic review of instructor presence in instructional videos: Effects on learning and affect.�Computers and Education Open,�2(100059), 100059. https:
+[328] (Normal) Jewitt, C., Chubinidze, D., Price, S., Yiannoutsou, N., & Barker, N. (2021). Making sense of digitally remediated touch in virtual reality experiences.�Discourse Context & Media,�41(100483), 100483. h
+[329] (Normal) Liu, Z.-D., Lyyra, H., Sun, Y.-N., Liu, B.-H., Li, C.-F., Guo, G.-C., Maniscalco, S., & Piilo, J. (2018). Experimental implementation of fully controlled dephasing dynamics and synthetic spectral dens
+[330] (Normal) Morris, T. H., & Rohs, M. (2021). Digitization bolstering self-directed learning for information literate adults�A systematic review.�Computers and Education Open,�2(100048), 100048. https://doi.org/1
+[331] (Normal) Papadopoulos, P. M., Obwegeser, N., & Weinberger, A. (2021). Concurrent and retrospective metacognitive judgements as feedback in audience response systems: Impact on performance and self-assessment a
+[332] (Normal) Trentsios, P., Wolf, M., & Frerich, S. (2020). Remote Lab meets Virtual Reality � Enabling immersive access to high tech laboratories from afar.�Procedia Manufacturing,�43, 25�31. https://doi.org/10.1
+[333] (Normal) Wang, Y.-H. (2020). Design-based research on integrating learning technology tools into higher education classes to achieve active learning.�Computers & Education,�156(103935), 103935. https://doi.org
+[334] (Normal) Zendler, A., & Greiner, H. (2020). The effect of two instructional methods on learning outcome in chemistry education: The experiment method and computer simulation.�Education for Chemical Engineers,�
+
+================================================================================
+TABLES: 9
+================================================================================
+--- Table 0 (15x3) ---
+  R0: ['N�', 'M�DULO', 'REQUERIMIENTO']
+  R1: ['1', 'Acceso', 'El sistema debe permitir que los nuevos usuarios se registre']
+  R2: ['2', 'Acceso', 'El sistema debe autenticar a los usuarios a trav�s de tokens']
+  R3: ['3', '', 'El sistema debe implementar un control de acceso basado en r']
+  R4: ['4', '', 'El sistema debe permitir el inicio de sesi�n a trav�s de pro']
+--- Table 1 (8x3) ---
+  R0: ['N�', 'CATEGOR�A', 'REQUERIMIENTO NO FUNCIONAL']
+  R1: ['1', 'Seguridad', 'La contrase�a de los usuarios deba guardarse utilizando algo']
+  R2: ['2', 'Rendimiento', 'El tiempo que tarda el agente de inteligencia artificial en ']
+  R3: ['3', 'Escalabilidad', 'La arquitectura basada en microservicios debe permitir que c']
+  R4: ['4', 'Usabilidad', 'La interfaz del sistema debe ser f�cil de usar y permitir el']
+--- Table 2 (15x5) ---
+  R0: ['#', 'HISTORIA DE USUARIO', 'STORY POINTS', 'PRIORIDAD', 'SPRINT']
+  R1: ['1', 'Como estudiante, me gustar�a registrarme usando mi correo el', '3', 'Alta', 'Sprint 1.1']
+  R2: ['2', 'Como estudiante, quiero poder iniciar sesi�n con mis credenc', '3', 'Alta', 'Sprint 1.1']
+  R3: ['3', 'Como estudiante, deseo iniciar sesi�n con mi cuenta de Googl', '2', 'Media', 'Sprint 1.2']
+  R4: ['4', 'Como docente, quiero crear evaluaciones que incluyan pregunt', '8', 'Alta', 'Sprint 2.1']
+--- Table 3 (7x2) ---
+  R0: ['CAMPO', 'DETALLE']
+  R1: ['Historia', 'Como estudiante, me gustar�a registrarme usando mi correo el']
+  R2: ['Criterios de aceptaci�n', '� El correo debe ser �nico en el sistema; si ya existe, debe']
+  R3: ['Story Points', '3']
+  R4: ['Prioridad', 'Alta']
+--- Table 4 (7x2) ---
+  R0: ['CAMPO', 'DETALLE']
+  R1: ['Historia', 'Como docente, quiero crear una evaluaci�n que incluya pregun']
+  R2: ['Criterios de aceptaci�n', '� El formulario permite a�adir preguntas de los tres tipos s']
+  R3: ['Story Points', '8']
+  R4: ['Prioridad', 'Alta']
+--- Table 5 (7x2) ---
+  R0: ['CAMPO', 'DETALLE']
+  R1: ['Historia', 'Como estudiante, deseo recibir retroalimentaci�n personaliza']
+  R2: ['Criterios de aceptaci�n', '� La retroalimentaci�n debe generarse en menos de 15 segundo']
+  R3: ['Story Points', '13']
+  R4: ['Prioridad', 'Alta']
+--- Table 6 (7x2) ---
+  R0: ['CAMPO', 'DETALLE']
+  R1: ['Historia', 'Como docente, quiero ver los resultados de mis estudiantes p']
+  R2: ['Criterios de aceptaci�n', '� El panel mostrar� la lista de estudiantes con su nota, tie']
+  R3: ['Story Points', '5']
+  R4: ['Prioridad', 'Alta']
+--- Table 7 (10x5) ---
+  R0: ['TIPO', 'TECNOLOGIA', 'DESCRIPCI�N DEL CASO DE PRUEBA', 'HERRAMIENTA', 'COBERTURA']
+  R1: ['Unitaria', 'Next.js', 'Validar que el componente QuestionCard muestre las opciones ', 'Jest y React Testing Library', 'Componentes de interfaz de usuario y\nCustom Hooks\n(useTimer,']
+  R2: ['Unitaria', 'NestJS', 'Comprobar que el caso de uso RegisterUseCase ejecute el algo', 'Jest y Nestjs testing Utilities', 'Casos de uso, servicios, Guards y Value Objects(Email, Point']
+  R3: ['Unitaria', 'FastAPI', 'Comprobar que la funci�n de preproceso de la cadena de texto', 'Pytest y \nPytest Asyncio', 'Funciones NLP, Schemas Pydantic y estrategias de calificaci�']
+  R4: ['Integraci�n', 'Next.js', 'Comprobar que el formulario de inicio de sesi�n envi� correc', 'Jest y Mock Service Worker', 'Formularios React Hook Form con validaci�n Zod, sesi�n de au']
+--- Table 8 (1x2) ---
+  R0: ['', '']

@@ -1,0 +1,27 @@
+# [Prueba de carga · tiempo real · Sprint 6.2]: 1000 conexiones concurrentes al canal de notificaciones con < 1 % de pérdida | [Patrón]: Load Test declarativo | [Tecnología]: Artillery 2 · motor socket.io (gateway /notifications, mismo canal RxJS que el SSE)
+# [Por qué socket.io y no SSE]: Artillery no trae motor SSE; el gateway reutiliza NotificationChannel.events() → mide el mismo bus en memoria
+# [Uso]: TOKEN=<jwt de acceso> npx artillery run sse-load.yml   (el token debe ser de un usuario activo)
+# [Medir pérdida]: mientras corre, publicar avisos (p. ej. exportar un reporte) y comparar `socketio.emit` recibidos vs. enviados
+
+config:
+  target: "{{ $env.API_URL || 'http://localhost:4000' }}"
+  phases:
+    - duration: 60 # 60 s abriendo ~17 conexiones/s → ~1000 sockets vivos
+      arrivalRate: 17
+      name: abrir-1000-conexiones
+  engines:
+    socketio: {} # Motor socket.io incluido en Artillery 2
+  socketio:
+    path: /socket.io # Ruta por defecto de Socket.IO en NestJS
+    transports: ["websocket"] # Sin long-polling → conexión persistente real
+    auth:
+      token: "{{ $env.TOKEN }}" # NotificationsGateway lo lee de handshake.auth.token
+  ensure:
+    maxErrorRate: 1 # < 1 % de conexiones fallidas o desconectadas
+
+scenarios:
+  - name: escuchar-canal
+    engine: socketio
+    flow:
+      - namespace: /notifications # @WebSocketGateway({ namespace: '/notifications' })
+        think: 120 # Mantiene el socket abierto 2 min escuchando `notification` y `report-export`

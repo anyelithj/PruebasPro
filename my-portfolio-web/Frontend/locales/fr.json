@@ -1,0 +1,47 @@
+{
+  "hero": {
+    "title": "Bonjour, je suis Juan Pérez",
+    "welcome": "Bienvenue",
+    "description": "Développeur Frontend spécialisé en Nuxt 3, Vue, TypeScript et Tailwind CSS.",
+    "projects": "Voir les projets",
+    "contact": "Me contacter"
+  },
+  "about": {
+    "title": "À propos de moi",
+    "description": "Je suis un développeur frontend passionné par la création d'expériences web modernes, efficaces et accessibles."
+  },
+  "portfolio": {
+    "title": "Portfolio",
+    "viewAll": "Voir tous les projets"
+  },
+  "skills": {
+    "title": "Compétences",
+    "frontend": "Développement Frontend",
+    "tools": "Outils",
+    "languages": "Langues"
+  },
+  "contact": {
+    "title": "Contact",
+    "description": "Vous avez un projet en tête ou vous souhaitez travailler avec moi ? Parlons-en !",
+    "name": "Nom",
+    "email": "E-mail",
+    "message": "Message",
+    "send": "Envoyer"
+  },
+   "portfolioTitle": "Mon Portfolio",
+  "nav": {
+    "blockchain": "Blockchain",
+    "blog": "Blog",
+    "home": "Accueil",
+    "about": "À propos",
+    "projects": "Projets",
+    "contact": "Contact",
+    "login": "Connexion",
+    "account": "Mon compte",
+    "admin": "Admin",
+    "logout": "Déconnexion"
+  },
+  "language": "Langue",
+  "welcome": "Bienvenue",
+  "description": "Développeur Frontend spécialisé en Nuxt 3, Vue, TypeScript et Tailwind CSS."
+}

@@ -1,0 +1,3 @@
+data/
+# [Sprint 5.6]: artefactos del ajuste fino (GB) → no se versionan
+*.gguf

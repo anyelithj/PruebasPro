@@ -1,0 +1,31 @@
+# [Artillery · configuración base]: objetivo, fases de carga y umbrales comunes de las pruebas de rendimiento del backend | [Patrón]: Configuration Object | [Principio]: DRY (los escenarios la reutilizan con `--config artillery.config.yml`)
+# [Uso]: TOKEN=<jwt de acceso> npx artillery run --config artillery.config.yml sse-load.yml
+# [Tecnología]: Artillery 2 (YAML declarativo) · {{ $env.X }} lee variables de entorno
+
+config:
+  target: "{{ $env.API_URL || 'http://localhost:4000' }}" # Backend NestJS (sin /api/v1: cada escenario pone su ruta)
+  phases:
+    - duration: 30 # Calentamiento: 30 s subiendo de 1 a 20 usuarios por segundo
+      arrivalRate: 1
+      rampTo: 20
+      name: calentamiento
+    - duration: 60 # Carga sostenida
+      arrivalRate: 20
+      name: sostenida
+  http:
+    timeout: 10 # Segundos máximos por petición
+  defaults:
+    headers:
+      Authorization: "Bearer {{ $env.TOKEN }}" # JWT de acceso (los endpoints están protegidos por JwtAuthGuard)
+  # [Umbrales]: la prueba falla (exit ≠ 0) si se superan → útil en CI
+  ensure:
+    thresholds:
+      - http.response_time.p95: 500 # p95 < 500 ms
+    maxErrorRate: 1 # < 1 % de errores
+
+scenarios:
+  # [Escenario por defecto]: catálogo de quizzes (lectura cacheada en Redis)
+  - name: catalogo-quiz
+    flow:
+      - get:
+          url: /api/v1/quiz

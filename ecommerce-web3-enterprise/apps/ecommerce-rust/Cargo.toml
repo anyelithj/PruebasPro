@@ -1,0 +1,43 @@
+# Cargo.toml (Rust/Cargo) => manifiesto del crate: metadatos + dependencias (equivalente a package.json / pyproject.toml)
+# Dependencias según docs/setup/03_RUST_AXUM_SETUP.md §2, sin duplicados de propósito.
+
+# [package] => tabla TOML con la identidad del crate
+[package]
+name = "ecommerce-rust"      # Nombre del binario generado (target/release/ecommerce-rust)
+version = "0.1.0"            # SemVer del servicio
+edition = "2021"             # Edición del lenguaje (sintaxis/reglas de módulos estables)
+publish = false              # Servicio privado: impide publicarlo por error en crates.io
+
+# [dependencies] => crates que se compilan dentro del binario de producción
+[dependencies]
+# --- 2.1 Runtime async y framework web ---
+tokio = { version = "1", features = ["full"] }                 # Runtime async (event loop multi-hilo, timers, net, sync)
+axum = { version = "0.8", features = ["ws"] }                  # Framework web; "ws" = WebSocket nativo (reemplaza tokio-tungstenite, que sería duplicado)
+tower = "0.5"                                                  # Abstracción Service/Layer (patrón Decorator/Chain of Responsibility para middlewares)
+tower-http = { version = "0.6", features = ["full"] }          # Middlewares HTTP listos: CORS, trace, compresión, timeouts
+# --- 2.2 Serialización ---
+serde = { version = "1", features = ["derive"] }               # #[derive(Serialize, Deserialize)] => (de)serialización por macros
+serde_json = "1"                                               # Formato JSON sobre serde
+# --- 2.3 Base de datos — SeaORM (PostgreSQL) ---
+sea-orm = { version = "1", features = ["sqlx-postgres", "runtime-tokio-native-tls", "macros"] } # ORM async (patrón Active Record/Repository)
+sea-orm-migration = "1"                                        # Migraciones versionadas de esquema (carpeta migrations/)
+# --- 2.4 GraphQL ---
+async-graphql = "7"                                            # Servidor GraphQL code-first
+async-graphql-axum = "7"                                       # Integración de async-graphql con Axum
+# --- 2.5 Cache en memoria lock-free ---
+dashmap = "6"                                                  # HashMap concurrente por shards (catálogo/carrito de alta concurrencia)
+# --- 2.7 Cliente HTTP ---
+reqwest = { version = "0.12", features = ["json"] }            # Llamadas salientes a otros microservicios (Express, FastAPI)
+# --- 2.8 Web3 / Blockchain ---
+ethers = "2"                                                   # Cliente EVM (contratos ERC20/NFT); "web3" se omite por duplicar esta función
+# --- 2.9 Logging ---
+tracing = "0.1"                                                # Logs estructurados con spans (observabilidad)
+tracing-subscriber = { version = "0.3", features = ["env-filter"] } # Salida de tracing filtrable con RUST_LOG
+# --- 2.10 Variables de entorno ---
+dotenvy = "0.15"                                               # Carga .env en desarrollo (fork mantenido de dotenv)
+
+# [profile.release] => optimizaciones del binario de producción (el que usa el Dockerfile)
+[profile.release]
+lto = true          # Link Time Optimization: binario más pequeño y rápido
+codegen-units = 1   # Mejor optimización a costa de compilar más lento
+strip = true        # Elimina símbolos de depuración del binario final

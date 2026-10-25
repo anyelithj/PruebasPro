@@ -1,0 +1,17 @@
+# [Modelfile de Ollama · Sprint 5.6]: registra el GGUF del corrector de redacciones como OLLAMA_CORRECTOR_MODEL (aula-corrector)
+# Lo ejecuta export_gguf.py:  ollama create aula-corrector -f training/writing_corrector/Modelfile
+# La instrucción de sistema NO va aquí: el servicio la envía en cada petición (SYSTEM_PROMPT, misma que en el entrenamiento) | [Principio]: DRY
+
+FROM ./aula-corrector.gguf
+
+# Plantilla ChatML de Qwen2.5 (el modelo base del ajuste fino)
+TEMPLATE """{{ if .System }}<|im_start|>system
+{{ .System }}<|im_end|>
+{{ end }}<|im_start|>user
+{{ .Prompt }}<|im_end|>
+<|im_start|>assistant
+"""
+
+PARAMETER stop "<|im_end|>"
+PARAMETER temperature 0.1
+PARAMETER num_ctx 4096

@@ -1,0 +1,63 @@
+﻿[0] (Normal) ARQUITECTURA T�CNICA DEL SISTEMA
+[1] (Normal) Plataforma de Trivia � Stack 100% Open Source
+[2] (Normal) Next.js 15  �  NestJS 10  �  FastAPI 0.110  �  Open Trivia DB
+[5] (Heading 1) 1. PATRONES DE DISE�O
+[7] (Normal) Solo se listan patrones de dise�o reconocidos: creacionales, estructurales, comportamentales y arquitect�nicos. Las metodolog�as UI/UX (Atomic Design, Skeleton Loading, Optimistic UI) se excluyen por ser t�cnicas de producto, no patrones de software. Los patrones espec�ficos del ecosistema React (HOC, Hooks, Compound, Rendering) se presentan en la secci�n 1.5.
+[9] (Heading 2) 1.1 Patrones Creacionales
+[13] (Heading 2) 1.2 Patrones Estructurales
+[17] (Heading 2) 1.3 Patrones Comportamentales
+[21] (Heading 2) 1.4 Patrones Arquitect�nicos
+[26] (Heading 2) 1.5 Patrones de Dise�o React � Frontend (Next.js)
+[28] (Normal) Patrones espec�ficos del ecosistema React aplicados en el frontend con Next.js 15, Clean Architecture y Atomic Design. Referencias: patterns.dev/react
+[30] (Heading 3) 1.5.1 Patrones de Componentes React
+[34] (Heading 3) 1.5.2 Patrones de Renderizado (Rendering Patterns) � Next.js 15
+[38] (Heading 3) 1.5.3 Patrones de Stack React (React 2026) y AI UI Patterns
+[43] (Heading 1) 2. PARADIGMAS DE PROGRAMACI�N
+[48] (Heading 1) 3. PROTOCOLOS DE APIs Y COMUNICACI�N
+[50] (Normal) Los protocolos de API definen el estilo y contrato de las interfaces. Los protocolos de comunicaci�n definen el mecanismo de transporte. Son conceptos distintos y se presentan por separado, incluyendo los del frontend.
+[52] (Heading 2) 3.1 Protocolos de API
+[54] (Normal) Nota: OpenAPI y Swagger NO son protocolos � son especificaciones/herramientas de documentaci�n de APIs. Se documentan en la secci�n 3.5. JSON:API tampoco es un protocolo � es una convenci�n de formato de respuesta REST, documentada en la secci�n 3.6.
+[58] (Heading 2) 3.2 Protocolos de Comunicaci�n � Frontend (Next.js)
+[62] (Heading 2) 3.3 Protocolos de Comunicaci�n � Backend (NestJS / FastAPI)
+[66] (Heading 2) 3.4 Protocolos de Seguridad y Autenticaci�n
+[71] (Heading 2) 3.5 Especificaciones y Herramientas de Documentaci�n de API
+[73] (Normal) OpenAPI y Swagger NO son protocolos de comunicaci�n ni de API. Son una especificaci�n est�ndar y su herramienta de visualizaci�n respectivamente, usadas para documentar contratos de API REST.
+[78] (Heading 2) 3.6 Convenciones de Formato de Respuesta API
+[80] (Normal) JSON:API NO es un protocolo de API ni de comunicaci�n. Es una especificaci�n de convenci�n de formato para estructurar respuestas REST de manera est�ndar e interoperable.
+[85] (Heading 1) 4. ARQUITECTURA Y MICROSERVICIOS
+[87] (Normal) Arquitectura de microservicios con dominio delimitado (DDD). Cada servicio implementa MVC internamente sobre Arquitectura Hexagonal + Clean Architecture. La comunicaci�n entre servicios es as�ncrona donde sea posible (eventos/colas).
+[89] (Heading 3) 4.1 Mapa de Microservicios
+[93] (Heading 3) 4.2 Patr�n MVC por Tecnolog�a
+[97] (Heading 3) 4.3 Capas Hexagonal + Clean Architecture (todos los servicios)
+[102] (Heading 1) 5. FUNCIONALIDADES: NestJS vs FastAPI
+[104] (Heading 2) 5.1 NestJS � Backend Central (L�gica de Negocio y Acceso)
+[109] (Heading 2) 5.2 FastAPI � Backend de IA (Inteligencia Artificial y An�lisis)
+[114] (Heading 1) 6. DEPENDENCIAS Y LIBRER�AS
+[116] (Normal) Todas las dependencias son 100% Open Source. Cada tabla incluye el nombre exacto de instalaci�n, para qu� sirve y en qu� contexto se usa dentro del proyecto.
+[118] (Heading 2) 6.0 Herramientas de Testing y Calidad � Resumen Unificado
+[122] (Heading 2) 6.1 Validaci�n de Datos por Stack
+[126] (Heading 2) 6.2 Herramientas de Calidad de C�digo por Tecnolog�a
+[130] (Heading 2) 6.3 Next.js 15 � Dependencias Completas
+[135] (Heading 2) 6.4 NestJS 10 � Dependencias Completas
+[140] (Heading 2) 6.5 FastAPI 0.110 � Dependencias Completas
+[145] (Heading 1) 7. ESTRATEGIA DE PRUEBAS � Por Tipo y Tecnolog�a
+[147] (Normal) Pir�mide de testing: m�s unitarias (base), menos E2E (cima). Todas las herramientas son 100% Open Source.
+[149] (Heading 2) 7.1 Pruebas Unitarias
+[153] (Heading 2) 7.2 Pruebas de Integraci�n
+[157] (Heading 2) 7.3 Pruebas Funcionales (E2E)
+[162] (Heading 2) 7.4 Pruebas de Rendimiento
+[166] (Heading 2) 7.5 Pruebas de Usabilidad
+python : Traceback (most recent call last):
+En línea: 1 Carácter: 1
++ python "C:/Users/angui/Documents/proyDemo/scripts/extract_docx2.py" " ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "C:\Users\angui\Documents\proyDemo\scripts\extract_docx2.py", line 9, in <module>
+    print(f"[{i}] ({style}) {text}")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\angui\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 15: character maps to <undefined>

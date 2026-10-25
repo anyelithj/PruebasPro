@@ -1,0 +1,27 @@
+<!doctype html>
+<!-- [HTML base · Angular 22]: idioma, viewport y <aula-root> | [SEO]: description + robots (pantallas privadas detrás de sesión) | [A11y]: lang declarado para lectores de pantalla -->
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Aula de Idiomas</title>
+    <!-- [base href]: /ng/ → los assets relativos (dev server) y absolutos (deployUrl) salen de /ng/; el router usa APP_BASE_HREF "/" (app.config.ts) → /tutor, /redaccion… -->
+    <base href="/ng/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Aula de Idiomas: tutor IA, corrector de redacciones, plan de estudio, notificaciones y reportes." />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <!-- [Anti-parpadeo]: aplica el tema guardado por Next.js (localStorage «ui-theme») antes del primer pintado | [Patrón]: Blocking Inline Script -->
+    <script>
+      (function () {
+        var all = ['light', 'dark', 'sepia', 'hcontrast', 'deepfocus', 'vr'];
+        var t = 'light';
+        try { t = localStorage.getItem('ui-theme') || 'light'; } catch (e) {}
+        document.documentElement.classList.add(all.indexOf(t) >= 0 ? t : 'light');
+      })();
+    </script>
+  </head>
+  <body class="min-h-dvh bg-background text-foreground antialiased">
+    <aula-root></aula-root>
+  </body>
+</html>

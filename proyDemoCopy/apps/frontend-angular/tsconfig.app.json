@@ -1,0 +1,8 @@
+/* [tsconfig de la app]: compila src/ (las pruebas viven en __tests__/, igual que Next.js y NestJS) | [Principio]: SRP (build y test separados) */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "types": [] },
+  // [@aula · Sprint 7.1]: paquetes compartidos del monorepo (TypeScript puro + JSON, sin imports de runtime)
+  "include": ["src/**/*.ts", "../../packages/**/*.ts"],
+  "exclude": ["src/**/*.spec.ts"]
+}

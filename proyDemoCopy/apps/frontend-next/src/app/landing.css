@@ -1,0 +1,285 @@
+/* Landing design system (mirrored from Demohtml/assets/css/style.css) */
+.landing-root {
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --primary-light: #818cf8;
+  --secondary: #8b5cf6;
+  --accent: #06b6d4;
+  --success: #9333ea;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  /* [Tema activo]: la landing usa los mismos tokens --nl-* que el portal → cambia con los 6 temas | [Principio]: SSOT */
+  --bg: var(--nl-bg);
+  --bg-alt: var(--nl-surf2);
+  --surface: var(--nl-surf);
+  --border: var(--nl-brd);
+  --text: var(--nl-txt);
+  --text-muted: var(--nl-txt2);
+  --text-light: #94a3b8;
+  --gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+  /* [Botones sólidos]: alias de los tokens globales (globals.css) → mismo morado y lila en landing y portal | [Principio]: DRY + SSOT */
+  --btn: var(--btn-solid);
+  --btn-hover: var(--btn-solid-hover);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 12px 32px rgba(99, 102, 241, 0.18);
+  --radius: 12px;
+  --radius-lg: 20px;
+  --transition: all 0.25s ease;
+
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  font-size: 15px;
+}
+
+.landing-root * { box-sizing: border-box; }
+.landing-root a { color: var(--primary-dark); text-decoration: none; } /* [Sprint 7.13 · WCAG AA]: #4f46e5 sobre blanco = 6.3:1 (el #6366f1 daba 4.46:1) */
+.landing-root a:hover { text-decoration: underline; }
+.landing-root img { max-width: 100%; display: block; }
+/* [Reset de botones de la landing]: excluye los menús de tema/idioma (aria-haspopup) y sus opciones (role) para no borrar su estilo */
+.landing-root button:not([aria-haspopup]):not([role]) { font-family: inherit; cursor: pointer; border: none; background: none; }
+
+/* [Contenedor · 2026-10-23 · 4.º pase]: MISMO ancho y gutter que el navbar compartido (max-w-[1240px] + px-4 → sm:px-6) → logo, títulos, textos,
+   botones y la franja final empiezan y terminan en la misma vertical que la barra | [Principio]: SSOT de layout (--page-gutter) */
+.landing-root { --page-gutter: 16px; }
+@media (min-width: 640px) { .landing-root { --page-gutter: 24px; } }
+.landing-root .container { max-width: 1240px; margin: 0 auto; padding: 0 var(--page-gutter); }
+
+.landing-root .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 22px;
+  border-radius: var(--radius-cta); /* [2026-10-23 · 4.º pase]: SSOT del radio «Comenzar gratis» (globals.css) */
+  font-weight: 600;
+  font-size: 14px;
+  transition: var(--transition);
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.landing-root .btn-primary { background: var(--btn); color: #fff; box-shadow: var(--shadow); }
+.landing-root .btn-primary:hover { background: var(--btn-hover); transform: translateY(-2px); box-shadow: var(--shadow-lg); color: #fff; }
+/* [Botón secundario lila]: antes blanco con borde; mismo nombre de clase → no cambia el JSX | [Principio]: OCP */
+.landing-root .btn-outline { background: var(--btn-soft); color: var(--btn-soft-text); border-color: transparent; }
+.landing-root .btn-outline:hover { background: var(--btn-soft-hover); color: var(--btn-soft-text); }
+/* `:focus-visible` (CSS): anillo visible solo con teclado → accesibilidad sin afectar el clic */
+.landing-root .btn:focus-visible { outline: 3px solid var(--btn); outline-offset: 2px; }
+.landing-root .btn-ghost { color: var(--text); }
+.landing-root .btn-ghost:hover { background: var(--bg-alt); }
+.landing-root .btn-block { width: 100%; justify-content: center; }
+
+.landing-root .navbar {
+  position: sticky; top: 0; z-index: 50;
+  background: color-mix(in srgb, var(--nl-surf) 85%, transparent); /* `color-mix` (CSS Color 5): superficie del tema translúcida */
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+.landing-root .navbar-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  height: 68px;
+}
+.landing-root .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; color: var(--text); }
+.landing-root .brand-mark {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--gradient);
+  display: grid; place-items: center; color: #fff;
+}
+.landing-root .nav-links { display: flex; gap: 28px; align-items: center; }
+.landing-root .nav-links a { color: var(--text-muted); font-weight: 500; font-size: 14px; }
+.landing-root .nav-links a:hover { color: var(--primary); }
+.landing-root .nav-actions { display: flex; gap: 10px; align-items: center; }
+
+.landing-root .hero {
+  position: relative;
+  padding: 80px 0 100px;
+  background: var(--gradient-soft);
+  overflow: hidden;
+}
+.landing-root .hero::before {
+  content: ''; position: absolute; top: -200px; right: -200px;
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(139,92,246,0.25), transparent 60%);
+  border-radius: 50%;
+}
+.landing-root .hero-grid {
+  display: grid; grid-template-columns: 1.05fr 1fr; gap: 60px; align-items: center;
+  position: relative; z-index: 1;
+}
+.landing-root .hero h1 {
+  font-size: 54px; line-height: 1.08; letter-spacing: -1.5px;
+  margin-bottom: 20px; font-weight: 800;
+}
+.landing-root .hero h1 .grad {
+  background: var(--gradient); -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent; background-clip: text;
+}
+.landing-root .hero p.lead { font-size: 18px; color: var(--text-muted); margin-bottom: 32px; max-width: 540px; }
+.landing-root .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; }
+.landing-root .hero-stats { display: flex; gap: 32px; margin-top: 48px; }
+.landing-root .hero-stats div b { display: block; font-size: 26px; color: var(--primary); }
+.landing-root .hero-stats div span { font-size: 13px; color: var(--text-muted); }
+.landing-root .hero-visual {
+  position: relative; aspect-ratio: 1/1; max-width: 460px; margin-left: auto;
+  display: grid; place-items: center;
+}
+.landing-root .brain-svg {
+  width: 100%; height: 100%; filter: drop-shadow(0 20px 40px rgba(99,102,241,0.3));
+}
+.landing-root .floating-card {
+  /* [Tema]: superficie + texto del tema activo (antes #fff fijo → texto claro invisible en oscuro) */
+  position: absolute; background: var(--surface); color: var(--text); padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px; box-shadow: var(--shadow-lg);
+  display: flex; align-items: center; gap: 12px;
+  font-size: 13px;
+  animation: landingFloat 4s ease-in-out infinite;
+}
+.landing-root .floating-card.fc-1 { top: 8%; left: -10%; }
+.landing-root .floating-card.fc-2 { bottom: 12%; right: -8%; animation-delay: 1.5s; }
+.landing-root .floating-card .ic {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--gradient); color: #fff;
+  display: grid; place-items: center;
+}
+@keyframes landingFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+.landing-root .section { padding: 90px 0; }
+.landing-root .section-head { text-align: center; max-width: 720px; margin: 0 auto 56px; }
+.landing-root .section-head .eyebrow {
+  display: inline-block; padding: 6px 14px;
+  background: var(--gradient-soft); color: var(--primary);
+  border-radius: 99px; font-size: 12px; font-weight: 600;
+  letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 16px;
+}
+.landing-root .section-head h2 { font-size: 38px; letter-spacing: -1px; margin-bottom: 14px; font-weight: 800; }
+.landing-root .section-head p { color: var(--text-muted); font-size: 17px; }
+
+.landing-root .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.landing-root .feature-card {
+  background: var(--surface); padding: 28px; border-radius: var(--radius-lg);
+  border: 1px solid var(--border); transition: var(--transition);
+}
+.landing-root .feature-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: var(--primary-light); }
+.landing-root .feature-card .icon {
+  width: 52px; height: 52px; border-radius: 14px;
+  background: var(--gradient-soft); color: var(--primary);
+  display: grid; place-items: center; margin-bottom: 18px;
+}
+.landing-root .feature-card h3 { font-size: 18px; margin-bottom: 8px; font-weight: 700; }
+.landing-root .feature-card p { color: var(--text-muted); font-size: 14px; }
+
+/* [Cursos de idiomas]: reutilizan .feature-card (mismo fondo, borde, radio y hover que «Características») en versión compacta | [Principio]: DRY */
+/* `auto-fill` + `minmax` (CSS Grid): 4 → 3 → 2 → 1 columnas según el ancho, sin media queries (responsive nativo) */
+.landing-root .course-list { list-style: none; margin: 0; padding: 0; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 18px; }
+/* `flex column` + `margin-top: auto` en el botón (Flexbox): todos los botones alineados abajo */
+.landing-root .course-card { display: flex; flex-direction: column; gap: 12px; padding: 20px; }
+.landing-root .course-head { display: flex; align-items: center; gap: 12px; }
+.landing-root .course-card .icon { width: 42px; height: 42px; border-radius: 12px; margin: 0; flex-shrink: 0; }
+.landing-root .course-card .icon b { font-size: 14px; letter-spacing: 0.5px; }
+.landing-root .course-card h3 { font-size: 16px; margin: 0; line-height: 1.25; }
+.landing-root .course-meta { font-size: 12px; font-weight: 600; color: var(--primary-dark); }
+/* `line-clamp` (CSS): máximo 3 renglones → tarjetas de la misma altura; el texto completo sigue en el HTML (SEO) */
+.landing-root .course-card p { font-size: 13px; line-height: 1.5; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
+.landing-root .course-btn { margin-top: auto; padding: 8px 16px; font-size: 13px; }
+
+.landing-root .roles-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.landing-root .role-card {
+  position: relative; padding: 32px 28px;
+  border-radius: var(--radius-lg); overflow: hidden;
+  background: var(--surface); border: 1px solid var(--border);
+  transition: var(--transition);
+}
+.landing-root .role-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); }
+.landing-root .role-card .badge {
+  display: inline-block; padding: 6px 12px;
+  background: var(--gradient); color: #fff;
+  border-radius: 99px; font-size: 11px; font-weight: 700;
+  letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 16px;
+}
+.landing-root .role-card h3 { font-size: 22px; margin-bottom: 10px; }
+.landing-root .role-card ul { list-style: none; margin: 16px 0 24px; padding: 0; }
+.landing-root .role-card ul li {
+  padding: 6px 0; color: var(--text-muted); font-size: 14px;
+  display: flex; align-items: center; gap: 10px;
+}
+.landing-root .role-card ul li::before {
+  content: ''; width: 6px; height: 6px;
+  background: var(--primary); border-radius: 50%;
+}
+
+.landing-root .cta-section {
+  background: var(--gradient); color: #fff; text-align: center;
+  padding: 80px 24px; border-radius: var(--radius-lg);
+  /* [2026-10-23 · 4.º pase]: la franja vive DENTRO de .container (antes margin: 0 24px a todo el ancho → se salía de la vertical del navbar en pantallas anchas) */
+}
+.landing-root .cta-wrap { padding-bottom: 80px; }
+/* [Tipografía uniforme]: mismo tamaño que los <h2> de las secciones (antes 36 vs 38 px) */
+.landing-root .cta-section h2 { font-size: 38px; margin-bottom: 14px; letter-spacing: -1px; font-weight: 800; }
+.landing-root .cta-section p { opacity: 0.92; font-size: 17px; margin-bottom: 28px; }
+/* [2026-10-23]: «Crear cuenta» = mismo botón sólido que «Comenzar gratis»; sobre la franja morada lleva borde blanco para destacar */
+.landing-root .cta-section .btn-primary { border-color: rgba(255, 255, 255, 0.85); }
+
+.landing-root .footer {
+  /* [Footer siempre oscuro]: fondo fijo; antes var(--text) se volvía claro en tema oscuro → texto claro ilegible */
+  background: #0f172a; color: #cbd5e1;
+  padding: 60px 0 30px;
+}
+.landing-root .footer-grid {
+  display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px;
+  margin-bottom: 40px;
+}
+.landing-root .footer h3 { color: #fff; margin-bottom: 16px; font-size: 14px; }
+.landing-root .footer a { color: #cbd5e1; display: block; padding: 4px 0; font-size: 14px; }
+.landing-root .footer a:hover { color: #fff; }
+/* [Contacto como texto]: los enlaces mailto no son fiables en todos los entornos | [UX] */
+.landing-root .footer-grid > div > span { color: #cbd5e1; display: block; padding: 4px 0; font-size: 14px; }
+.landing-root .footer-bottom {
+  border-top: 1px solid #1e293b; padding-top: 24px;
+  text-align: center; font-size: 13px; color: #94a3b8; /* [WCAG AA]: 7.1:1 sobre #0f172a (el #64748b daba 3.75:1) */
+}
+
+@media (max-width: 1024px) {
+  .landing-root .hero-grid { grid-template-columns: 1fr; }
+  .landing-root .feature-grid, .landing-root .roles-grid { grid-template-columns: repeat(2, 1fr); }
+  .landing-root .footer-grid { grid-template-columns: 1fr 1fr; }
+  .landing-root .hero h1 { font-size: 42px; }
+}
+@media (max-width: 720px) {
+  .landing-root .nav-links { display: none; }
+  .landing-root .hero { padding: 50px 0 70px; }
+  .landing-root .hero h1 { font-size: 34px; }
+  .landing-root .section { padding: 60px 0; }
+  .landing-root .section-head h2 { font-size: 28px; }
+  .landing-root .cta-section { padding: 48px 20px; } /* [2026-10-23 · 4.º pase]: franja final más compacta en móvil */
+  .landing-root .cta-section h2 { font-size: 28px; }
+  .landing-root .feature-grid, .landing-root .roles-grid { grid-template-columns: 1fr; }
+  .landing-root .footer-grid { grid-template-columns: 1fr; gap: 24px; }
+  .landing-root .hero-visual { max-width: 320px; margin: 0 auto; }
+  .landing-root .floating-card { display: none; }
+}
+@media (max-width: 480px) {
+  .landing-root .navbar-inner { height: 60px; }
+  .landing-root .brand { font-size: 15px; }
+  .landing-root .brand-mark { width: 32px; height: 32px; }
+  .landing-root .nav-actions .btn-ghost { display: none; }
+  .landing-root .hero { padding: 40px 0 60px; }
+  .landing-root .hero h1 { font-size: 28px; line-height: 1.15; }
+  .landing-root .hero p.lead { font-size: 15px; }
+  .landing-root .hero-stats { gap: 16px; flex-wrap: wrap; }
+  .landing-root .hero-stats div b { font-size: 22px; }
+  .landing-root .hero-cta .btn { flex: 1; justify-content: center; min-width: 140px; }
+  .landing-root .section { padding: 40px 0; }
+  .landing-root .section-head h2 { font-size: 22px; }
+  .landing-root .section-head p { font-size: 14px; }
+  .landing-root .feature-card, .landing-root .role-card { padding: 20px 18px; }
+  .landing-root .cta-section { padding: 50px 20px; margin: 0 16px 50px; }
+  .landing-root .cta-section h2 { font-size: 24px; }
+  .landing-root .footer { padding: 40px 0 20px; }
+  .landing-root .footer-grid { gap: 28px; }
+}

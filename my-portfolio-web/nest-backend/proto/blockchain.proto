@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+// [ISP][SRP] contrato único del agente blockchain — FastAPI expone, NestJS consume.
+package blockchain;
+
+// Servicio del agente blockchain (Solana Devnet + Ethereum Sepolia).
+service BlockchainService {
+  // Respuesta unaria: el agente ejecuta las tools y devuelve el resultado final.
+  rpc Invoke(BlockchainRequest) returns (BlockchainResponse);
+  // Streaming server-side: cada evento del agente (chunk, tool_call, tool_result).
+  rpc Stream(BlockchainRequest) returns (stream BlockchainEvent);
+}
+
+message BlockchainRequest {
+  string message = 1;         // Prompt en lenguaje natural del visitante.
+  string chain = 2;           // "solana" | "ethereum".
+  string wallet = 3;          // Dirección pública opcional del visitante.
+  string user_id = 4;         // Sujeto autenticado (opcional).
+}
+
+message BlockchainResponse {
+  string status = 1;          // "success" | "error".
+  string chain = 2;           // "solana" | "ethereum".
+  string tool_used = 3;       // Nombre de la @tool ejecutada.
+  string agent_response = 4;  // Explicación del agente en lenguaje natural.
+  string tool_result = 5;     // JSON serializado del resultado de la tool.
+  string tx_signature = 6;    // Firma Solana (si hubo transacción).
+  string tx_hash = 7;         // Hash Ethereum (si hubo transacción).
+  string network = 8;         // "devnet" | "sepolia".
+  string explorer_url = 9;    // URL al explorer (si aplica).
+  string timestamp = 10;      // ISO-8601.
+}
+
+message BlockchainEvent {
+  string type = 1;            // "chunk" | "tool_call" | "tool_result" | "done" | "error".
+  string content = 2;         // Texto del chunk (si type == chunk).
+  string tool = 3;            // Nombre de la tool (si type == tool_call).
+  string result = 4;          // JSON del resultado (si type == tool_result).
+}

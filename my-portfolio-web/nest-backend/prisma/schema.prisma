@@ -1,0 +1,160 @@
+// [DDD] modelo de datos expresivo del dominio
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  user
+}
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  name         String    @db.VarChar(120)
+  email        String    @unique @db.VarChar(255)
+  passwordHash String    @map("password_hash")
+  role         Role      @default(user)
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  sessions            Session[]
+  passwordResetTokens PasswordResetToken[]
+
+  @@map("users")
+}
+
+// [SEC] token de reseteo: se guarda solo el hash SHA-256; el valor en claro viaja en el enlace.
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+model Session {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  refreshJti  String   @unique @map("refresh_jti")
+  expiresAt   DateTime @map("expires_at")
+  revoked     Boolean  @default(false)
+  userAgent   String?  @map("user_agent")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Project {
+  id          String   @id @default(uuid()) @db.Uuid
+  title       String   @db.VarChar(160)
+  slug        String   @unique @db.VarChar(200)
+  description String   @db.Text
+  link        String   @db.VarChar(500)
+  techs       String[]
+  featured    Boolean  @default(false)
+  imageUrl    String?  @map("image_url") @db.VarChar(500)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([featured])
+  @@map("projects")
+}
+
+// [DDD] post del blog — CRUD admin, lectura pública. imageUrl = portada en Cloudinary.
+model Post {
+  id          String   @id @default(uuid()) @db.Uuid
+  title       String   @db.VarChar(200)
+  slug        String   @unique @db.VarChar(220)
+  excerpt     String   @db.VarChar(400)
+  content     String   @db.Text
+  tags        String[]
+  imageUrl    String?  @map("image_url") @db.VarChar(500)
+  published   Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([published])
+  @@index([createdAt])
+  @@map("posts")
+}
+
+// [DDD] ajustes clave-valor editables desde el panel (p. ej. system prompt del chat).
+model Setting {
+  key       String   @id @db.VarChar(80)
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+
+// [DDD] mensaje de chat IA — historial por sesión (Ollama / RAG).
+model ChatMessage {
+  id        String   @id @default(uuid()) @db.Uuid
+  sessionId String   @map("session_id") @db.VarChar(64)
+  role      String   @db.VarChar(16) // "user" | "assistant"
+  content   String   @db.Text
+  userId    String?  @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([sessionId])
+  @@index([userId])
+  @@map("chat_messages")
+}
+
+// [DDD] notificación multicanal — registro de cada envío.
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  channel   String   @db.VarChar(20) // "whatsapp" | "telegram" | "email"
+  recipient String   @db.VarChar(255)
+  message   String   @db.Text
+  status    String   @default("pending") @db.VarChar(16)
+  eventType String?  @map("event_type") @db.VarChar(40)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([channel])
+  @@map("notifications")
+}
+
+enum ContactStatus {
+  pending
+  read
+  replied
+  archived
+}
+
+// [DDD] envío del formulario público de contacto — lectura y gestión solo admin.
+model ContactSubmission {
+  id        String        @id @default(uuid()) @db.Uuid
+  name      String        @db.VarChar(120)
+  email     String        @db.VarChar(255)
+  message   String        @db.Text
+  status    ContactStatus @default(pending)
+  ipAddress String?       @map("ip_address") @db.VarChar(64)
+  // [ML] categoría (job|freelance|spam) + prioridad (high|medium|low) del clasificador.
+  category  String?       @db.VarChar(20)
+  priority  String?       @db.VarChar(10)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([category])
+  @@index([createdAt])
+  @@map("contact_submissions")
+}
