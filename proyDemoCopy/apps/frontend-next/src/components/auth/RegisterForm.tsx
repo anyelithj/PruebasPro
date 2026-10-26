@@ -10,6 +10,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { useAuth } from "@/hooks/useAuth";
 import { makeRegisterSchema, type RegisterInput } from "@/lib/validations";
 import { fmt } from "@aula/shared-i18n";
+import { PHONE_MAX_LENGTH, PHONE_PLACEHOLDER } from "@aula/shared-schemas"; // [2026-10-24]: límite y ejemplo del teléfono compartidos con Mi perfil y Gestión | [Principio]: SSOT
 import { usePreferences } from "@/components/layout/PreferencesProvider"; // [i18n]: textos y validaciones del idioma activo
 import { AUTH_ROUTES } from "@/lib/constants";
 import { OAuthButtons } from "@/components/auth/OAuthButtons";
@@ -32,6 +33,7 @@ export function RegisterForm() {
       firstName: "",
       lastName: "",
       email: "",
+      phone: "", // [2026-10-24]: opcional → "" = sin teléfono
       password: "",
       confirmPassword: "",
       acceptTerms: undefined as unknown as true,
@@ -44,6 +46,8 @@ export function RegisterForm() {
       lastName: values.lastName,
       email: values.email,
       password: values.password,
+      // `||` (JS): "" (falsy) → undefined → el campo no viaja y el usuario queda sin teléfono
+      phone: values.phone || undefined,
     });
   });
 
@@ -123,6 +127,31 @@ export function RegisterForm() {
         {errors.email && (
           <p id="email-error" role="alert" className="text-xs text-destructive">
             {errors.email.message}
+          </p>
+        )}
+      </div>
+
+      {/* [Teléfono · 2026-10-24]: opcional | `type="tel"` (HTML5) + `inputMode="tel"` → teclado numérico en móvil · `autoComplete="tel"` → autocompletado del navegador
+          [A11y]: `aria-describedby` enlaza la pista (y el error si existe) para lectores de pantalla · mismo <Input> (utilidad `control`, min-h-10) → misma altura que el resto */}
+      <div className="space-y-1.5">
+        <Label htmlFor="phone">{r.phone}</Label>
+        <Input
+          id="phone"
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          placeholder={PHONE_PLACEHOLDER}
+          maxLength={PHONE_MAX_LENGTH}
+          aria-invalid={!!errors.phone}
+          aria-describedby={errors.phone ? "phone-hint phone-error" : "phone-hint"}
+          {...register("phone")}
+        />
+        <p id="phone-hint" className="text-xs text-muted-foreground">
+          {r.phoneHint}
+        </p>
+        {errors.phone && (
+          <p id="phone-error" role="alert" className="text-xs text-destructive">
+            {errors.phone.message}
           </p>
         )}
       </div>

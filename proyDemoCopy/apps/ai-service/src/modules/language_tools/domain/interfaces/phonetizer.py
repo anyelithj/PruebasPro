@@ -8,6 +8,12 @@
 
 from typing import Protocol
 
+from src.modules.language_tools.domain.interfaces.speech_synthesizer import SpeechUnavailableError
+
+
+class PhonetizerMissingError(SpeechUnavailableError):
+    """[2026-10-24]: el motor no está instalado → fallo GLOBAL (503); cualquier otro fallo se degrada por palabra (IPA vacía) | [Patrón]: jerarquía de errores de dominio."""
+
 
 class Phonetizer(Protocol):
     """Contrato: texto + voz → IPA."""

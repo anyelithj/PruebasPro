@@ -1,5 +1,5 @@
-// next.types.ts => props tipadas de páginas del App Router de Next.js 15.
-// Desde Next 15, "params" y "searchParams" son PROMESAS (renderizado asíncrono de Server Components).
+// next.types.ts => props tipadas de páginas del App Router de Next.js 16.
+// Desde Next 16, "params" y "searchParams" son PROMESAS (renderizado asíncrono de Server Components).
 
 // "<P>" => genérico con la forma de los segmentos dinámicos ([id], [slug]...). Todas las páginas viven bajo
 // app/[locale]/, así que "params" siempre incluye además el idioma ("es" | "en").

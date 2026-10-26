@@ -1,6 +1,7 @@
 "use client"; // [Next.js]: Client Component → marcar completa (Optimistic UI) y navegación entre lecciones
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { youtubeEmbed } from "@/lib/youtube";
 import { useRouter } from "next/navigation";
 import { usePreferences } from "@/components/layout/PreferencesProvider";
 import { completeMaterialAction } from "@/lib/purchase-actions"; // [Server Action]: marca el material como completado
@@ -105,7 +106,7 @@ export function CourseLesson({
 
   // [Visor por tipo]: `key` → al cambiar de lección se re-monta | [Patrón]: Strategy | JSX guardado en una constante → se ubica según el tipo (DRY)
   const viewer = (
-    <div key={current.id} className="overflow-hidden rounded-xl bg-black">
+    <div key={`viewer-${current.id}`} className="overflow-hidden rounded-xl bg-black">
       {current.kind === "video" && (
         <video
           controls
@@ -142,7 +143,11 @@ export function CourseLesson({
           <audio controls preload="metadata" className="w-full max-w-xl" aria-label={current.title} onEnded={() => markDone(false)} src={materialFileUrl(courseId, current.id)} />
         </div>
       )}
-      {(current.kind === "document" || current.kind === "link") && (
+      {/* [2026-10-25]: un enlace de YouTube se reproduce aquí mismo (iframe sin cookies) */}
+      {current.kind === "link" && youtubeEmbed(current.url) && (
+        <iframe src={youtubeEmbed(current.url)!} title={current.title} className="aspect-video w-full" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowFullScreen loading="lazy" referrerPolicy="strict-origin-when-cross-origin" />
+      )}
+      {(current.kind === "document" || (current.kind === "link" && !youtubeEmbed(current.url))) && (
         <div className="grid place-items-center gap-3 bg-card p-8 text-center">
           <span aria-hidden className="text-4xl">{MATERIAL_ICON[current.kind]}</span>
           <p className="max-w-md break-all text-sm text-muted-foreground">{current.kind === "link" ? current.url : current.originalName}</p>
@@ -169,7 +174,7 @@ export function CourseLesson({
         {/* [Lectura en voz alta]: arriba (solo PDF) — texto resaltado con el audio + traducción completa y por selección; el PDF original queda debajo */}
         {current.kind === "pdf" && (
           <PdfReader
-            key={current.id}
+            key={`reader-${current.id}`} // [2026-10-25]: clave distinta del visor (mismo padre en PDF → «two children with the same key»)
             src={materialFileUrl(courseId, current.id)}
             lang={lang}
             color={color}

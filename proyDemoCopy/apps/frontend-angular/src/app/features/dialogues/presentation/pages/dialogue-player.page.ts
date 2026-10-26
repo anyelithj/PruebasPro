@@ -6,12 +6,15 @@ import {
   computed,
   DestroyRef,
   effect,
+  type ElementRef,
   inject,
   input,
   signal,
+  viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LipSyncService } from '@core/audio/lip-sync.service';
+import { speechFallbackNotice } from '@core/audio/server-speech';
 import { SpeechSynthesisService } from '@core/audio/speech-synthesis.service';
 import { I18nService } from '@core/i18n/i18n.service';
 import { SpinnerComponent } from '@shared/ui/atoms/spinner/spinner.component';
@@ -108,7 +111,7 @@ type Phase = 'idle' | 'listening' | 'user' | 'finished';
                   [maxSeconds]="30"
                   [disabled]="dialogues.busy()"
                   [language]="d.language"
-                  (started)="typed.set('')"
+                  (started)="typed.set(''); speechNotice.set(null)"
                   (transcript)="typed.set($event)"
                   (recorded)="spoken($event)"
                 />
@@ -117,6 +120,7 @@ type Phase = 'idle' | 'listening' | 'user' | 'finished';
                   (submit)="$event.preventDefault(); check(typed())"
                 >
                   <input
+                    #answer
                     class="control min-w-0 flex-1"
                     [attr.lang]="d.language"
                     [attr.aria-label]="tx.player.writeInstead"
@@ -128,6 +132,10 @@ type Phase = 'idle' | 'listening' | 'user' | 'finished';
                     {{ tx.player.check }}
                   </button>
                 </form>
+                <!-- [2026-10-25 · Respaldo]: servidor sin voz a texto o audio no válido → aviso accionable (role="status": no interrumpe) -->
+                @if (speechNotice(); as notice) {
+                  <p class="text-xs font-semibold text-tone-warning" role="status"><aula-icon name="info" /> {{ notice }}</p>
+                }
               </div>
             }
             <p
@@ -168,6 +176,8 @@ export default class DialoguePlayerPage {
   protected readonly index = signal(-1);
   protected readonly follow = signal(true);
   protected readonly typed = signal('');
+  protected readonly speechNotice = signal<string | null>(null); // [2026-10-25]: aviso si el servidor no pudo transcribir
+  private readonly answer = viewChild<ElementRef<HTMLInputElement>>('answer'); // `viewChild` (Angular 17.2+): campo para escribir la respuesta
   protected readonly score = signal(-1);
   protected readonly pass = PASS_SIMILARITY;
   private onlyListen = false;
@@ -247,7 +257,16 @@ export default class DialoguePlayerPage {
     );
     // [2026-10-23]: lo dicho queda ESCRITO en el campo (Whisper o, si falla, el dictado en vivo) → el alumno ve sus errores, corrige y vuelve a comprobar
     const said = text || rec.liveText;
-    if (!said) return;
+    // [Respaldo · 2026-10-25]: servidor sin voz a texto → dictado del navegador o escribir; otro fallo (audio no válido) → su mensaje
+    this.speechNotice.set(
+      this.dialogues.serverSpeechDown()
+        ? speechFallbackNotice(this.i18n.t().media.recorder, !!said)
+        : this.dialogues.actionError(),
+    );
+    if (!said) {
+      this.answer()?.nativeElement.focus(); // [A11y]: foco en el campo para escribir la respuesta
+      return;
+    }
     this.typed.set(said);
     this.check(said);
   }

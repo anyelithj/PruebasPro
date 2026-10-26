@@ -1,13 +1,16 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, type Observable } from 'rxjs';
-import { z } from 'zod';
+import * as z from 'zod'; // [Tree-shaking · Zod 4]: import de namespace (`* as z`) → esbuild empaqueta solo las funciones usadas (con `{ z }` arrastraba Zod entero, ~450 kB)
 import { API_URL } from '@core/http/api-url.token';
 import { MusicRepository } from '../domain/music.repository.port';
 import {
   CollectionDetailSchema,
   CollectionSchema,
   LineTimingSchema,
+  LyricsDraftSchema,
+  LyricsLoadSchema,
+  MediaLinkRulesSchema,
   PracticeRefSchema,
   SongDetailSchema,
   SongLineSchema,
@@ -17,6 +20,10 @@ import {
   type CollectionInput,
   type LinePatch,
   type LineTiming,
+  type LyricsDraft,
+  type LyricsDraftInput,
+  type LyricsLoad,
+  type MediaLinkRules,
   type PracticeRef,
   type Song,
   type SongDetail,
@@ -103,16 +110,30 @@ export class MusicHttpRepository extends MusicRepository {
       .pipe(map((r) => SongSchema.parse(r)));
   }
 
+  mediaLinkRules(): Observable<MediaLinkRules> {
+    return this.http.get<unknown>(`${this.base}/link-rules`).pipe(map((r) => MediaLinkRulesSchema.parse(r)));
+  }
+
   audioUrl(id: string): string {
     return `${this.base}/songs/${this.id(id)}/audio`;
   }
 
-  loadLyrics(id: string, lyrics: string, auto = true): Observable<{ lines: SongLine[]; enriched: boolean }> {
+  loadLyrics(id: string, lyrics: string, auto = true): Observable<LyricsLoad> {
     return this.http
       .post<unknown>(`${this.base}/songs/${this.id(id)}/lines`, { lyrics, auto })
-      .pipe(
-        map((r) => z.object({ lines: z.array(SongLineSchema), enriched: z.boolean() }).parse(r)),
-      );
+      .pipe(map((r) => LyricsLoadSchema.parse(r)));
+  }
+
+  reEnrich(id: string): Observable<LyricsLoad> {
+    return this.http
+      .post<unknown>(`${this.base}/songs/${this.id(id)}/lines/enrich`, {})
+      .pipe(map((r) => LyricsLoadSchema.parse(r)));
+  }
+
+  draftLyrics(input: LyricsDraftInput): Observable<LyricsDraft> {
+    return this.http
+      .post<unknown>(`${this.base}/lyrics/draft`, input)
+      .pipe(map((r) => LyricsDraftSchema.parse(r)));
   }
 
   patchLines(

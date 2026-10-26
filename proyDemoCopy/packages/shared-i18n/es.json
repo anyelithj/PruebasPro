@@ -57,6 +57,7 @@
     "dialogues": "Diálogos",
     "polyglot": "Poliglota",
     "grammar": "Gramática",
+    "reading": "Lectura",
     "mainNav": "Navegación principal",
     "openMenu": "Abrir menú",
     "closeMenu": "Cerrar menú",
@@ -429,6 +430,8 @@
       "formLabel": "Formulario de registro",
       "firstName": "Nombre",
       "lastName": "Apellido",
+      "phone": "Teléfono",
+      "phoneHint": "Opcional. Con indicativo del país (p. ej. +57).",
       "confirm": "Confirmar",
       "termsA": "Acepto los ",
       "termsLink": "términos y la política de privacidad",
@@ -491,7 +494,8 @@
       "lastNameRequired": "El apellido es obligatorio",
       "lastNameMax": "Apellido demasiado largo",
       "mismatch": "Las contraseñas no coinciden",
-      "terms": "Debes aceptar los términos"
+      "terms": "Debes aceptar los términos",
+      "phoneInvalid": "Teléfono no válido: solo números, espacios, guiones y + inicial."
     }
   },
   "management": {
@@ -539,7 +543,7 @@
     "loadErrorHint": "Verifica que el backend esté disponible en /api/v1/courses.",
     "pagination": "Paginación de cursos",
     "materials": {
-      "title": "📚 Temario del curso",
+      "title": "📚 Recursos del curso",
       "empty": "Este curso aún no tiene material.",
       "openPdf": "Abrir PDF en pestaña nueva",
       "upload": "Adjuntar material",
@@ -547,7 +551,7 @@
       "uploading": "Subiendo… {pct}%",
       "remove": "Quitar",
       "locked": "🔒 Compra el curso o inscríbete (si es gratuito) para ver sus videos, PDF, imágenes y demás recursos.",
-      "syllabus": "Temario",
+      "syllabus": "Recursos",
       "lesson": "Lección {n} de {total}",
       "prev": "← Anterior",
       "next": "Siguiente →",
@@ -560,7 +564,7 @@
       "manage": "Gestionar material",
       "lockedStep": "Bloqueado",
       "lockedHint": "Completa la lección anterior para desbloquear esta.",
-      "back": "← Volver al temario",
+      "back": "← Volver a los recursos",
       "resources": "Recursos",
       "resVideos": "🎞️ Videos",
       "resPdfs": "📄 PDF",
@@ -665,6 +669,12 @@
       "pricePaidRequired": "Un curso de pago necesita un precio mayor que 0.",
       "description": "Descripción",
       "descriptionHint": "Qué aprenderá el estudiante. Las primeras frases se usan como resumen en la tarjeta del curso.",
+      "content": "Contenido del curso",
+      "contentHint": "Temario, apuntes o material en Markdown, sin límite de longitud. Admite # títulos, - viñetas, 1. listas y **negrita**. Se muestra en la página del curso.",
+      "contentWrite": "Escribir",
+      "contentPreview": "Vista previa",
+      "contentEmpty": "Aún no hay contenido para previsualizar.",
+      "contentChars": "{n} caracteres",
       "language": "Idioma",
       "level": "Nivel MCER",
       "instructor": "Instructor",
@@ -685,7 +695,7 @@
     "submit": "Crear curso",
     "submitting": "Creando…",
     "materials": {
-      "title": "Material del curso",
+      "title": "Recursos del curso",
       "hint": "Adjunta videos, audios, PDF, imágenes y documentos (Word, Excel, PowerPoint, TXT) o enlaces externos. Máx. {mb} MB por archivo. Se suben al guardar el curso.",
       "add": "+ Adjuntar archivo",
       "titleLabel": "Título del material",
@@ -702,17 +712,18 @@
     "saveError": "No se pudo guardar el curso.",
     "ai": {
       "title": "Generar con IA",
-      "hint": "La IA local propone título, descripción en Markdown (objetivos y temario) y etiquetas según idioma y nivel. Revísalo antes de guardar.",
+      "hint": "La IA local crea el CONTENIDO del curso (presentación, objetivos, temario con lecciones y a quién va dirigido), una descripción corta y las etiquetas según idioma y nivel. Revísalo antes de guardar.",
       "topic": "Enfoque (opcional)",
       "topicPlaceholder": "Ej. Inglés para viajes, conversación de negocios",
-      "run": "Generar ficha",
+      "run": "Generar contenido",
       "running": "Generando… (puede tardar 1–2 min)",
       "useImported": "Usar el contenido importado como base",
-      "done": "Ficha generada: revisa el título, la descripción y las etiquetas."
+      "done": "Contenido generado: revisa el título, la descripción corta, el contenido y las etiquetas."
     },
     "import": {
       "title": "Importar contenido del curso",
-      "done": "Contenido importado en la descripción (Markdown)."
+      "done": "Contenido importado en «Contenido del curso» (Markdown). La descripción no se ha modificado.",
+      "doneSuggested": "Contenido importado en «Contenido del curso». Como la descripción estaba vacía, se propuso su primer párrafo: revísalo."
     }
   },
   "profile": {

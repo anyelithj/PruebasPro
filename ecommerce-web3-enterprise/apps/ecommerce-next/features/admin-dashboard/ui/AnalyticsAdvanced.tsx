@@ -87,7 +87,7 @@ export function HeatmapTab() {
           description={t("heatmapHint")}
           actions={
             <>
-              <label className="flex flex-col gap-1 text-sm">{t("page")}<input value={path} onChange={(e) => setPath(e.target.value || "/")} className="h-9 rounded-md border px-2" /></label>
+              <label className="flex flex-col gap-1 text-sm">{t("page")}<input value={path} onChange={(e) => setPath(e.target.value || "/")} className="h-9 rounded-md border border-slate-300 px-3 text-sm" /></label>
               <SelectField label={t("device")} value={device} onChange={(e) => setDevice(e.target.value as "desktop" | "mobile")} options={[{ value: "desktop", label: t("devices.desktop") }, { value: "mobile", label: t("devices.mobile") }]} />
             </>
           }
@@ -254,18 +254,18 @@ export function SimulationTab() {
       <SectionHeader title={t("simulation")} description={t("simulationHint")} />
       <form className="grid grid-cols-1 gap-3 sm:grid-cols-5" onSubmit={(e) => { e.preventDefault(); if (productId) sim.mutate(undefined, { onError: (err) => toast.error(errorMessage(err)) }); }}>
         <label className="flex flex-col gap-1 text-sm sm:col-span-2">{t("product")}
-          <select value={productId} onChange={(e) => setProductId(e.target.value)} required className="h-9 rounded-md border px-2">
+          <select value={productId} onChange={(e) => setProductId(e.target.value)} required className="h-9 rounded-md border border-slate-300 px-3 text-sm">
             <option value="">—</option>
             {(products.data ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-sm">{t("discount")}<input type="number" min={0} max={90} value={discount} onChange={(e) => setDiscount(Number(e.target.value))} className="h-9 rounded-md border px-2" /></label>
+        <label className="flex flex-col gap-1 text-sm">{t("discount")}<input type="number" min={0} max={90} value={discount} onChange={(e) => setDiscount(Number(e.target.value))} className="h-9 rounded-md border border-slate-300 px-3 text-sm" /></label>
         <label className="flex flex-col gap-1 text-sm">{t("event")}
-          <select value={event} onChange={(e) => setEvent(e.target.value as typeof event)} className="h-9 rounded-md border px-2">
+          <select value={event} onChange={(e) => setEvent(e.target.value as typeof event)} className="h-9 rounded-md border border-slate-300 px-3 text-sm">
             {(["NONE", "BLACK_FRIDAY", "CYBER_MONDAY", "CHRISTMAS"] as const).map((v) => <option key={v} value={v}>{t(`events2.${v}`)}</option>)}
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-sm">{t("promoDays")}<input type="number" min={1} max={31} value={promoDays} onChange={(e) => setPromoDays(Number(e.target.value))} className="h-9 rounded-md border px-2" /></label>
+        <label className="flex flex-col gap-1 text-sm">{t("promoDays")}<input type="number" min={1} max={31} value={promoDays} onChange={(e) => setPromoDays(Number(e.target.value))} className="h-9 rounded-md border border-slate-300 px-3 text-sm" /></label>
         <Button type="submit" loading={sim.isPending} className="self-start">{t("simulate")}</Button>
       </form>
       {result && (

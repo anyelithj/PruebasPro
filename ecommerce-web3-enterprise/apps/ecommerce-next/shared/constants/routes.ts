@@ -30,7 +30,7 @@ export const routes = {
   influencers: "/influencers",
   chat: (conversation?: string) => (conversation ? `/chat?conversation=${conversation}` : "/chat"),
   recommendations: "/recommendations",
-  // Panel (Fase 7): ADMIN todo; VENDOR solo VENDOR_PANEL_ROUTES (middleware.ts + layout del grupo (admin))
+  // Panel (Fase 7): ADMIN todo; VENDOR solo VENDOR_PANEL_ROUTES (proxy.ts + layout del grupo (admin))
   dashboard: "/dashboard",
   adminAnalytics: "/dashboard/analytics",
   adminProducts: "/dashboard/products",

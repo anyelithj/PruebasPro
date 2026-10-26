@@ -136,12 +136,19 @@ export class VoiceRecorderComponent {
     }
     this.state.set('asking');
     try {
-      this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // [2026-10-25 · Audio cortado/robótico]: la supresión de ruido y el control de ganancia del navegador «recortan» la voz (sobre todo con el dictado en vivo abierto a la vez)
+      // → voz natural en mono
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        // [2026-10-26]: sin echoCancellation → con el dictado (Web Speech) abierto a la vez, el AEC de Chrome en Windows dejaba la voz cortada y «robótica»; en el turno del alumno el avatar está callado
+        audio: { channelCount: 1, sampleRate: 48_000, echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+      });
     } catch {
       return this.fail(this.labels().denied); // Permiso denegado o sin micrófono
     }
     this.chunks = [];
-    this.recorder = new MediaRecorder(this.stream);
+    // Opus a 128 kbps (por defecto Chrome usa ~32 kbps) · Safari no tiene webm → su formato por defecto
+    const mimeType = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus'].find((t) => MediaRecorder.isTypeSupported?.(t));
+    this.recorder = new MediaRecorder(this.stream, { ...(mimeType ? { mimeType } : {}), audioBitsPerSecond: 128_000 });
     this.recorder.ondataavailable = (e) => e.data.size && this.chunks.push(e.data);
     this.recorder.onstop = () => {
       const blob = new Blob(this.chunks, { type: this.recorder?.mimeType || 'audio/webm' });

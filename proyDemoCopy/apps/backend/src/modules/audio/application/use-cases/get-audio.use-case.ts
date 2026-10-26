@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Readable } from 'stream';
 import { QueryFailedError, Repository } from 'typeorm';
@@ -13,6 +13,7 @@ import {
   type ByteRange,
 } from '../../domain/audio-key';
 import { PronunciationAudio } from '../../domain/entities/pronunciation-audio.entity';
+import { silenceReason } from '../../domain/wav-audibility';
 import {
   AUDIO_STORAGE,
   type AudioStoragePort,
@@ -71,6 +72,12 @@ export class GetAudioUseCase {
 
     // ── 2) Generar una sola vez: voz local → almacén (disco, MinIO o R2) → registro trazable
     const speech = await this.speech.synthesize(req, accessToken);
+    // [2026-10-24 · Guard]: audio vacío/corrupto/mudo → NO se cachea (si no, quedaría mudo para siempre) y 503 → el cliente usa la voz del navegador
+    const silent = silenceReason(speech.audio);
+    if (silent) {
+      this.logger.warn(`Audio descartado (${req.language}/${req.variant}, ${speech.engine}): ${silent}`);
+      throw new ServiceUnavailableException(`El motor de voz devolvió un audio que no suena: ${silent}`);
+    }
     const path = objectKey(req, key);
     await this.storage.put(path, speech.audio, 'audio/wav');
     try {

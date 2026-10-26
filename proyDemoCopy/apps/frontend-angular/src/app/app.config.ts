@@ -1,10 +1,11 @@
 import { APP_BASE_HREF } from '@angular/common';
 import { provideBrowserGlobalErrorListeners, provideZonelessChangeDetection, type ApplicationConfig } from '@angular/core';
-import { PreloadAllModules, provideRouter, withComponentInputBinding, withInMemoryScrolling, withPreloading } from '@angular/router';
+import { provideRouter, withComponentInputBinding, withInMemoryScrolling, withPreloading } from '@angular/router';
 import { provideAuth } from '@core/auth/auth.providers';
 import { provideHttp } from '@core/http/http.providers';
 import { DictionaryRepository } from '@core/dictionary/dictionary.repository.port';
 import { DictionaryHttpRepository } from '@core/dictionary/dictionary.http-repository';
+import { IdlePreloadingStrategy } from '@core/routing/idle-preloading.strategy';
 import { routes } from './app.routes';
 // [appConfig · Angular 22]: providers globales — router, HttpClient, sesión, sin zone.js | [Patrón]: Composition Root | [Principio]: SRP (cada core/* aporta su provide*) + OCP | [Paradigma]: Declarativo
 // [Rendimiento]: zoneless → detección de cambios guiada por signals (sin parchear APIs del navegador)
@@ -26,6 +27,7 @@ export const appConfig: ApplicationConfig = {
     { provide: APP_BASE_HREF, useValue: '/' },
     // `withComponentInputBinding` (Angular): params de ruta → inputs del componente · `withInMemoryScrolling`: vuelve arriba al navegar y baja al #ancla (secciones del manual, Sprint 7.11)
     // [withPreloading · 2026-10-24]: tras la primera pantalla, Angular descarga en segundo plano el resto de funcionalidades lazy → cambiar de sección dentro del remoto no espera la red | [Patrón]: Preloading Strategy
-    provideRouter(routes, withComponentInputBinding(), withInMemoryScrolling({ scrollPositionRestoration: 'top', anchorScrolling: 'enabled' }), withPreloading(PreloadAllModules)),
+    // [IdlePreloadingStrategy]: reemplaza PreloadAllModules → precarga en tiempo ocioso (no compite con la pantalla que se está abriendo) y omite rutas con `data: { preload: false }`
+    provideRouter(routes, withComponentInputBinding(), withInMemoryScrolling({ scrollPositionRestoration: 'top', anchorScrolling: 'enabled' }), withPreloading(IdlePreloadingStrategy)),
   ],
 };

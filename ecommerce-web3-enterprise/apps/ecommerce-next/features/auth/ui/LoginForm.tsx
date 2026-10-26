@@ -1,7 +1,7 @@
 // LoginForm.tsx => login en DOS pasos: (1) credenciales, (2) código OTP si la cuenta tiene 2FA.
 // El resultado final (tokens del backend) se entrega a next-auth con signIn("credentials"), que los verifica
 // y crea la sesión en cookie httpOnly. Paradigma: componentes funcionales + hooks; máquina de estados en Redux Toolkit (Client State); llamadas al backend con TanStack Query.
-"use client"; // Directiva de Next.js 15 App Router: usa hooks => Client Component
+"use client"; // Directiva de Next.js 16 App Router: usa hooks => Client Component
 
 import { useMutation } from "@tanstack/react-query"; // Operaciones de escritura con estados loading/error
 import { useSearchParams } from "next/navigation";

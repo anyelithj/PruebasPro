@@ -37,4 +37,13 @@
   .dark [class*="bg-white/"] {
     background-color: rgb(var(--surface) / 0.9);
   }
+  /* Controles de formulario UNIFORMES en Next y Nuxt (mismo bloque en ambas apps): borde, radio, fondo, tamaño de
+     texto, placeholder y anillo de foco iguales para todo input/select/textarea, también los que no usan el componente
+     Input. ":where()" => especificidad 0: cualquier clase utilitaria de Tailwind sigue pudiendo sobrescribirlo */
+  :where(input:not([type="checkbox"], [type="radio"], [type="file"], [type="range"], [type="color"]), select, textarea) {
+    @apply rounded-md border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400;
+  }
+  :where(input, select, textarea, button, a):focus-visible {
+    @apply outline-none ring-2 ring-blue-600 ring-offset-1; /* blue-600 = "accent" de Nuxt = "--ring" de Next */
+  }
 }

@@ -4,7 +4,8 @@
 # Patrón "Builder" (multi-stage): cada stage tiene UNA responsabilidad (SRP) y la imagen final solo lleva lo necesario.
 
 # ---------- STAGE BASE: runtime común ----------
-FROM node:20-alpine AS base
+# Node.js 24.22.1 (LTS) fijado por versión exacta: misma versión en Docker, CI (ci.yml) y local (.nvmrc)
+FROM node:24.22.1-alpine AS base
 # "apk add openssl" => Prisma necesita OpenSSL en Alpine para su query engine
 RUN apk add --no-cache openssl
 # "corepack enable" => activa la versión EXACTA de pnpm declarada en "packageManager" del package.json raíz
@@ -18,6 +19,9 @@ FROM base AS deps
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY packages ./packages
 COPY apps/ecommerce-express/package.json ./apps/ecommerce-express/
+# El "postinstall" de la app ejecuta "prisma generate": necesita el schema ANTES de instalar (sin esto el build falla con
+# "Could not find Prisma Schema"). Solo se copia prisma/ => la capa sigue cacheándose mientras no cambie el modelo
+COPY apps/ecommerce-express/prisma ./apps/ecommerce-express/prisma
 # "--filter ecommerce-express..." => instala esta app + sus paquetes internos del workspace (no Next/Nuxt)
 # "--frozen-lockfile" => falla si el lockfile no coincide (builds reproducibles, igual que en CI)
 RUN pnpm install --frozen-lockfile --filter ecommerce-express...
@@ -42,7 +46,7 @@ RUN pnpm --filter ecommerce-express deploy --prod /prod
 RUN cd /prod && /repo/apps/ecommerce-express/node_modules/.bin/prisma generate --schema /repo/apps/ecommerce-express/prisma/schema.prisma
 
 # ---------- STAGE PRODUCTION: imagen final mínima ----------
-FROM node:20-alpine AS production
+FROM node:24.22.1-alpine AS production
 RUN apk add --no-cache openssl
 WORKDIR /app
 ENV NODE_ENV=production

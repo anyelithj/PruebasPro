@@ -11,7 +11,7 @@ import OrderCheckoutPage from '@features/payments/presentation/pages/order-check
 
 // [Stripe.js falso]: `createEmbeddedCheckoutPage` devuelve un checkout que registra el montaje
 const mount = jest.fn();
-jest.mock('@stripe/stripe-js', () => ({
+jest.mock('@stripe/stripe-js/pure', () => ({
   loadStripe: jest.fn(async () => ({ createEmbeddedCheckoutPage: jest.fn(async () => ({ mount, destroy: jest.fn() })) })),
 }));
 

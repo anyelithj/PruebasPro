@@ -141,7 +141,7 @@ function CryptoPanel({ checkoutSessionId, networks }: { checkoutSessionId: strin
     <div className="flex flex-col gap-3 rounded-lg border border-slate-200 p-4 text-sm">
       <label className="flex flex-col gap-1">
         <span className="font-medium">{t("cryptoAsset")}</span>
-        <select value={choice} onChange={(event) => { setChoice(Number(event.target.value)); quote.reset(); }} className="h-9 rounded-md border border-slate-300 px-2">
+        <select value={choice} onChange={(event) => { setChoice(Number(event.target.value)); quote.reset(); }} className="h-9 rounded-md border border-slate-300 px-3 text-sm">
           {choices.map((option, index) => (
             <option key={`${option.asset}-${option.network}`} value={index}>{`${option.asset} · ${option.network}`}</option>
           ))}

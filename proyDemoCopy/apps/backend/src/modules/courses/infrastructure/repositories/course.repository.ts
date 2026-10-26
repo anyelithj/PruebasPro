@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ILike, In, Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Course } from '../../domain/entities/course.entity';
 import { CourseEnrollment } from '../../domain/entities/course-enrollment.entity';
 import {
@@ -85,12 +85,19 @@ export class CourseRepository implements ICourseRepository, OnModuleInit {
     return { data, total, page, limit };
   }
 
+  // [withContent · 2026-10-24]: consulta base del DETALLE → añade la columna `content` (select: false en la entidad) | [Principio]: DRY (id y slug)
+  // `addSelect` (TypeORM QueryBuilder): incluye una columna excluida por defecto sin enumerar todas las demás
+  private withContent() {
+    return this.courseRepo.createQueryBuilder('c').addSelect('c.content');
+  }
+
   async findById(id: string): Promise<Course | null> {
-    return this.courseRepo.findOne({ where: { id } });
+    return this.withContent().where('c.id = :id', { id }).getOne();
   }
 
   async findBySlug(slug: string): Promise<Course | null> {
-    return this.courseRepo.findOne({ where: { slug: ILike(slug) } });
+    // `ILIKE` (PostgreSQL): mismo criterio sin mayúsculas que antes (ILike de TypeORM) | parámetro enlazado → sin inyección SQL
+    return this.withContent().where('c.slug ILIKE :slug', { slug }).getOne();
   }
 
   async getEnrollment(
@@ -149,7 +156,9 @@ export class CourseRepository implements ICourseRepository, OnModuleInit {
         patch.group ?? existing.group,
       );
     }
-    return this.courseRepo.save(existing);
+    await this.courseRepo.save(existing);
+    // [2026-10-24]: relee con `content` (select: false) → la respuesta del PATCH trae el curso completo aunque no se editara el contenido
+    return (await this.findById(id)) ?? existing;
   }
 
   // [remove]: baja dura — borra el curso (las inscripciones en cascade si la FK lo define) | [Principio]: SRP

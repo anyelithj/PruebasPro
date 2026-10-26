@@ -1,4 +1,4 @@
-// sitemap.ts => genera /sitemap.xml (convención de archivos de Next.js 15, sin dependencias).
+// sitemap.ts => genera /sitemap.xml (convención de archivos de Next.js 16, sin dependencias).
 // Lista las páginas indexables (home, catálogo, categorías, marcas, productos) en CADA idioma, con sus alternativas
 // hreflang (es/en) para que los buscadores muestren la versión correcta a cada usuario (SEO internacional).
 import type { MetadataRoute } from "next";

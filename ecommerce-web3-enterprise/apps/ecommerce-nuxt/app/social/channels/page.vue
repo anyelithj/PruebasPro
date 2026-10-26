@@ -101,7 +101,7 @@ async function importMentions() {
       <div class="flex flex-wrap items-center justify-between gap-2">
         <h2 id="ugc-title" class="text-lg font-semibold">{{ $t("social.ugc.title") }}</h2>
         <label class="flex items-center gap-2 text-sm">{{ $t("social.ugc.status") }}
-          <select v-model="status" class="h-9 rounded-md border px-2">
+          <select v-model="status" class="h-9 rounded-md border border-slate-300 px-3 text-sm">
             <option v-for="value in ['PENDING', 'APPROVED', 'REJECTED']" :key="value" :value="value">{{ $t(`social.ugc.statuses.${value}`) }}</option>
           </select>
         </label>
@@ -111,7 +111,7 @@ async function importMentions() {
         <div class="mt-3 flex flex-col gap-3">
           <ProductPicker v-model="importProduct" single />
           <label class="flex flex-col gap-1 text-sm">{{ $t("social.ugc.hashtag") }}
-            <input v-model="hashtag" class="h-9 rounded-md border px-2" placeholder="#mitienda" >
+            <input v-model="hashtag" class="h-9 rounded-md border border-slate-300 px-3 text-sm" placeholder="#mitienda" >
           </label>
           <Button class="self-end" @click="importMentions">{{ $t("social.ugc.import") }}</Button>
         </div>

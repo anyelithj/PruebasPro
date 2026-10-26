@@ -1,5 +1,6 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import { isServerSpeechDown } from '@core/audio/server-speech';
 import type { Recording } from '@shared/ui/organisms/voice-recorder/voice-recorder.component';
 import { GamesRepository } from '../domain/games.repository.port';
 import type { SubmitResult, Transcription } from '../domain/models/games';
@@ -41,6 +42,15 @@ export class SpeechFacade {
         ...extra,
       });
     } catch (err) {
+      // [Respaldo · 2026-10-25]: servidor sin voz a texto + dictado del navegador → la ronda se envía con ese texto (sin marcas por palabra: sin métrica de fluidez)
+      const live = this.liveFallback(err, rec);
+      if (live)
+        return this.games.answer({
+          answer: live,
+          durationMs: rec.durationMs,
+          promptEndS: 0,
+          ...extra,
+        });
       this.error.set(err instanceof Error ? err.message : String(err));
       return null;
     } finally {
@@ -57,11 +67,19 @@ export class SpeechFacade {
       this.transcript.set(t);
       return t.text.trim() || null;
     } catch (err) {
+      const live = this.liveFallback(err, rec);
+      if (live) return live; // [2026-10-25]: mismo respaldo que submitOral
       this.error.set(err instanceof Error ? err.message : String(err));
       return null;
     } finally {
       this.transcribing.set(false);
     }
+  }
+
+  // [liveFallback]: texto dictado en vivo solo si el fallo es del servidor (no del audio) | [Principio]: DRY
+  private liveFallback(err: unknown, rec: Recording): string | null {
+    const live = rec.liveText?.trim();
+    return live && isServerSpeechDown(err) ? live : null;
   }
 
   reset(): void {

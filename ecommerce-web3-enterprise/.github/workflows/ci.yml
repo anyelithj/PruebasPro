@@ -35,10 +35,10 @@ jobs:
       # Instala pnpm; sin "version" toma la de "packageManager" del package.json raíz (misma versión que local y Docker)
       - uses: pnpm/action-setup@v4
 
-      # Instala Node 20 y cachea el store de pnpm entre ejecuciones (key = hash de pnpm-lock.yaml)
+      # Instala Node 24.22.1 (misma versión exacta que Docker y .nvmrc) y cachea el store de pnpm entre ejecuciones (key = hash de pnpm-lock.yaml)
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: .nvmrc
           cache: pnpm
 
       # "--frozen-lockfile" => falla si pnpm-lock.yaml no coincide con los package.json (builds reproducibles)

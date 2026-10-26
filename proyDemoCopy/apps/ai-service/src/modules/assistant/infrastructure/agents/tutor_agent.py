@@ -26,8 +26,14 @@ _SYSTEM_PROMPT = (
     "El «Material de referencia» es material del curso que el alumno AÚN NO HA VISTO en este chat: "
     "úsalo solo si responde a su pregunta y no lo contradigas; si no la cubre, responde con prudencia indicando que es una explicación general. "
     "Nunca digas que ya diste ejemplos o explicaciones que no aparecen en la «Conversación previa». "
-    "Corrige con amabilidad los errores del alumno y termina proponiendo un ejercicio breve. "
-    "Máximo 6 oraciones."
+    # [2026-10-25 · Práctica dinámica]: la conversación ya abre con «¡Hola! ¿Qué tema te gustaría practicar hoy?»
+    "Si el alumno aún no ha dicho el tema, pregúntale cuál con 2-3 ideas cortas de su nivel. "
+    # [2026-10-26]: reglas más breves + momento EXACTO del cambio de idioma + retos variados (más dinámico)
+    "Cuando lo diga: da la regla en MÁXIMO 2 líneas (fórmula + 1 ejemplo con traducción) y termina con: "
+    "«Desde tu próxima respuesta, escríbeme solo en {lang}.» y el primer reto. Después practica por turnos en {lang}: UN mini-reto por mensaje, "
+    "alternando tipos (completa la frase, traduce, elige la opción correcta, responde una pregunta sobre ti, corrige el error); "
+    "corrige su respuesta en una línea (✓ bien / mejor así: …) y lanza el siguiente, subiendo poco a poco la dificultad. "
+    "Nunca des listas largas ni repitas la explicación. Máximo 4 oraciones."
 )
 
 
@@ -109,13 +115,14 @@ class TutorAgent:
         previous = [m.content for m in conversation.messages[:-1] if m.role == "assistant"]
         small_talk = _is_small_talk(user_input)
         if small_talk:  # [2026-10-23]: solo ante un saludo se pide saludar y preguntar qué practicar
-            prompt += " (El alumno solo saluda: salúdalo brevemente y pregúntale qué quiere practicar.)"
+            prompt += " (El alumno solo saluda: NO vuelvas a saludar largo; pregúntale qué tema quiere practicar con 2-3 ideas de su nivel.)"
         elif previous:
             prompt += f" (Ya saludaste: NO saludes otra vez; responde directamente a «{user_input}».)"
         # [Determinístico]: desde B1, un mensaje casi todo en español activa el paso «dilo en el idioma meta» de forma explícita
         if language and language != "es" and (level or "B1")[:1].upper() in "BC" and not small_talk and drifted_to_spanish(user_input, language):
             prompt += f" (El alumno escribió en español: muéstrale cómo decirlo en {_LANGUAGES.get(language, language)} y pídele que lo escriba él.)"
-        reply = await self._llm.generate(prompt, system=_SYSTEM_PROMPT, max_tokens=400, temperature=0.5)
+        system = _SYSTEM_PROMPT.format(lang=_LANGUAGES.get(language or "", "el idioma que estudias"))  # [2026-10-25]: «A partir de ahora respóndeme en inglés»
+        reply = await self._llm.generate(prompt, system=system, max_tokens=400, temperature=0.5)
         # [Limpieza]: modelos pequeños a veces repiten el guion «Estudiante: … Tutor:» → se queda lo último del tutor
         text = reply.rsplit("Tutor:", 1)[-1].strip()
         # [Guarda de repetición]: respuesta casi igual a una anterior (≥ 75 %) → un reintento más creativo centrado solo en la pregunta
@@ -124,7 +131,7 @@ class TutorAgent:
             retry = await self._llm.generate(
                 f"{studying}Material de referencia:\n{context_block}\n\nPregunta del estudiante: {user_input}\n"
                 "Explica ESTE tema con un ejemplo y su traducción; no saludes ni repitas frases anteriores.\nTutor:",
-                system=_SYSTEM_PROMPT, max_tokens=400, temperature=0.8,
+                system=system, max_tokens=400, temperature=0.8,
             )
             text = retry.rsplit("Tutor:", 1)[-1].strip() or text
         return AgentReply(text)

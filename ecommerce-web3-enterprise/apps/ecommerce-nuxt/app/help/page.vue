@@ -31,7 +31,7 @@ useHead({
       <h1 class="text-3xl font-semibold">{{ $t("store.help.title") }}</h1>
       <p class="text-slate-600">{{ $t("store.help.subtitle") }}</p>
       <label class="flex flex-col gap-1 text-sm font-medium">{{ $t("store.help.search") }}
-        <input v-model="query" type="search" :placeholder="$t('store.help.searchPlaceholder')" class="h-9 rounded-md border px-3 font-normal" >
+        <input v-model="query" type="search" :placeholder="$t('store.help.searchPlaceholder')" class="h-9 rounded-md border border-slate-300 px-3 font-normal text-sm" >
       </label>
       <p aria-live="polite" class="text-xs text-slate-500">{{ query ? $t("store.help.results", { n: total }) : "" }}</p>
     </header>

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -70,7 +71,10 @@ export class DraftCourseDto {
   @MaxLength(200)
   topic?: string;
 
-  @ApiProperty({ required: false, description: 'Texto importado (PDF/Word/URL)' })
+  @ApiProperty({
+    required: false,
+    description: 'Texto importado (PDF/Word/URL)',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(20000)
@@ -185,6 +189,25 @@ export class CoursesController {
   @ApiOperation({ summary: 'Borrador de curso generado por IA (ADMIN)' })
   draft(@Body() dto: DraftCourseDto) {
     return this.draftCourse.execute(dto);
+  }
+
+  // [POST /courses/draft/topic · 2026-10-25]: explicación de UN subtema del temario (definición, uso, reglas, ejemplos) · `topic` obligatorio
+  @ApiBearerAuth()
+  @Roles(Role.ADMIN)
+  @Post('draft/topic')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Explicación de un subtema del temario generada por IA (ADMIN)',
+  })
+  draftTopic(@Body() dto: DraftCourseDto) {
+    if (!dto.topic?.trim())
+      throw new BadRequestException('Escribe el subtema que quieres explicar.');
+    return this.draftCourse.topic({
+      language: dto.language,
+      level: dto.level,
+      topic: dto.topic,
+      text: dto.text,
+    });
   }
 
   // [POST /courses]: crear curso — ADMIN | [Patrón]: Command + RBAC

@@ -57,23 +57,21 @@ export class ReplaceSongLinesUseCase {
       return {
         lines: await this.lines.find({ where: { songId }, order: { position: 'ASC' } }),
         enriched: false,
+        missing: 0, // Modo manual: no se pidió nada automático
       };
     try {
-      return {
-        lines: await this.enrich.execute(actor, songId, token),
-        enriched: true,
-      };
+      // [2026-10-24]: enriquecimiento por trozos con reintento y respaldo de IPA → `missing` dice cuántas líneas quedan por completar
+      const { lines, missing } = await this.enrich.run(actor, songId, token);
+      return { lines, enriched: missing === 0, missing };
     } catch (err) {
       this.logger.warn(
         `Letra ${songId} guardada sin IPA: ${err instanceof Error ? err.message : String(err)}`,
       );
-      return {
-        lines: await this.lines.find({
-          where: { songId },
-          order: { position: 'ASC' },
-        }),
-        enriched: false,
-      };
+      const lines = await this.lines.find({
+        where: { songId },
+        order: { position: 'ASC' },
+      });
+      return { lines, enriched: false, missing: lines.length };
     }
   }
 

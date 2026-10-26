@@ -57,7 +57,12 @@ export class User {
   timezone?: string | null;
 
   // [Idioma preferido]: ISO 639-1 (es/en/pt) | si coincide con un idioma de la UI, el frontend también lo aplica a la interfaz
-  @Column({ type: 'varchar', length: 5, nullable: true, name: 'preferred_language' })
+  @Column({
+    type: 'varchar',
+    length: 5,
+    nullable: true,
+    name: 'preferred_language',
+  })
   preferredLanguage?: string | null;
 
   // [Activo]: soft-disable sin borrar (logout forzado, baneo, etc.)

@@ -34,9 +34,12 @@ const COLUMNS = [
         </ul>
       </nav>
     </div>
-    <div class="flex flex-col items-center justify-between gap-3 border-t px-4 py-4 text-xs text-slate-500 sm:flex-row sm:px-8">
+    <!-- Barra legal alineada con la cabecera y el contenido (mismo contenedor max-w-7xl + px-4) -->
+    <div class="border-t">
+      <div class="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 py-4 text-xs text-slate-500 sm:flex-row">
       <p>© {{ new Date().getFullYear() }} eCommerce Web3. {{ $t("store.footer.legal") }}</p>
       <NuxtLink :to="switchLocalePath(locale === 'es' ? 'en' : 'es')" :hreflang="locale === 'es' ? 'en' : 'es'" class="hover:underline">{{ $t("store.footer.language") }}: {{ locale === "es" ? "English" : "Español" }}</NuxtLink>
+      </div>
     </div>
   </footer>
 </template>

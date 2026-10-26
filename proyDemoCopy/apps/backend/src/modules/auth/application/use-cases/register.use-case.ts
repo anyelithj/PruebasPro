@@ -41,6 +41,7 @@ export class RegisterUseCase {
       password: dto.password,
       firstName: dto.firstName,
       lastName: dto.lastName,
+      phone: dto.phone, // [2026-10-24]: opcional · CreateUserUseCase lo recorta (`trim`) y guarda `null` si llega vacío
       role: Role.USER,
     });
 

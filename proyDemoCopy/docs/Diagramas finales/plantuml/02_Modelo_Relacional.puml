@@ -1,0 +1,154 @@
+@startuml
+skinparam backgroundColor #FEFEFE
+skinparam entity {
+  BackgroundColor #E8F5E9
+  BorderColor #2E7D32
+  FontName Arial
+  FontSize 9
+}
+
+entity "users" as users {
+  *id : UUID <<PK>>
+  --
+  *email : VARCHAR(320) <<UQ, NN>>
+  *password_hash : VARCHAR(255) <<NN>>
+  *first_name : VARCHAR(80) <<NN>>
+  *last_name : VARCHAR(80) <<NN>>
+  *role : VARCHAR(10) <<NN, DF='USER'>>
+  section : VARCHAR(40) <<NULL>>
+  *is_active : BOOLEAN <<NN, DF=true>>
+  *is_email_verified : BOOLEAN <<NN, DF=false>>
+  *created_at : TIMESTAMP <<NN>>
+  *updated_at : TIMESTAMP <<NN>>
+}
+
+entity "auth_sessions" as auth_sessions {
+  *id : UUID <<PK>>
+  --
+  *user_id : UUID <<FK, NN, IX>>
+  *refresh_token_hash : VARCHAR(255) <<NN>>
+  user_agent : VARCHAR(255) <<NULL>>
+  ip_address : VARCHAR(64) <<NULL>>
+  *expires_at : TIMESTAMPTZ <<NN>>
+  *is_revoked : BOOLEAN <<NN, DF=false>>
+  *created_at : TIMESTAMP <<NN>>
+}
+
+entity "email_verification_tokens" as email_verification_tokens {
+  *id : UUID <<PK>>
+  --
+  *user_id : UUID <<FK, NN, IX>>
+  *token_hash : VARCHAR(255) <<UQ, NN>>
+  *expires_at : TIMESTAMPTZ <<NN>>
+  used_at : TIMESTAMPTZ <<NULL>>
+  *created_at : TIMESTAMP <<NN>>
+}
+
+entity "password_reset_tokens" as password_reset_tokens {
+  *id : UUID <<PK>>
+  --
+  *user_id : UUID <<FK, NN, IX>>
+  *token_hash : VARCHAR(255) <<UQ, NN>>
+  *expires_at : TIMESTAMPTZ <<NN>>
+  used_at : TIMESTAMPTZ <<NULL>>
+  *created_at : TIMESTAMP <<NN>>
+}
+
+entity "quizzes" as quizzes {
+  *id : UUID <<PK>>
+  --
+  *title : VARCHAR(160) <<NN>>
+  description : TEXT <<NULL>>
+  *category : VARCHAR(20) <<NN, DF='general'>>
+  *difficulty : VARCHAR(10) <<NN, DF='medium'>>
+  *language : VARCHAR(2) <<NN, DF='en'>>
+  *author_id : UUID <<FK, NN, IX>>
+  *source : VARCHAR(32) <<NN, DF='custom'>>
+  *time_per_question_seconds : INT <<NN, DF=30>>
+  *is_published : BOOLEAN <<NN, DF=false>>
+  *created_at : TIMESTAMP <<NN>>
+  *updated_at : TIMESTAMP <<NN>>
+}
+
+entity "questions" as questions {
+  *id : UUID <<PK>>
+  --
+  *quiz_id : UUID <<FK, NN, IX, CASCADE>>
+  *text : TEXT <<NN>>
+  *type : VARCHAR(20) <<NN, DF='multiple_choice'>>
+  options : JSONB <<NULL>>
+  *correct_answer : TEXT <<NN>>
+  *difficulty : VARCHAR(10) <<NN, DF='medium'>>
+  *language : VARCHAR(2) <<NN, DF='en'>>
+  *position : INT <<NN, DF=0>>
+  time_limit_seconds : INT <<NULL>>
+  explanation : TEXT <<NULL>>
+  feedback : TEXT <<NULL>>
+}
+
+entity "quiz_sessions" as quiz_sessions {
+  *id : UUID <<PK>>
+  --
+  *user_id : UUID <<FK, NN, IX>>
+  *quiz_id : UUID <<FK, NN, IX>>
+  *status : VARCHAR(15) <<NN, DF='in_progress'>>
+  *answers : JSONB <<NN, DF='[]'>>
+  *total_score : FLOAT <<NN, DF=0>>
+  *correct_count : INT <<NN, DF=0>>
+  *started_at : TIMESTAMP <<NN>>
+  completed_at : TIMESTAMPTZ <<NULL>>
+}
+
+entity "feedback_ia" as feedback_ia {
+  *id : UUID <<PK>>
+  --
+  *session_id : UUID <<FK, NN, IX>>
+  *question_id : UUID <<FK, NN, IX>>
+  *user_id : UUID <<FK, NN, IX>>
+  *content : TEXT <<NN>>
+  suggestion : TEXT <<NULL>>
+  *score : FLOAT <<NN>>
+  *is_correct : BOOLEAN <<NN>>
+  confidence : FLOAT <<NULL>>
+  *model : VARCHAR(64) <<NN>>
+  *strategy_used : VARCHAR(20) <<NN>>
+  latency_ms : INT <<NULL>>
+  *created_at : TIMESTAMP <<NN>>
+}
+
+entity "scores" as scores {
+  *id : UUID <<PK>>
+  --
+  *user_id : UUID <<FK, NN, IX>>
+  *quiz_id : UUID <<FK, NN, IX>>
+  *session_id : UUID <<NN>>
+  *points : FLOAT <<NN>>
+  *correct_count : INT <<NN>>
+  *total_questions : INT <<NN>>
+  *accuracy : FLOAT <<NN>>
+  *created_at : TIMESTAMP <<NN>>
+}
+
+' === Relaciones con cardinalidad ===
+users ||..o{ auth_sessions : "1:N"
+users ||..o{ email_verification_tokens : "1:N"
+users ||..o{ password_reset_tokens : "1:N"
+users ||..o{ quizzes : "1:N (author)"
+users ||..o{ quiz_sessions : "1:N"
+users ||..o{ feedback_ia : "1:N"
+users ||..o{ scores : "1:N"
+
+quizzes ||..o{ questions : "1:N"
+quizzes ||..o{ quiz_sessions : "1:N"
+quizzes ||..o{ scores : "1:N"
+
+quiz_sessions ||..o{ feedback_ia : "1:N"
+questions ||..o{ feedback_ia : "1:N"
+
+note bottom of users
+  **Tablas NO incluidas (incompletas):**
+  - achievements
+  - notifications
+end note
+
+@enduml

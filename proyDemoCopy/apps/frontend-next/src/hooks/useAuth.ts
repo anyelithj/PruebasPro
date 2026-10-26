@@ -22,6 +22,7 @@ interface RegisterPayload {
   password: string;
   firstName: string;
   lastName: string;
+  phone?: string; // [2026-10-24]: teléfono opcional del alta
 }
 
 export function useAuth() {

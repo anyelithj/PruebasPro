@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { z } from 'zod';
+import * as z from 'zod'; // [Tree-shaking · Zod 4]: import de namespace (`* as z`) → esbuild empaqueta solo las funciones usadas (con `{ z }` arrastraba Zod entero, ~450 kB)
 import { API_URL } from '../http/api-url.token';
 // [CartService · core/cart]: el MISMO carrito del topbar de Next.js (localStorage «cart», mismo origen) + compra simulada | [Patrón]: Singleton + Repository (localStorage) + Observer (evento `storage`) + Command (checkout) | [Principio]: SRP + SSOT (Next.js y Angular leen la misma clave) | [Paradigma]: Reactivo (signals) + Funcional (actualizaciones inmutables)
 // ponytail: compra sin pasarela (igual que checkoutAction de Next.js); el sprint 7.3 (Payments) la cambia por orden + webhook

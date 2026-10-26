@@ -50,6 +50,7 @@ export class StartGameBody {
   @IsOptional() @IsEnum(CefrLevel) level?: CefrLevel;
   @IsOptional() @IsInt() @Min(1) @Max(3) difficulty?: number;
   @IsOptional() @IsUUID() scenarioId?: string;
+  @IsOptional() @IsUUID() deckId?: string; // [2026-10-25]: juego con material propio
 }
 
 export class AgentTurnBody {

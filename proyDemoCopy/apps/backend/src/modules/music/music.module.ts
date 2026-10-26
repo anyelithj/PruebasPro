@@ -9,9 +9,11 @@ import { ArchiveCollectionUseCase } from './application/use-cases/archive-collec
 import { ChangeSongStatusUseCase } from './application/use-cases/change-song-status.use-case';
 import { CreateCollectionUseCase } from './application/use-cases/create-collection.use-case';
 import { CreateSongUseCase } from './application/use-cases/create-song.use-case';
+import { DraftSongLyricsUseCase } from './application/use-cases/draft-song-lyrics.use-case';
 import { EnrichSongLinesUseCase } from './application/use-cases/enrich-song-lines.use-case';
 import { GenerateSongPracticeUseCase } from './application/use-cases/generate-song-practice.use-case';
 import { GetCollectionUseCase } from './application/use-cases/get-collection.use-case';
+import { ImportLyricsFromUrlUseCase } from './application/use-cases/import-lyrics-from-url.use-case';
 import {
   GetSongUseCase,
   SongAccess,
@@ -35,12 +37,16 @@ import { WithdrawSongUseCase } from './application/use-cases/withdraw-song.use-c
 import { Song } from './domain/entities/song.entity';
 import { SongCollection } from './domain/entities/song-collection.entity';
 import { SongLine } from './domain/entities/song-line.entity';
+import { LYRICS_DRAFT } from './domain/interfaces/lyrics-draft.interface';
+import { WEB_PAGE_FETCHER } from './domain/interfaces/web-page-fetcher.interface';
 import { AlignmentClient } from './infrastructure/ai/alignment-client.adapter';
+import { LyricsDraftClient } from './infrastructure/ai/lyrics-draft-client.adapter';
+import { PublicWebFetcher } from './infrastructure/web/public-web-fetcher.adapter';
 import { SongCollectionsController } from './presentation/song-collections.controller';
 import { SongLinesController } from './presentation/song-lines.controller';
 import { SongPracticesController } from './presentation/song-practices.controller';
 import { SongsController } from './presentation/songs.controller';
-// [MusicModule · Sprints 9.2/9.10 · RF-115 a RF-120, RF-128]: canciones con licencia y revisión, letra por líneas con IPA y traducción, tiempos (manual o propuestos por Alignment), colecciones y prácticas generadas | [Patrón]: Module + DI Container + Ports & Adapters (LANGUAGE_TOOLS de Vocabulary, ALIGNMENT → AlignmentClient, MUSIC_STORE → ObjectStore «music») | [Principio]: DIP + SRP + DRY (Practice y LanguageTools reutilizados)
+// [MusicModule · Sprints 9.2/9.10 · RF-115 a RF-120, RF-128]: canciones con licencia y revisión, letra por líneas con IPA y traducción, tiempos (manual o propuestos por Alignment), colecciones y prácticas generadas | [Patrón]: Module + DI Container + Ports & Adapters (LANGUAGE_TOOLS de Vocabulary, ALIGNMENT → AlignmentClient, MUSIC_STORE → ObjectStore «music», WEB_PAGE_FETCHER → PublicWebFetcher, LYRICS_DRAFT → LyricsDraftClient) | [Principio]: DIP + SRP + DRY (Practice y LanguageTools reutilizados)
 
 @Module({
   imports: [
@@ -59,6 +65,8 @@ import { SongsController } from './presentation/songs.controller';
   providers: [
     { provide: MUSIC_STORE, useFactory: () => createObjectStore('music') },
     { provide: ALIGNMENT, useClass: AlignmentClient },
+    { provide: WEB_PAGE_FETCHER, useClass: PublicWebFetcher }, // [2026-10-24]: letra desde un enlace (como navegador, anti-SSRF)
+    { provide: LYRICS_DRAFT, useClass: LyricsDraftClient }, // [2026-10-24]: letra con IA (OllamaClient del AIModule @Global)
     SongAccess,
     CreateSongUseCase,
     UploadSongAudioUseCase,
@@ -79,6 +87,8 @@ import { SongsController } from './presentation/songs.controller';
     ArchiveCollectionUseCase,
     GenerateSongPracticeUseCase,
     ListSongPracticesUseCase,
+    ImportLyricsFromUrlUseCase,
+    DraftSongLyricsUseCase,
   ],
   exports: [ALIGNMENT], // [Sprint 9.4]: Dialogues sincroniza el audio de los diálogos con el mismo cliente (DRY)
 })

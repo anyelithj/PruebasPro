@@ -2,6 +2,7 @@
 // [Patrón]: Interpreter (línea → bloque) + Presentational | [Principio]: KISS + YAGNI (sin librería: solo la sintaxis que producimos) | [Paradigma]: Funcional (puro, sirve en RSC y Client)
 // ponytail: no soporta tablas, enlaces ni código; si se necesitan, usar `marked` + DOMPurify (ya en Angular)
 import type { ReactNode } from "react";
+import { youtubeEmbed } from "@/lib/youtube";
 
 // [inline]: **negrita** → <strong> | `split` con grupo de captura conserva los delimitados en índices impares
 const inline = (text: string): ReactNode[] => text.split(/\*\*(.+?)\*\*/g).map((part, i) => (i % 2 ? <strong key={i}>{part}</strong> : part));
@@ -36,6 +37,9 @@ export function Markdown({ text, className = "" }: { text: string; className?: s
           <ul key={i} className="list-disc space-y-1 pl-5">{b.lines.map((l, j) => <li key={j}>{inline(l)}</li>)}</ul>
         ) : b.kind === "ol" ? (
           <ol key={i} className="list-decimal space-y-1 pl-5">{b.lines.map((l, j) => <li key={j}>{inline(l)}</li>)}</ol>
+        ) : b.lines.length === 1 && youtubeEmbed(b.lines[0]) ? (
+          // [2026-10-25]: un párrafo que es SOLO un enlace de YouTube → video incrustado (cursos importados/compartidos)
+          <iframe key={i} src={youtubeEmbed(b.lines[0])!} title="Video de YouTube" className="aspect-video w-full max-w-2xl rounded-lg" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowFullScreen loading="lazy" referrerPolicy="strict-origin-when-cross-origin" />
         ) : (
           <p key={i}>{inline(b.lines.join(" "))}</p>
         ),

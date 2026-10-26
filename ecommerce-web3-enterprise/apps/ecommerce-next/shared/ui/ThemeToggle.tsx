@@ -1,6 +1,6 @@
 // ThemeToggle.tsx => botón de tema claro/oscuro (36×36, mismo tamaño que IconAction). El tema vive en la cookie
 // "theme" (no en localStorage): en localhost la cookie se comparte entre puertos y detrás de Nginx es el mismo origen,
-// así Next (panel/login) y Nuxt (tienda) muestran SIEMPRE el mismo tema. Sin cookie => preferencia del sistema
+// así Next (panel/login) y Nuxt (tienda) muestran SIEMPRE el mismo tema. Sin cookie => tema claro por defecto
 // (lo aplica THEME_SCRIPT de shared/lib/theme.ts en <head>).
 "use client";
 

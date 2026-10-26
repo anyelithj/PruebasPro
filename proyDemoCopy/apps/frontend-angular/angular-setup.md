@@ -176,6 +176,12 @@ cd apps/frontend-next && pnpm dev
 cd apps/frontend-angular && pnpm start
 ```
 
+> **Recarga en caliente (HMR) detrás del shell · 2026-10-24.** El dev server de Angular usa Vite; su cliente (`/ng/@vite/client`) abre un WebSocket con el puerto de la URL desde la que se cargó. Next.js no reenvía ese WebSocket (`ws://localhost:9000/ng/?token=…` recibe el 308 interno `/ng/ → /ng`), lo que antes dejaba en consola *«WebSocket connection to 'ws://localhost:9000/ng/?token=…' failed»* + *«[vite] Direct websocket connection fallback»*.
+> Solución: en `next dev`, `next.config.ts → redirects()` manda `/ng/@vite/client` con un **307 a `http://localhost:9100/ng/@vite/client`**; el módulo toma esa URL como `import.meta.url` y el WebSocket va **directo a :9100** al primer intento (Vite responde con CORS para orígenes `localhost`). En `next build`/`next start` la redirección no existe (Angular es estático, sin HMR).
+> - Si el dev server de Angular se ve desde el navegador en otra dirección, define `ANGULAR_DEV_BROWSER_URL` (p. ej. `http://127.0.0.1:9100`) al arrancar Next.js.
+> - Abriendo el portal por IP de red (`http://192.168.x.x:9000`) Vite rechaza el CORS del cliente → sin HMR (recarga manual); usa `http://localhost:9000` para desarrollar.
+> - Alternativa sin HMR: `ng serve --live-reload=false --hmr=false` (el dev server no abre WebSocket).
+
 Abrir `http://localhost:9000/login`, iniciar sesión y entrar a:
 
 | Ruta (shell :9000) | Pantalla Angular | Rol |

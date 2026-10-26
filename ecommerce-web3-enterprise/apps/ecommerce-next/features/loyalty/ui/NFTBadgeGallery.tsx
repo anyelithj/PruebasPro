@@ -44,7 +44,7 @@ function TransferBadge({ accountId, badge }: { accountId: string; badge: { id: s
   return (
     <form className="flex flex-col gap-2 sm:col-span-2" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
       <label htmlFor="transfer-to" className="text-slate-500">{t("transferTo")}</label>
-      <input id="transfer-to" value={to} onChange={(event) => setTo(event.target.value.trim())} pattern="^0x[a-fA-F0-9]{40}$" required placeholder="0x…" className="h-9 rounded-md border px-2 font-mono text-xs" />
+      <input id="transfer-to" value={to} onChange={(event) => setTo(event.target.value.trim())} pattern="^0x[a-fA-F0-9]{40}$" required placeholder="0x…" className="h-9 rounded-md border border-slate-300 px-3 font-mono text-xs" />
       <Button type="submit" size="sm" variant="secondary" loading={sending || transfer.isPending} className="self-start">{t("transfer")}</Button>
     </form>
   );

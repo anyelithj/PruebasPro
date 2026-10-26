@@ -1,7 +1,9 @@
 <!--
   AdminSidebar.vue (widget · Vue 3 + Tailwind) => menú lateral ÚNICO, ESPEJO EXACTO de AdminSidebar.tsx (Next.js): mismo
-  diseño "pro sidebar" (fondo oscuro, marca, tarjeta del usuario, buscador, grupos plegables, ítem activo resaltado, riel
-  de íconos en escritorio y panel deslizable en móvil), mismas clases, mismo manifiesto y mismas reglas por rol.
+  diseño "pro sidebar" (fondo oscuro, marca, tarjeta del usuario, buscador, grupos desplegables en acordeón EXCLUSIVO
+  —un grupo abierto a la vez, sin scroll—, ítem activo resaltado, riel de íconos en escritorio y panel deslizable en
+  móvil), mismas clases, mismo manifiesto y mismas reglas por rol. Botón ocultar/mostrar estilo Claude/Gemini: ícono
+  "panel lateral" arriba, junto a la marca (expandido) o solo en el riel (colapsado).
   Corrección: antes los ítems de Nuxt se dibujaban con <component :is="resolveComponent('NuxtLink')">; en la plantilla
   "resolveComponent" no existe y salía un elemento sin href (sin cursor de mano y sin navegar). Ahora cada ítem es un
   <NuxtLink> o un <a href> explícito (v-if / v-else).
@@ -12,9 +14,9 @@
 import { computed, ref, watch } from "vue";
 import type { AdminNavItem } from "@ecommerce/shared-types";
 import { cn } from "~~/shared/lib/cn";
-import { initials, panelHome, usePanelNav } from "./usePanelNav";
+import { COLLAPSED_KEY, initials, panelHome, usePanelNav } from "./usePanelNav";
 
-const { NAV, locale, groups, active, text, itemHref, collapsed, mobileOpen, user, name, roleLabel, nextUrl } = usePanelNav();
+const { NAV, locale, groups, active, text, itemHref, collapsed, mobileOpen, toggleCollapsed, user, name, roleLabel, nextUrl } = usePanelNav();
 const localePath = useLocalePath();
 const route = useRoute();
 
@@ -24,17 +26,15 @@ const ITEM = "group/item relative flex cursor-pointer items-center gap-2.5 round
 const ITEM_ACTIVE = "bg-indigo-500/15 text-white";
 const ICON_BOX = "flex size-6 shrink-0 items-center justify-center rounded-md bg-slate-800 text-slate-400 transition-colors group-hover/item:text-indigo-300";
 const ICON_BOX_ACTIVE = "bg-indigo-500 text-white group-hover/item:text-white";
-const COLLAPSED_KEY = "admin-sidebar-collapsed";
+// Botón "panel lateral" (36 px, como Claude/Gemini): mismo estilo en escritorio (ocultar/mostrar) y móvil (cerrar)
+const SIDEBAR_TOGGLE = "size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400";
 
-// Acordeón: el grupo activo se abre solo (watch = Observer de la ruta)
-const open = ref(new Set<string>([active.value?.group.key ?? "account"]));
-watch(active, (value) => value && !open.value.has(value.group.key) && (open.value = new Set(open.value).add(value.group.key)));
+// Acordeón EXCLUSIVO (Dropdown): un solo grupo abierto (string | null); el de la ruta activa se abre solo (watch = Observer)
+const open = ref<string | null>(active.value?.group.key ?? "account");
+watch(() => active.value?.group.key, (key) => key && (open.value = key));
 watch(() => route.fullPath, () => (mobileOpen.value = false)); // Al navegar se cierra el panel móvil
-const toggleGroup = (key: string) => {
-  const next = new Set(open.value);
-  if (!next.delete(key)) next.add(key);
-  open.value = next;
-};
+const toggleGroup = (key: string) => (open.value = open.value === key ? null : key); // Mismo grupo => se pliega
+const isOpen = (key: string) => collapsed.value || searching.value || open.value === key; // DRY de la plantilla
 
 // Buscador sin tildes (NFD + quitar diacríticos)
 const query = ref("");
@@ -49,14 +49,10 @@ const isActive = (item: AdminNavItem) => active.value?.item.key === item.key;
 // homeHref => la marca lleva al inicio del panel según el rol (panelHome: ADMIN resumen, VENDOR catálogo, resto cuenta), en Next
 const homeHref = computed(() => nextUrl(panelHome(user.value?.roles ?? [])));
 
-// Preferencia del riel: se lee al montar (solo navegador) y se guarda al cambiar
+// Preferencia del riel: se lee al montar (solo navegador); toggleCollapsed (usePanelNav) la guarda al cambiar
 onMounted(() => {
   try { collapsed.value = localStorage.getItem(COLLAPSED_KEY) === "1"; } catch { /* almacenamiento bloqueado */ }
 });
-const toggleCollapsed = () => {
-  collapsed.value = !collapsed.value;
-  try { localStorage.setItem(COLLAPSED_KEY, collapsed.value ? "1" : "0"); } catch { /* sin persistencia */ }
-};
 </script>
 
 <template>
@@ -68,15 +64,22 @@ const toggleCollapsed = () => {
       :class="cn('scale-fixed fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-slate-900 text-slate-300 shadow-xl transition-[width,transform] duration-200 ease-out motion-reduce:transition-none lg:translate-x-0', mobileOpen ? 'translate-x-0' : '-translate-x-full', collapsed ? 'lg:w-[4.5rem]' : 'lg:w-72')"
       @keydown.esc="mobileOpen = false"
     >
-      <!-- Marca -->
-      <div class="flex h-16 shrink-0 items-center gap-3 border-b border-white/10 px-4">
-        <a :href="homeHref" :class="cn('flex min-w-0 items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400', collapsed && 'lg:mx-auto')">
+      <!-- Marca + botón ocultar/mostrar (estilo Claude/Gemini): expandido => marca y botón "panel lateral" a la derecha;
+           colapsado (riel) => solo el botón, centrado, en el mismo lugar -->
+      <div :class="cn('flex h-16 shrink-0 items-center gap-3 border-b border-white/10 px-4', collapsed && 'lg:justify-center lg:px-0')">
+        <a :href="homeHref" :class="cn('flex min-w-0 items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400', collapsed && 'lg:hidden')">
           <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-sm font-bold text-white shadow">W3</span>
-          <span :class="cn('truncate font-semibold text-white', collapsed && 'lg:sr-only')">eCommerce Web3</span>
+          <span class="truncate font-semibold text-white">eCommerce Web3</span>
         </a>
-        <button type="button" class="ml-auto rounded-md p-1.5 text-slate-400 hover:bg-white/10 hover:text-white lg:hidden" :aria-label="text('closeMenu')" @click="mobileOpen = false">
+        <!-- aria-expanded => estado del menú para lectores de pantalla; title => tooltip nativo -->
+        <button type="button" :aria-expanded="!collapsed" aria-controls="panel-sidebar" :title="collapsed ? text('expand') : text('collapse')" :class="cn(SIDEBAR_TOGGLE, 'ml-auto hidden lg:flex', collapsed && 'lg:ml-0')" @click="toggleCollapsed">
+          <span class="sr-only">{{ collapsed ? text("expand") : text("collapse") }}</span>
           <!-- eslint-disable-next-line vue/no-v-html -- SVG estático del manifiesto (repositorio), nunca datos del usuario -->
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="size-5" aria-hidden="true" v-html="NAV.icons.close" />
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="size-5" aria-hidden="true" v-html="NAV.icons.sidebar" />
+        </button>
+        <button type="button" :class="cn(SIDEBAR_TOGGLE, 'ml-auto flex lg:hidden')" :aria-label="text('closeMenu')" @click="mobileOpen = false">
+          <!-- eslint-disable-next-line vue/no-v-html -- SVG estático del manifiesto -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="size-5" aria-hidden="true" v-html="NAV.icons.sidebar" />
         </button>
       </div>
 
@@ -106,14 +109,14 @@ const toggleCollapsed = () => {
         <p v-if="!filtered.length" class="px-3 py-2 text-sm text-slate-500">{{ text("noResults") }}</p>
         <section v-for="group in filtered" :key="group.key" :aria-label="group.label[locale]" :class="cn('mb-0.5', collapsed && 'lg:mb-2 lg:border-t lg:border-white/10 lg:pt-3 lg:first:border-t-0 lg:first:pt-0')">
           <h2 :class="cn(collapsed && 'lg:sr-only')">
-            <button type="button" :aria-expanded="collapsed || searching || open.has(group.key)" :aria-controls="`nav-panel-${group.key}`" class="flex w-full cursor-pointer items-center justify-between rounded-md px-2 pb-0.5 pt-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400" @click="toggleGroup(group.key)">
+            <button type="button" :aria-expanded="isOpen(group.key)" :aria-controls="`nav-panel-${group.key}`" class="flex w-full cursor-pointer items-center justify-between rounded-md px-2 pb-0.5 pt-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400" @click="toggleGroup(group.key)">
               {{ group.label[locale] }}
               <!-- eslint-disable-next-line vue/no-v-html -- SVG estático del manifiesto -->
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" :class="cn('size-3.5 transition-transform', (collapsed || searching || open.has(group.key)) && 'rotate-180')" aria-hidden="true" v-html="NAV.icons.chevron" />
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" :class="cn('size-3.5 transition-transform', isOpen(group.key) && 'rotate-180')" aria-hidden="true" v-html="NAV.icons.chevron" />
             </button>
           </h2>
           <!-- Cerrado => clase "hidden": la clase "flex" de Tailwind anula el atributo hidden (por eso antes no se plegaba) -->
-          <ul :id="`nav-panel-${group.key}`" :hidden="!(collapsed || searching || open.has(group.key))" :class="cn('flex flex-col gap-px', !(collapsed || searching || open.has(group.key)) && 'hidden')">
+          <ul :id="`nav-panel-${group.key}`" :hidden="!isOpen(group.key)" :class="cn('flex flex-col gap-px', !isOpen(group.key) && 'hidden')">
             <li v-for="item in group.items" :key="item.key">
               <!-- Ítem de Nuxt => NuxtLink (SPA); ítem de Next => <a href> (otra app). Ambos son enlaces reales -->
               <NuxtLink v-if="item.app === 'nuxt'" :to="itemHref(item)" :title="collapsed ? item.label[locale] : undefined" :aria-current="isActive(item) ? 'page' : undefined" :class="cn(ITEM, collapsed && 'lg:justify-center lg:px-0', isActive(item) && ITEM_ACTIVE)">
@@ -136,20 +139,15 @@ const toggleCollapsed = () => {
         </section>
       </nav>
 
-      <!-- Pie: tienda + ocultar/mostrar menú -->
-      <div :class="cn('flex shrink-0 items-center gap-1 border-t border-white/10 p-3', collapsed && 'lg:flex-col')">
-        <NuxtLink :to="localePath('/')" :title="text('store')" :class="cn(ITEM, 'flex-1', collapsed && 'lg:w-full lg:justify-center lg:px-0')">
+      <!-- Pie: volver a la tienda (el botón ocultar/mostrar vive arriba, junto a la marca) -->
+      <div class="flex shrink-0 items-center border-t border-white/10 p-3">
+        <NuxtLink :to="localePath('/')" :title="collapsed ? text('store') : undefined" :class="cn(ITEM, 'flex-1', collapsed && 'lg:justify-center lg:px-0')">
           <span :class="ICON_BOX">
             <!-- eslint-disable-next-line vue/no-v-html -- SVG estático del manifiesto -->
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="size-4" aria-hidden="true" v-html="NAV.icons.store" />
           </span>
           <span :class="cn('truncate', collapsed && 'lg:sr-only')">{{ text("store") }}</span>
         </NuxtLink>
-        <button type="button" :aria-pressed="collapsed" aria-controls="panel-sidebar" :title="collapsed ? text('expand') : text('collapse')" class="hidden size-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-slate-400 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 lg:flex" @click="toggleCollapsed">
-          <span class="sr-only">{{ collapsed ? text("expand") : text("collapse") }}</span>
-          <!-- eslint-disable-next-line vue/no-v-html -- SVG estático del manifiesto -->
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" :class="cn('size-4 transition-transform', collapsed && 'rotate-180')" aria-hidden="true" v-html="NAV.icons.collapse" />
-        </button>
       </div>
     </aside>
   </div>

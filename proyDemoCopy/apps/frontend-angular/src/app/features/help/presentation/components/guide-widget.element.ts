@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, ElementRef, inject, signal, viewChild } from '@angular/core';
-import { LANGUAGES } from '@aula/shared-schemas';
+import { CEFR_LEVELS, LANGUAGES } from '@aula/shared-schemas';
 import { SessionService } from '@core/auth/session.service';
 import { I18nService } from '@core/i18n/i18n.service';
 import { AvatarSvgComponent } from '@shared/ui/atoms/avatar-svg/avatar-svg.component';
@@ -92,8 +92,12 @@ import { GuideChatComponent } from './guide-chat.component';
             }
           </div>
           <section id="guide-panel" role="tabpanel" [attr.aria-labelledby]="'guide-tab-' + guide.mode()" class="flex min-h-0 flex-1 flex-col gap-3">
-            <p class="text-xs text-muted-foreground">{{ t.modes[guide.mode()].hint }}</p>
+            @if (guide.mode() !== 'tutor') { <!-- [2026-10-26]: el tutor abre SOLO con su saludo -->
+              <p class="text-xs text-muted-foreground">{{ t.modes[guide.mode()].hint }}</p>
+            }
             @if (guide.mode() === 'tutor') {
+              <!-- [2026-10-25]: idioma y nivel en la MISMA fila -->
+              <div class="flex flex-wrap items-center gap-3">
               <label class="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
                 {{ t.tutorLanguage }}
                 <select class="control h-9 min-h-9 py-1 text-xs" [value]="guide.language()" (change)="guide.language.set($any($event.target).value)">
@@ -102,6 +106,16 @@ import { GuideChatComponent } from './guide-chat.component';
                   }
                 </select>
               </label>
+              <!-- [2026-10-25]: nivel MCER → el tutor adapta las reglas y los ejemplos -->
+              <label class="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                {{ t.tutorLevel }}
+                <select class="control h-9 min-h-9 py-1 text-xs" [value]="guide.level()" (change)="guide.level.set($any($event.target).value)">
+                  @for (l of levels; track l) {
+                    <option [value]="l">{{ l }}</option>
+                  }
+                </select>
+              </label>
+              </div>
             }
             <aula-guide-chat class="min-h-0 flex-1" maxHeight="none" />
           </section>
@@ -116,6 +130,7 @@ export class GuideWidgetElement {
   protected readonly guide = inject(GuideFacade);
   protected readonly modes = BOT_MODES;
   protected readonly languages = LANGUAGES;
+  protected readonly levels = CEFR_LEVELS;
   protected readonly icons = { tutor: 'graduation-cap', support: 'wrench', guide: 'compass' } as const; // [2026-10-23]: iconos SVG (antes emojis)
   // [Estado de la ventana · 2026-10-23]: closed → open ⇄ min | max = panel grande | [Patrón]: State (signals)
   protected readonly view = signal<'closed' | 'open' | 'min'>('closed');

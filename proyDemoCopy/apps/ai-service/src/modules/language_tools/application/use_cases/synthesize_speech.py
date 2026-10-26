@@ -9,6 +9,7 @@
 from dataclasses import dataclass
 
 from src.modules.language_tools.application.schemas.speak_request import SpeakRequest
+from src.modules.language_tools.domain.audio_quality import ensure_audible
 from src.modules.language_tools.domain.interfaces.speech_synthesizer import (
     SpeechSynthesizer,
 )
@@ -34,6 +35,8 @@ class SynthesizeSpeechUseCase:
             req.language, req.variant
         )  # 422 si la variante no corresponde al idioma
         audio = await self._synth.synthesize(req.text.strip(), voice)
+        # [2026-10-24 · Guard]: un WAV sin muestras o en silencio → 503 en vez de un audio mudo (el backend no lo cachea y el navegador usa su voz)
+        ensure_audible(audio)
         return SpeechResult(
             audio=audio, variant=variant, voice=voice, engine=self._synth.engine
         )

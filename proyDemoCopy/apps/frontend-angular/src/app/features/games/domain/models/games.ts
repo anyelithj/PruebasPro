@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod'; // [Tree-shaking · Zod 4]: import de namespace (`* as z`) → esbuild empaqueta solo las funciones usadas (con `{ z }` arrastraba Zod entero, ~450 kB)
 import { CEFR_LEVELS, LANGUAGES } from '@aula/shared-schemas';
 import { GAME_TYPES } from './game-type';
 // [Modelo Games · Dominio · Sprints 8.8–8.11]: sesión, ronda, veredicto, turno del agente, flashcard (SM-2), escenario de role-play, métrica de fluidez y transcripción — contrato de /api/games/* y /api/speech/* de NestJS | [Patrón]: Schema-First (Zod) + funciones puras | [Principio]: SSOT + Type-Safe | [Paradigma]: Funcional
@@ -177,6 +177,7 @@ export const StartInputSchema = z.object({
   level: z.enum(CEFR_LEVELS).optional(),
   difficulty: z.number().int().min(1).max(3).optional(),
   scenarioId: z.string().optional(),
+  deckId: z.string().optional(), // [2026-10-25]: juego con material propio (?mazo=)
 });
 export type StartInput = z.infer<typeof StartInputSchema>;
 export interface RoundInput {

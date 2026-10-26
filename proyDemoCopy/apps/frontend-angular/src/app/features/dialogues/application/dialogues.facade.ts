@@ -1,5 +1,6 @@
 import { inject, Injectable, signal } from '@angular/core';
-import { firstValueFrom, type Observable } from 'rxjs';
+import { catchError, firstValueFrom, of, throwError, type Observable } from 'rxjs';
+import { isServerSpeechDown } from '@core/audio/server-speech';
 import { AsyncState } from '@shared/utils/async-state';
 import { DialoguesRepository } from '../domain/dialogues.repository.port';
 import type {
@@ -27,6 +28,7 @@ export class DialoguesFacade {
   readonly history = new AsyncState<Session[]>((l) => !l.length);
   readonly busy = signal(false);
   readonly actionError = signal<string | null>(null);
+  readonly serverSpeechDown = signal(false); // [2026-10-25]: el servidor no transcribe (faster-whisper ausente o caído) → la página ofrece el respaldo
 
   private async act<T>(source: Observable<T>): Promise<T | null> {
     this.busy.set(true);
@@ -108,7 +110,18 @@ export class DialoguesFacade {
     return this.repo.audioUrl(id);
   }
 
+  // [transcribe · 2026-10-25]: servidor sin voz a texto → `null` SIN `actionError` (no es un fallo del alumno) y `serverSpeechDown` = true
+  // `catchError` (RxJS): convierte solo ese caso en `of(null)`; el resto de errores sigue por `act` | [Principio]: DRY (reutiliza act)
   transcribe(audio: Blob, language: string): Promise<string | null> {
-    return this.act(this.repo.transcribe(audio, language));
+    this.serverSpeechDown.set(false);
+    return this.act(
+      this.repo.transcribe(audio, language).pipe(
+        catchError((err: unknown) => {
+          if (!isServerSpeechDown(err)) return throwError(() => err);
+          this.serverSpeechDown.set(true);
+          return of(null);
+        }),
+      ),
+    );
   }
 }

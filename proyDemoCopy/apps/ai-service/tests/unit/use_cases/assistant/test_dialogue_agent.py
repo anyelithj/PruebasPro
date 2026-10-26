@@ -123,3 +123,65 @@ async def test_despedida_cierra_la_conversacion_sin_llm():
     out = await say(llm, "The cheese is mild, fresh, and sweet; goodbye.")
     assert out.game_state["finished"] is True and out.game_state["translation"] and llm.calls == 0
     assert "finished" not in (await say(llm, "How do you say goodbye in French when you leave?")).game_state
+
+
+# ───── 2026-10-25 · «El rooster's beak is a mix of…» y el respaldo «Interesting! Can you tell me a bit more?» dos veces ─────
+
+MEX = DialogueContext(topic="mexican-food", title="Mexican food", vocabulary=["tacos", "pico de gallo", "spicy"], turn=4)
+
+
+class QueueLlm:
+    """LLM falso con respuestas en cola (str tal cual; dict → JSON; None → caído) y los prompts recibidos."""
+
+    def __init__(self, *replies: object) -> None:
+        self.replies, self.prompts, self.systems = list(replies), [], []
+
+    async def generate(self, prompt: str, **kw: object) -> str:
+        self.prompts.append(prompt)
+        self.systems.append(str(kw.get("system", "")))
+        reply = self.replies.pop(0) if self.replies else None
+        if reply is None:
+            raise RuntimeError("Ollama caído")
+        return reply if isinstance(reply, str) else json.dumps(reply)
+
+
+async def test_articulo_espanol_al_inicio_se_repara_sin_otra_llamada():
+    llm = QueueLlm({"reply": "El rooster's beak is a mix of tomato, onion and chili. Do you make it at home?", "correction": None})
+    r = await say(llm, "I like rooster's beak", ctx=MEX)  # type: ignore[arg-type]
+    assert r.text == "The rooster's beak is a mix of tomato, onion and chili. Do you make it at home?"
+    assert r.answered_by == "llm" and len(llm.prompts) == 1
+
+
+async def test_el_prompt_exige_solo_el_idioma_y_ya_no_pide_traducciones():
+    llm = QueueLlm({"reply": "Nice! Do you like spicy food?"})
+    await say(llm, "I like tacos", ctx=MEX)  # type: ignore[arg-type]
+    assert "never use Spanish words" in llm.systems[0] and "learner_translation" not in llm.systems[0]
+
+
+async def test_respuesta_con_otra_clave_no_cae_en_el_respaldo():
+    # [Causa raíz]: {"response": …} dejaba «reply» vacío → respaldo fijo sin reintento
+    llm = QueueLlm({"response": "Tacos are great! What do you put in them?"})
+    r = await say(llm, "I like tacos", ctx=MEX)  # type: ignore[arg-type]
+    assert r.text == "Tacos are great! What do you put in them?" and r.answered_by == "llm"
+
+
+async def test_json_invalido_reintenta_en_texto_plano():
+    llm = QueueLlm('{"reply": "Tacos are gre', "Aula: Tacos are great! Which salsa do you like?")
+    r = await say(llm, "I like tacos", ctx=MEX)  # type: ignore[arg-type]
+    assert r.text == "Tacos are great! Which salsa do you like?" and len(llm.prompts) == 2
+
+
+async def test_respaldo_contextual_y_rotado_aunque_se_pierda_la_memoria():
+    # Memoria en RAM perdida (conversación nueva en cada turno) → antes salía SIEMPRE «Interesting! Can you tell me a bit more?»
+    first = await say(QueueLlm(), "I love pico de gallo with tacos", ctx=MEX)  # type: ignore[arg-type]
+    assert first.answered_by == "engine" and "pico de gallo" in first.text and "pico de gallo" in first.game_state["translation"]
+    later = [(await say(QueueLlm(), "With my family", ctx=MEX.model_copy(update={"turn": t}))).text for t in (2, 3)]  # type: ignore[arg-type]
+    assert len(set(later)) == 2 and "Interesting! Can you tell me a bit more?" not in later
+
+
+async def test_sin_reintento_si_el_primer_intento_agoto_el_presupuesto():
+    llm = QueueLlm({"reply": "¿Te gustan los tacos picantes? Creo que es muy rico."}, {"reply": "Do you like tacos?"})
+    r = await DialogueAgent(llm, retry_budget_s=0.0).reply(  # type: ignore[arg-type]
+        Conversation(id="c", user_id="u"), "I like tacos", "en", ScreenContext(route=None, role="USER", level="A2", dialogue=MEX)
+    )
+    assert len(llm.prompts) == 1 and r.answered_by == "engine" and "¿" not in r.text

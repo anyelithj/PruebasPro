@@ -15,7 +15,7 @@ function setup(overrides: Partial<MusicRepository> = {}) {
     updateCollection: jest.fn((_id: string, p: { songIds: string[] }) => of({ ...collection, songIds: p.songIds })),
     listSongs: jest.fn(() => of([song({ status: 'review' })])),
     getSong: jest.fn(() => of(songDetail())),
-    loadLyrics: jest.fn(() => of({ lines: [], enriched: false })),
+    loadLyrics: jest.fn(() => of({ lines: [], enriched: false, missing: 0 })),
     patchLines: jest.fn(() => of(songDetail().lines)),
     changeStatus: jest.fn(() => of(song())),
     generatePractice: jest.fn(() => of({ kind: 'gap_fill', activityId: 'a9', reused: false })),
@@ -47,7 +47,7 @@ describe('MusicFacade', () => {
 
   it('letra guardada sin IPA (FastAPI caído) → false para avisar; recarga la canción', async () => {
     const { music, repo } = setup();
-    expect(await music.loadLyrics('s1', 'Hello\nBye')).toBe(false);
+    expect(await music.loadLyrics('s1', 'Hello\nBye')).toEqual({ enriched: false, missing: 0 });
     expect(repo.getSong).toHaveBeenCalledWith('s1');
   });
 

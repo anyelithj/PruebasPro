@@ -1,8 +1,9 @@
 # syntax=docker/dockerfile:1.6
 # [Imagen del backend NestJS]: build multi-etapa (compila → imagen final solo con dependencias de producción)
+# [Node 24.22.1 LTS]: misma versión en las dos etapas, en CI (NODE_VERSION) y en .nvmrc | [Principio]: Reproducibilidad
 
 # ───────────── Etapa 1: dependencias + compilación ─────────────
-FROM node:22-alpine AS builder
+FROM node:24.22.1-alpine AS builder
 WORKDIR /app
 
 # pnpm fijado a la versión con la que se generó pnpm-lock.yaml (lockfile v9)
@@ -21,7 +22,7 @@ RUN pnpm build \
     && pnpm prune --prod --ignore-scripts
 
 # ───────────── Etapa 2: ejecución ─────────────
-FROM node:22-alpine AS runner
+FROM node:24.22.1-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 

@@ -66,7 +66,7 @@ export function SegmentsTab() {
   const preview = useAdminMutation<Record<string, unknown>, { count: number }>([], (rules) => ({ path: "/crm/segment/preview", method: "POST", body: { rules } }));
   const fields = [
     { name: "name", label: t("segmentName") },
-    { name: "description", label: t("description"), type: "textarea" },
+    { name: "description", label: t("description"), type: "textarea" as const },
     { name: "minOrders", label: t("rules.minOrders"), type: "number" as const },
     { name: "maxOrders", label: t("rules.maxOrders"), type: "number" as const },
     { name: "minLtv", label: t("rules.minLtv"), type: "number" as const },
@@ -116,7 +116,7 @@ export function CohortsTab() {
         description={t("cohortsHint")}
         actions={
           <label className="flex items-center gap-2 text-sm">{t("months")}
-            <select value={months} onChange={(e) => setMonths(Number(e.target.value))} className="h-9 rounded-md border px-2">
+            <select value={months} onChange={(e) => setMonths(Number(e.target.value))} className="h-9 rounded-md border border-slate-300 px-3 text-sm">
               {[6, 12, 24].map((value) => <option key={value} value={value}>{value}</option>)}
             </select>
           </label>

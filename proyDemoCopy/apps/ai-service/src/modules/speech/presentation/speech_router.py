@@ -7,16 +7,19 @@
 [Sprint 8.6]: RF-102, RF-104, RF-105.
 """
 
+import asyncio
+from dataclasses import asdict
 from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
+from huggingface_hub.constants import HF_HUB_CACHE
 
 from src.modules.speech.application.schemas.fluency_request import FluencyRequest, FluencyResponse
 from src.modules.speech.application.schemas.transcribe_response import TranscribeResponse
 from src.modules.speech.application.use_cases.analyze_fluency import AnalyzeFluencyUseCase
 from src.modules.speech.application.use_cases.transcribe_audio import TranscribeAudioUseCase
-from src.shared.clients.whisper_transcriber import WhisperTranscriber, get_speech_to_text
+from src.shared.clients.whisper_transcriber import WhisperTranscriber, get_speech_to_text, speech_engine_status
 from src.shared.config.settings import get_settings
 from src.shared.dependencies.auth_deps import CurrentUserDep
 
@@ -43,10 +46,18 @@ async def fluency(payload: FluencyRequest, _user: CurrentUserDep) -> FluencyResp
 @router.get("/models", summary="Modelos de voz instalados y su tamaño")
 async def list_models(_user: CurrentUserDep) -> dict[str, object]:
     s = get_settings()
-    # Caché de Hugging Face donde faster-whisper guarda los modelos descargados
-    hub = Path.home() / ".cache" / "huggingface" / "hub"
+    # Caché de Hugging Face donde faster-whisper guarda los modelos descargados | `HF_HUB_CACHE` respeta HF_HOME/HF_HUB_CACHE
+    # (Docker: /app/.cache/huggingface/hub · Windows: %USERPROFILE%/.cache/huggingface/hub) en vez de suponer ~/.cache
+    hub = Path(HF_HUB_CACHE)
     installed = [
         {"name": d.name.removeprefix("models--Systran--faster-whisper-"), "size_mb": round(sum(f.stat().st_size for f in d.rglob("*") if f.is_file()) / 1e6, 1)}
         for d in (hub.glob("models--Systran--faster-whisper-*") if hub.exists() else [])
     ]
     return {"active": s.whisper_model, "compute_type": s.whisper_compute_type, "installed": installed}
+
+
+@router.get("/status", summary="¿Está instalado el motor de voz a texto? (sin autenticación, sin cargar el modelo)")
+async def status() -> dict[str, object]:
+    # [2026-10-25 · Observabilidad]: el frontend/NestJS saben si ofrecer el respaldo (dictado del navegador o escribir)
+    # `asyncio.to_thread`: el primer import de faster-whisper (ctranslate2 + PyAV) bloquea ~1 s → fuera del event loop
+    return asdict(await asyncio.to_thread(speech_engine_status))

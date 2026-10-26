@@ -86,6 +86,7 @@ export interface CreateCourseInput {
   slug: string;
   shortDescription: string;
   description?: string | null;
+  content?: string | null; // [2026-10-24]: contenido Markdown del curso (columna `text`, sin MaxLength en el DTO)
   category: import("@/types/courses").CourseCategory;
   group?: import("@/types/courses").CourseGroup; // [Idioma del curso]: el backend lo acepta (ACTIVE_COURSE_GROUPS) y es clave para el filtro del catálogo
   instructor: string;
@@ -181,4 +182,9 @@ export async function purchaseCourse(courseId: string): Promise<{ courseId: stri
 // [POST /courses/:id/materials/:mid/complete]: marca un material como visto → progreso recalculado en el backend | [Patrón]: Command
 export async function completeMaterial(courseId: string, materialId: string): Promise<{ completedMaterialIds: string[]; progress: number }> {
   return apiFetch(`/courses/${encodeURIComponent(courseId)}/materials/${encodeURIComponent(materialId)}/complete`, { method: "POST", body: {}, bearer: await withBearer() });
+}
+
+// [completeTopic · 2026-10-25]: subtema del temario estudiado (o desmarcado) → { completedTopics, progress }
+export async function completeTopic(courseId: string, topic: string, done: boolean): Promise<{ completedTopics: string[]; progress: number }> {
+  return apiFetch(`/courses/${encodeURIComponent(courseId)}/materials/topics/complete`, { method: "POST", body: { topic, done }, bearer: await withBearer() });
 }

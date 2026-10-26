@@ -86,6 +86,14 @@ describe('RegisterUseCase', () => {
     expect(res.user.isEmailVerified).toBe(false);
   });
 
+  // [2026-10-24]: el teléfono opcional del formulario de registro llega a CreateUserUseCase (que lo recorta y guarda null si viene vacío)
+  it('propaga el teléfono opcional al alta del usuario', async () => {
+    await useCase.execute({ ...dto, phone: '+57 300 123 4567' });
+    expect(createUser.execute).toHaveBeenCalledWith(
+      expect.objectContaining({ phone: '+57 300 123 4567', role: Role.USER }),
+    );
+  });
+
   it('propaga Conflict si el email ya está registrado y no crea sesión', async () => {
     createUser.execute.mockRejectedValue(
       new ConflictException('Email already registered'),

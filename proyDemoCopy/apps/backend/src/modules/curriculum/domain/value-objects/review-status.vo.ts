@@ -56,3 +56,43 @@ export const initialStatus = (fromAi: boolean): ReviewStatus =>
 // [Estados visibles para estudiantes]: `Object.freeze` (JS) congela el array en runtime | [Principio]: SSOT
 export const STUDENT_VISIBLE_STATUSES: ReadonlyArray<ReviewStatus> =
   Object.freeze([ReviewStatus.APPROVED]);
+
+// [publishSteps · 2026-10-24]: transiciones que llevan un recurso a «publicado» (o de vuelta a borrador al despublicar) SIN saltos — la máquina de estados exige pasar por revisión
+// [Patrón]: Lookup Table derivada de TRANSITIONS | [Principio]: SSOT (antes el frontend tenía su propia copia) + idempotencia (ya publicado → [] → reintentar no repite nada) | [Paradigma]: Funcional (pura)
+const PUBLISH_PATH: Readonly<
+  Record<ReviewStatus, ReadonlyArray<ReviewStatus>>
+> = Object.freeze({
+  [ReviewStatus.DRAFT]: [
+    ReviewStatus.REVIEW_REQUIRED,
+    ReviewStatus.REVIEWED,
+    ReviewStatus.APPROVED,
+  ],
+  [ReviewStatus.GENERATED]: [
+    ReviewStatus.REVIEW_REQUIRED,
+    ReviewStatus.REVIEWED,
+    ReviewStatus.APPROVED,
+  ],
+  [ReviewStatus.REVIEW_REQUIRED]: [
+    ReviewStatus.REVIEWED,
+    ReviewStatus.APPROVED,
+  ],
+  [ReviewStatus.REVIEWED]: [ReviewStatus.APPROVED],
+  [ReviewStatus.ARCHIVED]: [
+    ReviewStatus.DRAFT,
+    ReviewStatus.REVIEW_REQUIRED,
+    ReviewStatus.REVIEWED,
+    ReviewStatus.APPROVED,
+  ],
+  [ReviewStatus.APPROVED]: [], // Ya publicado: nada que hacer
+});
+
+// `publish ? … : …` (operador ternario): despublicar solo afecta a lo publicado (approved → draft); el resto queda igual
+export const publishSteps = (
+  from: ReviewStatus,
+  publish: boolean,
+): ReadonlyArray<ReviewStatus> =>
+  publish
+    ? PUBLISH_PATH[from]
+    : from === ReviewStatus.APPROVED
+      ? [ReviewStatus.DRAFT]
+      : [];

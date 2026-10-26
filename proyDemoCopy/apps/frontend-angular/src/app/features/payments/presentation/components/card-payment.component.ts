@@ -1,5 +1,7 @@
 import { afterNextRender, ChangeDetectionStrategy, Component, DestroyRef, ElementRef, inject, input, output, viewChild } from '@angular/core';
-import { loadStripe } from '@stripe/stripe-js';
+// [Carga diferida de Stripe.js · 2026-10-24]: `@stripe/stripe-js/pure` NO inyecta <script src="js.stripe.com/v3"> al importarse (el punto de entrada por defecto sí lo hace como efecto secundario)
+// [Por qué]: IdlePreloadingStrategy precarga este chunk en cualquier pantalla → con el import por defecto Stripe.js (y su iframe m.stripe.network, con su propia CSP) se cargaba en TODO el portal | [Patrón]: Lazy Load | [Principio]: mínimo privilegio (terceros solo donde se paga)
+import { loadStripe } from '@stripe/stripe-js/pure';
 // [CardPaymentComponent · Presentacional]: monta el checkout EMBEBIDO de Stripe (Checkout Sessions, `ui_mode: 'embedded_page'`) dentro de la pantalla | [Patrón]: Adapter (Stripe.js → componente Angular) + Lifecycle (mount/destroy) | [Principio]: SRP + seguridad PCI (la tarjeta va directo a Stripe en su iframe, nunca a nuestros servidores) | [Paradigma]: Declarativo + async/await
 // [Tecnología]: @stripe/stripe-js carga Stripe.js desde js.stripe.com (requisito de Stripe: no se empaqueta ni se aloja aquí)
 // [Flujo]: al pagar, Stripe redirige a la `return_url` (/checkout/confirmacion/:orderId?pago=…) que fijó el backend
@@ -25,7 +27,7 @@ export class CardPaymentComponent {
     // `afterNextRender` (Angular): el <div> ya existe en el DOM → se puede montar | solo en el navegador
     afterNextRender(async () => {
       try {
-        const stripe = await loadStripe(this.publishableKey());
+        const stripe = await loadStripe(this.publishableKey()); // `pure`: el script de Stripe se descarga AQUÍ, al montar el formulario de pago (no antes)
         if (!stripe || destroyed) return;
         const secret = this.clientSecret();
         const instance = await stripe.createEmbeddedCheckoutPage({ fetchClientSecret: () => Promise.resolve(secret) });

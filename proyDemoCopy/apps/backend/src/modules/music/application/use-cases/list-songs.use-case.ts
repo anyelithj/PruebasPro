@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, IsNull, Repository, type FindOptionsWhere } from 'typeorm';
 import { Song, type SongStatus } from '../../domain/entities/song.entity';
 import { SongCollection } from '../../domain/entities/song-collection.entity';
+import { SongLine } from '../../domain/entities/song-line.entity';
+import { type SongBlocker, songBlockers } from '../../domain/song-readiness';
 import type { MusicActor } from './get-song.use-case';
 // [UseCase ListSongs · Sprint 9.2 · RF-115]: canciones por idioma, nivel y colección — publicadas para todos; «mías» (cualquier estado) para el docente; cola de revisión para el ADMIN | [Patrón]: Query + Soft Delete | [Principio]: SRP + mínimo privilegio | [Paradigma]: POO
 
@@ -14,15 +16,39 @@ export interface SongFilter {
   mine?: boolean;
 }
 
+// [SongView · 2026-10-24]: canción + lo que le falta para publicarse (solo en vistas de gestión: «mías» y ADMIN) | `&` (TS): tipo intersección
+export type SongView = Song & { blockers?: SongBlocker[] };
+
 @Injectable()
 export class ListSongsUseCase {
   constructor(
     @InjectRepository(Song) private readonly songs: Repository<Song>,
     @InjectRepository(SongCollection)
     private readonly collections: Repository<SongCollection>,
+    @InjectRepository(SongLine) private readonly lines: Repository<SongLine>,
   ) {}
 
-  async execute(actor: MusicActor, f: SongFilter): Promise<Song[]> {
+  async execute(actor: MusicActor, f: SongFilter): Promise<SongView[]> {
+    const found = await this.find(actor, f);
+    // [Gestión]: el autor (mine) y el ADMIN reciben `blockers` → Gestión · Actividades deshabilita «Publicar» y dice qué falta
+    return f.mine || actor.role === 'ADMIN' ? this.withBlockers(found) : found;
+  }
+
+  // [withBlockers]: UNA consulta agrupada con el número de líneas por canción (sin N+1) | `GROUP BY` (SQL) vía QueryBuilder de TypeORM
+  private async withBlockers(songs: Song[]): Promise<SongView[]> {
+    if (!songs.length) return [];
+    const rows = await this.lines
+      .createQueryBuilder('l')
+      .select('l.song_id', 'songId')
+      .addSelect('COUNT(*)', 'n')
+      .where('l.song_id IN (:...ids)', { ids: songs.map((s) => s.id) })
+      .groupBy('l.song_id')
+      .getRawMany<{ songId: string; n: string }>();
+    const counts = new Map(rows.map((r) => [r.songId, Number(r.n)])); // `Map` (ES2015): búsqueda O(1) por id
+    return songs.map((s) => ({ ...s, blockers: songBlockers(s, counts.get(s.id) ?? 0) }));
+  }
+
+  private async find(actor: MusicActor, f: SongFilter): Promise<Song[]> {
     const where: FindOptionsWhere<Song> = {
       withdrawnAt: IsNull(),
       ...(f.language ? { language: f.language } : {}),

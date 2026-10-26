@@ -23,7 +23,7 @@ const { filtered, store } = useSocialCommerce(items);
   <section class="flex flex-col gap-4" :aria-label="$t('social.feed')">
     <label class="flex items-center gap-2 self-start text-sm">
       {{ $t("social.fields.platforms") }}
-      <select :value="store.platform" class="h-9 rounded-md border px-3" @change="store.setPlatform(($event.target as HTMLSelectElement).value as never)">
+      <select :value="store.platform" class="h-9 rounded-md border border-slate-300 px-3 text-sm" @change="store.setPlatform(($event.target as HTMLSelectElement).value as never)">
         <option value="">{{ $t("common.all") }}</option>
         <option v-for="platform in PLATFORMS" :key="platform" :value="platform">{{ platform }}</option>
       </select>

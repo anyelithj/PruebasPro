@@ -1,0 +1,156 @@
+<mxfile host="Electron" agent="claude-code">
+  <diagram id="ModeloRelacional_ProyDemo" name="Modelo Relacional PostgreSQL">
+    <mxGraphModel dx="1854" dy="814" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2400" pageHeight="1700" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=20;fontStyle=1;" value="Modelo Relacional&amp;nbsp;" vertex="1">
+          <mxGeometry height="60" width="1600" x="400" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="users" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1976D2;strokeColor=#0D47A1;fontColor=#FFFFFF;align=center;verticalAlign=middle;fontStyle=1;fontSize=14;" value="users  (PK: id)" vertex="1">
+          <mxGeometry height="36" width="340" x="130" y="163" as="geometry" />
+        </mxCell>
+        <mxCell id="users_body" parent="1" style="text;html=1;align=left;verticalAlign=top;fillColor=#FFFFFF;strokeColor=#1976D2;spacingLeft=8;spacingTop=6;fontSize=11;fontFamily=Consolas;" value="PK  id                  uuid           DEFAULT uuid_generate_v4()&#xa;UK  email               varchar(320)   NOT NULL&#xa;     password_hash       varchar(255)   NOT NULL&#xa;     first_name          varchar(80)    NOT NULL&#xa;     last_name           varchar(80)    NOT NULL&#xa;     role                users_role_enum NOT NULL DEFAULT &#39;USER&#39;&#xa;     is_active           boolean        NOT NULL DEFAULT true&#xa;     is_email_verified   boolean        NOT NULL DEFAULT false&#xa;     created_at          timestamptz    NOT NULL DEFAULT now()&#xa;     updated_at          timestamptz    NOT NULL DEFAULT now()&#xa;━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━&#xa;IDX uq_users_email (email)         UNIQUE&#xa;IDX idx_users_role (role)&#xa;IDX idx_users_active (is_active)" vertex="1">
+          <mxGeometry height="221" width="340" x="130" y="199" as="geometry" />
+        </mxCell>
+        <mxCell id="sess" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1976D2;strokeColor=#0D47A1;fontColor=#FFFFFF;align=center;verticalAlign=middle;fontStyle=1;fontSize=14;" value="auth_sessions  (PK: id)" vertex="1">
+          <mxGeometry height="36" width="340" x="30" y="580" as="geometry" />
+        </mxCell>
+        <mxCell id="sess_body" parent="1" style="text;html=1;align=left;verticalAlign=top;fillColor=#FFFFFF;strokeColor=#1976D2;spacingLeft=8;spacingTop=6;fontSize=11;fontFamily=Consolas;" value="PK  id                    uuid           DEFAULT uuid_generate_v4()&#xa;FK  user_id               uuid           REFERENCES users(id) ON DELETE CASCADE&#xa;     refresh_token_hash    varchar(255)   NOT NULL&#xa;     user_agent            varchar(255)   NULL&#xa;     ip_address            varchar(64)    NULL&#xa;     expires_at            timestamptz    NOT NULL&#xa;     is_revoked            boolean        NOT NULL DEFAULT false&#xa;     created_at            timestamptz    NOT NULL DEFAULT now()&#xa;━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━&#xa;IDX idx_sessions_user (user_id)&#xa;IDX idx_sessions_refresh (refresh_token_hash)" vertex="1">
+          <mxGeometry height="220" width="340" x="30" y="616" as="geometry" />
+        </mxCell>
+        <mxCell id="quizzes" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1976D2;strokeColor=#0D47A1;fontColor=#FFFFFF;align=center;verticalAlign=middle;fontStyle=1;fontSize=14;" value="quizzes  (PK: id)" vertex="1">
+          <mxGeometry height="36" width="380" x="620" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="quizzes_body" parent="1" style="text;html=1;align=left;verticalAlign=top;fillColor=#FFFFFF;strokeColor=#1976D2;spacingLeft=8;spacingTop=6;fontSize=11;fontFamily=Consolas;" value="PK  id                          uuid           DEFAULT uuid_generate_v4()&#xa;FK  author_id                   uuid           REFERENCES users(id) ON DELETE RESTRICT&#xa;     title                       varchar(160)   NOT NULL&#xa;     description                 text           NULL&#xa;     category                    quiz_category_enum&#xa;     difficulty                  quiz_difficulty_enum&#xa;     language                    quiz_language_enum&#xa;     source                      quiz_source_enum DEFAULT &#39;MANUAL&#39;&#xa;     time_per_question_seconds   int            NOT NULL DEFAULT 30&#xa;     is_published                boolean        NOT NULL DEFAULT false&#xa;     created_at                  timestamptz    DEFAULT now()&#xa;     updated_at                  timestamptz    DEFAULT now()&#xa;━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━&#xa;IDX idx_quizzes_author (author_id)&#xa;IDX idx_quizzes_category (category)&#xa;IDX idx_quizzes_published (is_published)&#xa;IDX idx_quizzes_language (language)" vertex="1">
+          <mxGeometry height="254" width="380" x="620" y="186" as="geometry" />
+        </mxCell>
+        <mxCell id="questions" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1976D2;strokeColor=#0D47A1;fontColor=#FFFFFF;align=center;verticalAlign=middle;fontStyle=1;fontSize=14;" value="questions  (PK: id)" vertex="1">
+          <mxGeometry height="36" width="380" x="1180" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="questions_body" parent="1" style="text;html=1;align=left;verticalAlign=top;fillColor=#FFFFFF;strokeColor=#1976D2;spacingLeft=8;spacingTop=6;fontSize=11;fontFamily=Consolas;" value="PK  id                  uuid           DEFAULT uuid_generate_v4()&#xa;FK  quiz_id             uuid           REFERENCES quizzes(id) ON DELETE CASCADE&#xa;     text                text           NOT NULL&#xa;     type                question_type_enum&#xa;     options             jsonb          NULL   -- [&#39;A&#39;,&#39;B&#39;,&#39;C&#39;,&#39;D&#39;]&#xa;     correct_answer      text           NOT NULL&#xa;     difficulty          quiz_difficulty_enum&#xa;     language            quiz_language_enum&#xa;     position            int            NOT NULL&#xa;     time_limit_seconds  int            NULL&#xa;━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━&#xa;IDX idx_questions_quiz (quiz_id)&#xa;IDX idx_questions_position (quiz_id, position) UNIQUE&#xa;IDX gin_questions_options (options) USING GIN" vertex="1">
+          <mxGeometry height="214" width="380" x="1180" y="156" as="geometry" />
+        </mxCell>
+        <mxCell id="qsessions" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1976D2;strokeColor=#0D47A1;fontColor=#FFFFFF;align=center;verticalAlign=middle;fontStyle=1;fontSize=14;" value="quiz_sessions  (PK: id)" vertex="1">
+          <mxGeometry height="36" width="380" x="1620" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="qsessions_body" parent="1" style="text;html=1;align=left;verticalAlign=top;fillColor=#FFFFFF;strokeColor=#1976D2;spacingLeft=8;spacingTop=6;fontSize=11;fontFamily=Consolas;" value="PK  id              uuid           DEFAULT uuid_generate_v4()&#xa;FK  user_id         uuid           REFERENCES users(id) ON DELETE RESTRICT&#xa;FK  quiz_id         uuid           REFERENCES quizzes(id) ON DELETE RESTRICT&#xa;     status          qsession_status_enum NOT NULL DEFAULT &#39;IN_PROGRESS&#39;&#xa;     answers         jsonb          NOT NULL DEFAULT &#39;[]&#39;::jsonb&#xa;     total_score     float8         NOT NULL DEFAULT 0&#xa;     correct_count   int            NOT NULL DEFAULT 0&#xa;     started_at      timestamptz    NOT NULL DEFAULT now()&#xa;     completed_at    timestamptz    NULL&#xa;━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━&#xa;IDX idx_qsessions_user (user_id)&#xa;IDX idx_qsessions_quiz (quiz_id)&#xa;IDX idx_qsessions_status (status)&#xa;IDX gin_qsessions_answers (answers) USING GIN&#xa;CHK chk_completed_consistency&#xa;     CHECK ((status = &#39;COMPLETED&#39;) = (completed_at IS NOT NULL))" vertex="1">
+          <mxGeometry height="254" width="380" x="1620" y="156" as="geometry" />
+        </mxCell>
+        <mxCell id="scores" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1976D2;strokeColor=#0D47A1;fontColor=#FFFFFF;align=center;verticalAlign=middle;fontStyle=1;fontSize=14;" value="scores  (PK: id)" vertex="1">
+          <mxGeometry height="36" width="320" x="2040" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="scores_body" parent="1" style="text;html=1;align=left;verticalAlign=top;fillColor=#FFFFFF;strokeColor=#1976D2;spacingLeft=8;spacingTop=6;fontSize=11;fontFamily=Consolas;" value="PK  id                uuid&#xa;FK  user_id           uuid → users(id)&#xa;FK  quiz_id           uuid → quizzes(id)&#xa;FK  session_id        uuid → quiz_sessions(id)&#xa;     points            float8 NOT NULL&#xa;     correct_count     int    NOT NULL&#xa;     total_questions   int    NOT NULL&#xa;     accuracy          float8 NOT NULL  -- derivado&#xa;     created_at        timestamptz DEFAULT now()&#xa;━━━━━━━━━━━━━━━━━━━&#xa;UK uq_scores_session (session_id)&#xa;IDX idx_scores_user (user_id)&#xa;IDX idx_scores_quiz (quiz_id)&#xa;IDX idx_scores_created (created_at DESC)&#xa;IDX idx_scores_accuracy (accuracy DESC)&#xa;CHK chk_accuracy_range&#xa;    CHECK (accuracy BETWEEN 0 AND 1)" vertex="1">
+          <mxGeometry height="254" width="320" x="2040" y="156" as="geometry" />
+        </mxCell>
+        <mxCell id="ach" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1976D2;strokeColor=#0D47A1;fontColor=#FFFFFF;align=center;verticalAlign=middle;fontStyle=1;fontSize=14;" value="achievements  (PK: id)" vertex="1">
+          <mxGeometry height="36" width="340" x="490" y="616" as="geometry" />
+        </mxCell>
+        <mxCell id="ach_body" parent="1" style="text;html=1;align=left;verticalAlign=top;fillColor=#FFFFFF;strokeColor=#1976D2;spacingLeft=8;spacingTop=6;fontSize=11;fontFamily=Consolas;" value="PK  id            uuid          DEFAULT uuid_generate_v4()&#xa;FK  user_id       uuid → users(id) ON DELETE CASCADE&#xa;     code          achievement_code_enum&#xa;     title         varchar(160)&#xa;     description   text NULL&#xa;     unlocked_at   timestamptz DEFAULT now()&#xa;━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━&#xa;UK uq_ach_user_code (user_id, code)&#xa;IDX idx_ach_user (user_id)" vertex="1">
+          <mxGeometry height="200" width="340" x="490" y="652" as="geometry" />
+        </mxCell>
+        <mxCell id="notif" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1976D2;strokeColor=#0D47A1;fontColor=#FFFFFF;align=center;verticalAlign=middle;fontStyle=1;fontSize=14;" value="notifications  (PK: id)" vertex="1">
+          <mxGeometry height="36" width="390" x="890" y="570" as="geometry" />
+        </mxCell>
+        <mxCell id="notif_body" parent="1" style="text;html=1;align=left;verticalAlign=top;fillColor=#FFFFFF;strokeColor=#1976D2;spacingLeft=8;spacingTop=6;fontSize=11;fontFamily=Consolas;" value="PK  id          uuid          DEFAULT uuid_generate_v4()&#xa;FK  user_id     uuid → users(id) ON DELETE CASCADE&#xa;     type        varchar(64)&#xa;     title       varchar(255)&#xa;     body        text&#xa;     is_read     boolean       NOT NULL DEFAULT false&#xa;     read_at     timestamptz   NULL&#xa;     created_at  timestamptz   DEFAULT now()&#xa;━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━&#xa;IDX idx_notif_user (user_id)&#xa;IDX idx_notif_unread (user_id, is_read) WHERE is_read = false" vertex="1">
+          <mxGeometry height="220" width="390" x="890" y="606.44" as="geometry" />
+        </mxCell>
+        <mxCell id="feedback" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1976D2;strokeColor=#0D47A1;fontColor=#FFFFFF;align=center;verticalAlign=middle;fontStyle=1;fontSize=14;" value="feedback_ia  (PK: id)" vertex="1">
+          <mxGeometry height="36" width="380" x="1430" y="606.44" as="geometry" />
+        </mxCell>
+        <mxCell id="feedback_body" parent="1" style="text;html=1;align=left;verticalAlign=top;fillColor=#FFFFFF;strokeColor=#1976D2;spacingLeft=8;spacingTop=6;fontSize=11;fontFamily=Consolas;" value="PK  id            uuid           DEFAULT uuid_generate_v4()&#xa;FK  session_id    uuid → quiz_sessions(id) ON DELETE CASCADE&#xa;FK  question_id   uuid → questions(id)&#xa;     score         float8&#xa;     content       text&#xa;     model         varchar(64)    -- llama3-8b, gpt-4o-mini&#xa;     latency_ms    int&#xa;     created_at    timestamptz    DEFAULT now()&#xa;━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━&#xa;IDX idx_feedback_session (session_id)&#xa;IDX idx_feedback_question (question_id)&#xa;IDX idx_feedback_created (created_at DESC)" vertex="1">
+          <mxGeometry height="240" width="380" x="1430" y="642.44" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="sess_body" style="endArrow=open;html=1;edgeStyle=orthogonalEdgeStyle;strokeColor=#1976D2;fontSize=10;" target="users_body" value="N:1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="210" y="550" />
+              <mxPoint x="270" y="550" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="quizzes_body" style="endArrow=open;html=1;edgeStyle=orthogonalEdgeStyle;strokeColor=#1976D2;fontSize=10;" target="users_body" value="N:1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="480" y="250" />
+              <mxPoint x="480" y="250" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="questions_body" style="endArrow=open;html=1;edgeStyle=orthogonalEdgeStyle;strokeColor=#1976D2;fontSize=10;" target="quizzes_body" value="N:1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1060" y="263" />
+              <mxPoint x="1060" y="263" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" style="endArrow=open;html=1;edgeStyle=orthogonalEdgeStyle;strokeColor=#1976D2;fontSize=10;" value="N:1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1620" y="410" />
+              <mxPoint x="1620" y="400" />
+              <mxPoint x="1000" y="400" />
+            </Array>
+            <mxPoint x="1640" y="410" as="sourcePoint" />
+            <mxPoint x="1000" y="400" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="qsessions_body" style="endArrow=open;html=1;edgeStyle=orthogonalEdgeStyle;strokeColor=#1976D2;fontSize=10;exitX=0.456;exitY=0.985;exitDx=0;exitDy=0;exitPerimeter=0;" value="N:1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1793" y="450" />
+              <mxPoint x="530" y="450" />
+              <mxPoint x="530" y="380" />
+            </Array>
+            <mxPoint x="1798.98" y="389" as="sourcePoint" />
+            <mxPoint x="470" y="380" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e6" edge="1" parent="1" source="scores_body" style="endArrow=open;html=1;edgeStyle=orthogonalEdgeStyle;strokeColor=#D32F2F;fontSize=10;" target="qsessions_body" value="1:1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" edge="1" parent="1" style="endArrow=open;html=1;edgeStyle=orthogonalEdgeStyle;strokeColor=#1976D2;fontSize=10;" target="users_body" value="N:1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="420" y="780" />
+            </Array>
+            <mxPoint x="490" y="780" as="sourcePoint" />
+            <mxPoint x="250" y="380" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e8" edge="1" parent="1" style="endArrow=open;html=1;edgeStyle=orthogonalEdgeStyle;strokeColor=#1976D2;fontSize=10;entryX=0.944;entryY=0.998;entryDx=0;entryDy=0;entryPerimeter=0;" value="N:1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1095" y="530" />
+              <mxPoint x="460" y="530" />
+            </Array>
+            <mxPoint x="1095" y="580" as="sourcePoint" />
+            <mxPoint x="460.96000000000004" y="419.99799999999976" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e9" edge="1" parent="1" style="endArrow=open;html=1;edgeStyle=orthogonalEdgeStyle;strokeColor=#1976D2;fontSize=10;" value="N:1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1810" y="780" />
+              <mxPoint x="1800" y="780" />
+              <mxPoint x="1800" y="770" />
+              <mxPoint x="1990" y="770" />
+            </Array>
+            <mxPoint x="1800" y="770" as="sourcePoint" />
+            <mxPoint x="1990" y="406.9999999999998" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e10" edge="1" parent="1" source="feedback_body" style="endArrow=open;html=1;edgeStyle=orthogonalEdgeStyle;strokeColor=#1976D2;fontSize=10;dashed=1;" value="N:1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1530" y="870" />
+              <mxPoint x="1530" y="870" />
+            </Array>
+            <mxPoint x="1530" y="369.9999999999998" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

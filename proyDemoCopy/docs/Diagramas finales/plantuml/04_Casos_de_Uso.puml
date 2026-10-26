@@ -1,0 +1,151 @@
+@startuml
+skinparam backgroundColor #FEFEFE
+skinparam actor {
+  BackgroundColor #E3F2FD
+  BorderColor #1565C0
+  FontName Arial
+  FontSize 12
+}
+skinparam usecase {
+  BackgroundColor #F3E5F5
+  BorderColor #6A1B9A
+  FontName Arial
+  FontSize 11
+}
+
+left to right direction
+
+' ==============================================
+' PANEL 1 — AUTENTICACIÓN
+' ==============================================
+rectangle Autenticación {
+  actor "Estudiante" as USER_AUTH
+  actor "Sistema OAuth" as OAUTH
+
+  (Registrarse) as UC_REG
+  (Iniciar sesión) as UC_LOGIN
+  (Iniciar sesión OAuth) as UC_OAUTH
+  (Refrescar token) as UC_REFRESH
+  (Cerrar sesión) as UC_LOGOUT
+  (Validar credenciales) as UC_VALIDATE
+  (Verificar id_token) as UC_VERIFY_TOKEN
+  (Emitir tokens JWT) as UC_EMIT_JWT
+  (Crear sesión) as UC_CREATE_SESSION
+}
+
+UC_LOGIN <|.. UC_VALIDATE : include
+UC_LOGIN <|.. UC_EMIT_JWT : include
+UC_LOGIN <|.. UC_CREATE_SESSION : include
+UC_OAUTH <|.. UC_VERIFY_TOKEN : include
+UC_OAUTH <|.. UC_EMIT_JWT : include
+UC_OAUTH <|.. UC_CREATE_SESSION : include
+
+USER_AUTH --> UC_REG
+USER_AUTH --> UC_LOGIN
+USER_AUTH --> UC_OAUTH
+USER_AUTH --> UC_REFRESH
+USER_AUTH --> UC_LOGOUT
+OAUTH <-- UC_OAUTH
+
+' ==============================================
+' PANEL 2 — CREAR / PUBLICAR EVALUACIÓN
+' ==============================================
+rectangle "CREAR / PUBLICAR EVALUACIÓN" as CREAR_EVAL {
+  actor "Docente" as TEACHER
+  actor "Servicio IA - LLM Local\n(Ollama: Qwen3/Mistral)" as IA_EXT
+
+  (Crear evaluación) as UC_CREATE_QUIZ
+  (Generar Preguntas con IA) as UC_AI_GEN
+  (Agregar preguntas) as UC_ADD_Q
+  (Editar Evaluación) as UC_EDIT_QUIZ
+  (Validar Roles) as UC_VALIDATE_ROLES
+  (Persistir quiz) as UC_PERSIST_QUIZ
+  (Publicar evaluación) as UC_PUBLISH
+  (Despublicar / eliminar) as UC_DELETE
+}
+
+UC_CREATE_QUIZ <|.. UC_VALIDATE_ROLES : include
+UC_CREATE_QUIZ <|.. UC_PERSIST_QUIZ : include
+UC_CREATE_QUIZ <|.. UC_ADD_Q : include
+UC_CREATE_QUIZ <|.. UC_AI_GEN : extends
+
+TEACHER --> UC_CREATE_QUIZ
+TEACHER --> UC_AI_GEN
+TEACHER --> UC_ADD_Q
+TEACHER --> UC_EDIT_QUIZ
+TEACHER --> UC_PUBLISH
+TEACHER --> UC_DELETE
+IA_EXT <-- UC_AI_GEN
+
+' ==============================================
+' PANEL 3 — RESOLVER EVALUACIONES
+' ==============================================
+rectangle "RESOLVER EVALUACIONES" as RESOLVER {
+  actor "Estudiante" as USER_RESOLVER
+  actor "Servicio IA" as IA_EXT2
+
+  (Listar evaluaciones publicadas) as UC_LIST
+  (Iniciar intento) as UC_START
+  (Obtener evaluación) as UC_GET_QUIZ
+  (Responder pregunta) as UC_ANSWER
+  (Finalizar intento) as UC_END
+  (Calificar localmente) as UC_GRADE_LOCAL
+  (Calificar con IA) as UC_GRADE_IA
+  (Generar feedback IA) as UC_FEEDBACK_IA
+  (Calcular score) as UC_CALC_SCORE
+  (Guardar score) as UC_SAVE_SCORE
+}
+
+UC_START <|.. UC_GET_QUIZ : include
+UC_ANSWER <|.. UC_GRADE_LOCAL : extends
+UC_ANSWER <|.. UC_GRADE_IA : extends
+UC_ANSWER <|.. UC_FEEDBACK_IA : include
+UC_END <|.. UC_CALC_SCORE : include
+UC_CALC_SCORE <|.. UC_SAVE_SCORE : include
+
+USER_RESOLVER --> UC_LIST
+USER_RESOLVER --> UC_START
+USER_RESOLVER --> UC_ANSWER
+USER_RESOLVER --> UC_END
+IA_EXT2 <-- UC_GRADE_IA
+IA_EXT2 <-- UC_FEEDBACK_IA
+
+' ==============================================
+' PANEL 4 — CONSULTA HISTÓRICO DE FEEDBACK IA Y SCORE
+' ==============================================
+rectangle "Consulta Histórico de FeedBack IA y Score" as SCORES {
+  actor "Estudiante" as USER_SCORE
+  actor "Docente/Admin" as TEACHER_ADMIN
+  actor "Servicio IA" as IA_EXT3
+
+  (Historial de scores) as UC_HISTORY
+  (Analizar debilidades) as UC_WEAKNESSES
+  (Ver leaderboard) as UC_LB
+}
+
+USER_SCORE --> UC_HISTORY
+USER_SCORE --> UC_WEAKNESSES
+USER_SCORE --> UC_LB
+TEACHER_ADMIN --> UC_LB
+TEACHER_ADMIN --> UC_HISTORY
+TEACHER_ADMIN --> UC_WEAKNESSES
+IA_EXT3 <-- UC_WEAKNESSES
+
+' ==============================================
+' PANEL 5 — ADMINISTRACIÓN
+' ==============================================
+rectangle ADMINISTRACIÓN as ADMIN_PANEL {
+  actor "Administrador" as ADMIN
+
+  (Gestionar Usuarios) as UC_MANAGE_USERS
+  (Bloquear y Activar usuario) as UC_BLOCK_USER
+  (Listar Secciones) as UC_SECTIONS
+  (Ver reportes agregados) as UC_REPORTS
+}
+
+ADMIN --> UC_MANAGE_USERS
+ADMIN --> UC_BLOCK_USER
+ADMIN --> UC_SECTIONS
+ADMIN --> UC_REPORTS
+
+@enduml

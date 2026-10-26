@@ -92,12 +92,29 @@ describe('CourseMaterialsUseCase.complete', () => {
     const enrollment = { id: 'e', purchasedAt: new Date(), completedMaterialIds: [] as string[], progress: 0, completedAt: null };
     const save = jest.fn();
     const materials = { find: jest.fn().mockResolvedValue([{ id: 'm1' }, { id: 'm2' }]) } as never;
-    const courses = { exists: jest.fn().mockResolvedValue(true) } as never;
+    const courses = { exists: jest.fn().mockResolvedValue(true), createQueryBuilder: qb(null) } as never;
     const enrollments = { findOne: jest.fn().mockResolvedValue(enrollment), save } as never;
     const useCase = new CourseMaterialsUseCase(materials, courses, enrollments, {} as never);
     await expect(useCase.complete('c1', 'm1', { id: 'u', role: Role.USER })).resolves.toEqual({ completedMaterialIds: ['m1'], progress: 50 });
     await expect(useCase.complete('c1', 'm1', { id: 'u', role: Role.USER })).resolves.toEqual({ completedMaterialIds: ['m1'], progress: 50 });
     await expect(useCase.complete('c1', 'm2', { id: 'u', role: Role.USER })).resolves.toMatchObject({ progress: 100 });
     expect(save).toHaveBeenCalledTimes(3);
+  });
+});
+
+// [qb]: QueryBuilder mínimo que devuelve el curso con su `content` (temario)
+const qb = (content: string | null) => () => {
+  const b = { select: () => b, addSelect: () => b, where: () => b, getOne: () => Promise.resolve({ id: 'c1', content }) };
+  return b;
+};
+
+describe('CourseMaterialsUseCase.completeTopic', () => {
+  it('el texto antes del primer «##» es el subtema «Introducción» (como en Next) y cuenta en el progreso', async () => {
+    const enrollment = { id: 'e', purchasedAt: new Date(), completedMaterialIds: [] as string[], completedTopics: [] as string[], progress: 0, completedAt: null };
+    const courses = { exists: jest.fn().mockResolvedValue(true), createQueryBuilder: qb('Bienvenida al curso\n\n## El verbo to be\n\nam / is / are') } as never;
+    const materials = { count: jest.fn().mockResolvedValue(0) } as never;
+    const enrollments = { findOne: jest.fn().mockResolvedValue(enrollment), save: jest.fn() } as never;
+    const useCase = new CourseMaterialsUseCase(materials, courses, enrollments, {} as never);
+    await expect(useCase.completeTopic('c1', 'Introducción', true, { id: 'u', role: Role.USER })).resolves.toEqual({ completedTopics: ['Introducción'], progress: 50 });
   });
 });

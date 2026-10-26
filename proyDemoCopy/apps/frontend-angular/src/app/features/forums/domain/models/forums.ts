@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod'; // [Tree-shaking · Zod 4]: import de namespace (`* as z`) → esbuild empaqueta solo las funciones usadas (con `{ z }` arrastraba Zod entero, ~450 kB)
 // [Modelo Forums · Dominio]: hilos y respuestas de una lección (contrato de /api/forums/* de NestJS) + reglas puras de permisos | [Patrón]: Schema-First (Zod) + Policy (funciones puras) | [Principio]: SSOT + Type-Safe | [Paradigma]: Funcional
 // [Permisos]: espejo de los casos de uso de NestJS (UX) — el backend vuelve a comprobarlos siempre
 

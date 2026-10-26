@@ -5,8 +5,8 @@
 
 # ---------- STAGE BASE ----------
 # "FROM ... AS" => imagen base con nombre de stage | alpine => imagen mínima
-# Node 22: Nuxt 4 usa APIs de Set (difference) que Node 20 no tiene
-FROM node:22-alpine AS base
+# Node.js 24.22.1 (LTS) fijado por versión exacta (Nuxt 4 necesita las APIs de Set de Node 22+): igual que CI y .nvmrc
+FROM node:24.22.1-alpine AS base
 # "corepack enable" => activa la versión de pnpm fijada en "packageManager" del package.json raíz
 RUN corepack enable
 # "WORKDIR" => replica la raíz del monorepo dentro del contenedor
@@ -37,7 +37,7 @@ FROM development AS build
 RUN pnpm run build
 
 # ---------- STAGE PRODUCTION: solo .output (no necesita node_modules) ----------
-FROM node:22-alpine AS production
+FROM node:24.22.1-alpine AS production
 WORKDIR /app
 # "ENV" => NODE_ENV=production activa optimizaciones; HOST/PORT los lee el servidor Nitro
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=3000

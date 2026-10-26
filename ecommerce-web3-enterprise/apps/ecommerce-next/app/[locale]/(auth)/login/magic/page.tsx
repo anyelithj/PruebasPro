@@ -1,6 +1,6 @@
 // page.tsx (/login/magic?token=...) => Server Component: destino del enlace mágico del correo (RF-01.3).
 // El canje del token ocurre en el navegador (MagicLinkLogin) porque crea la sesión de next-auth (cookie httpOnly).
-// SEO: noindex (página de un solo uso). "Suspense" => requerido por Next 15 para Client Components con useSearchParams.
+// SEO: noindex (página de un solo uso). "Suspense" => requerido por Next 16 para Client Components con useSearchParams.
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getTranslations } from "next-intl/server";

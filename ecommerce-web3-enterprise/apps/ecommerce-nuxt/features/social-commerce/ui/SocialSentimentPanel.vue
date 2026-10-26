@@ -31,7 +31,7 @@ const share = (label: string) => (data.value?.summary.total ? (data.value.summar
     <div class="flex flex-wrap items-center justify-between gap-2">
       <h2 id="sentiment-title" class="text-lg font-semibold">{{ $t("social.sentiment.title") }}</h2>
       <label class="flex items-center gap-2 text-sm">{{ $t("social.sentiment.period") }}
-        <select v-model.number="days" class="h-9 rounded-md border px-2">
+        <select v-model.number="days" class="h-9 rounded-md border border-slate-300 px-3 text-sm">
           <option v-for="value in [7, 30, 90]" :key="value" :value="value">{{ $t("social.sentiment.days", { n: value }) }}</option>
         </select>
       </label>

@@ -29,7 +29,14 @@ import {
   type JwtPayload,
 } from '../../../shared/decorators/current-user.decorator';
 import { Role } from '../../users/domain/value-objects/role.vo';
-import { IsOptional, IsString, IsUrl, MaxLength } from 'class-validator'; // [class-validator]: DTO del enlace
+import {
+  IsBoolean,
+  IsOptional,
+  IsString,
+  IsUrl,
+  MaxLength,
+  MinLength,
+} from 'class-validator'; // [class-validator]: DTO del enlace
 import { ApiProperty } from '@nestjs/swagger';
 import {
   CourseMaterialsUseCase,
@@ -55,6 +62,11 @@ export class AddLinkMaterialDto {
 
 @ApiTags('courses')
 @ApiBearerAuth()
+export class CompleteTopicBody {
+  @ApiProperty() @IsString() @MinLength(1) @MaxLength(300) topic!: string;
+  @ApiProperty({ required: false }) @IsOptional() @IsBoolean() done?: boolean;
+}
+
 @Controller('courses/:courseId/materials')
 export class CourseMaterialsController {
   constructor(private readonly materials: CourseMaterialsUseCase) {}
@@ -133,6 +145,28 @@ export class CourseMaterialsController {
     );
     res.setHeader('X-Content-Type-Options', 'nosniff'); // [Seguridad]: el navegador no reinterpreta el tipo
     await sendRanged(res, range, source); // Content-Type y Content-Length los fija el helper
+  }
+
+  // [POST topics/complete · 2026-10-25]: subtema del temario estudiado (o desmarcado) → progreso | ANTES de «:id/complete» (si no, «topics» se toma como id)
+  @Post('topics/complete')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Marcar un subtema del temario como estudiado (usuario inscrito)',
+  })
+  completeTopic(
+    @Param('courseId', ParseUUIDPipe) courseId: string,
+    @Body() body: CompleteTopicBody,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.materials.completeTopic(
+      courseId,
+      body.topic,
+      body.done ?? true,
+      {
+        id: user.sub,
+        role: user.role,
+      },
+    );
   }
 
   // [POST :id/complete]: marca el material como visto en la línea de tiempo del usuario → recalcula su progreso

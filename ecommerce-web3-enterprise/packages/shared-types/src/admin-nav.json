@@ -1,5 +1,5 @@
 {
-  "$comment": "admin-nav.json => menú ÚNICO del panel de administración (Shared Kernel / Configuration as Data). Lo leen Next.js (AdminSidebar.tsx) y Nuxt (AdminSidebar.vue): el usuario ve el mismo menú, mismos íconos y mismo orden sin importar qué aplicación sirve la pantalla (microfrontends transparentes). app = qué aplicación sirve la ruta; adminOnly = oculto al rol VENDOR; description = subtítulo de la página (lo muestra el encabezado de las pantallas de Nuxt); match = prefijos extra que marcan el ítem como activo (ej. /cms- cubre páginas, landings, eventos, lookbooks y colecciones); icons = trazos SVG 24x24 (contenido estático del repositorio). text = textos de la interfaz del panel; roles = nombre visible de cada rol. Orden: «General» primero y luego «Mi cuenta» (pedido del usuario 2026-10-11). Visibilidad: el grupo «account» lo ve todo usuario con sesión; el resto, ADMIN (el VENDOR ve además los ítems de Nuxt sin adminOnly).",
+  "$comment": "admin-nav.json => menú ÚNICO del panel (Shared Kernel / Configuration as Data). Lo leen Next.js (AdminSidebar.tsx) y Nuxt (AdminSidebar.vue): mismo menú, íconos y orden sin importar qué aplicación sirve la pantalla (microfrontends transparentes). app = aplicación que sirve la ruta; path admite query (?tab= abre una pestaña del panel de Next, ?kind= un tipo del CMS de Nuxt) y el ítem con query coincidente gana sobre el que no la tiene; adminOnly = oculto al rol VENDOR y a clientes; everyone = grupo visible para toda sesión (Mi cuenta, IA); description = subtítulo de la página; match = prefijos extra que activan el ítem; icons = trazos SVG 24x24 estáticos. Reglas de organización (2026-10-25): cada grupo es un desplegable de máximo 6 ítems con UNA sola responsabilidad (CRM = solo cliente; CMS = solo contenido; Ventas = pedido, cobro y envío) y el acordeón abre un grupo a la vez => el menú no genera scroll. Orden: «General» primero y luego «Mi cuenta».",
   "groups": [
     {
       "key": "general",
@@ -30,18 +30,6 @@
             "es": "Analítica",
             "en": "Analytics"
           }
-        },
-        {
-          "key": "aiAssistant",
-          "app": "next",
-          "path": "/dashboard/ai-assistant",
-          "icon": "bot",
-          "adminOnly": true,
-          "rf": "RF-17",
-          "label": {
-            "es": "Asistente IA",
-            "en": "AI assistant"
-          }
         }
       ]
     },
@@ -51,6 +39,7 @@
         "es": "Mi cuenta",
         "en": "My account"
       },
+      "everyone": true,
       "items": [
         {
           "key": "accOverview",
@@ -117,28 +106,6 @@
             "es": "Notificaciones",
             "en": "Notifications"
           }
-        },
-        {
-          "key": "chatbot",
-          "app": "next",
-          "path": "/chat",
-          "icon": "chat",
-          "rf": "RF-17",
-          "label": {
-            "es": "Chatbot IA",
-            "en": "AI chatbot"
-          }
-        },
-        {
-          "key": "recommendations",
-          "app": "next",
-          "path": "/recommendations",
-          "icon": "sparkle",
-          "rf": "RF-18",
-          "label": {
-            "es": "Recomendaciones para ti",
-            "en": "Recommended for you"
-          }
         }
       ]
     },
@@ -161,6 +128,47 @@
           }
         },
         {
+          "key": "payments",
+          "app": "nuxt",
+          "path": "/config/payments",
+          "icon": "receipt",
+          "adminOnly": true,
+          "description": {
+            "es": "Pasarelas de pago, billeteras cripto y moneda de la tienda.",
+            "en": "Payment gateways, crypto wallets and store currency."
+          },
+          "rf": "RF-27.1",
+          "label": {
+            "es": "Pagos y moneda",
+            "en": "Payments & currency"
+          }
+        },
+        {
+          "key": "shipping",
+          "app": "nuxt",
+          "path": "/config/shipping",
+          "icon": "truck",
+          "adminOnly": true,
+          "description": {
+            "es": "Transportadoras, tarifas por peso y tasas de impuesto por región.",
+            "en": "Carriers, weight-based rates and tax rates per region."
+          },
+          "rf": "RF-27.4",
+          "label": {
+            "es": "Envío e impuestos",
+            "en": "Shipping & taxes"
+          }
+        }
+      ]
+    },
+    {
+      "key": "crm",
+      "label": {
+        "es": "CRM · Clientes",
+        "en": "CRM · Customers"
+      },
+      "items": [
+        {
           "key": "customers",
           "app": "next",
           "path": "/dashboard/customers",
@@ -170,6 +178,70 @@
           "label": {
             "es": "Clientes",
             "en": "Customers"
+          }
+        },
+        {
+          "key": "crmSegments",
+          "app": "next",
+          "path": "/dashboard/customers?tab=segments",
+          "icon": "filter",
+          "adminOnly": true,
+          "rf": "RF-22.2",
+          "label": {
+            "es": "Segmentos",
+            "en": "Segments"
+          },
+          "description": {
+            "es": "Grupos con tus propias reglas (pedidos, gasto, inactividad, ciudad, etiquetas) para campañas.",
+            "en": "Groups with your own rules (orders, spend, inactivity, city, tags) for campaigns."
+          }
+        },
+        {
+          "key": "crmCohorts",
+          "app": "next",
+          "path": "/dashboard/customers?tab=cohorts",
+          "icon": "layers",
+          "adminOnly": true,
+          "rf": "RF-22.7",
+          "label": {
+            "es": "Cohortes",
+            "en": "Cohorts"
+          },
+          "description": {
+            "es": "Qué porcentaje de los clientes de cada mes vuelve a comprar.",
+            "en": "What share of each month's customers buys again."
+          }
+        },
+        {
+          "key": "crmValue",
+          "app": "next",
+          "path": "/dashboard/customers?tab=value",
+          "icon": "badge",
+          "adminOnly": true,
+          "rf": "RF-22.3",
+          "label": {
+            "es": "Alto valor y abandono",
+            "en": "High value & churn"
+          },
+          "description": {
+            "es": "Clientes que más valdrán en 12 meses y quiénes están por irse.",
+            "en": "Customers worth the most in 12 months and who is about to leave."
+          }
+        },
+        {
+          "key": "crmDuplicates",
+          "app": "next",
+          "path": "/dashboard/customers?tab=duplicates",
+          "icon": "copy",
+          "adminOnly": true,
+          "rf": "RF-22.4",
+          "label": {
+            "es": "Duplicados e importación",
+            "en": "Duplicates & import"
+          },
+          "description": {
+            "es": "Une cuentas repetidas e importa clientes desde un CSV.",
+            "en": "Merge repeated accounts and import customers from a CSV."
           }
         }
       ]
@@ -218,10 +290,103 @@
       ]
     },
     {
+      "key": "cms",
+      "label": {
+        "es": "CMS · Contenido",
+        "en": "CMS · Content"
+      },
+      "items": [
+        {
+          "key": "content",
+          "app": "nuxt",
+          "path": "/cms-page?kind=page",
+          "match": [
+            "/cms-"
+          ],
+          "icon": "file",
+          "description": {
+            "es": "Páginas informativas del sitio con el editor visual de bloques.",
+            "en": "Informational site pages built with the visual block editor."
+          },
+          "rf": "RF-25",
+          "label": {
+            "es": "Páginas",
+            "en": "Pages"
+          }
+        },
+        {
+          "key": "cmsLandings",
+          "app": "nuxt",
+          "path": "/cms-page?kind=landing",
+          "icon": "template",
+          "rf": "RF-25",
+          "label": {
+            "es": "Landings",
+            "en": "Landings"
+          },
+          "description": {
+            "es": "Páginas de campaña y promociones con contador y captura de leads.",
+            "en": "Campaign and promotion pages with countdown and lead capture."
+          }
+        },
+        {
+          "key": "cmsEvents",
+          "app": "nuxt",
+          "path": "/cms-page?kind=event",
+          "icon": "calendar",
+          "rf": "RF-25",
+          "label": {
+            "es": "Eventos",
+            "en": "Events"
+          },
+          "description": {
+            "es": "Eventos de la tienda (lanzamientos, ventas privadas) con fecha y lugar.",
+            "en": "Store events (launches, private sales) with date and venue."
+          }
+        },
+        {
+          "key": "cmsLookbooks",
+          "app": "nuxt",
+          "path": "/cms-page?kind=lookbook",
+          "icon": "image",
+          "rf": "RF-25",
+          "label": {
+            "es": "Lookbooks",
+            "en": "Lookbooks"
+          },
+          "description": {
+            "es": "Galerías editoriales de looks con productos enlazados.",
+            "en": "Editorial look galleries with linked products."
+          },
+          "match": [
+            "/cms-lookbook"
+          ]
+        },
+        {
+          "key": "cmsCollections",
+          "app": "nuxt",
+          "path": "/cms-page?kind=collection",
+          "icon": "tag",
+          "rf": "RF-25",
+          "label": {
+            "es": "Colecciones",
+            "en": "Collections"
+          },
+          "description": {
+            "es": "Colecciones del catálogo (temporadas, cápsulas) visibles en la tienda.",
+            "en": "Catalog collections (seasons, capsules) shown in the store."
+          },
+          "match": [
+            "/cms-collection"
+          ]
+        }
+      ]
+    },
+    {
       "key": "marketing",
       "label": {
-        "es": "Marketing y contenido",
-        "en": "Marketing & content"
+        "es": "Marketing",
+        "en": "Marketing"
       },
       "items": [
         {
@@ -237,23 +402,29 @@
           }
         },
         {
-          "key": "content",
+          "key": "notifications",
           "app": "nuxt",
-          "path": "/cms-page",
-          "match": [
-            "/cms-"
-          ],
-          "icon": "template",
+          "path": "/pwa/notifications",
+          "icon": "bell",
           "description": {
-            "es": "Páginas, landings, eventos, lookbooks y colecciones en un solo listado, con el mismo editor visual para todos.",
-            "en": "Pages, landings, events, lookbooks and collections in one list, with the same visual editor for all of them."
+            "es": "Avisos push del navegador: suscripción y envío de pruebas.",
+            "en": "Browser push notifications: subscription and test sends."
           },
-          "rf": "RF-25",
+          "rf": "RF-28.3",
           "label": {
-            "es": "Contenido del sitio",
-            "en": "Site content"
+            "es": "Notificaciones push",
+            "en": "Push notifications"
           }
-        },
+        }
+      ]
+    },
+    {
+      "key": "social",
+      "label": {
+        "es": "Social commerce",
+        "en": "Social commerce"
+      },
+      "items": [
         {
           "key": "socialProducts",
           "app": "nuxt",
@@ -333,44 +504,56 @@
       ]
     },
     {
-      "key": "settings",
+      "key": "ai",
       "label": {
-        "es": "Configuración de la tienda",
-        "en": "Store settings"
+        "es": "Inteligencia artificial",
+        "en": "Artificial intelligence"
       },
+      "everyone": true,
       "items": [
         {
-          "key": "payments",
-          "app": "nuxt",
-          "path": "/config/payments",
-          "icon": "receipt",
+          "key": "aiAssistant",
+          "app": "next",
+          "path": "/dashboard/ai-assistant",
+          "icon": "bot",
           "adminOnly": true,
-          "description": {
-            "es": "Pasarelas de pago, billeteras cripto y moneda de la tienda.",
-            "en": "Payment gateways, crypto wallets and store currency."
-          },
-          "rf": "RF-27.1",
+          "rf": "RF-17",
           "label": {
-            "es": "Pagos y moneda",
-            "en": "Payments & currency"
+            "es": "Asistente IA",
+            "en": "AI assistant"
           }
         },
         {
-          "key": "shipping",
-          "app": "nuxt",
-          "path": "/config/shipping",
-          "icon": "truck",
-          "adminOnly": true,
-          "description": {
-            "es": "Transportadoras, tarifas por peso y tasas de impuesto por región.",
-            "en": "Carriers, weight-based rates and tax rates per region."
-          },
-          "rf": "RF-27.4",
+          "key": "chatbot",
+          "app": "next",
+          "path": "/chat",
+          "icon": "chat",
+          "rf": "RF-17",
           "label": {
-            "es": "Envío e impuestos",
-            "en": "Shipping & taxes"
+            "es": "Chatbot IA",
+            "en": "AI chatbot"
           }
         },
+        {
+          "key": "recommendations",
+          "app": "next",
+          "path": "/recommendations",
+          "icon": "sparkle",
+          "rf": "RF-18",
+          "label": {
+            "es": "Recomendaciones para ti",
+            "en": "Recommended for you"
+          }
+        }
+      ]
+    },
+    {
+      "key": "settings",
+      "label": {
+        "es": "Configuración",
+        "en": "Settings"
+      },
+      "items": [
         {
           "key": "settings",
           "app": "next",
@@ -381,21 +564,6 @@
           "label": {
             "es": "Equipo e integraciones",
             "en": "Team & integrations"
-          }
-        },
-        {
-          "key": "notifications",
-          "app": "nuxt",
-          "path": "/pwa/notifications",
-          "icon": "bell",
-          "description": {
-            "es": "Avisos push del navegador: suscripción y envío de pruebas.",
-            "en": "Browser push notifications: subscription and test sends."
-          },
-          "rf": "RF-28.3",
-          "label": {
-            "es": "Notificaciones push",
-            "en": "Push notifications"
           }
         },
         {
@@ -485,6 +653,10 @@
     "chat": {
       "es": "Abrir chat",
       "en": "Open chat"
+    },
+    "more": {
+      "es": "Más",
+      "en": "More"
     }
   },
   "roles": {
@@ -547,6 +719,14 @@
     "collapse": "<path d=\"M18.75 19.5l-7.5-7.5 7.5-7.5m-6 15L5.25 12l7.5-7.5\"/>",
     "chevron": "<path d=\"m6 9 6 6 6-6\"/>",
     "store": "<path d=\"M4 10v10h16V10M3 6l2-3h14l2 3v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0V6Zm7 14v-5h4v5\"/>",
-    "logout": "<path d=\"M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3\"/><path d=\"m10 17-5-5 5-5\"/><path d=\"M5 12h11\"/>"
+    "logout": "<path d=\"M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3\"/><path d=\"m10 17-5-5 5-5\"/><path d=\"M5 12h11\"/>",
+    "sidebar": "<rect x=\"3\" y=\"4\" width=\"18\" height=\"16\" rx=\"2\"/><path d=\"M9 4v16\"/>",
+    "file": "<path d=\"M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z\"/><path d=\"M14 3v5h5M9 13h6M9 17h4\"/>",
+    "calendar": "<rect x=\"3\" y=\"5\" width=\"18\" height=\"16\" rx=\"2\"/><path d=\"M16 3v4M8 3v4M3 10h18\"/>",
+    "filter": "<path d=\"M3 5h18l-7 8v6l-4 2v-8L3 5Z\"/>",
+    "copy": "<rect x=\"9\" y=\"9\" width=\"12\" height=\"12\" rx=\"2\"/><path d=\"M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1\"/>",
+    "mic": "<rect x=\"9\" y=\"3\" width=\"6\" height=\"11\" rx=\"3\"/><path d=\"M5 11a7 7 0 0 0 14 0M12 18v3\"/>",
+    "qr": "<rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/><path d=\"M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3\"/>",
+    "camera": "<path d=\"M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z\"/><circle cx=\"12\" cy=\"13.5\" r=\"3.5\"/>"
   }
 }

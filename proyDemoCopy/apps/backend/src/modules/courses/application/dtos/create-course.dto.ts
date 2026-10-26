@@ -48,6 +48,28 @@ export class CreateCourseDto {
   @IsString()
   description?: string | null;
 
+  // [Contenido del curso · 2026-10-24]: Markdown importado o escrito por el autor | SIN @MaxLength a propósito (columna `text` ilimitada) | [Principio]: SRP (la descripción sigue siendo el resumen)
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Contenido del curso en Markdown (sin límite de longitud)',
+  })
+  @IsOptional()
+  @IsString()
+  content?: string | null;
+
+  // [2026-10-25]: objetivos y «a quién va dirigido» (antes la IA los mezclaba con el temario)
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  objectives?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  audience?: string | null;
+
   @ApiProperty({ enum: CourseCategory, description: 'Nivel MCER (A1–C2)' })
   @IsEnum(CourseCategory)
   category!: CourseCategory;

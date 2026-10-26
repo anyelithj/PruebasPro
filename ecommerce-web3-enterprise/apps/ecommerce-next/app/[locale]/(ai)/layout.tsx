@@ -1,5 +1,5 @@
 // layout.tsx (ai) => chatbot IA (/chat) y recomendaciones (/recommendations) dentro del MISMO marco del panel
-// (PanelFrame): aparecen como ítems del grupo "Mi cuenta" del menú lateral general. Rutas privadas (middleware.ts).
+// (PanelFrame): aparecen como ítems del grupo "Mi cuenta" del menú lateral general. Rutas privadas (proxy.ts).
 import type { ReactNode } from "react";
 import { initPage } from "@/shared/lib/i18n/server";
 import { PanelFrame } from "@/widgets/panel/PanelFrame";

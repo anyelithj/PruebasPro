@@ -32,27 +32,42 @@ export class HttpExceptionFilter implements ExceptionFilter {
         ? exception.getResponse()
         : 'Internal server error';
 
-    const message =
+    const body =
       typeof exceptionResponse === 'string'
-        ? exceptionResponse
-        : ((exceptionResponse as { message?: string | string[] }).message ??
-          'Unexpected error');
+        ? undefined
+        : (exceptionResponse as {
+            message?: string | string[];
+            code?: unknown;
+          });
+    const message = body
+      ? (body.message ?? 'Unexpected error')
+      : exceptionResponse;
+    // [code · 2026-10-25]: código estable opcional (p. ej. SPEECH_ENGINE_MISSING) → el frontend decide el respaldo sin parsear el texto | [Principio]: OCP (las excepciones sin `code` no cambian)
+    const code = typeof body?.code === 'string' ? body.code : undefined;
 
     // [Envelope error]: forma estable para consumidores frontend
     const errorBody = {
       statusCode: status,
       message,
+      ...(code && { code }), // Spread condicional: la clave solo aparece si hay código
       timestamp: new Date().toISOString(),
       path: request.url,
       method: request.method,
     };
 
     // [Log diferenciado]: 5xx error, 4xx warn (no contamina alertas)
-    if (status >= 500) {
+    // [2026-10-25]: un 503 lanzado a propósito (ServiceUnavailableException: dependencia caída o no instalada) es esperable → sin stack;
+    // si además trae `code`, el adaptador que lo lanzó ya avisó (WARN una vez) → aquí solo DEBUG para no repetirlo en cada petición
+    const expectedUnavailable =
+      exception instanceof HttpException &&
+      status === HttpStatus.SERVICE_UNAVAILABLE;
+    if (status >= 500 && !expectedUnavailable) {
       this.logger.error(
         `${request.method} ${request.url} → ${status}`,
         exception instanceof Error ? exception.stack : String(exception),
       );
+    } else if (expectedUnavailable && code) {
+      this.logger.debug(`${request.method} ${request.url} → ${status} ${code}`);
     } else {
       this.logger.warn(
         `${request.method} ${request.url} → ${status}: ${JSON.stringify(message)}`,

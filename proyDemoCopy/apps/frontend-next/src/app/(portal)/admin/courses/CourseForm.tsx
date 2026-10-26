@@ -20,7 +20,8 @@ import {
   type CourseResponse,
 } from "@/types/courses";
 import { addLinkMaterial, uploadMaterial } from "@/lib/materials-client";
-import { TextImport, type ImportedText } from "@/components/shared/TextImport"; // [2026-10-23]: importar contenido (PDF/Word/Excel/imagen/audio/URL → Markdown)
+import { CourseSyllabusEditor } from "@/components/courses/CourseSyllabusEditor"; // [2026-10-25]: temario = subtemas (IA, a mano o importando)
+import { parseSyllabus, type SyllabusTopic } from "@/lib/syllabus";
 import { slugify } from "@/lib/slug"; // [Slug automático]: mismo algoritmo que el backend
 import { fmt } from "@aula/shared-i18n";
 import { ResultDialog, type SaveResult } from "@/components/shared/ResultDialog"; // [Modal de resultado]: éxito / error al guardar
@@ -69,7 +70,11 @@ export function CourseForm({ initial, initialMaterials = [] }: CourseFormProps) 
   const [aiTopic, setAiTopic] = useState("");
   const [aiBusy, setAiBusy] = useState(false);
   const [aiMsg, setAiMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const imported = useRef(""); // Último texto importado → base opcional para la IA
+  // [Temario · 2026-10-25]: lista de SUBTEMAS (antes un único Markdown donde la IA mezclaba presentación, objetivos y temario) | se guarda como «## Subtema» en `content`
+  const [topics, setTopics] = useState<SyllabusTopic[]>(() => parseSyllabus(initial?.content));
+  // [Idioma del contenido]: sigue al <select name="group"> → OCR, transcripción e IA en el idioma correcto | `toLowerCase`: "EN" → "en" (ISO 639-1)
+  const [language, setLanguage] = useState((initial?.group ?? "EN").toLowerCase());
+  const getLevel = () => String(new FormData(formRef.current ?? undefined).get("category") ?? "A1");
 
   // [setField]: escribe en un control del form por `name` (inputs no controlados) | `namedItem` (DOM)
   const setField = (name: string, value: string) => {
@@ -77,36 +82,29 @@ export function CourseForm({ initial, initialMaterials = [] }: CourseFormProps) 
     if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) el.value = value;
   };
 
-  // [onImported]: el Markdown importado va a la descripción; el título del documento, al título si está vacío
-  const onImported = (x: ImportedText) => {
-    imported.current = x.text;
-    setField("description", x.markdown.slice(0, 4000)); // = maxLength del textarea
-    const titleEl = formRef.current?.elements.namedItem("title") as HTMLInputElement | null;
-    if (titleEl && !titleEl.value && x.title) {
-      titleEl.value = x.title;
-      if (!slugTouched) setSlug(slugify(x.title));
-    }
-    setAiMsg({ ok: true, text: t.adminCourses.import.done });
-  };
-
-  // [generateWithAi]: POST /api/courses/draft con idioma + nivel del formulario → título, descripción y etiquetas | [Patrón]: Command + Adapter
-  const generateWithAi = async (useImported: boolean) => {
+  // [generateWithAi · 2026-10-25]: POST /api/courses/draft → título, PRESENTACIÓN, objetivos, a quién va dirigido, etiquetas y el TEMARIO (lista de subtemas)
+  // Los subtemas llegan con título; cada uno se explica después con «Explicar con IA» (definición, uso, reglas, ejemplos) | [Patrón]: Command + Adapter
+  const generateWithAi = async () => {
     const form = formRef.current;
     if (!form) return;
-    const data = new FormData(form);
     setAiBusy(true);
     setAiMsg(null);
     try {
       const res = await fetch("/api/courses/draft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ language: String(data.get("group") ?? "EN").toLowerCase(), level: String(data.get("category") ?? "A1"), topic: aiTopic.trim() || undefined, text: useImported && imported.current ? imported.current : undefined }),
+        body: JSON.stringify({ language, level: getLevel(), topic: aiTopic.trim() || undefined }),
       });
-      const body = (await res.json().catch(() => ({}))) as { title?: string; description?: string; tags?: string[]; message?: string };
+      const body = (await res.json().catch(() => ({}))) as { title?: string; description?: string; objectives?: string; audience?: string; topics?: string[]; tags?: string[]; message?: string };
       if (!res.ok || !body.title) throw new Error(body.message ?? `HTTP ${res.status}`);
       setField("title", body.title);
       if (!slugTouched) setSlug(slugify(body.title));
       setField("description", body.description ?? "");
+      setField("objectives", body.objectives ?? "");
+      setField("audience", body.audience ?? "");
+      // Subtemas nuevos al final (sin duplicar los que ya están)
+      const have = new Set(topics.map((x) => x.title.toLowerCase()));
+      setTopics((prev) => [...prev, ...(body.topics ?? []).filter((x) => !have.has(x.toLowerCase())).map((title) => ({ title, body: "" }))]);
       // [Etiquetas]: solo las de la lista cerrada (COURSE_TAGS) | `toLowerCase` → comparación sin mayúsculas
       const wanted = new Set((body.tags ?? []).map((x) => x.toLowerCase()));
       form.querySelectorAll<HTMLInputElement>('input[name="tags"]').forEach((cb) => (cb.checked = cb.checked || wanted.has(cb.value.toLowerCase())));
@@ -164,7 +162,8 @@ export function CourseForm({ initial, initialMaterials = [] }: CourseFormProps) 
     const ok = result?.ok;
     setResult(null);
     if (ok) {
-      router.push("/admin/courses");
+      // [2026-10-25]: como en Recursos → al detalle del curso para revisarlo y publicarlo (antes volvía al listado)
+      router.push(state.id ? `/courses/${state.id}` : "/admin/courses");
       router.refresh();
     }
   };
@@ -266,7 +265,7 @@ export function CourseForm({ initial, initialMaterials = [] }: CourseFormProps) 
 
         <div className="space-y-1.5">
           <Label htmlFor="group">{f.language} *</Label>
-          <select id="group" name="group" defaultValue={initial?.group ?? "EN"} className={controlClass} {...invalid("group")}>
+          <select id="group" name="group" defaultValue={initial?.group ?? "EN"} onChange={(e) => setLanguage(e.target.value.toLowerCase())} className={controlClass} {...invalid("group")}>
             {/* [Opciones del SSOT de idiomas]: nombres traducidos */}
             {LANGUAGE_GROUPS.map((g) => (
               <option key={g} value={g}>
@@ -289,12 +288,46 @@ export function CourseForm({ initial, initialMaterials = [] }: CourseFormProps) 
           {fieldError("category")}
         </div>
 
-        {/* [Una sola descripción]: el resumen de la tarjeta se deriva en el servidor → el autor no escribe dos veces lo mismo */}
+        {/* [IA · 2026-10-25]: tras elegir idioma y nivel → rellena la ficha (presentación, objetivos, público) y el TEMARIO (subtemas) */}
+        <fieldset className="space-y-2 rounded-xl border border-dashed border-tone-brand-line bg-tone-brand-soft p-4 sm:col-span-2" aria-busy={aiBusy}>
+          <legend className="px-1 text-sm font-semibold"><Sparkles aria-hidden className="inline size-4 align-[-0.125em]" /> {ai.title}</legend>
+          <p className="text-xs text-muted-foreground">{ai.hint}</p>
+          <div className="flex flex-wrap gap-2">
+            <Label htmlFor="aiTopic" className="sr-only">{ai.topic}</Label>
+            <Input id="aiTopic" value={aiTopic} onChange={(e) => setAiTopic(e.target.value)} placeholder={ai.topicPlaceholder} maxLength={200} className="min-w-48 flex-1" />
+            <button type="button" className="btn btn-primary btn-sm" disabled={aiBusy || pending} onClick={() => void generateWithAi()}>
+              {aiBusy ? ai.running : ai.run}
+            </button>
+          </div>
+          {aiMsg && (
+            <p role={aiMsg.ok ? "status" : "alert"} aria-live="polite" className={`text-xs font-semibold ${aiMsg.ok ? "text-tone-brand" : "text-tone-danger"}`}>
+              {aiMsg.text}
+            </p>
+          )}
+        </fieldset>
+
+        {/* [Ficha del curso · 2026-10-25]: presentación (descripción), objetivos y a quién va dirigido → separados del temario */}
         <div className="space-y-1.5 sm:col-span-2">
-          <Label htmlFor="description">{f.description} *</Label>
-          <textarea id="description" name="description" rows={8} maxLength={4000} required defaultValue={initial?.description ?? initial?.shortDescription} aria-describedby="description-hint" className={controlClass} {...invalid("description")} />
+          <Label htmlFor="description">Presentación *</Label>
+          <textarea id="description" name="description" rows={4} maxLength={4000} required defaultValue={initial?.description ?? initial?.shortDescription} aria-describedby="description-hint" className={controlClass} {...invalid("description")} />
           <p id="description-hint" className="text-xs text-muted-foreground">{f.descriptionHint}</p>
           {fieldError("description")}
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="objectives">Objetivos</Label>
+          <textarea id="objectives" name="objectives" rows={5} maxLength={4000} defaultValue={initial?.objectives ?? ""} placeholder="- Presentarte y saludar&#10;- Hablar de tu rutina…" className={controlClass} {...invalid("objectives")} />
+          {fieldError("objectives")}
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="audience">A quién va dirigido</Label>
+          <textarea id="audience" name="audience" rows={5} maxLength={4000} defaultValue={initial?.audience ?? ""} className={controlClass} {...invalid("audience")} />
+          {fieldError("audience")}
+        </div>
+
+        {/* [Temario · 2026-10-25]: subtemas con su explicación (IA, a mano o importando) → `content` | los archivos van en «Recursos del curso» */}
+        <div className="sm:col-span-2">
+          <CourseSyllabusEditor name="content" topics={topics} onChange={setTopics} language={language} getLevel={getLevel} />
+          {fieldError("content")}
         </div>
 
         <div className="space-y-1.5">
@@ -375,33 +408,6 @@ export function CourseForm({ initial, initialMaterials = [] }: CourseFormProps) 
           {fieldError("tags")}
         </fieldset>
 
-        {/* [Asistentes · 2026-10-23 · 4.º pase]: DESPUÉS de Etiquetas (antes encabezaban el formulario) → primero los datos básicos, luego importar o generar con IA */}
-        <div className="space-y-2 sm:col-span-2">
-          {/* [2026-10-23]: asistentes de contenido — importar (archivo/URL → Markdown) y generar con IA | [Responsive]: apilados en móvil, 2 columnas desde lg */}
-          <div className="grid gap-4 lg:grid-cols-2">
-            <TextImport label={t.adminCourses.import.title} onText={onImported} />
-            <fieldset className="space-y-2 rounded-xl border border-dashed border-tone-brand-line bg-tone-brand-soft p-4" aria-busy={aiBusy}>
-              <legend className="px-1 text-sm font-semibold"><Sparkles aria-hidden className="inline size-4 align-[-0.125em]" /> {ai.title}</legend>
-              <p className="text-xs text-muted-foreground">{ai.hint}</p>
-              <Label htmlFor="aiTopic" className="sr-only">{ai.topic}</Label>
-              <Input id="aiTopic" value={aiTopic} onChange={(e) => setAiTopic(e.target.value)} placeholder={ai.topicPlaceholder} maxLength={200} />
-              <div className="flex flex-wrap gap-2">
-                <button type="button" className="btn btn-primary btn-sm" disabled={aiBusy || pending} onClick={() => void generateWithAi(false)}>
-                  {aiBusy ? ai.running : ai.run}
-                </button>
-                <button type="button" className="btn btn-outline btn-sm" disabled={aiBusy || pending || !imported.current} onClick={() => void generateWithAi(true)}>
-                  {ai.useImported}
-                </button>
-              </div>
-            </fieldset>
-          </div>
-          {aiMsg && (
-            <p role={aiMsg.ok ? "status" : "alert"} aria-live="polite" className={`text-xs font-semibold ${aiMsg.ok ? "text-tone-brand" : "text-tone-danger"}`}>
-              {aiMsg.text}
-            </p>
-          )}
-        </div>
-
         <div className="space-y-1.5">
           <Label htmlFor="lab">{f.lab}</Label>
           {/* [Select de laboratorio]: opciones cerradas + "Sin laboratorio" | un valor antiguo fuera de la lista se conserva como opción */}
@@ -425,7 +431,7 @@ export function CourseForm({ initial, initialMaterials = [] }: CourseFormProps) 
           {f.isProBono}
         </label>
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" name="isPublished" defaultChecked={initial?.isPublished ?? true} className="size-4 accent-primary" />
+          <input type="checkbox" name="isPublished" defaultChecked={initial?.isPublished ?? false} /* [2026-10-25]: todo nace en borrador; se publica tras revisarlo */ className="size-4 accent-primary" />
           {f.isPublished}
         </label>
       </fieldset>

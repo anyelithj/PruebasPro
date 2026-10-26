@@ -32,6 +32,7 @@ export interface RegisterInput {
   password: string;
   firstName: string;
   lastName: string;
+  phone?: string; // [2026-10-24]: opcional · `?` (TS) → puede no viajar
 }
 
 // [Cookie options]: defensa httpOnly + secure (en prod) | [Buena práctica]: anti-XSS

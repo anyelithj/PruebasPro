@@ -2,12 +2,17 @@ import { inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom, type Observable } from 'rxjs';
 import { AsyncState } from '@shared/utils/async-state';
 import { MusicRepository } from '../domain/music.repository.port';
+import { NO_LINK_RULES } from '../domain/models/music';
 import type {
   Collection,
   CollectionDetail,
   CollectionInput,
   LinePatch,
   LineTiming,
+  LyricsDraft,
+  LyricsDraftInput,
+  LyricsLoad,
+  MediaLinkRules,
   PracticeRef,
   Song,
   SongDetail,
@@ -29,7 +34,12 @@ export class MusicFacade {
   readonly song = new AsyncState<SongDetail>();
   readonly practices = new AsyncState<PracticeRef[]>((l) => !l.length);
   readonly busy = signal(false);
+  // [pendingLyrics · 2026-10-24]: letra generada con IA que aún no se guardó (la fachada vive en la ruta padre → sobrevive al paso /subir → /subir/:id)
+  readonly pendingLyrics = signal('');
   readonly actionError = signal<string | null>(null);
+  // [linkRules · 2026-10-24]: dominios de letras/streaming para validar el enlace del audio en el cliente (se piden una vez por fachada)
+  readonly linkRules = signal<MediaLinkRules>(NO_LINK_RULES);
+  private linkRulesRequested = false;
 
   // [act]: una acción con estado ocupado y error visible; nunca lanza → la UI queda siempre en un estado válido | [Principio]: DRY
   private async act<T>(source: Observable<T>): Promise<T | null> {
@@ -110,12 +120,35 @@ export class MusicFacade {
     return ok;
   }
 
-  // [loadLyrics]: devuelve false si FastAPI no respondió (líneas guardadas sin IPA → se puede reintentar)
+  // [loadLinkRules]: Fail-soft — sin reglas solo se valida el formato y el servidor sigue respondiendo con un mensaje claro (no se muestra error)
+  async loadLinkRules(): Promise<void> {
+    if (this.linkRulesRequested) return;
+    this.linkRulesRequested = true;
+    try {
+      this.linkRules.set(await firstValueFrom(this.repo.mediaLinkRules()));
+    } catch {
+      this.linkRulesRequested = false; // Reintento en la próxima visita al paso
+    }
+  }
+
+  // [loadLyrics]: { enriched, missing } — missing > 0 = versos guardados sin IPA o sin traducción (se puede reintentar) · null = error visible
   // `auto` (2026-10-19): false = modo manual (líneas sin IPA ni traducción para escribirlas a mano)
-  async loadLyrics(id: string, lyrics: string, auto = true): Promise<boolean | null> {
+  async loadLyrics(id: string, lyrics: string, auto = true): Promise<Pick<LyricsLoad, 'enriched' | 'missing'> | null> {
     const r = await this.act(this.repo.loadLyrics(id, lyrics, auto));
     if (r) await this.loadSong(id);
-    return r ? r.enriched : null;
+    return r ? { enriched: r.enriched, missing: r.missing } : null;
+  }
+
+  // [retryEnrich · 2026-10-24]: vuelve a pedir IPA y traducción SOLO de los versos que faltan (idempotente)
+  async retryEnrich(id: string): Promise<Pick<LyricsLoad, 'enriched' | 'missing'> | null> {
+    const r = await this.act(this.repo.reEnrich(id));
+    if (r) await this.loadSong(id);
+    return r ? { enriched: r.enriched, missing: r.missing } : null;
+  }
+
+  // [draftLyrics · 2026-10-24]: letra ORIGINAL con IA (idioma, nivel y tema) → el docente la revisa antes de guardarla
+  draftLyrics(input: LyricsDraftInput): Promise<LyricsDraft | null> {
+    return this.act(this.repo.draftLyrics(input));
   }
 
   async saveLines(

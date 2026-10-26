@@ -2,7 +2,7 @@ import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { OllamaClient } from '../../../ai/ollama.client';
 import {
-  LANGUAGE_LABEL,
+  LANGUAGE_NAME_EN,
   type Language,
 } from '../../../../shared/domain/language.vo';
 import {
@@ -12,6 +12,10 @@ import {
   type Skill,
 } from '../../domain/item-type';
 import { itemProblem } from '../../domain/item-rules';
+import {
+  inTargetLanguage,
+  strictLine,
+} from '../../../../shared/domain/target-language';
 import type { ItemInput } from './create-activity.use-case';
 // [UseCase GenerateActivityDraft · Sprint 8.12 · RF-114]: pide a Ollama (OllamaClient compartido) un BORRADOR de ítems; no guarda nada: el docente lo revisa en el constructor y decide | [Patrón]: Use Case (Query) + Adapter (OllamaClient) + Filter (descarta ítems incoherentes) | [Principio]: SRP + DRY + revisión humana | [Paradigma]: POO + async/await
 
@@ -40,11 +44,28 @@ export class GenerateActivityDraftUseCase {
       'qwen2.5:3b';
   }
 
-  async execute(
+  // [execute · 2026-10-25]: si la IA responde en español (tema escrito en español) se repite una vez con orden estricta de idioma
+  execute(
     req: DraftRequest,
   ): Promise<{ items: ItemInput[]; model: string; discarded: number }> {
+    return inTargetLanguage(
+      req.language,
+      (strict) => this.once(req, strict),
+      (r) =>
+        r.items
+          .map((i) => [i.prompt, ...(i.options ?? [])].join(' '))
+          .join(' '),
+    );
+  }
+
+  private async once(
+    req: DraftRequest,
+    strict: boolean,
+  ): Promise<{ items: ItemInput[]; model: string; discarded: number }> {
     const prompt = [
-      `Create ${req.count} ORIGINAL practice items in ${LANGUAGE_LABEL[req.language]} (CEFR ${req.level}) about "${req.topic}".`,
+      strict ? strictLine(req.language) : '',
+      `Create ${req.count} ORIGINAL practice items in ${LANGUAGE_NAME_EN[req.language]} (CEFR ${req.level}) about "${req.topic}".`,
+      `The topic may be written in Spanish: translate it. "prompt", "options" and "accepted" MUST be written ONLY in ${LANGUAGE_NAME_EN[req.language]}; only "explanation" and "tip" in Spanish.`,
       `Skill: ${req.skill}. Allowed itemType values: ${req.itemTypes.join(', ')}.`,
       'Return ONLY JSON: {"items":[{"itemType":"...","prompt":"...","options":["..."],"accepted":[["..."]],"explanation":"(en español)","tip":"(en español)"}]}.',
       'Rules: multiple_choice → options are the choices and accepted=[[correct option]]; fill_blank → prompt uses ___ for each blank and accepted has one list per blank;',
@@ -60,7 +81,11 @@ export class GenerateActivityDraftUseCase {
     const res = await this.ollama.generate({
       model: this.model,
       prompt,
-      options: { temperature: 0.4, num_predict: 1500, num_ctx: req.sourceText ? 8192 : 4096 }, // Más contexto si hay material
+      options: {
+        temperature: 0.4,
+        num_predict: 1500,
+        num_ctx: req.sourceText ? 8192 : 4096,
+      }, // Más contexto si hay material
     });
     let raw: unknown;
     try {

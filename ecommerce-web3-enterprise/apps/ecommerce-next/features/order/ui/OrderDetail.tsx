@@ -42,9 +42,9 @@ function DeliveryPreferences({ order }: { order: OrderDetailData }) {
       <h2 className="font-semibold">{t("title")}</h2>
       {/* Input nativo de fecha: selector accesible del sistema, sin librería (min/max = regla del backend) */}
       <label htmlFor="delivery-date">{t("date")}</label>
-      <input id="delivery-date" type="date" min={toDateInput(Date.now() + DAY_MS)} max={toDateInput(Date.now() + 30 * DAY_MS)} value={date} onChange={(event) => setDate(event.target.value)} className="h-9 rounded-md border border-slate-300 px-2" />
+      <input id="delivery-date" type="date" min={toDateInput(Date.now() + DAY_MS)} max={toDateInput(Date.now() + 30 * DAY_MS)} value={date} onChange={(event) => setDate(event.target.value)} className="h-9 rounded-md border border-slate-300 px-3 text-sm" />
       <label htmlFor="delivery-notes">{t("instructions")}</label>
-      <textarea id="delivery-notes" rows={2} maxLength={500} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder={t("placeholder")} className="rounded-md border border-slate-300 p-2" />
+      <textarea id="delivery-notes" rows={2} maxLength={500} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder={t("placeholder")} className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
       <Button type="submit" size="sm" variant="secondary" loading={update.isPending} className="self-start">{t("save")}</Button>
     </form>
   );
@@ -97,7 +97,7 @@ function CancelDialog({ orderId, open, onClose }: { orderId: string; open: boole
     <Modal open={open} onClose={onClose} title={t("title")}>
       <form onSubmit={form.handleSubmit} className="flex flex-col gap-3">
         <label htmlFor="cancel-reason" className="text-sm font-medium">{t("reason")}</label>
-        <textarea id="cancel-reason" rows={3} className="rounded-md border border-slate-300 p-2 text-sm" aria-invalid={reasonError ? true : undefined} {...form.getFieldProps("reason")} />
+        <textarea id="cancel-reason" rows={3} className="rounded-md border border-slate-300 px-3 py-2 text-sm" aria-invalid={reasonError ? true : undefined} {...form.getFieldProps("reason")} />
         {reasonError && <p role="alert" className="text-sm text-red-600">{tRoot(reasonError)}</p>}
         <Button type="submit" variant="danger" loading={cancel.isPending}>{t("confirm")}</Button>
       </form>
@@ -123,13 +123,13 @@ function RefundDialog({ orderId, productIds, open, onClose }: { orderId: string;
     <Modal open={open} onClose={onClose} title={t("title")}>
       <form onSubmit={form.handleSubmit} className="flex flex-col gap-3">
         <label htmlFor="refund-reason" className="text-sm font-medium">{t("reason")}</label>
-        <select id="refund-reason" className="h-9 rounded-md border border-slate-300 px-2 text-sm" {...form.getFieldProps("reason")}>
+        <select id="refund-reason" className="h-9 rounded-md border border-slate-300 px-3 text-sm" {...form.getFieldProps("reason")}>
           {REFUND_REASONS.map((reason) => (
             <option key={reason} value={reason}>{tRoot(`order.refundReasons.${reason}`)}</option>
           ))}
         </select>
         <label htmlFor="refund-description" className="text-sm font-medium">{t("description")}</label>
-        <textarea id="refund-description" rows={4} className="rounded-md border border-slate-300 p-2 text-sm" aria-invalid={descriptionError ? true : undefined} {...form.getFieldProps("description")} />
+        <textarea id="refund-description" rows={4} className="rounded-md border border-slate-300 px-3 py-2 text-sm" aria-invalid={descriptionError ? true : undefined} {...form.getFieldProps("description")} />
         {descriptionError && <p role="alert" className="text-sm text-red-600">{tRoot(descriptionError)}</p>}
         {/* RF-12.7 fotos del producto (obligatorias según la política de la tienda) */}
         <label htmlFor="refund-photos" className="text-sm font-medium">{t("photos")}</label>
@@ -147,13 +147,13 @@ function RefundDialog({ orderId, productIds, open, onClose }: { orderId: string;
         <p aria-live="polite" className="text-xs text-slate-500">{upload.isPending ? t("uploading") : t("photosCount", { count: form.values.evidenceUrls?.length ?? 0 })}</p>
         {/* RF-12.4 cómo resolver: reembolso, cambio por otra talla/color o crédito en tienda */}
         <label htmlFor="refund-resolution" className="text-sm font-medium">{t("resolution")}</label>
-        <select id="refund-resolution" className="h-9 rounded-md border border-slate-300 px-2 text-sm" {...form.getFieldProps("resolution")}>
+        <select id="refund-resolution" className="h-9 rounded-md border border-slate-300 px-3 text-sm" {...form.getFieldProps("resolution")}>
           {REFUND_RESOLUTIONS.map((value) => <option key={value} value={value}>{t(`resolutions.${value}`)}</option>)}
         </select>
         {form.values.resolution === "EXCHANGE" && (
           <>
             <label htmlFor="refund-variant" className="text-sm font-medium">{t("exchangeVariant")}</label>
-            <select id="refund-variant" className="h-9 rounded-md border border-slate-300 px-2 text-sm" {...form.getFieldProps("exchangeVariantId")}>
+            <select id="refund-variant" className="h-9 rounded-md border border-slate-300 px-3 text-sm" {...form.getFieldProps("exchangeVariantId")}>
               <option value="">—</option>
               {(variants.data ?? []).map((variant) => <option key={variant.id} value={variant.id}>{variant.name}</option>)}
             </select>

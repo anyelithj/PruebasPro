@@ -14,6 +14,7 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { Throttle } from '@nestjs/throttler'; // [2026-10-24]: límite propio para la publicación en lote
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   CurrentUser,
@@ -22,11 +23,13 @@ import {
 import { Roles } from '../../../shared/decorators/roles.decorator';
 import { Role } from '../../users/domain/value-objects/role.vo';
 import { ChangeReviewStatusCommand } from '../application/commands/change-review-status.command';
+import { BulkPublishCommand } from '../application/commands/bulk-publish.command';
 import { DeleteCurriculumItemCommand } from '../application/commands/delete-curriculum-item.command';
 import { CreateCurriculumItemCommand } from '../application/commands/create-curriculum-item.command';
 import { UpdateCurriculumItemCommand } from '../application/commands/update-curriculum-item.command';
 import type { CurriculumActor } from '../application/curriculum-actor';
 import {
+  BulkPublishDto,
   ChangeReviewStatusDto,
   CreateCurriculumItemDto,
   CreateSourceDto,
@@ -96,6 +99,7 @@ export class CurriculumController {
     private readonly scanContradictions: ScanContradictionsCommand,
     private readonly certificationPractice: CertificationPracticeQuery,
     private readonly exportItems: ExportCurriculumQuery,
+    private readonly bulkPublish: BulkPublishCommand,
   ) {}
 
   // ───── Catálogo (rutas estáticas antes de ':id') ─────
@@ -248,14 +252,41 @@ export class CurriculumController {
   // [GET /curriculum/export · 2026-10-23]: descarga el contenido filtrado (p. ej. un tema) en PDF, Word, Excel o CSV — ruta estática antes de ':id'
   // `@Res()` (NestJS): respuesta manual con `attachment` → el navegador descarga el archivo
   @Get('export')
-  @ApiOperation({ summary: 'Descargar los recursos filtrados en PDF, Word, Excel o CSV' })
-  async export(@Query() dto: ExportCurriculumDto, @CurrentUser() user: JwtPayload, @Res() res: Response): Promise<void> {
+  @ApiOperation({
+    summary: 'Descargar los recursos filtrados en PDF, Word, Excel o CSV',
+  })
+  async export(
+    @Query() dto: ExportCurriculumDto,
+    @CurrentUser() user: JwtPayload,
+    @Res() res: Response,
+  ): Promise<void> {
     const { format = 'pdf', ...filter } = dto;
-    const file = await this.exportItems.execute(filter, this.actor(user), format);
+    const file = await this.exportItems.execute(
+      filter,
+      this.actor(user),
+      format,
+    );
     res.setHeader('Content-Type', file.contentType);
-    res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${file.filename}"`,
+    );
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.end(file.buffer);
+  }
+
+  // [POST /curriculum/status/bulk · 2026-10-24]: publica/despublica un tema completo en UNA petición (ruta estática antes de ':id')
+  // `@Throttle` (@nestjs/throttler v6): contador PROPIO de esta ruta (10/min) → no consume el cupo global por cada recurso del lote | [Patrón]: Per-Route Policy
+  @Post('status/bulk')
+  @Roles(Role.TEACHER)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Publicar o despublicar varios recursos (publicar: solo ADMIN) — idempotente: lo ya publicado se omite',
+  })
+  statusBulk(@Body() dto: BulkPublishDto, @CurrentUser() user: JwtPayload) {
+    return this.bulkPublish.execute(dto.ids, dto.publish, this.actor(user));
   }
 
   // [GET /curriculum/by-topic]: recursos agrupados por tema (estudiantes: solo aprobados) — ruta estática antes de ':id'

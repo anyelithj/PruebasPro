@@ -140,14 +140,20 @@ function SelectField<T extends string>({ id, label, value, onChange, placeholder
 // [CountInput · 2026-10-23 · 4.º pase]: cantidad de elementos a crear (mínimo 1, sin máximo) como STEPPER «− [n] +» — etiqueta ENCIMA del campo
 // (antes iba en línea con el número y desalineaba la fila) | <input type="number"> nativo (HTML) + botones | [Principio]: DRY (se usa en "elegir" y en "generar más")
 // [A11y]: el <input> sigue siendo editable con teclado (flechas ↑/↓ nativas); los botones llevan aria-label y aria-controls
-function CountInput({ id, value, onChange }: { id: string; value: number; onChange: (n: number) => void }) {
-  const set = (n: number) => onChange(Math.max(1, Math.trunc(n))); // `Math.trunc/max`: entero ≥ 1 (0 o negativos no tienen sentido)
+// [2026-10-24 · Vaciar al enfocar]: `select()` en onFocus no bastaba (Chrome/Safari deshacen la selección al soltar el clic) → al enfocar el campo se VACÍA y el número
+// actual queda como `placeholder`; al salir sin escribir (o con un valor inválido) se restaura | [Patrón]: Controlled Component + borrador local (draft) | [Paradigma]: Reactivo
+// [Altura · 2026-10-24]: el contenedor mide `h-10` (40 px, borde incluido por `box-sizing: border-box`) = misma altura que `.control` y `.btn` del formulario
+// [2026-10-24 · export + `label`/`max` opcionales]: lo reutiliza «Crear actividad» («¿Cuántos ítems?», máx. del DTO); sin ellos se comporta igual que antes
+export function CountInput({ id, value, onChange, label = "¿Cuántos elementos?", max }: { id: string; value: number; onChange: (n: number) => void; label?: string; max?: number }) {
+  const set = (n: number) => onChange(Math.min(max ?? Infinity, Math.max(1, Math.trunc(n)))); // `?? Infinity`: sin `max` no hay tope // `Math.trunc/max`: entero ≥ 1 (0 o negativos no tienen sentido)
+  // `useState<string | null>` (React + TS union): null = sin editar (muestra `value`) · string = lo que el usuario está escribiendo (puede estar vacío)
+  const [draft, setDraft] = useState<string | null>(null);
   return (
     <div>
       <label htmlFor={id} className="mb-1 block text-xs font-semibold text-muted-foreground">
-        ¿Cuántos elementos?
+        {label}
       </label>
-      <div className="inline-flex items-stretch overflow-hidden rounded-lg border border-border bg-muted focus-within:border-primary focus-within:ring-2 focus-within:ring-ring/40">
+      <div className="inline-flex h-10 items-stretch overflow-hidden rounded-lg border border-border bg-muted focus-within:border-primary focus-within:ring-2 focus-within:ring-ring/40">
         <button type="button" aria-label="Uno menos" aria-controls={id} disabled={value <= 1} onClick={() => set(value - 1)} className="grid w-10 place-items-center text-lg font-bold text-muted-foreground hover:bg-card hover:text-primary disabled:opacity-40">
           −
         </button>
@@ -156,13 +162,19 @@ function CountInput({ id, value, onChange }: { id: string; value: number; onChan
           type="number"
           inputMode="numeric" // Teclado numérico en móvil
           min={1}
-          value={value}
-          // `valueAsNumber` (DOM): NaN mientras el campo está vacío → se ignora
-          onChange={(e) => !Number.isNaN(e.target.valueAsNumber) && set(e.target.valueAsNumber)}
-          onFocus={(e) => e.currentTarget.select()} // Selecciona el número → se reemplaza escribiendo
-          className="no-spin h-10 w-16 border-x border-border bg-transparent text-center text-sm font-semibold tabular-nums text-foreground focus:outline-none"
+          max={max}
+          value={draft ?? value} // `??` (ES2020): sin borrador → el valor confirmado
+          placeholder={String(value)} // El valor anterior se ve atenuado mientras el campo está vacío
+          onFocus={() => setDraft("")} // [Vaciar al enfocar]: se escribe el número real sin borrar el de por defecto
+          // `valueAsNumber` (DOM): NaN si el campo está vacío → solo se confirma un entero ≥ 1; el texto se conserva en el borrador
+          onChange={(e) => {
+            setDraft(e.target.value);
+            if (e.target.valueAsNumber >= 1) set(e.target.valueAsNumber);
+          }}
+          onBlur={() => setDraft(null)} // [Restaurar]: vacío o inválido → vuelve a mostrar el último valor válido
+          className="no-spin h-full w-16 border-x border-border bg-transparent text-center text-sm font-semibold tabular-nums text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
         />
-        <button type="button" aria-label="Uno más" aria-controls={id} onClick={() => set(value + 1)} className="grid w-10 place-items-center text-lg font-bold text-muted-foreground hover:bg-card hover:text-primary">
+        <button type="button" aria-label="Uno más" aria-controls={id} disabled={max !== undefined && value >= max} onClick={() => set(value + 1)} className="grid w-10 place-items-center text-lg font-bold text-muted-foreground hover:bg-card hover:text-primary disabled:opacity-40">
           +
         </button>
       </div>
@@ -172,7 +184,7 @@ function CountInput({ id, value, onChange }: { id: string; value: number; onChan
 
 // [ChoiceCard · 2026-10-23 · 4.º pase]: tarjeta de una forma de crear el contenido (título + explicación + acción abajo) | [Patrón]: Composite | [Principio]: DRY
 // Las tres tarjetas (IA · a mano · importar) tienen la MISMA estructura → la acción queda alineada al pie (`mt-auto`) aunque los textos midan distinto
-function ChoiceCard({ icon, title, hint, children }: { icon: React.ReactNode; title: string; hint: string; children: React.ReactNode }) {
+export function ChoiceCard({ icon, title, hint, children }: { icon: React.ReactNode; title: string; hint: string; children: React.ReactNode }) {
   return (
     <section className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4">
       <header className="space-y-1">
@@ -653,7 +665,7 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" className="btn btn-outline btn-sm" disabled={!comboReady || aiBusy !== null} aria-busy={aiBusy === "topics"} onClick={() => void suggestTopics()}>
+          <button type="button" className="btn btn-outline" disabled={!comboReady || aiBusy !== null} aria-busy={aiBusy === "topics"} onClick={() => void suggestTopics()}>
             {aiBusy === "topics" ? "Pensando temas…" : <><Sparkles aria-hidden className="inline size-4 align-[-0.125em]" /> Sugerir más temas con IA</>}
           </button>
           {aiTopicsFresh.length > 0 && (
@@ -701,7 +713,7 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
               </ChoiceCard>
               <ChoiceCard icon={<FileUp className="size-4" />} title="Importar" hint={language ? "Excel, CSV, Word, PDF, texto, imagen o el enlace de una página web: una fila por elemento." : "Primero elige el idioma (se usa para leer imágenes y la IPA)."}>
                 {/* [Importar]: requiere el idioma (OCR y variante IPA) */}
-                <ImportPanel kind={kind} language={language} disabled={!language} onImport={addImported} />
+                <ImportPanel kind={kind} language={language} topic={topicName} disabled={!language} onImport={addImported} />
               </ChoiceCard>
             </div>
           </div>
@@ -718,7 +730,7 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
                     </h3>
                     {isGroup && !entry.itemId && <span className="badge bg-tone-brand-soft text-tone-brand">Nuevo</span>}
                     {!isEdit && !entry.itemId && (
-                      <button type="button" onClick={() => removeEntry(entry.uid)} aria-label={`Quitar elemento ${i + 1}`} className="btn btn-ghost btn-sm text-tone-danger">
+                      <button type="button" onClick={() => removeEntry(entry.uid)} aria-label={`Quitar elemento ${i + 1}`} className="btn btn-ghost text-tone-danger">
                         ✕ Quitar
                       </button>
                     )}
@@ -737,7 +749,7 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
             {/* [Más elementos]: añadir a mano o generar más con IA (alta) · volver a generar (edición) */}
             {isEdit ? (
               canGenerate && (
-                <button type="button" className="btn btn-ghost btn-sm" aria-busy={aiBusy === "content"} disabled={aiBusy !== null} onClick={() => void generateContent({ force: true })}>
+                <button type="button" className="btn btn-ghost" aria-busy={aiBusy === "content"} disabled={aiBusy !== null} onClick={() => void generateContent({ force: true })}>
                   {aiBusy === "content" ? "Generando…" : <><Sparkles aria-hidden className="inline size-4 align-[-0.125em]" /> Volver a generar con IA</>}
                 </button>
               )
@@ -746,14 +758,14 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
               <div className="space-y-3 rounded-xl border border-dashed border-border p-4">
                 <CountInput id="count-more" value={count} onChange={setCount} />
                 <div className="flex flex-wrap gap-2">
-                  <button type="button" className="btn btn-outline btn-sm" disabled={!canGenerate} aria-busy={aiBusy === "content"} onClick={() => void generateContent({ force: true, append: true })}>
+                  <button type="button" className="btn btn-outline" disabled={!canGenerate} aria-busy={aiBusy === "content"} onClick={() => void generateContent({ force: true, append: true })}>
                     {aiBusy === "content" || aiProgress ? generatingLabel : <><Sparkles aria-hidden className="inline size-4 align-[-0.125em]" /> {`Generar ${count} más con IA`}</>}
                   </button>
-                  <button type="button" className="btn btn-outline btn-sm" onClick={() => addManual(count)}>
+                  <button type="button" className="btn btn-outline" onClick={() => addManual(count)}>
                     <PenLine aria-hidden className="inline size-4 align-[-0.125em]" /> Añadir {count} a mano
                   </button>
                 </div>
-                <ImportPanel kind={kind} language={language} disabled={!language} onImport={addImported} />
+                <ImportPanel kind={kind} language={language} topic={topicName} disabled={!language} onImport={addImported} />
               </div>
             )}
           </div>
@@ -771,10 +783,10 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
               <Recycle aria-hidden className="inline size-4 align-[-0.125em]" /> <b>Ya existe un recurso de este tipo para «{topicName}»</b>. Para no duplicar contenido no se usó la IA.
             </p>
             <div className="flex flex-wrap gap-2">
-              <Link href={`/admin/curriculum/${draft.existingItemId}`} className="btn btn-primary btn-sm">
+              <Link href={`/admin/curriculum/${draft.existingItemId}`} className="btn btn-primary">
                 Abrir el existente
               </Link>
-              <button type="button" className="btn btn-outline btn-sm" disabled={aiBusy !== null} onClick={() => void generateContent({ force: true })}>
+              <button type="button" className="btn btn-outline" disabled={aiBusy !== null} onClick={() => void generateContent({ force: true })}>
                 Generar uno nuevo igualmente
               </button>
             </div>
@@ -783,7 +795,7 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
         {draft?.strategy === "cache" && (
           <div role="status" className="flex flex-wrap items-center gap-2 rounded-lg border border-tone-info-line bg-tone-info-soft p-3 text-xs text-tone-info">
             <span className="flex-1"><Recycle aria-hidden className="inline size-4 align-[-0.125em]" /> Reutilizado de una generación anterior idéntica — <b>no se usó la IA</b> (LLM_REQUIRED = false).</span>
-            <button type="button" className="btn btn-outline btn-sm" disabled={aiBusy !== null} onClick={() => void generateContent({ force: true })}>
+            <button type="button" className="btn btn-outline" disabled={aiBusy !== null} onClick={() => void generateContent({ force: true })}>
               Generar otra versión
             </button>
           </div>
@@ -820,7 +832,7 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
             <div className="space-y-2">
               <SearchSelect<SourceOption> id="source" label="Libro, web o diccionario *" placeholder="Buscar fuente…" value={source} onSelect={setSource} fetchOptions={fetchSources} contextKey="sources" />
               {canAdmin && !showSourcePanel && (
-                <button type="button" className="btn btn-outline btn-sm" onClick={() => setShowSourcePanel(true)}>
+                <button type="button" className="btn btn-outline" onClick={() => setShowSourcePanel(true)}>
                   + Registrar fuente nueva
                 </button>
               )}

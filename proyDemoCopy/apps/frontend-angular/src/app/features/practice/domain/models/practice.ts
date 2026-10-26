@@ -1,5 +1,5 @@
 import type { IconName } from '@shared/ui/atoms/icon/icon.component';
-import { z } from 'zod';
+import * as z from 'zod'; // [Tree-shaking · Zod 4]: import de namespace (`* as z`) → esbuild empaqueta solo las funciones usadas (con `{ z }` arrastraba Zod entero, ~450 kB)
 import { CEFR_LEVELS, LANGUAGES } from '@aula/shared-schemas';
 // [Modelo Practice · Dominio · Sprints 8.14/8.15]: actividad, ítem (vista del estudiante sin respuestas / vista completa del docente), intento y retroalimentación con errores clasificados — contrato de /api/practice/* de NestJS | [Patrón]: Schema-First (Zod) + funciones puras | [Principio]: SSOT + Type-Safe | [Paradigma]: Funcional
 // [Contrato por tipo] (igual que FastAPI Grading /grading/practice):

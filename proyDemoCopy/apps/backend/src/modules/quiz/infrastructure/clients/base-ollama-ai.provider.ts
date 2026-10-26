@@ -51,6 +51,10 @@ export abstract class BaseOllamaAIProvider implements IAIQuestionProvider {
   abstract readonly id: AIProvider;
   // [Modelo Ollama]: tag exacto (ej qwen3:8b) | [Patrón]: Template Method
   protected abstract readonly model: string;
+  // `get` (ES2015): expone el tag en solo lectura para la factory (diagnóstico de motores duplicados) sin abrir `model` a escritura
+  get modelTag(): string {
+    return this.model;
+  }
 
   constructor(
     protected readonly ollama: OllamaClient, // [DI]: cliente compartido del módulo AI (@Global) → un solo cliente HTTP de Ollama | [Principio]: DIP + DRY

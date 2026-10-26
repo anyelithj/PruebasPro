@@ -6,5 +6,6 @@ import { ANGULAR_ASSETS } from "@/config/angular";
 
 // `export function` (Server Component): sin estado; next/script deduplica por src
 export function AngularElements() {
-  return <Script type="module" src={`${ANGULAR_ASSETS}/main.js`} strategy="afterInteractive" />;
+  // [2026-10-25]: `crossOrigin` → el <link rel=preload> que genera Next lleva el MISMO modo que el módulo (antes: «preload … not used because the request credentials mode does not match»)
+  return <Script type="module" src={`${ANGULAR_ASSETS}/main.js`} strategy="afterInteractive" crossOrigin="anonymous" />;
 }

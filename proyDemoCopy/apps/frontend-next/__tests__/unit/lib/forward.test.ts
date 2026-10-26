@@ -37,7 +37,7 @@ describe("forward (BFF comodín)", () => {
     expect(res.headers.get("cache-control")).toBe("no-cache, no-transform");
   });
 
-  // [Sprint 8.16]: juegos, práctica y vocabulario reenviados; el audio de /speech se corta en el BFF si supera 10 MB (413) sin llegar a NestJS
+  // [Sprint 8.16]: juegos, práctica y vocabulario reenviados; el audio de /speech se corta en el BFF si supera 25 MB (413) sin llegar a NestJS
   it("reenvía games, practice y vocabulary; speech solo POST", async () => {
     proxy.mockResolvedValue(new Response("{}", { headers: { "content-type": "application/json" } }));
     await forward(req("POST", "http://localhost/api/games/agent/turn"), ["games", "agent", "turn"]);
@@ -47,8 +47,8 @@ describe("forward (BFF comodín)", () => {
     expect((await forward(req("GET"), ["speech", "transcribe"])).status).toBe(405);
   });
 
-  it("413 si la grabación declara más de 10 MB (no se reenvía)", async () => {
-    const big = new Request("http://localhost/api/speech/transcribe", { method: "POST", headers: { "content-length": String(11 * 1024 * 1024) } });
+  it("413 si la grabación declara más de 25 MB (= MAX_AUDIO_BYTES) (no se reenvía)", async () => {
+    const big = new Request("http://localhost/api/speech/transcribe", { method: "POST", headers: { "content-length": String(26 * 1024 * 1024) } });
     expect((await forward(big, ["speech", "transcribe"])).status).toBe(413);
     expect(proxy).not.toHaveBeenCalled();
   });

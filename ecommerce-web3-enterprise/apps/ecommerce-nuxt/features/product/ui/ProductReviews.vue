@@ -158,7 +158,7 @@ const stars = (value: number) => "★".repeat(Math.round(value)) + "☆".repeat(
     <!-- Lista ordenable -->
     <div class="flex items-center justify-between gap-2">
       <label for="reviews-sort" class="text-sm font-medium">{{ $t("store.reviews.sortLabel") }}</label>
-      <select id="reviews-sort" v-model="sort" class="h-9 rounded-md border border-slate-300 px-2 text-sm">
+      <select id="reviews-sort" v-model="sort" class="h-9 rounded-md border border-slate-300 px-3 text-sm">
         <option value="helpful">{{ $t("store.reviews.sortHelpful") }}</option>
         <option value="newest">{{ $t("store.reviews.sortNewest") }}</option>
       </select>
@@ -210,17 +210,17 @@ const stars = (value: number) => "★".repeat(Math.round(value)) + "☆".repeat(
         <legend class="text-sm font-medium">{{ $t("store.reviews.aspectsLegend") }}</legend>
         <label v-for="aspect in ASPECTS" :key="aspect" class="flex items-center justify-between gap-2 text-sm">
           {{ $t(`store.reviews.aspects.${aspect}`) }}
-          <select v-model.number="form.aspects[aspect]" class="h-9 rounded-md border border-slate-300 px-2">
+          <select v-model.number="form.aspects[aspect]" class="h-9 rounded-md border border-slate-300 px-3 text-sm">
             <option :value="undefined">—</option>
             <option v-for="value in 5" :key="value" :value="value">{{ value }}</option>
           </select>
         </label>
       </fieldset>
       <label class="flex flex-col gap-1 text-sm">{{ $t("store.reviews.titleField") }}
-        <input v-model="form.title" required minlength="3" maxlength="120" class="h-9 rounded-md border border-slate-300 px-2" >
+        <input v-model="form.title" required minlength="3" maxlength="120" class="h-9 rounded-md border border-slate-300 px-3 text-sm" >
       </label>
       <label class="flex flex-col gap-1 text-sm">{{ $t("store.reviews.body") }}
-        <textarea v-model="form.body" required minlength="10" maxlength="3000" rows="4" class="rounded-md border border-slate-300 p-2" />
+        <textarea v-model="form.body" required minlength="10" maxlength="3000" rows="4" class="rounded-md border border-slate-300 px-3 py-2 text-sm" />
       </label>
       <label class="flex flex-col gap-1 text-sm">{{ $t("store.reviews.photos") }}
         <input type="file" accept="image/jpeg,image/png,image/webp" multiple class="text-sm" @change="uploadPhotos" >

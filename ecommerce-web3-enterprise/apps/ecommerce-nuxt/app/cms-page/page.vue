@@ -8,7 +8,7 @@
   Composite (DataTable con celdas por slot). Accesibilidad: select con <label> y acciones con texto sr-only.
 -->
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { useApi } from "~~/shared/lib/api-client";
 import { useToast } from "~~/shared/composable/useToast";
 import { routes } from "~~/shared/constants/routes";
@@ -41,7 +41,22 @@ const localePath = useLocalePath();
 const store = useCmsStore();
 const api = cmsApi(useApi());
 const page = ref(1);
+const route = useRoute();
+const router = useRouter();
 const KINDS: ListKind[] = ["page", "landing", "event", "lookbook", "collection"];
+// NAV_KEY => ítem del menú lateral (grupo «CMS · Contenido») de cada tipo: título y descripción del encabezado
+const NAV_KEY: Record<ListKind, string> = { page: "content", landing: "cmsLandings", event: "cmsEvents", lookbook: "cmsLookbooks", collection: "cmsCollections" };
+// isKind => type guard (TypeScript): valida el texto de la URL antes de usarlo como ListKind
+const isKind = (value: unknown): value is ListKind => KINDS.includes(value as ListKind);
+// URL -> estado: "?kind=landing" (enlace del menú) selecciona el tipo; sin "kind" (volver del editor) se escribe en la
+// URL el tipo guardado en Pinia => el menú lateral marca el ítem correcto. "immediate" => también al entrar
+watch(() => route.query.kind, (kind) => {
+  if (!isKind(kind)) return void router.replace({ query: { ...route.query, kind: store.listKind } });
+  if (kind !== store.listKind) {
+    store.setListKind(kind);
+    page.value = 1;
+  }
+}, { immediate: true });
 
 // toRow => Adapter de cada fuente a Row (colección activa = publicada, inactiva = borrador)
 const fromContent = (item: CmsContentSummary): Row => ({ id: item.id, kind: item.kind, slug: item.slug, title: item.title, status: item.status, updatedAt: item.updatedAt });
@@ -84,16 +99,18 @@ const archive = async (row: Row) => {
     toast.error((error as Error).message);
   }
 };
+// selectKind => estado + URL (router.replace: sin entrada nueva en el historial) => el menú lateral marca el tipo elegido
 const selectKind = (kind: ListKind) => {
   store.setListKind(kind);
   page.value = 1; // La página 3 de otra pestaña podría no existir
+  void router.replace({ query: { ...route.query, kind } });
 };
 </script>
 
 <template>
   <div class="flex flex-col gap-6">
     <!-- Encabezado = texto del menú ("Contenido del sitio") + descripción + acción principal (igual que Next.js) -->
-    <AdminHeading nav-key="content"><Button :to="newUrl">{{ $t("common.new") }}</Button></AdminHeading>
+    <AdminHeading :nav-key="NAV_KEY[store.listKind]"><Button :to="newUrl">{{ $t("common.new") }}</Button></AdminHeading>
     <!-- Un solo listado con filtro "Tipo" (antes 5 pestañas con la misma tabla): mismo control que los filtros de Next -->
     <label class="flex w-full flex-col gap-1.5 text-sm font-medium sm:w-60">
       {{ $t("cms.kindFilter") }}

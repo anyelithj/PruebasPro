@@ -57,6 +57,7 @@
     "dialogues": "Dialogues",
     "polyglot": "Polyglot",
     "grammar": "Grammar",
+    "reading": "Reading",
     "mainNav": "Main navigation",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
@@ -429,6 +430,8 @@
       "formLabel": "Registration form",
       "firstName": "First name",
       "lastName": "Last name",
+      "phone": "Phone",
+      "phoneHint": "Optional. Include the country code (e.g. +1).",
       "confirm": "Confirm",
       "termsA": "I accept the ",
       "termsLink": "terms and privacy policy",
@@ -491,7 +494,8 @@
       "lastNameRequired": "Last name is required",
       "lastNameMax": "Last name is too long",
       "mismatch": "Passwords do not match",
-      "terms": "You must accept the terms"
+      "terms": "You must accept the terms",
+      "phoneInvalid": "Invalid phone: only digits, spaces, dashes and a leading +."
     }
   },
   "management": {
@@ -539,7 +543,7 @@
     "loadErrorHint": "Check that the backend is available at /api/v1/courses.",
     "pagination": "Course pagination",
     "materials": {
-      "title": "📚 Course syllabus",
+      "title": "📚 Course resources",
       "empty": "This course has no material yet.",
       "openPdf": "Open PDF in a new tab",
       "upload": "Attach material",
@@ -547,7 +551,7 @@
       "uploading": "Uploading… {pct}%",
       "remove": "Remove",
       "locked": "🔒 Buy the course or enroll (if it is free) to see its videos, PDFs, images and other resources.",
-      "syllabus": "Syllabus",
+      "syllabus": "Resources",
       "lesson": "Lesson {n} of {total}",
       "prev": "← Previous",
       "next": "Next →",
@@ -560,7 +564,7 @@
       "manage": "Manage material",
       "lockedStep": "Locked",
       "lockedHint": "Complete the previous lesson to unlock this one.",
-      "back": "← Back to syllabus",
+      "back": "← Back to resources",
       "resources": "Resources",
       "resVideos": "🎞️ Videos",
       "resPdfs": "📄 PDFs",
@@ -665,6 +669,12 @@
       "pricePaidRequired": "A paid course needs a price greater than 0.",
       "description": "Description",
       "descriptionHint": "What the student will learn. The first sentences are used as the summary on the course card.",
+      "content": "Course content",
+      "contentHint": "Syllabus, notes or material in Markdown, no length limit. Supports # headings, - bullets, 1. lists and **bold**. Shown on the course page.",
+      "contentWrite": "Write",
+      "contentPreview": "Preview",
+      "contentEmpty": "There is no content to preview yet.",
+      "contentChars": "{n} characters",
       "language": "Language",
       "level": "CEFR level",
       "instructor": "Instructor",
@@ -685,7 +695,7 @@
     "submit": "Create course",
     "submitting": "Creating…",
     "materials": {
-      "title": "Course material",
+      "title": "Course resources",
       "hint": "Attach videos, audio, PDFs, images and documents (Word, Excel, PowerPoint, TXT) or external links. Max {mb} MB per file. Uploaded when the course is saved.",
       "add": "+ Attach file",
       "titleLabel": "Material title",
@@ -702,17 +712,18 @@
     "saveError": "The course could not be saved.",
     "ai": {
       "title": "Generate with AI",
-      "hint": "The local AI suggests a title, a Markdown description (objectives and syllabus) and tags from the language and level. Review it before saving.",
+      "hint": "The local AI creates the course CONTENT (introduction, objectives, syllabus with lessons and target audience), a short description and tags from the language and level. Review it before saving.",
       "topic": "Focus (optional)",
       "topicPlaceholder": "e.g. English for travel, business conversation",
       "run": "Generate",
       "running": "Generating… (may take 1–2 min)",
       "useImported": "Use the imported content as a base",
-      "done": "Draft generated: review the title, description and tags."
+      "done": "Content generated: review the title, short description, content and tags."
     },
     "import": {
       "title": "Import course content",
-      "done": "Content imported into the description (Markdown)."
+      "done": "Content imported into “Course content” (Markdown). The description was not changed.",
+      "doneSuggested": "Content imported into “Course content”. The description was empty, so its first paragraph was suggested: please review it."
     }
   },
   "profile": {

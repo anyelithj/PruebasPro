@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod'; // [Tree-shaking · Zod 4]: import de namespace (`* as z`) → esbuild empaqueta solo las funciones usadas (con `{ z }` arrastraba Zod entero, ~450 kB)
 // [Modelo Feedback · Dominio]: historial de exámenes, debilidades y plan de estudio (contratos de /api/quiz/sessions/me y /api/ai/feedback/study-plan) + regla pura de precisión por tema | [Patrón]: Schema-First (Zod) + Group-Aggregate | [Principio]: SSOT + Type-Safe | [Paradigma]: Funcional
 
 // [Historial]: solo los campos que usa el cálculo (Zod descarta el resto)

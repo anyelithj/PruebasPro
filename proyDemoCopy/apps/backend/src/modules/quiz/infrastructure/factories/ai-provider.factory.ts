@@ -41,6 +41,31 @@ export class AIProviderFactory {
     ]);
     // `=== 'true'`: comparación estricta; cualquier otro valor (o ausencia) desactiva el fallback → seguro por defecto
     this.fallbackEnabled = config.get<string>('AI_FALLBACK_ENABLED') === 'true';
+    this.warnSharedModels();
+  }
+
+  // [2026-10-24 · Diagnóstico]: si OLLAMA_AYA/QWEN/MISTRAL_MODEL apuntan al mismo tag, los «tres motores» son en realidad UNO → si ese modelo no cabe en RAM fallan los tres igual
+  // (el respaldo real lo da OllamaClient con OLLAMA_FALLBACK_MODELS) | [Patrón]: Fail Loud en el arranque
+  private warnSharedModels(): void {
+    const byModel = new Map<string, string[]>(); // `Map` (ES2015): tag → motores que lo usan
+    for (const [id, p] of this.registry) {
+      if (!p.modelTag) continue;
+      byModel.set(p.modelTag, [
+        ...(byModel.get(p.modelTag) ?? []),
+        AI_PROVIDER_LABEL[id],
+      ]);
+    }
+    for (const [model, engines] of byModel)
+      if (engines.length > 1)
+        this.logger.warn(
+          `Los motores ${engines.join(', ')} usan el mismo modelo "${model}": elegir otro motor no cambia el resultado. Configura OLLAMA_*_MODEL distintos o OLLAMA_FALLBACK_MODELS.`,
+        );
+  }
+
+  // [sameModel]: dos motores con el mismo tag → probar el segundo tras fallar el primero es repetir el mismo fallo
+  private sameModel(a: AIProvider, b: AIProvider): boolean {
+    const ma = this.registry.get(a)?.modelTag;
+    return !!ma && ma === this.registry.get(b)?.modelTag;
   }
 
   // [Selector]: resuelve provider por id | [Patrón]: Factory Method
@@ -106,6 +131,8 @@ export class AIProviderFactory {
       preferred !== FALLBACK_AI_PROVIDER
         ? FALLBACK_AI_PROVIDER
         : DEFAULT_AI_PROVIDER;
-    return alternative === preferred ? [preferred] : [preferred, alternative];
+    return alternative === preferred || this.sameModel(preferred, alternative)
+      ? [preferred]
+      : [preferred, alternative];
   }
 }

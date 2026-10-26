@@ -9,7 +9,7 @@ import { similarity } from '@features/dialogues/domain/models/dialogues';
 import { dialogue, session, topic, turn } from '@testing/music-dialogues';
 // [Spec DialoguesFacade + DialogueAgentFacade · Sprints 9.11–9.13]: confirmar el nivel saca de pendientes; conversación — apertura que habla el avatar, SSE (user → token → avatar) con corrección y vocabulario, voz → texto, error visible | [Patrón]: Test Double (repositorio y voz falsos)
 
-const speech = { speak: jest.fn((_t: string, _l: string, _r: number, h: { end?: () => void } = {}) => h.end?.()), stop: jest.fn(), hasVoice: jest.fn(() => true), speaking: () => false, accent: () => 'uk' };
+const speech = { speak: jest.fn((_t: string, _l: string, _r: number, h: { end?: () => void } = {}) => h.end?.()), stop: jest.fn(), hasVoice: jest.fn(() => true), hasNaturalVoice: () => true, speaking: () => false, accent: () => 'uk' };
 
 function setup(overrides: Partial<DialoguesRepository> = {}) {
   const repo = {

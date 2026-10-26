@@ -23,6 +23,9 @@ function buildSchema(t: Dictionary) {
       title: z.string().trim().min(1, req).max(200, max(200)),
       slug: z.string().trim().max(220, max(220)).regex(/^([a-z0-9](?:[a-z0-9-]*[a-z0-9])?)?$/, t.common.slug), // Vacío permitido → se genera
       description: z.string().trim().min(1, req).max(4000, max(4000)), // [Una sola descripción]: de ella se deriva el resumen (shortDescription)
+      content: z.string().trim(), // [Contenido del curso · 2026-10-24]: Markdown SIN `.max()` (columna `text` ilimitada; el DTO tampoco tiene MaxLength)
+      objectives: z.string().trim().max(4000, max(4000)), // [2026-10-25]: ficha separada del temario
+      audience: z.string().trim().max(4000, max(4000)),
       group: z.enum(GROUPS, { message: t.common.invalid }),
       category: z.enum(CEFR_LEVELS, { message: t.common.invalid }),
       instructor: z.string().trim().min(1, req).max(120, max(120)),
@@ -77,6 +80,9 @@ export async function saveCourseAction(_prev: CourseFormState, formData: FormDat
     title: text("title"),
     slug: text("slug"),
     description: text("description"),
+    content: text("content"),
+    objectives: text("objectives"),
+    audience: text("audience"),
     group: text("group"),
     category: text("category"),
     instructor: text("instructor"),
@@ -106,6 +112,9 @@ export async function saveCourseAction(_prev: CourseFormState, formData: FormDat
     slug: v.slug || slugify(v.title), // Slug vacío → derivado del título
     shortDescription: summarize(v.description), // Resumen para la tarjeta (máx. 500 del backend)
     description: v.description,
+    content: v.content || null, // Vacío → null (borra el contenido al editar)
+    objectives: v.objectives || null,
+    audience: v.audience || null,
     group: v.group,
     category: v.category,
     instructor: v.instructor,

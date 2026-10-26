@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { catchError, firstValueFrom, map, of, type Observable } from 'rxjs';
-import { z } from 'zod';
+import * as z from 'zod'; // [Tree-shaking · Zod 4]: import de namespace (`* as z`) → esbuild empaqueta solo las funciones usadas (con `{ z }` arrastraba Zod entero, ~450 kB)
 import { API_URL } from '@core/http/api-url.token';
 import type { ActivityContent, ContentKind } from '../domain/models/practice';
 // [ContentCatalogService · Infraestructura · 2026-10-23]: opciones para VINCULAR contenido a una actividad (vocabulario de Recursos, juegos, canciones, diálogos, fichas de gramática y temas de poliglota)

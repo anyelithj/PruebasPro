@@ -1,9 +1,9 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, type Observable } from 'rxjs';
-import { z } from 'zod';
+import * as z from 'zod'; // [Tree-shaking · Zod 4]: import de namespace (`* as z`) → esbuild empaqueta solo las funciones usadas (con `{ z }` arrastraba Zod entero, ~450 kB)
 import { API_URL } from '@core/http/api-url.token';
-import { GamesRepository } from '../domain/games.repository.port';
+import { GamesRepository, type GameDeck } from '../domain/games.repository.port';
 import {
   AgentTurnSchema,
   CatalogSchema,
@@ -36,6 +36,10 @@ export class GamesHttpRepository extends GamesRepository {
   private readonly api = inject(API_URL);
   private readonly base = `${this.api}/games`;
   private readonly id = (v: string) => encodeURIComponent(v);
+
+  decks(): Observable<GameDeck[]> {
+    return this.http.get<GameDeck[]>(`${this.base}/decks`);
+  }
 
   catalog(): Observable<Catalog> {
     return this.http.get<unknown>(`${this.base}/catalog`).pipe(map((r) => CatalogSchema.parse(r)));

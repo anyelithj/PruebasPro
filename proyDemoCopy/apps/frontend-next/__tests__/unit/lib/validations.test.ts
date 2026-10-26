@@ -78,6 +78,17 @@ describe("registerSchema", () => {
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.firstName).toBe("Ada");
   });
+
+  // [Teléfono · 2026-10-24]: opcional · misma regex que NestJS (PHONE_PATTERN de @aula/shared-schemas) | `it.each` (Jest): tabla de casos
+  it.each(["", "+57 300 123 4567", "(601) 555-1234"])("acepta teléfono %p", (phone) => {
+    expect(registerSchema.safeParse({ ...valid, phone }).success).toBe(true);
+  });
+
+  it.each(["abc1234567", "12345"])("rechaza teléfono %p con mensaje en phone", (phone) => {
+    const result = registerSchema.safeParse({ ...valid, phone });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.issues[0].path).toEqual(["phone"]);
+  });
 });
 
 // [Recuperar / restablecer contraseña]: correo válido y misma regla fuerte que el registro (DRY)

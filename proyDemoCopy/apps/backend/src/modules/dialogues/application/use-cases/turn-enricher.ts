@@ -3,6 +3,7 @@ import {
   LANGUAGE_TOOLS,
   type LanguageToolsPort,
 } from '../../../../shared/domain/interfaces/language-tools.interface';
+import { sanitizeTranslation } from '../../domain/translation-sanitizer';
 // [TurnEnricher · 2026-10-23]: IPA + traducción de varios turnos en una petición a LanguageTools | archivo propio para cortar el ciclo
 // get-dialogue ↔ add-turn (SWC evalúa los metadatos de decoradores al cargar → «Cannot access 'TurnEnricher' before initialization»)
 // [Patrón]: Ports & Adapters + degradación elegante | [Principio]: SRP + DRY (subida, conversación, biblioteca) + DIP | [Paradigma]: POO + async/await
@@ -29,10 +30,11 @@ export class TurnEnricher {
   ): Promise<TurnLinguistics[]> {
     try {
       const res = await this.tools.lines(texts, language, token);
-      return res.lines.map((l) => ({
+      // [2026-10-25]: `sanitizeTranslation` → nunca se guarda JSON crudo ni «yes» → «yes» (null = la UI muestra «—»)
+      return res.lines.map((l, i) => ({
         ipa: l.ipa,
         ipaUs: l.ipa_us,
-        translation: l.translation,
+        translation: sanitizeTranslation(texts[i] ?? l.text, l.translation),
       }));
     } catch (err) {
       this.logger.warn(

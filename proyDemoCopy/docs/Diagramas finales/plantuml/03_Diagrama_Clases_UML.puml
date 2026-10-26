@@ -1,0 +1,455 @@
+@startuml
+skinparam backgroundColor #FEFEFE
+skinparam class {
+  FontName Arial
+  FontSize 10
+}
+skinparam interface {
+  BackgroundColor #FFF8E1
+  BorderColor #E65100
+  FontSize 10
+}
+skinparam enum {
+  FontSize 10
+}
+
+' ==============================================
+' ENUMS
+' ==============================================
+enum Role {
+  USER
+  TEACHER
+  ADMIN
+}
+enum SessionStatus {
+  in_progress
+  completed
+  abandoned
+}
+enum QuestionType {
+  multiple_choice
+  true_false
+  open_answer
+}
+enum GradingStrategy {
+  similarity
+  llm_rubric
+  exact_match
+}
+enum AIProvider {
+  QWEN
+  MISTRAL
+}
+enum Category {
+  general
+  language
+  math
+  science
+  biology
+  physics
+  chemistry
+  history
+  geography
+  social_sciences
+  english
+  technology
+  art
+  custom
+}
+enum Difficulty {
+  easy
+  medium
+  hard
+}
+enum Language {
+  en
+  es
+}
+
+' ==============================================
+' ENTITIES
+' ==============================================
+class "User" as User <<entity>> {
+  -id: UUID
+  -email: string
+  -passwordHash: string
+  -firstName: string
+  -lastName: string
+  -role: Role
+  -isActive: boolean
+  -isEmailVerified: boolean
+  -section: string
+  -createdAt: Date
+  -updatedAt: Date
+}
+
+class "Session" as Session <<entity>> {
+  -id: UUID
+  -userId: UUID
+  -refreshTokenHash: string
+  -userAgent: string
+  -ipAddress: string
+  -expiresAt: Date
+  -isRevoked: boolean
+  -createdAt: Date
+}
+
+class "EmailVerificationToken" as EmailVerificationToken <<entity>> {
+  -id: UUID
+  -userId: UUID
+  -tokenHash: string
+  -expiresAt: Date
+  -usedAt: Date
+  -createdAt: Date
+  +isExpired(): boolean
+  +isUsed(): boolean
+  +markUsed(): void
+}
+
+class "PasswordResetToken" as PasswordResetToken <<entity>> {
+  -id: UUID
+  -userId: UUID
+  -tokenHash: string
+  -expiresAt: Date
+  -usedAt: Date
+  -createdAt: Date
+  +isExpired(): boolean
+  +isUsed(): boolean
+  +markUsed(): void
+}
+
+class "Quiz" as Quiz <<entity>> {
+  -id: UUID
+  -title: string
+  -description: string
+  -category: Category
+  -difficulty: Difficulty
+  -language: Language
+  -authorId: UUID
+  -source: string
+  -timePerQuestionSeconds: int
+  -isPublished: boolean
+  -createdAt: Date
+  -updatedAt: Date
+}
+
+class "Question" as Question <<entity>> {
+  -id: UUID
+  -quizId: UUID
+  -text: string
+  -type: QuestionType
+  -options: string[]
+  -correctAnswer: string
+  -difficulty: Difficulty
+  -language: Language
+  -position: int
+  -timeLimitSeconds: int
+  -explanation: string
+  -feedback: string
+}
+
+class "QuizSession" as QuizSession <<entity>> {
+  -id: UUID
+  -userId: UUID
+  -quizId: UUID
+  -status: SessionStatus
+  -answers: SessionAnswer[]
+  -totalScore: float
+  -correctCount: int
+  -startedAt: Date
+  -completedAt: Date
+}
+
+class "SessionAnswer" as SessionAnswer <<entity>> {
+  -questionId: UUID
+  -userAnswer: string
+  -isCorrect: boolean
+  -score: float
+  -timeTakenMs: int
+  -answeredAt: string
+}
+
+class "FeedbackIA" as FeedbackIA <<entity>> {
+  -id: UUID
+  -userId: UUID
+  -questionId: UUID
+  -sessionId: UUID
+  -content: string
+  -suggestion: string
+  -score: float
+  -isCorrect: boolean
+  -confidence: float
+  -model: string
+  -strategyUsed: GradingStrategy
+  -latencyMs: int
+  -createdAt: Date
+}
+
+class "Score" as Score <<entity>> {
+  -id: UUID
+  -userId: UUID
+  -quizId: UUID
+  -sessionId: string
+  -points: float
+  -correctCount: int
+  -totalQuestions: int
+  -accuracy: float
+  -createdAt: Date
+}
+
+' ==============================================
+' VALUE OBJECTS
+' ==============================================
+class "Email" as Email <<ValueObject>> {
+  -value: string
+  +{static} create(): Email
+  +equals(o: ): boolean
+}
+
+class "HashedPassword" as HashedPassword <<ValueObject>> {
+  -value: string
+  +{static} fromHash(hash: string): HashedPassword
+  +equals(other: HashedPassword): boolean
+}
+
+class "Points" as Points <<ValueObject>> {
+  -value: int
+  +{static} create(value: int): Points
+  +add(other: Points): Points
+  +equals(other: Points): boolean
+}
+
+' ==============================================
+' REPOSITORY INTERFACES
+' ==============================================
+interface "IUserRepository" as IUserRepository {
+  +findById(id)
+  +findByEmail(email)
+  +create(input)
+  +update(id, input)
+  +deactivate(id)
+  +reactivate(id)
+  +listAll()
+  +listSections()
+}
+
+interface "IAuthRepository" as IAuthRepository {
+  +createSession(data)
+  +findActiveByHash(hash)
+  +revoke(id)
+  +revokeAllForUser(userId)
+}
+
+interface "ITokenService" as ITokenService {
+  +issuePair(payload)
+  +verifyRefresh(token)
+  +hashRefresh(token)
+}
+
+interface "IQuizRepository" as IQuizRepository {
+  +createQuiz(data, authorId)
+  +findQuizById(id, withQuestions?)
+  +listQuizzes(filters)
+  +updateQuiz(id, data)
+  +deleteQuiz(id)
+  +replaceQuestions(quizId, questions)
+  +createSession(userId, quizId)
+  +findSessionById(id)
+  +appendSessionAnswer(sessionId, answer)
+  +finalizeSession(sessionId, score, correct)
+  +listSessionsByUser(userId, limit?)
+}
+
+interface "IScoreRepository" as IScoreRepository {
+  +create(data)
+  +findByUser(userId, limit?, months?)
+  +getLeaderboard(limit, months?, section?)
+  +countByUser(userId)
+  +sumPointsByUser(userId)
+}
+
+interface "IFeedbackRepository" as IFeedbackRepository {
+  +create(input)
+}
+
+interface "IAIQuestionProvider" as IAIQuestionProvider {
+  +generateQuestions()
+}
+
+' ==============================================
+' USE CASES
+' ==============================================
+class "RegisterUseCase" as RegisterUseCase
+class "LoginUseCase" as LoginUseCase
+class "LogoutUseCase" as LogoutUseCase
+class "RefreshTokenUseCase" as RefreshTokenUseCase
+class "OAuthLoginUseCase" as OAuthLoginUseCase
+class "VerifyEmailUseCase" as VerifyEmailUseCase
+class "RequestPasswordResetUseCase" as RequestPasswordResetUseCase
+class "ResetPasswordUseCase" as ResetPasswordUseCase
+
+class "CreateQuizUseCase" as CreateQuizUseCase
+class "GetQuizUseCase" as GetQuizUseCase
+class "ListQuizzesUseCase" as ListQuizzesUseCase
+class "GenerateAIQuestionsUseCase" as GenerateAIQuestionsUseCase
+class "StartSessionUseCase" as StartSessionUseCase
+class "SubmitAnswerUseCase" as SubmitAnswerUseCase
+class "EndSessionUseCase" as EndSessionUseCase
+class "ListMyHistoryUseCase" as ListMyHistoryUseCase
+
+class "SaveFeedbackUseCase" as SaveFeedbackUseCase
+
+class "CalculateScoreUseCase" as CalculateScoreUseCase
+class "SaveScoreUseCase" as SaveScoreUseCase
+class "GetLeaderboardUseCase" as GetLeaderboardUseCase
+class "GetUserHistory (Score)" as GetUserHistory_Score
+
+class "GetProfileUseCase" as GetProfileUseCase
+class "UpdateProfileUseCase" as UpdateProfileUseCase
+class "GetUserHistoryUseCase" as GetUserHistoryUseCase
+
+' ==============================================
+' INFRASTRUCTURE
+' ==============================================
+class "BaseOllamaAIProvider" as BaseOllamaAIProvider <<Template Method, abstract>> {
+  #baseUrl: string
+  #model: string
+  +generateQuestions()
+  #callOllama()
+  #buildPrompt()
+  #parseJsonArray()
+}
+
+class "QwenProvider" as QwenProvider {
+  -id: AIProvider
+  -model: string
+}
+
+class "MistralProvider" as MistralProvider {
+  -id: AIProvider
+  -model: string
+}
+
+class "AIProviderFactory" as AIProviderFactory <<Factory>> {
+  -registry: Map
+  +get()
+  +generateWithFallback()
+}
+
+class "AIClientService" as AIClientService {
+  +grade(question, answer)
+  +generateFeedback(quiz, session)
+  +analyzeWeaknesses(answers, questions)
+}
+
+class "TypeOrmFeedbackRepository" as TypeOrmFeedbackRepository <<adapter>>
+
+' ==============================================
+' CONTROLLERS
+' ==============================================
+class "AuthController" as AuthController
+class "QuizController" as QuizController
+class "ScoreController" as ScoreController
+class "UsersController" as UsersController
+class "ProfileController" as ProfileController
+class "AIController" as AIController
+
+' ==============================================
+' RELATIONSHIPS
+' ==============================================
+
+' Entity associations
+User "1" --> "*" Session
+User "1" --> "*" PasswordResetToken
+User "1" --> "*" EmailVerificationToken
+User "1" --> "*" QuizSession
+User "1" --> "*" Score
+User "1" --> "*" FeedbackIA
+Quiz "1" --> "*" Score
+Quiz "1" *-- "*" Question : compone
+QuizSession "*" --> "1" Quiz
+QuizSession "1" --> "*" SessionAnswer : contiene
+QuizSession "1" --> "*" FeedbackIA
+Question "1" --> "*" FeedbackIA
+
+' Generalizations
+QwenProvider --|> BaseOllamaAIProvider
+MistralProvider --|> BaseOllamaAIProvider
+BaseOllamaAIProvider ..|> IAIQuestionProvider
+AIProviderFactory --> IAIQuestionProvider
+TypeOrmFeedbackRepository ..|> IFeedbackRepository
+
+' Dependencies - Auth
+RegisterUseCase --> IUserRepository
+RegisterUseCase --> IAuthRepository
+RegisterUseCase --> ITokenService
+LoginUseCase --> IUserRepository
+LoginUseCase --> IAuthRepository
+LoginUseCase --> ITokenService
+LogoutUseCase --> IAuthRepository
+LogoutUseCase --> ITokenService
+RefreshTokenUseCase --> IUserRepository
+RefreshTokenUseCase --> IAuthRepository
+RefreshTokenUseCase --> ITokenService
+OAuthLoginUseCase --> IUserRepository
+OAuthLoginUseCase --> IAuthRepository
+OAuthLoginUseCase --> ITokenService
+VerifyEmailUseCase --> IUserRepository
+RequestPasswordResetUseCase --> IUserRepository
+ResetPasswordUseCase --> IUserRepository
+ResetPasswordUseCase --> IAuthRepository
+
+' Dependencies - Quiz
+CreateQuizUseCase --> IQuizRepository
+GetQuizUseCase --> IQuizRepository
+ListQuizzesUseCase --> IQuizRepository
+GenerateAIQuestionsUseCase --> IQuizRepository
+StartSessionUseCase --> IQuizRepository
+SubmitAnswerUseCase --> IQuizRepository
+SubmitAnswerUseCase --> AIClientService
+SubmitAnswerUseCase --> SaveFeedbackUseCase
+EndSessionUseCase --> IQuizRepository
+ListMyHistoryUseCase --> IQuizRepository
+
+' Dependencies - Feedback
+SaveFeedbackUseCase --> IFeedbackRepository
+
+' Dependencies - Score
+SaveScoreUseCase --> IScoreRepository
+SaveScoreUseCase --> CalculateScoreUseCase
+GetLeaderboardUseCase --> IScoreRepository
+GetUserHistory_Score --> IScoreRepository
+
+' Dependencies - Profile
+GetProfileUseCase --> IUserRepository
+UpdateProfileUseCase --> IUserRepository
+GetUserHistoryUseCase --> IUserRepository
+
+' Dependencies - Controllers
+AuthController --> RegisterUseCase
+AuthController --> LoginUseCase
+AuthController --> LogoutUseCase
+AuthController --> RefreshTokenUseCase
+AuthController --> OAuthLoginUseCase
+AuthController --> VerifyEmailUseCase
+AuthController --> RequestPasswordResetUseCase
+AuthController --> ResetPasswordUseCase
+
+QuizController --> CreateQuizUseCase
+QuizController --> GetQuizUseCase
+QuizController --> ListQuizzesUseCase
+QuizController --> GenerateAIQuestionsUseCase
+QuizController --> StartSessionUseCase
+QuizController --> SubmitAnswerUseCase
+QuizController --> EndSessionUseCase
+QuizController --> ListMyHistoryUseCase
+
+ScoreController --> SaveScoreUseCase
+ScoreController --> GetLeaderboardUseCase
+ScoreController --> GetUserHistory_Score
+
+ProfileController --> GetProfileUseCase
+ProfileController --> UpdateProfileUseCase
+ProfileController --> GetUserHistoryUseCase
+
+@enduml

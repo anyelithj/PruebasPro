@@ -191,6 +191,26 @@ describe('Gramática (10.9/10.10/10.15)', () => {
     expect(out.summary).toBe('Hábitos');
   });
 
+  // [2026-10-24]: forma tolerante — tipos con mayúsculas/sinónimos, cuerpo como lista y ejemplos como objetos
+  it('GrammarDraftClient normaliza tipos, cuerpos en lista y ejemplos como objetos', async () => {
+    const ollama = {
+      generate: jest.fn(async () => ({
+        response: JSON.stringify({
+          summary: ['Hábitos', 'y rutinas'],
+          sections: [
+            { type: 'Usage', title: 'Uso', body: ['Hábitos.', 'Rutinas.'], examples: [{ text: 'I work.' }] },
+            { type: 'Questions', title: 'Preguntas', body: 'Do + sujeto + verbo', examples: ['Do you work?'] },
+          ],
+        }),
+      })),
+    } as unknown as OllamaClient;
+    const config = { get: () => undefined } as unknown as ConfigService;
+    const out = await new GrammarDraftClient(ollama, config).draft({ title: 'Present Simple', language: 'en', level: 'A1' });
+    expect(out.sections.map((x) => x.type)).toEqual(['usage', 'interrogative']);
+    expect(out.sections[0]).toMatchObject({ body: 'Hábitos. Rutinas.', examples: ['I work.'] });
+    expect(out.summary).toBe('Hábitos y rutinas');
+  });
+
   it('GrammarDraftClient responde 503 si el JSON no tiene secciones válidas', async () => {
     const ollama = { generate: jest.fn(async () => ({ response: '{"sections":[]}' })) } as unknown as OllamaClient;
     const config = { get: () => undefined } as unknown as ConfigService;

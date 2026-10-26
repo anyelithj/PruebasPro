@@ -1,5 +1,5 @@
 import type { IconName } from '@shared/ui/atoms/icon/icon.component';
-import { z } from 'zod';
+import * as z from 'zod'; // [Tree-shaking · Zod 4]: import de namespace (`* as z`) → esbuild empaqueta solo las funciones usadas (con `{ z }` arrastraba Zod entero, ~450 kB)
 import { CEFR_LEVELS, LANGUAGES } from '@aula/shared-schemas';
 // [Modelo Grammar · Dominio · Sprints 10.11/10.12]: fichas, secciones (uso, fórmula, negativa, interrogativa, nota y errores comunes) y ejemplos con IPA UK/US y traducción — contrato de /api/grammar/* de NestJS | [Patrón]: Schema-First (Zod) + Lookup Table (SECTION_META) | [Principio]: SSOT + Type-Safe | [Paradigma]: Declarativo
 

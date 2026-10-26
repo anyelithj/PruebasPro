@@ -1,4 +1,4 @@
-// robots.ts => genera /robots.txt según el entorno (convención de Next.js 15).
+// robots.ts => genera /robots.txt según el entorno (convención de Next.js 16).
 // Producción: permite rastrear el catálogo y bloquea zonas privadas/transaccionales.
 // Otros entornos (staging, preview): bloquea todo para no indexar contenido de prueba (contenido duplicado).
 import type { MetadataRoute } from "next";

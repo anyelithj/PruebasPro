@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PHONE_PATTERN } from "@aula/shared-schemas"; // [2026-10-24]: regex del teléfono compartida con el backend | [Principio]: SSOT
 // [Validaciones Zod]: schemas runtime usados en formularios + Route Handlers | [Patrón]: Schema Validation | [Principio]: SSOT + DRY | [Paradigma]: Funcional + Declarativo
 
 // [Login]: mismas reglas que backend NestJS LoginDto
@@ -15,6 +16,7 @@ export interface AuthMessages {
   lastNameMax: string;
   mismatch: string;
   terms: string;
+  phoneInvalid: string; // [2026-10-24]: teléfono con formato no válido
 }
 
 // [Mensajes por defecto (ES)]: los de siempre → los esquemas estáticos y sus tests no cambian
@@ -30,6 +32,7 @@ const DEFAULT_AUTH_MESSAGES: AuthMessages = {
   lastNameMax: "Apellido demasiado largo",
   mismatch: "Las contraseñas no coinciden",
   terms: "Debes aceptar los términos para continuar",
+  phoneInvalid: "Teléfono no válido: solo números, espacios, guiones y + inicial.",
 };
 
 // [makeLoginSchema]: esquema de login con mensajes del idioma activo
@@ -51,6 +54,11 @@ export type LoginInput = z.input<typeof loginSchema>;
 const strongPassword = (m: AuthMessages) =>
   z.string().min(8, m.passwordMin).max(128, m.passwordMax).regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, m.passwordRule);
 
+// [optionalPhone · 2026-10-24]: teléfono opcional reutilizable | [Patrón]: Factory | [Principio]: DRY + SSOT
+// `.trim()` (Zod): limpia espacios de los extremos · `.regex(PHONE_PATTERN)`: la regex ya acepta "" → vacío = sin teléfono · `.optional()`: admite `undefined`
+export const optionalPhone = (m: Pick<AuthMessages, "phoneInvalid">) => // `Pick<T, K>` (TS): solo exige el mensaje que usa (ISP)
+  z.string().trim().regex(PHONE_PATTERN, m.phoneInvalid).optional();
+
 // [Register]: regex coincide con backend (upper + lower + digit) | [Principio]: SSOT
 export const makeRegisterSchema = (m: AuthMessages = DEFAULT_AUTH_MESSAGES) =>
   z
@@ -58,6 +66,7 @@ export const makeRegisterSchema = (m: AuthMessages = DEFAULT_AUTH_MESSAGES) =>
       firstName: z.string().trim().min(1, m.firstNameRequired).max(80, m.firstNameMax),
       lastName: z.string().trim().min(1, m.lastNameRequired).max(80, m.lastNameMax),
       email: z.string().min(1, m.emailRequired).email(m.emailInvalid),
+      phone: optionalPhone(m), // [2026-10-24]: opcional · misma regla que Mi perfil y el DTO de NestJS
       password: strongPassword(m),
       confirmPassword: z.string(),
       acceptTerms: z.literal(true, { message: m.terms }),

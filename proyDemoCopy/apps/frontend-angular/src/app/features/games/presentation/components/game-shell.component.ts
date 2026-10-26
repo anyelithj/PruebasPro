@@ -9,7 +9,7 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CEFR_LEVELS, LANGUAGES } from '@aula/shared-schemas';
 import { I18nService } from '@core/i18n/i18n.service';
 import { ButtonComponent } from '@shared/ui/atoms/button/button.component';
@@ -153,6 +153,7 @@ import { accuracy, type GameSession, type StartInput } from '../../domain/models
 export class GameShellComponent {
   protected readonly i18n = inject(I18nService);
   protected readonly facade = inject(GamesFacade);
+  private readonly route = inject(ActivatedRoute); // [2026-10-25]: ?mazo= del juego creado en Gestión
   readonly type = input.required<GameType>();
   readonly lang = input<string | undefined>(undefined); // Prellenado (?lang=)
   readonly lvl = input<string | undefined>(undefined); // ?level=
@@ -191,6 +192,8 @@ export class GameShellComponent {
       level: (this.level() || undefined) as StartInput['level'],
       difficulty: this.difficulty(),
       scenarioId: this.scenarioId(),
+      // [2026-10-25]: ?mazo= → juego creado en Gestión con sus propias palabras | `snapshot` basta: la URL no cambia durante la partida
+      deckId: this.route.snapshot.queryParamMap.get('mazo') ?? undefined,
     };
     const s = await this.facade.start(input);
     if (s) this.started.emit(s);

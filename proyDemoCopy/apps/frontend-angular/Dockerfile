@@ -1,7 +1,8 @@
 # [Dockerfile · remoto Angular 22]: build estático multi-etapa servido con Nginx en :9100 | [Patrón]: Multi-stage Build | [Rendimiento]: imagen final solo con Nginx + archivos estáticos | [Seguridad]: sin Node ni código fuente en producción
 # [Contexto]: la raíz del monorepo (styles.css importa apps/frontend-next/src/app/globals.css) → docker build -f apps/frontend-angular/Dockerfile .
 
-FROM node:22.22-alpine AS build
+# [Node 24.22.1]: misma versión que CI y .nvmrc (Angular 22 exige ^22.22.3 || ^24.15.0)
+FROM node:24.22.1-alpine AS build
 WORKDIR /repo
 RUN corepack enable
 # Tokens de diseño compartidos con Next.js (SSOT)

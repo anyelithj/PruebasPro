@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { z } from 'zod';
+import * as z from 'zod'; // [Tree-shaking · Zod 4]: import de namespace (`* as z`) → esbuild empaqueta solo las funciones usadas (con `{ z }` arrastraba Zod entero, ~450 kB)
 import { ROLES, type Role } from '@aula/shared-schemas';
 import { displayNameFromEmail, toPortalRole } from '@aula/shared-nav/navigation'; // [SSOT]: mismo nombre visible y rol de UI que el shell Next.js
 import { API_URL } from '../http/api-url.token';

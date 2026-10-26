@@ -24,6 +24,7 @@ from src.modules.language_tools.application.use_cases.lookup_word import LookupW
 from src.modules.language_tools.application.use_cases.synthesize_speech import SynthesizeSpeechUseCase
 from src.modules.language_tools.application.use_cases.transcribe_ipa import TranscribeIpaUseCase
 from src.modules.language_tools.application.use_cases.translate_text import TranslateTextUseCase
+from src.modules.language_tools.infrastructure.translation_cache import TranslationCache
 from src.modules.language_tools.domain.language_voices import ACCENT_VARIANT, DEFAULT_VARIANT, VOICES
 from src.modules.language_tools.infrastructure.clients.espeak_phonetizer import EspeakPhonetizer, get_phonetizer
 from src.modules.language_tools.infrastructure.clients.espeak_speech import EspeakSpeech, get_speech_synthesizer
@@ -42,8 +43,12 @@ def get_speak_use_case(
 
 
 # [Factorías · Sprint 8.1]: un OllamaClient por petición (sin estado) + el fonetizador determinista
+# [Caché de proceso · 2026-10-25]: traducciones validadas compartidas entre peticiones (singleton de módulo; el caso de uso es por petición)
+_TRANSLATION_CACHE = TranslationCache()
+
+
 def get_translate_use_case() -> TranslateTextUseCase:
-    return TranslateTextUseCase(OllamaClient(timeout=60.0), get_settings().ollama_model)  # [2026-10-20]: 60 s → carga en frío del modelo sin perder la traducción
+    return TranslateTextUseCase(OllamaClient(timeout=60.0), get_settings().ollama_model, _TRANSLATION_CACHE)  # [2026-10-20]: 60 s → carga en frío del modelo sin perder la traducción
 
 
 def get_ipa_use_case(phonetizer: PhonetizerDep) -> TranscribeIpaUseCase:

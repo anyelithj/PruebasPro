@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod'; // [Tree-shaking · Zod 4]: import de namespace (`* as z`) → esbuild empaqueta solo las funciones usadas (con `{ z }` arrastraba Zod entero, ~450 kB)
 import { CEFR_LEVELS, LANGUAGES } from '@aula/shared-schemas';
 // [Modelo OwnLlm · Dominio]: redacción, errores marcados y corrección (contrato de /api/ai/own-llm/*) + regla pura para marcar el texto | [Patrón]: Schema-First (Zod) + Value Object | [Principio]: SSOT (tipos derivados de los esquemas) + Type-Safe | [Paradigma]: Funcional (sin Angular, sin HTTP)
 

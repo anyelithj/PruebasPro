@@ -286,8 +286,8 @@ function TaxReport({ from: initialFrom, to: initialTo, token }: { from: string; 
     <section aria-labelledby="tax-report-title" className="flex flex-col gap-3 rounded-lg border p-4">
       <h3 id="tax-report-title" className="font-semibold">{t("taxReport")}</h3>
       <div className="flex flex-wrap items-end gap-3 text-sm">
-        <label className="flex flex-col gap-1">{t("from")}<input type="date" value={range.from} onChange={(event) => setRange({ ...range, from: event.target.value })} className="h-9 rounded-md border px-2" /></label>
-        <label className="flex flex-col gap-1">{t("to")}<input type="date" value={range.to} onChange={(event) => setRange({ ...range, to: event.target.value })} className="h-9 rounded-md border px-2" /></label>
+        <label className="flex flex-col gap-1">{t("from")}<input type="date" value={range.from} onChange={(event) => setRange({ ...range, from: event.target.value })} className="h-9 rounded-md border border-slate-300 px-3 text-sm" /></label>
+        <label className="flex flex-col gap-1">{t("to")}<input type="date" value={range.to} onChange={(event) => setRange({ ...range, to: event.target.value })} className="h-9 rounded-md border border-slate-300 px-3 text-sm" /></label>
         <button type="button" className="h-9 rounded-md border px-3 hover:bg-accent" onClick={() => token && downloadAuthed(`/invoice/report?from=${range.from}&to=${range.to}T23:59:59&format=csv`, `reporte-tributario-${range.from}.csv`, token).catch(() => toast.error(t("downloadError")))}>{t("downloadCsv")}</button>
       </div>
       <div className="overflow-x-auto">

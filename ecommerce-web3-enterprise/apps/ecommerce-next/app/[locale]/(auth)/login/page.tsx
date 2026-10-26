@@ -26,7 +26,7 @@ export default async function LoginPage({ params }: PageProps) {
         <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
 
-      {/* "Suspense" => requerido por Next 15 para Client Components que leen useSearchParams (pre-render estático) */}
+      {/* "Suspense" => requerido por Next 16 para Client Components que leen useSearchParams (pre-render estático) */}
       <Suspense>
         <LoginForm />
       </Suspense>

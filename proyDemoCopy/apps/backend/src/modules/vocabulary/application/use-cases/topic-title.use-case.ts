@@ -29,9 +29,17 @@ export class TopicTitleUseCase {
       language === 'es'
         ? topic
         : (await this.tools.translate(topic, 'es', language, token)).translation.trim() || topic;
-    const ipa = await this.tools.ipa(text, language, token);
-    const out = { text, ipa: ipa.ipa, ipaUs: ipa.ipa_us, translationEs: topic };
-    this.cache.set(key, out);
+    // [Degradación · 2026-10-24]: si FastAPI no da la IPA (503 puntual de espeak-ng) el título se muestra igual, sin IPA, y NO se cachea → el próximo intento la completa | [Principio]: Fail Soft
+    const ipa = await this.tools
+      .ipa(text, language, token)
+      .catch(() => null); // `.catch` (Promise): convierte el fallo en `null` sin try/catch anidado
+    const out = {
+      text,
+      ipa: ipa?.ipa ?? '',
+      ipaUs: ipa?.ipa_us ?? null,
+      translationEs: topic,
+    };
+    if (ipa) this.cache.set(key, out);
     return out;
   }
 }

@@ -1,6 +1,7 @@
 "use client"; // [Next.js]: Client Component → necesario para hooks de React (useActionState) e interactividad
 import { useActionState, useEffect, useRef } from "react"; // [React 19]: conecta un <form> con una Server Action y expone estado + pending | useEffect: aplica el idioma guardado a la UI
 import { isLocale } from "@aula/shared-i18n"; // [Type guard]: ¿el idioma preferido es también idioma de la interfaz (es/en)?
+import { PHONE_MAX_LENGTH, PHONE_PLACEHOLDER } from "@aula/shared-schemas"; // [2026-10-24]: límites/ejemplo del teléfono compartidos con registro y Gestión | [Principio]: SSOT
 import { usePreferences } from "@/components/layout/PreferencesProvider";
 import { updateProfileAction, type ProfileFormState } from "./actions"; // [Server Action]: mutación en el servidor
 // [ProfileEditForm]: tarjeta "Datos personales" de NeuroLearning (cabecera con avatar + estadísticas + campos + Guardar datos) | [Patrón]: Presentational + Uncontrolled inputs (defaultValue del servidor) | [Principio]: SRP + KISS | [Paradigma]: Declarativo
@@ -27,9 +28,13 @@ const PREFERRED_LANGUAGES = ["es", "en", "pt"] as const;
 // `const` (ES2015) tipado con ProfileFormState: estado inicial del formulario (antes del primer envío), fuera del componente para no recrearlo
 const INITIAL_STATE: ProfileFormState = { status: "idle" };
 
-// [Clase de control]: estilo de input del original (surf2 + borde de tema) | [Principio]: DRY (7 controles)
-const controlClass =
+// [Clase base de control]: estilo de input del original (surf2 + borde de tema) | [Principio]: DRY (7 controles)
+const controlBase =
   "w-full rounded-lg border border-border bg-muted px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-invalid:border-destructive read-only:opacity-70";
+// [Altura uniforme · 2026-10-24]: `h-10` (Tailwind, 40px) → <input> y <select> miden lo mismo en todos los navegadores (el <select> nativo trae su propio alto) | template literal (ES2015) compone la clase
+const controlClass = `${controlBase} h-10`;
+// [Textarea]: sin altura fija → la define `rows` | [Principio]: OCP (extiende la base sin modificarla)
+const textareaClass = `${controlBase} resize-none`;
 
 // [initials]: "Ana Pérez" → "AP" | [Paradigma]: Funcional (pura) | `?.` + `??` (ES2020): tolera nombres vacíos
 const initials = (a: string, b: string) => `${a.trim()[0] ?? ""}${b.trim()[0] ?? ""}`.toUpperCase() || "?";
@@ -120,12 +125,12 @@ export function ProfileEditForm({ firstName, lastName, email, roleLabel, section
 
           {/* [Teléfono · 2026-10-24]: `type="tel"` (HTML) → teclado telefónico en móvil | error del servidor bajo el campo */}
           <Field id="phone" label={p.phone} hint={p.phoneHint} error={errors.phone}>
-            <input id="phone" name="phone" type="tel" inputMode="tel" autoComplete="tel" defaultValue={phone ?? ""} maxLength={20} placeholder="+57 300 123 4567" className={controlClass} {...ariaFor("phone", errors.phone)} />
+            <input id="phone" name="phone" type="tel" inputMode="tel" autoComplete="tel" defaultValue={phone ?? ""} maxLength={PHONE_MAX_LENGTH} placeholder={PHONE_PLACEHOLDER} className={controlClass} {...ariaFor("phone", errors.phone)} />
           </Field>
 
           {/* [Uncontrolled + name]: viajan en el FormData; tras guardar, React restablece al nuevo defaultValue del servidor (no al valor viejo) */}
           <Field id="bio" label={p.bio}>
-            <textarea id="bio" name="bio" rows={2} maxLength={300} defaultValue={bio ?? ""} placeholder={p.bioPlaceholder} className={`${controlClass} resize-none`} />
+            <textarea id="bio" name="bio" rows={2} maxLength={300} defaultValue={bio ?? ""} placeholder={p.bioPlaceholder} className={textareaClass} />
           </Field>
 
           <div className="grid gap-[9px] sm:grid-cols-2">

@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod'; // [Tree-shaking · Zod 4]: import de namespace (`* as z`) → esbuild empaqueta solo las funciones usadas (con `{ z }` arrastraba Zod entero, ~450 kB)
 import type { TranscriptLine } from '@shared/ui/organisms/synced-transcript/transcript-line.model';
 // [Modelo Dialogues · Dominio · Sprints 9.11–9.13]: temas, diálogos guionados con nivel estimado/confirmado, turnos con IPA y traducción y conversaciones con el avatar — contrato de /api/dialogues/* de NestJS | [Patrón]: Schema-First (Zod) + funciones puras | [Principio]: SSOT + Type-Safe | [Paradigma]: Funcional
 

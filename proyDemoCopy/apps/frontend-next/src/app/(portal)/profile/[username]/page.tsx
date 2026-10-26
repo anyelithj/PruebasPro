@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getCurrentAccessToken } from "@/lib/auth";
 import { apiFetch } from "@/lib/api-client";
 import type { MyHistoryItem } from "@/types/quiz";
+import { PhoneLink } from "@/components/shared/PhoneLink"; // [2026-10-24]: teléfono como enlace `tel:`
 
 interface UserPublic {
   id: string;
@@ -10,6 +11,7 @@ interface UserPublic {
   lastName: string;
   role: string;
   section: string | null;
+  phone?: string | null; // [2026-10-24]: GET /users/:id lo devuelve (null si no hay)
   createdAt: string;
 }
 
@@ -78,6 +80,12 @@ export default async function PublicProfilePage(props: { params: Promise<{ usern
         <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{displayName}</h1>
         {profile.section && (
           <p className="text-sm text-muted-foreground">Sección: {profile.section}</p>
+        )}
+        {/* [Teléfono · 2026-10-24]: solo si existe (`&&` cortocircuito JS) */}
+        {profile.phone && (
+          <p className="text-sm text-muted-foreground">
+            Teléfono: <PhoneLink phone={profile.phone} />
+          </p>
         )}
         <p className="text-xs text-muted-foreground">
           Miembro desde {new Date(profile.createdAt).toLocaleDateString("es-CO")}

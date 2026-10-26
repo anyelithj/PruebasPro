@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod'; // [Tree-shaking · Zod 4]: import de namespace (`* as z`) → esbuild empaqueta solo las funciones usadas (con `{ z }` arrastraba Zod entero, ~450 kB)
 // [Modelo Certificates · Dominio]: certificado propio, cursos listos para certificar y vista pública de verificación (contrato de /api/certificates/* de NestJS) + reglas puras | [Patrón]: Schema-First (Zod) | [Principio]: SSOT + Type-Safe | [Paradigma]: Funcional (funciones puras)
 // [Privacidad]: la vista pública no trae email ni ids internos (el backend ya los omite; Zod descarta cualquier extra)
 

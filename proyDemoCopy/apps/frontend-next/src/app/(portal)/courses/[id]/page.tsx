@@ -10,12 +10,16 @@ import { getCurrentUserPayload } from "@/lib/auth";
 import { Role } from "@/lib/constants";
 import { CourseMaterials } from "@/components/courses/CourseMaterials"; // [Temario del curso]: lecciones (video/PDF/imagen) con estado Completado/En curso/Bloqueado
 import { CourseBadge } from "@/components/courses/CourseBadge";
+import { CourseSyllabus } from "@/components/courses/CourseSyllabus"; // [2026-10-25]: temario = subtemas con su explicación
+import { parseSyllabus } from "@/lib/syllabus";
 import { CoursePrice } from "@/components/courses/CoursePrice";
 import { CourseActions } from "@/components/courses/CourseActions";
 import { ApiError } from "@/lib/errors";
 import { courseGroupLabel } from "@/types/courses";
 import { BRAND } from "@/config/brand";
 import { getServerDictionary } from "@/lib/i18n-server";
+import { RowActions } from "@/components/admin/RowActions";
+import { setCoursePublishedAction } from "@/app/(portal)/admin/courses/actions";
 // [Página /courses/:id]: SSR detalle + generateMetadata + OG + JSON-LD | [Patrón]: Container | [Principio]: SRP
 
 interface PageProps {
@@ -97,6 +101,13 @@ export default async function CourseDetailPage(props: PageProps) {
   const isAdmin = user?.role === Role.ADMIN;
   // [Acceso al material]: comprado, inscrito (gratis) o ADMIN | la autorización REAL la hace el backend al servir cada archivo (403) | [Seguridad]: la UI solo refleja
   const canSee = Boolean(course.hasAccess) || isAdmin; // `Boolean()`: tolera un backend sin el campo
+  const isStaff = isAdmin || user?.role === Role.TEACHER;
+  // [Progreso real · 2026-10-25]: recursos vistos + lecciones de la ruta completadas (antes solo contaban los recursos → al avanzar en la ruta la barra no se movía)
+  // [2026-10-25]: + subtemas del temario estudiados
+  const topics = parseSyllabus(course.content);
+  const topicsDone = topics.filter((x) => course.completedTopics?.includes(x.title)).length;
+  const units = materials.length + topics.length + (outline?.summary.lessons ?? 0);
+  const progress = units ? Math.round((((course.completedMaterialIds?.length ?? 0) + topicsDone + (outline?.summary.completed ?? 0)) / units) * 100) : course.progress;
 
   return (
     <div className="fade-in w-full space-y-5 py-4">
@@ -107,6 +118,23 @@ export default async function CourseDetailPage(props: PageProps) {
 
       {/* Back link */}
       <BackLink href="/courses" memo="catalog">Volver a cursos</BackLink>
+
+      {/* [Revisión · 2026-10-25]: el ADMIN revisa el curso tal como lo verá el estudiante y lo publica aquí (como en Recursos) */}
+      {isAdmin && (
+        <div className="surface flex flex-wrap items-center justify-between gap-3 p-3">
+          <p className="text-sm">
+            Estado:{" "}
+            <span className={`badge ${course.isPublished ? "bg-tone-brand-soft text-tone-brand" : "bg-tone-warning-soft text-tone-warning"}`}>{course.isPublished ? "Publicado" : "Borrador"}</span>
+            {!course.isPublished && <span className="ml-2 text-xs text-muted-foreground">Revísalo y publícalo para que aparezca en el catálogo.</span>}
+          </p>
+          <RowActions
+            title={course.title}
+            editHref={`/admin/courses/${course.id}/edit`}
+            publish={{ isPublished: course.isPublished, toggle: setCoursePublishedAction.bind(null, course.id, !course.isPublished) }}
+            deleteTitle={`Eliminar «${course.title}»`}
+          />
+        </div>
+      )}
 
       {/* HERO CARD */}
       <section
@@ -193,21 +221,21 @@ export default async function CourseDetailPage(props: PageProps) {
           >
             <span>Tu progreso</span>
             <span className="font-bold eeg-mono" style={{ color: course.color }}>
-              {course.progress}%
+              {progress}%
             </span>
           </div>
           <div
             className="h-2 rounded-full overflow-hidden"
             style={{ background: `${course.color}22` }}
             role="progressbar"
-            aria-valuenow={course.progress}
+            aria-valuenow={progress}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-label="Progreso del curso"
           >
             <div
               className="h-full transition-[width] duration-1000"
-              style={{ width: `${course.progress}%`, background: course.color }}
+              style={{ width: `${progress}%`, background: course.color }}
             />
           </div>
         </div>
@@ -224,9 +252,22 @@ export default async function CourseDetailPage(props: PageProps) {
           }}
         >
           <h2 className="text-sm font-semibold mb-2" style={{ color: "var(--nl-txt)" }}>
-            Descripción
+            Presentación
           </h2>
           <Markdown text={course.description || course.shortDescription} className="text-xs leading-relaxed text-[var(--nl-txt2)]" />
+          {/* [Ficha · 2026-10-25]: objetivos y público en su sitio (antes la IA los mezclaba con el temario) */}
+          {course.objectives?.trim() && (
+            <>
+              <h3 className="mt-4 mb-1 text-sm font-semibold text-[var(--nl-txt)]">Objetivos</h3>
+              <Markdown text={course.objectives} className="text-xs leading-relaxed text-[var(--nl-txt2)]" />
+            </>
+          )}
+          {course.audience?.trim() && (
+            <>
+              <h3 className="mt-4 mb-1 text-sm font-semibold text-[var(--nl-txt)]">A quién va dirigido</h3>
+              <Markdown text={course.audience} className="text-xs leading-relaxed text-[var(--nl-txt2)]" />
+            </>
+          )}
         </article>
 
         <article
@@ -267,6 +308,10 @@ export default async function CourseDetailPage(props: PageProps) {
         </article>
       </div>
 
+      {/* [Contenido del curso · 2026-10-24]: Markdown largo (importado o escrito) bajo la descripción | se oculta si el curso no tiene contenido */}
+      {/* [2026-10-25]: TEMARIO = subtemas (bloqueados hasta iniciar el curso · el personal los ve siempre) · cada uno se marca «Estudiado» → progreso */}
+      <CourseSyllabus courseId={course.id} content={course.content} completed={course.completedTopics ?? []} locked={!canSee && !isStaff} canTrack={Boolean(course.hasAccess)} color={course.color} />
+
       {/* Compra / Acceso card */}
       <section
         className="rounded-2xl p-5"
@@ -291,11 +336,11 @@ export default async function CourseDetailPage(props: PageProps) {
         />
         <CourseActions
           courseId={course.id}
-          progress={course.progress}
+          progress={progress}
           isFree={course.isFree}
           hasAccess={course.hasAccess}
           color={course.color}
-          primaryHref="#materials-title" // Con acceso: baja al material
+          primaryHref={topics.length ? "#syllabus-title" : "#materials-title"} // Con acceso: baja al temario (o al material si no hay)
           purchase={{ title: course.title, price: course.price, currency: course.currency }} // Sin acceso: "Comprar" → carrito
           initialFavorite={course.isFavorite}
           initialLike={course.likeOn}

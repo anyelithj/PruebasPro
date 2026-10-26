@@ -7,7 +7,7 @@ import { TEXT_IMPORT_ACCEPT, TextImportService, type ExtractedText } from '@core
 
 export interface TextImportLabels {
   file: string; // «Desde un archivo (PDF, Word, texto o imagen)»
-  url: string; // «O desde un enlace»
+  url: string; // «O desde un enlace» · vacío = sin campo de enlace (p. ej. la letra ya se importa desde el enlace del audio)
   read: string; // Botón «Leer enlace»
   reading: string; // «Leyendo…»
 }
@@ -30,6 +30,7 @@ export interface TextImportLabels {
           (change)="readFile($any($event.target))"
         />
       </label>
+      @if (lb.url) {
       <form class="flex items-end gap-2" (submit)="$event.preventDefault(); readUrl()">
         <label class="block min-w-0 flex-1 text-xs font-semibold text-muted-foreground">
           <aula-icon name="link" /> {{ lb.url }}
@@ -43,6 +44,7 @@ export interface TextImportLabels {
         </label>
         <button type="submit" class="btn btn-outline" [disabled]="busy() || !link().trim()">{{ lb.read }}</button>
       </form>
+      }
       @if (busy()) {
         <p class="text-xs text-muted-foreground sm:col-span-2" aria-live="polite"><aula-icon name="hourglass" /> {{ lb.reading }}</p>
       }

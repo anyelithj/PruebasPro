@@ -21,7 +21,7 @@ const total = computed(() => props.influencers.reduce((sum, item) => sum + item.
       <h2 id="commission-title" class="text-base font-semibold">{{ $t("social.influencer.commissions") }}</h2>
       <label class="flex items-center gap-2 text-sm">
         {{ $t("social.influencer.rate") }}
-        <input type="number" min="0" max="50" step="1" :value="Math.round(store.commissionRate * 100)" class="h-9 w-20 rounded-md border px-2" @change="store.setCommissionRate(Number(($event.target as HTMLInputElement).value) / 100)" >
+        <input type="number" min="0" max="50" step="1" :value="Math.round(store.commissionRate * 100)" class="h-9 w-20 rounded-md border border-slate-300 px-3 text-sm" @change="store.setCommissionRate(Number(($event.target as HTMLInputElement).value) / 100)" >
         %
       </label>
     </div>

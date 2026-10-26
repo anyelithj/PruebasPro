@@ -22,4 +22,8 @@ export const handlers = [
   http.get(`${API}/reports/export/me`, () => HttpResponse.json(envelope([]))),
   // [Sprint 10.3]: palabras marcadas del diccionario (cualquier texto con <aula-word-lookup> las pide para resaltarlas)
   http.get(`${API}/vocabulary/words`, () => HttpResponse.json(envelope([]))),
+  // [2026-10-24]: dominios de letras/streaming del asistente de canciones (GET /music/link-rules) — espejo reducido de NestJS music/domain/media-links.ts
+  http.get(`${API}/music/link-rules`, () =>
+    HttpResponse.json(envelope({ lyricsHosts: ['letras.com', 'genius.com'], streamingHosts: ['youtube.com', 'youtu.be'] })),
+  ),
 ];

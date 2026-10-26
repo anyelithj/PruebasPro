@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod'; // [Tree-shaking · Zod 4]: import de namespace (`* as z`) → esbuild empaqueta solo las funciones usadas (con `{ z }` arrastraba Zod entero, ~450 kB)
 // [Modelo Payments · Dominio]: orden, pago, sesión de checkout y reembolso (contrato de /api/payments/* del backend NestJS) + reglas puras | [Patrón]: Schema-First (Zod) | [Principio]: SSOT + Type-Safe | [Paradigma]: Funcional (funciones puras)
 // [Montos]: siempre en unidades mínimas (centavos) como el backend → sin errores de coma flotante
 

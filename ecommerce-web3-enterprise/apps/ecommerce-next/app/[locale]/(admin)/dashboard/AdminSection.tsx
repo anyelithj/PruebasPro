@@ -36,7 +36,7 @@ export function AdminHeading({ children, description, rf }: { children: ReactNod
 
 // adminPage => Server Component de una sección: fija el idioma (render estático por locale), pinta el <h1> traducido
 // y monta la sección interactiva (Client Component). "ComponentType" => cualquier componente sin props.
-// El RBAC ya lo resolvieron middleware.ts y el layout del grupo (admin): aquí no se repite (DRY).
+// El RBAC ya lo resolvieron proxy.ts y el layout del grupo (admin): aquí no se repite (DRY).
 export function adminPage(key: string, Section: ComponentType) {
   return async function AdminPage({ params }: PageProps) {
     await initPage(params);

@@ -57,6 +57,15 @@ export class CourseEnrollment {
   })
   completedMaterialIds!: string[];
 
+  // [Temas estudiados · 2026-10-25]: títulos de los subtemas del temario («## …» del contenido) marcados por el alumno → cuentan en `progress`
+  @Column({
+    type: 'text',
+    array: true,
+    default: () => "'{}'",
+    name: 'completed_topics',
+  })
+  completedTopics!: string[];
+
   @Column({ type: 'timestamptz', nullable: true, name: 'completed_at' })
   completedAt!: Date | null;
 

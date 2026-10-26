@@ -14,7 +14,7 @@ ecommerce-web3-enterprise/            # UN solo repositorio git (pnpm workspaces
 │   ├── ecommerce-express/            # Backend Node (N-Layer, Prisma)            — workspace pnpm
 │   ├── ecommerce-fastapi/            # Backend Python (ML)                        — Poetry (fuera de pnpm)
 │   ├── ecommerce-rust/               # Backend Rust (alto rendimiento)            — Cargo (fuera de pnpm)
-│   ├── ecommerce-next/               # Frontend Next.js 15 (FSD)                  — workspace pnpm
+│   ├── ecommerce-next/               # Frontend Next.js 16.4.1 (FSD)              — workspace pnpm
 │   └── ecommerce-nuxt/               # Frontend Nuxt (FSD)                        — workspace pnpm
 ├── packages/                         # Código compartido entre apps de Node
 │   ├── eslint-config/                # Reglas ESLint (flat config) — la raíz y cada app las extienden

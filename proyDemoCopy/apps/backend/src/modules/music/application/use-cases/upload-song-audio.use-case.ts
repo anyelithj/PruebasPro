@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import { MEDIA_EXT, mediaMime } from '../../../../shared/http/audio-mime';
 import type { ObjectStore } from '../../../../shared/storage/object-store';
 import { Song } from '../../domain/entities/song.entity';
+import { classifyMediaLink, MEDIA_LINK_MESSAGES } from '../../domain/media-links'; // [2026-10-24]: páginas de letras/streaming → mensaje concreto sin descargar nada
 import { type MusicActor, SongAccess } from './get-song.use-case';
 // [UseCase UploadSongAudio · Sprint 9.2 · RF-116]: sube el audio de la canción al almacén de objetos (prefijo «music») y reemplaza el anterior; si estaba publicada vuelve a revisión | [Patrón]: Use Case (Command) + Ports & Adapters (ObjectStore: disco, MinIO o R2) | [Principio]: SRP + DIP + mínimo privilegio | [Paradigma]: POO + async/await
 
@@ -67,6 +68,9 @@ export async function fetchMediaUrl(raw: string, maxBytes = MAX_SONG_AUDIO_BYTES
   } catch {
     throw new BadRequestException('Escribe un enlace válido (https://…)');
   }
+  // [Fail Fast · 2026-10-24]: página de letras o de streaming conocida → 400 con QUÉ HACER, sin petición saliente | `kind` (MediaLinkKind): Specification del dominio
+  const kind = classifyMediaLink(raw);
+  if (kind === 'lyrics_page' || kind === 'streaming_page') throw new BadRequestException(MEDIA_LINK_MESSAGES[kind]);
   const host = url.hostname.toLowerCase();
   // `RegExp` (JS): bloquea localhost, IPs privadas y de enlace local (la API no debe pedir recursos de la red interna)
   if (!/^https?:$/.test(url.protocol) || /^(localhost|.*\.local|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|0\.|\[?::1\]?$|\[?f[cd])/.test(host))
@@ -74,7 +78,7 @@ export async function fetchMediaUrl(raw: string, maxBytes = MAX_SONG_AUDIO_BYTES
   const res = await fetch(url, { redirect: 'error', signal: AbortSignal.timeout(30_000) }).catch(() => null);
   if (!res?.ok || !res.body) throw new BadRequestException('No se pudo descargar el enlace');
   if (/text\/html/.test(res.headers.get('content-type') ?? ''))
-    throw new BadRequestException('El enlace es una página web, no un archivo de audio o vídeo (usa el enlace directo al .mp3/.mp4)');
+    throw new BadRequestException(MEDIA_LINK_MESSAGES.html_page);
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const c of res.body as unknown as AsyncIterable<Uint8Array>) {

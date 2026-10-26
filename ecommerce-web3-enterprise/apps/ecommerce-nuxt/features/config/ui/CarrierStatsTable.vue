@@ -22,7 +22,7 @@ const percent = (value: number) => `${Math.round(value * 100)} %`;
   <div class="flex flex-col gap-3">
     <label class="flex items-center gap-2 self-start text-sm">
       {{ $t("config.shipping.statsPeriod") }}
-      <select v-model.number="days" class="h-9 rounded-md border border-slate-300 px-2">
+      <select v-model.number="days" class="h-9 rounded-md border border-slate-300 px-3 text-sm">
         <option :value="30">30</option>
         <option :value="90">90</option>
         <option :value="365">365</option>

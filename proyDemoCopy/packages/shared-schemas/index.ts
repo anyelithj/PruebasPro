@@ -15,3 +15,14 @@ export type Role = (typeof ROLES)[number];
 // [AUDIENCES]: a quién va dirigido un contenido de ayuda (FAQ, manual): todos o un rol concreto
 export const AUDIENCES = ["ALL", ...ROLES] as const;
 export type Audience = (typeof AUDIENCES)[number];
+
+// [Teléfono del usuario · 2026-10-24]: regla compartida por registro, Mi perfil y Gestión → usuarios (Zod: `z.string().regex(PHONE_PATTERN)`) | [Principio]: SSOT + DRY (antes la regex estaba copiada en cada formulario)
+// [Espejo del backend]: users/domain/value-objects/phone.vo.ts (NestJS valida con la MISMA regex en `@OptionalPhone`)
+// [Regex permisiva E.164-ish]: `\+?` «+» inicial opcional · `[0-9 ()-]` dígitos, espacio, paréntesis y guion · `{7,20}` longitud · `(...)?` → cadena vacía válida = «sin teléfono»
+export const PHONE_PATTERN = /^(\+?[0-9 ()-]{7,20})?$/;
+export const PHONE_MAX_LENGTH = 21; // `maxLength` del <input>: «+» + 20 caracteres que admite la regex
+export const PHONE_PLACEHOLDER = "+57 300 123 4567"; // Ejemplo con indicativo de país (Colombia)
+
+// [READING_GENRES · Lectura · 2026-10-25]: géneros de los textos de lectura (espejo de ReadingGenre de NestJS: reading/domain/reading-genre.ts) | `as const` → `z.enum(READING_GENRES)` y tipo unión
+export const READING_GENRES = ["tale", "fable", "animals", "poem", "news", "dialogue", "biography", "legend"] as const;
+export type ReadingGenre = (typeof READING_GENRES)[number];

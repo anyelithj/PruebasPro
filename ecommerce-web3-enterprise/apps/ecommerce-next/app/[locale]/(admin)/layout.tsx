@@ -1,7 +1,7 @@
 // layout.tsx (admin) => chrome del panel de administración (Fase 7): marco único PanelFrame (menú + barra + loader).
-// RBAC en dos capas (defensa en profundidad, patrón Guard): middleware.ts redirige antes de renderizar y este layout
+// RBAC en dos capas (defensa en profundidad, patrón Guard): proxy.ts redirige antes de renderizar y este layout
 // (Server Component) vuelve a comprobar la sesión; si no es ADMIN ni VENDOR responde 404 real (no revela que el panel
-// existe). Las secciones permitidas al VENDOR (VENDOR_PANEL_ROUTES) las filtra middleware.ts.
+// existe). Las secciones permitidas al VENDOR (VENDOR_PANEL_ROUTES) las filtra proxy.ts.
 // SEO: noindex (área privada). Rendimiento: sin el header/footer de la tienda (menos HTML y JS por página).
 import type { Metadata } from "next";
 import type { ReactNode } from "react";

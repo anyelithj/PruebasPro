@@ -1,0 +1,959 @@
+[P0|Normal] INSTITUCIÓN UNIVERSITARIA POLITÉCNICO GRANCOLOMBIANO
+[P1|Normal] FACULTAD DE INGENIERÍA, DISEÑO, E INNOVACIÓN
+[P2|Normal] INGENIERÍA DE SISTEMAS
+[P3|Normal] GRUPO DE INVESTIGACIÓN E-TIC
+[P4|Normal] 
+[P5|Normal] 
+[P6|Normal] 
+[P7|Normal] Desarrollo 
+[P8|Normal] 
+[P9|Normal] 
+[P10|Normal] PRESENTA:
+[P11|Normal] Anyelith Jineth Jacobo Carrillo
+[P12|Normal]  114047-100094044
+[P13|Normal] 
+[P14|Normal] ASESOR:
+[P15|Normal] Edna Lucero Triana Salgado
+[P16|Normal] 
+[P17|Normal]                                                               Junio 2026
+[P18|Normal] ÍNDICE GENERAL 
+[P19|Normal] 
+[P20|Normal] ÍNDICE DE TABLAS 
+[P21|table of figures] Tabla 1	22
+[P22|table of figures] Tabla 2	24
+[P23|table of figures] Tabla 3	25
+[P24|table of figures] Tabla 4	26
+[P25|table of figures] Tabla 5	28
+[P26|table of figures] Tabla 6	28
+[P27|table of figures] Tabla 7	29
+[P28|table of figures] Tabla 8	29
+[P29|table of figures] Tabla 9:	35
+[P30|table of figures] Tabla 10	35
+[P31|table of figures] Tabla 11	36
+[P32|table of figures] Tabla 12	37
+[P33|table of figures] Tabla 13	37
+[P34|table of figures] Tabla 14	39
+[P35|table of figures] Tabla 15	40
+[P36|table of figures] Tabla 16:	41
+[P37|table of figures] Tabla 17	42
+[P38|table of figures] Tabla 18	42
+[P39|table of figures] Tabla 19	85
+[P40|table of figures] Tabla 20	90
+[P41|table of figures] Tabla 21	91
+[P42|table of figures] Tabla 22	91
+[P43|table of figures] Tabla 23	92
+[P44|table of figures] Tabla 24	93
+[P45|table of figures] Tabla 25	94
+[P46|table of figures] Tabla 26	94
+[P47|table of figures] Tabla 27	96
+[P48|Normal] 
+[P49|Normal] 
+[P50|Normal] ÍNDICE DE FIGURAS 
+[P51|table of figures] Figura 3 1	66
+[P52|table of figures] Figura 3 2	67
+[P53|table of figures] Figura 3 3	68
+[P54|table of figures] Figura 3 4	68
+[P55|table of figures] Figura 3 5	69
+[P56|table of figures] Figura 3 6:	70
+[P57|table of figures] Figura 3 7	71
+[P58|table of figures] Figura 3 8	72
+[P59|table of figures] Figura 3 9	73
+[P60|table of figures] Figura 3 10	73
+[P61|table of figures] Figura 3 11	74
+[P62|table of figures] Figura 3 13	99
+[P63|Normal] 
+[P64|table of figures] Figura 4 1	98
+[P65|table of figures] Figura 4 2	99
+[P66|table of figures] Figura 4 3:	100
+[P67|table of figures] Figura 4 4	101
+[P68|table of figures] Figura 4 5	101
+[P69|table of figures] Figura 4 6	102
+[P70|table of figures] Figura 4 7	103
+[P71|table of figures] Figura 4 8	103
+[P72|table of figures] Figura 4 9: Pruebas funcionales: flujo de cuestionarios.	104
+[P73|table of figures] Figura 4 10	105
+[P74|table of figures] Figura 4 11	105
+[P75|table of figures] Figura 4 12	106
+[P76|table of figures] Figura 4 13	107
+[P77|table of figures] Figura 4 14	109
+[P78|table of figures] Figura 4 15	110
+[P79|table of figures] Figura 4 16	111
+[P80|table of figures] Figura 4 17	111
+[P81|Normal] 
+[P82|Normal] 
+[P83|Heading 1] Resumen
+[P84|Normal] El informe presenta el análisis, el diseño y el desarrollo del módulo de evaluaciones con inteligencia artificial para la Corpora . El informe indica que la elaboración tuvo lugar del 11 de marzo al 30 de mayo de 2026. El módulo forma parte de una plataforma de educación en desarrollo. El módulo pretende cambiar los métodos de evaluación con la inteligencia artificial.
+[P85|Normal]  Hoy en día las pruebas tradicionales están muy limitadas. Los resultados llegan tarde, y no dan información sobre el perfil cognitivo de cada estudiante. Esa falta de información complica la detección temprana de los vacíos conceptuales. Por eso el proyecto propone una alternativa: un diagnóstico automático y una retroalimentación personalizada con un agente de inteligencia artificial. El sistema analiza la interacción del usuario al final de cada sesión. El sistema incluso formula sugerencias de instrucción personalizadas correspondientes al rendimiento del usuario, atravesando todo el trayecto.
+[P86|Normal] La etapa de puesta en marcha dio principio al descubrir el inconveniente el 11 de marzo de 2026, para luego concluirse con el remate del diseño técnico definitivo el 5 de mayo del mismo año Se concentró en la dimensión técnica del sistema, más específicamente en la arquitectura de microservicios, utilizando NestJS y FastAPI, así como los mismos prototipos visuales en Figma, por otra parte, el módulo de evaluaciones, ya funcional. El equipo definió la parte técnica del aplicativo, diseñó la arquitectura de microservicios con NestJS y FastAPI, creó los prototipos visuales en Figma y desarrolló el módulo de evaluaciones en funcionamiento. Los resultados que obtuvimos indican que dar las recomendaciones de estudio a medida después de cada sesión de evaluación ayuda al estudiante a mejorar la forma en que el estudiante piensa sobre su aprendizaje. Eso confirma que la inteligencia artificial tiene un lugar en las escuelas y en los entornos de aprendizaje Adicionalmente, el componente de autenticación y registro facilita al personal el rastreo de la información académica del alumno. A partir de ahí, se establecen los fundamentos necesarios para el escrutinio educativo.
+[P87|Normal] Palabras clave: la Neuroeducación, la inteligencia artificial, los servicios pequeños y la evaluación personalizada. Se incluyen Next.js, FastAPI, NestJS, PostgreSQL, JWT, Scrum, los Métodos ágiles, el análisis de lenguaje natural, el asistente de inteligencia artificial y la retroalimentación pedagógica.
+[P88|Heading 1] Introducción
+[P89|Header] 
+[P90|Header] 
+[P91|Normal] La Corporación  comenzó la implementación de un módulo de simulaciones como primero de los componentes de su plataforma neuroeducativa, enfocado para definir con la mayor precisión diagnóstica y la mayor capacidad adaptativa los procesos de valoración académica. El presente documento recoge las fases de análisis, diseño, construcción y validación que llevaron a cabo entre el 11 de marzo y el 5 de junio de 2026. La solución puesta en producción articula una arquitectura basada en servicios apoyada en NestJS y FastAPI, una capa de presentación bajo la herramienta Next.js y un agente de inteligencia artificial con la función de transformar los resultados de las evaluaciones en retroalimentación pedagógica relevante, ajustada al perfil de cada uno de los estudiantes.
+[P92|Normal] 
+[P93|Normal] Desde el rol de función, el módulo permite la elaboración de instrumentos de evaluación, ya sea de forma tradicional o con la ayuda de IA, los cuales serán a su vez resueltos por el alumnado por medio de Internet. La corrección automática organizada presenta tres mecanismos articulados: una correspondencia directa para los ítems cerrados, similitud semántica para las respuestas semiestructuradas y procesamiento de lenguaje natural para las preguntas de desarrollo. El sistema puede también registrar el avance académico utilizando puntuaciones individuales, posiciones en tablas de clasificación y logros. El desarrollo completo se describe bajo la metodología de Scrum a través de cuatro sprints y de la verificación continúa realizada mediante pruebas de tipo unidad, de integración y funcionales, respectivamente.
+[P94|Normal] 
+[P95|Normal] En otro sentido, el presente proyecto adquiere mayor sentido en el ámbito de la neuroeducación, en cuanto a que es una disciplina que impulsa la necesidad de articular las prácticas de la evaluación mediante el enlace con los procesos cognitivos y emocionales que intervienen al aprender, tal como arguyen Caballero y Llorent en 2022. En esta línea de trabajo, el módulo deja de ser un instrumento de medida del rendimiento puesto que se erige como un elemento que favorece comprender las formas de aprender de cada alumno, a través de analítica de rendimiento y retroalimentación pedagógica en función de las necesidades académicas.
+[P96|Normal] 
+[P97|Normal] Los resultados que se documentan en el presente informe dan cuenta de la viabilidad técnica de la propuesta en tanto que aumenta el enriquecimiento de los procesos pedagógicos en contextos de educación soportados por tecnología.
+[P98|Header] 
+[P99|Header] 
+[P100|Heading 2] Descripción de la Empresa
+[P101|Header] 
+[P102|Normal] Corporación  se fundó en el 2007 con un grupo de especialistas cuyo meta era ser soporte para comunidades muy necesitadas la mayoría por su situación económica. Ante los problemas sociales que nuestra nación padece, se creara una estrategia, desde la ciencia y la educación. Funciona como un motor de cambio facilitando un programa enfocado a formar y operar redes de ayuda. Estas redes proponen su propio saber para asistir a los ámbitos educativo, social y productivo. 
+[P103|Header]  
+[P104|Heading 2] Formulación del Problema
+[P105|Header] 
+[P106|Normal] Uno de los principales problemas a los que se enfrentan las instituciones educativas es el escaso rendimiento académico; este hecho se debe, entre otras causas, a las dificultades cognitivas no detectadas a tiempo y al uso de modelos de evaluación tradicional que no deja llevar a cabo un análisis a la profundidad del proceso de aprendizaje. La situación anterior provoca que sea necesaria la creación de una aplicación digital inteligente que contenga herramientas de evaluación, tecnologías de medición neurocognitiva y analítica educativa a fin de realizar el seguimiento del aprendizaje, la evolución cognitiva del alumno y la toma de decisiones pedagógicas para mejorar el rendimiento académico.
+[P107|Normal] 
+[P108|Heading 2] Justificación
+[P109|Normal]  El proyecto nace porque los métodos viejos de evaluación ya no sirven. Esos métodos dan una retroalimentación tardía, genérica y poco alineada con el perfil mental de cada estudiante. Con un módulo de evaluación que usa inteligencia artificial, el proyecto podrá calificar automáticamente respuestas abiertas usando técnicas de similitud semántica. El módulo incluso generará retroalimentación personalizada en segundos. Con esa retroalimentación, el proyecto fortalecerá los procesos de aprendizaje. Posteriormente el proyecto ayudará a detectar a tiempo oportunidades de mejora. Finalmente, el proyecto pondrá a la organización en la vanguardia de la neuroeducación basada en evidencia.
+[P110|Normal] La solución ofrecerá rutas de mejora claras, escalables y trazables. Las rutas estarán dentro de una arquitectura de microservicios. La arquitectura de microservicios asegura flexibilidad, integración y crecimiento futuro del sistema.
+[P111|Normal] 
+[P112|Heading 1] Alcance
+[P113|Header] 
+[P114|Normal] El alcance englobado en este proyecto es de diseño y desarrollo funcional de fines del módulo evaluaciones bajo arquitectura de microservicios. La primera fase abarca el prototipado en Figma, modelos de diseño del sistema, el modelado de la base de datos como insumos base. A partir de estos artefactos se construirá el frontend en Next.js, los microservicios backend en NestJS y FastAPI, el BFF (Backend for Frontend) como capa de comunicación, la autenticación mediante JWT, y el componente de integración con el agente de asistencia IA, que es la parte responsable de generar la retroalimentación pedagógica y las recomendaciones orientadas a personalizar el aprendizaje. 
+[P115|Normal] El trabajo que se entregará, contempla la misma persistencia de la base de datos en PostgreSQL donde se irán agregando la información progresivamente con cada evaluación, siendo esta la base para la analítica, la integración de microservicios y una aplicación enfocada en inteligencia artificial, orientado en la generación de datos científicos en neuroeducación y en la personalización y el mejoramiento del proceso de aprendizaje del usuario. Se adjuntará un plan de pruebas unitarias de integración y funcionales.
+[P116|Normal] 
+[P117|Heading 1] Objetivo Principal
+[P118|Normal] Desarrollar la sección de evaluaciones para monitorear y analizar las fortalezas cognitivas, emocionales y metacognitivas que integra retroalimentación proporcionada por un agente de asistencia IA, empleando una arquitectura de microservicios en NestJS y FastAPI, además de prototipado en Figma; el proyecto se llevará a cabo en las instalaciones de la empresa  durante el periodo de prácticas, desde el 11 de marzo hasta el 30 de mayo de 2026.
+[P119|Normal] 
+[P120|Heading 2] Objetivos Secundarios
+[P121|Normal] Diseñar prototipos en Figma para la sección de evaluaciones, asegurando que la interfaz sea intuitiva y facilite la interacción entre el estudiante y el agente de asistencia IA.
+[P122|Normal] Construir la estructura del backend con una arquitectura de microservicios en NestJS, garantizando la seguridad, escalabilidad y una gestión eficiente de los datos de los usuarios.
+[P123|Normal] Modelar la base de datos y los modelos de análisis y diseño es fundamental para organizar de manera técnica la información sobre las fortalezas cognitivas, emocionales y metacognitivas que hemos detectado.
+[P124|Normal] Integrar el componente de retroalimentación a través de un agente de asistencia IA, que convierta los resultados técnicos de la evaluación en consejos pedagógicos claros para el alumno.
+[P125|Normal] Validar la funcionalidad del módulo en el entorno de desarrollo de la empresa, asegurando que la integración entre los microservicios cumpla con los plazos establecidos en el cronograma.
+[P126|Heading 1] Marco Teórico
+[P127|Heading 2] Neuroeducación 
+[P128|Normal]  La neuroeducación se define como un campo interdisciplinario que articula los hallazgos de la neurociencia cognitiva con los fundamentos teóricos y prácticos de la educación, buscando profundizar en la comprensión de los procesos de aprendizaje y enseñanza de Caballero y Llorent, 2022. En su investigación cuasi experimental, dichos autores mostraron que intervenciones sustentadas en principios neuroeducativos producen avances notables tanto en la atención sostenida como en el desempeño académico estudiantil. De igual modo, los principios de esta disciplina pueden aplicarse a escenarios de simulación y toma de decisiones en contextos de formación profesional clínica, promoviendo aprendizajes más situados y con mayor transferencia.
+[P129|Heading 2] Arquitectura de Microservicios
+[P130|Normal] 
+[P131|Normal]  La evolución de los mecanismos de comunicación entre aplicaciones a través de API ha generado la necesidad de asegurar la compatibilidad entre versiones sin afectar los procesos de integración y entrega continua. El paradigma de microservicios organiza las aplicaciones como un conjunto de componentes funcionales independientes, de menor tamaño y con bajo nivel de acoplamiento, permitiendo que cada componente pueda desarrollarse, desplegarse y escalarse de manera autónoma. Desde una perspectiva investigativa, Li et al. 2021 realizaron una revisión sistemática de 72 estudios primarios, identificando que la escalabilidad, la mantenibilidad y la resiliencia representan los atributos de calidad más relevantes dentro de esta arquitectura. De igual forma, Waseem, Liang y Shahin 2021 establecieron que la adopción conjunta de Domain-Driven Design DDD y prácticas de monitoreo continuo contribuye positivamente al diseño y evolución de este tipo de software. Sin embargo, uno de los principales desafíos asociados a los microservicios radica.
+[P132|Heading 2] Next.Js 
+[P133|Normal] . Next.js es un framework que se basa en React y ofrece características avanzadas como el renderizado del lado del servidor (SSR), la generación estática de sitios (SSG), el enrutamiento basado en archivos y la optimización automática del rendimiento. Estas funcionalidades hacen que sea más fácil desarrollar aplicaciones web modernas, escalables y eficientes, mejorando tanto la experiencia del usuario como el posicionamiento en los motores de búsqueda.
+[P134|Normal] 
+[P135|Heading 2] Tailwindcss
+[P136|Normal] Tailwind CSS es un framework de estilos que se centra en utilidades, permitiendo construir interfaces de usuario de forma rápida y coherente. Su enfoque simplifica la creación de diseños responsivos, reutilizables y fáciles de mantener, lo que reduce la necesidad de escribir grandes cantidades de código CSS personalizado.
+[P137|Normal] 
+[P138|Heading 2] Nestjs
+[P139|Normal] NestJS es un framework para Node.js que se basa en TypeScript y está diseñado para crear aplicaciones escalables y mantenibles. Su arquitectura modular, el uso de inyección de dependencias y la clara separación de responsabilidades entre controladores, servicios y repositorios facilitan la implementación de aplicaciones empresariales y arquitecturas basadas en microservicios.
+[P140|Heading 2] FastAPI
+[P141|Normal] FastAPI es un framework de alto rendimiento para Python que se fundamenta en el estándar ASGI y utiliza anotaciones de tipos (type hints) para la validación automática de datos. También integra Pydantic para gestionar modelos de datos y genera documentación automática a través de OpenAPI. Estas características lo hacen una opción ideal para el desarrollo de microservicios analíticos y aplicaciones de inteligencia artificial.
+[P142|Normal] 
+[P143|Heading 2] PostgreSQL
+[P144|Normal] Postgre PostgreSQL corresponde a un sistema de gestión de bases de datos relacionales de código abierto diseñado para garantizar el cumplimiento de las propiedades de atomicidad, consistencia, aislamiento y durabilidad, permitiendo la ejecución de transacciones confiables y consistentes. Entre sus principales capacidades técnicas se encuentran el soporte nativo para estructuras complejas de datos como JavaScript Object Notation Binary, la disponibilidad de índices especializados como Generalized Inverted Index y Generalized Search Tree, el particionamiento de tablas y un amplio ecosistema de extensiones que favorecen el procesamiento eficiente de grandes volúmenes de información.
+[P145|Normal] 
+[P146|Heading 2] JSON Web Tokens (JWT)
+[P147|Normal] JSON Web Tokens corresponde a un estándar abierto establecido mediante la Request for Comments 7519, desarrollado con el propósito de transmitir y representar información de forma segura entre dos entidades utilizando tokens firmados digitalmente. Su principal aplicación se encuentra en la implementación de mecanismos de autenticación y autorización sin almacenamiento de estado, característica que facilita su utilización dentro de entornos distribuidos y arquitecturas fundamentadas en microservicios. 
+[P148|Heading 2] Scrum
+[P149|Normal] Scrum es un marco de trabajo ágil utilizado para gestionar proyectos de desarrollo de software mediante procesos iterativos e incrementales. Este enfoque establece responsabilidades específicas para el propietario del producto, el facilitador Scrum y el equipo de desarrollo, incorporando actividades orientadas a planificar, supervisar y evaluar el avance del proyecto durante cada Sprint. Igualmente incluye elementos fundamentales como la lista priorizada de requerimientos, las tareas definidas para cada Sprint y los incrementos generados durante el desarrollo. Actualmente, Scrum suele complementarse con integración continua, automatización de pruebas y entrega continua para fortalecer la calidad y eficiencia del desarrollo de software.
+[P150|Heading 2] UML
+[P151|Normal] El Lenguaje Unificado de Modelado constituye una notación gráfica estandarizada por Object Management Group que permite especificar, representar visualmente, diseñar y documentar los diferentes componentes que integran un sistema de software. Dentro del presente proyecto se utilizan diagramas de casos de uso, clases, secuencia y estados, complementados mediante el modelo entidad relación para representar la estructura correspondiente al esquema de datos.
+[P152|Normal] 
+[P153|Heading 2] Revisión de Literatura y Antecedentes
+[P154|Normal] La propuesta planteada se sustenta en la articulación entre la inteligencia artificial y las ciencias cognitivas, considerando las perspectivas predominantes de la inteligencia artificial dentro del contexto educativo, orientadas al apoyo del aprendizaje, el fortalecimiento de las actividades docentes y el incremento de la autonomía estudiantil según Ouyang y Jiao, 2021. En este escenario, la inCorporación de agentes de asistencia basados en inteligencia artificial supera la automatización de tareas, debido a que actúan como mediadores capaces de fortalecer dimensiones emocionales y resultados de aprendizaje mediante procesos continuos de retroalimentación Xu et al., 2026. Desde la perspectiva de la neuroeducación, investigaciones recientes evidencian que las aplicaciones inteligentes pueden favorecer los procesos de enseñanza y aprendizaje, manteniendo coherencia con los patrones de desarrollo cognitivo y emocional del usuario Burbano-Enríquez et al., 2025.
+[P155|Header] 
+[P156|Normal] Desde una perspectiva técnica, la evolución hacia agentes autónomos de inteligencia artificial durante 2025 constituye un avance significativo frente a los sistemas conversacionales estáticos, debido a que proporciona mayores capacidades de personalización y adaptación dentro del contexto educativo Belcic y Stryker, 2025. En este marco, la implementación de una arquitectura fundamentada en NestJS y FastAPI contribuye a gestionar la carga cognitiva mediante el procesamiento de grandes volúmenes de información orientados a predecir el desempeño del usuario utilizando modelos de lenguaje. Sin embargo, estos softwares requieren infraestructuras técnicas robustas que permitan abordar adecuadamente las brechas emocionales presentes en la interacción entre humanos y máquinas Jin et al., 2026.
+[P157|Header] 
+[P158|Normal] Finalmente, los antecedentes relacionados con tecnologías educativas evidencian una tendencia hacia entornos de aprendizaje híbridos, escalables y con mayores niveles de personalización Zhang y Aslan, 2021. Por consiguiente, el desarrollo de este módulo de evaluaciones busca no solamente digitalizar pruebas, sino también contribuir a la construcción de ecosistemas de aprendizaje autodirigidos, fundamentales para la alfabetización digital contemporánea y el fortalecimiento de procesos de innovación pedagógica sustentados en evidencia científica.
+[P159|Header] .
+[P160|Heading 1] Estado del Arte
+[P161|Normal]  El estado del arte analizado se propuso para cinco plataformas EdTech de reconocido prestigio: Google Classroom, Moodle, Kahoot, Quizlet y ClassroomIO. Las plataformas mencionadas están centradas en la gestión y aplicación de las evaluaciones, sin embargo, su capacidad de calificación automática sólo es capaz de calificarlas mediante preguntas cerradas, las cuales incorporan una retroalimentación en muchas ocasiones estática o simplemente numérica.
+[P162|Normal] La propuesta realizada destaca por incluir mecanismos que se encargaran de la evaluación automática de las respuestas abiertas, utilizando técnicas de procesamiento de lenguaje natural y técnicas de análisis de similitud semántica, así como retroalimentación pedagógica en modo personalizado por medio de un agente de inteligencia artificial, junto a la arquitectura de Generación Aumentada por Recuperación (RAG) en fase de implementación bajo el armazón de FAISS.
+[P163|Normal] La arquitectura de esta plataforma se basa en una arquitectura de microservicios integrando modelos de lenguaje de gran escala (LLM) ejecutados localmente mediante Ollama que garantiza una mayor autonomía tecnológica y un mejor control sobre los datos que se procesan. Dentro de nuestros plazos a futuro, realizaríamos la inclusión dentro de visita de servicios provistos por OpenAI para la expansión de las capacidades de generación de razonamiento y asistencia inteligente de la plataforma.
+[P164|Normal] Tabla 1
+[P165|Normal] Plataformas EdTech a partir de la comparación efectuada.
+[P166|Normal] 
+[P167|Normal] 
+[P168|Heading 1] Levantamiento de Requerimientos 
+[P169|Normal] Proceso de Recolección de Requisitos
+[P170|Normal]  La recolección de requisitos tuvo lugar en la fase inicial del proyecto, desde el 12 de marzo hasta el 7 de abril de 2026. En ese proceso se combinaron las diferentes metodologías que contribuyen a recoger lo más exhaustivamente posible las necesidades que el sistema debe incluir:
+[P171|Normal] Entrevistas estructuradas con los actores de la iniciativa y la dirección de la organización
+[P172|Normal] Estas entrevistas tenían como objetivo privado las necesidades pedagógicas, las limitaciones de las soluciones tecnológicas actuales y las expectativas respecto de la plataforma.
+[P173|Normal] Análisis comparativo de herramientas EdTech Para determinar las brechas funcionales y oportunidades de diferenciación respecto a la solución de aprendizaje que se quiere desarrollar, se realizó un análisis de la funcionalidad de evaluación de cinco herramientas EdTech representativas como Google Classroom, classroom.oi, Moodle, Kahoot y Quizlet.
+[P174|Normal] Se llevó a cabo una revisión de la literatura científica sobre neuroeducación y aplicativos de evaluación inteligente, con el objetivo de alinear los requisitos del proyecto con las tendencias actuales en aprendizaje personalizado y retroalimentación cognitiva.
+[P175|Normal] 
+[P176|Heading 2] Requerimientos Funcionales 
+[P177|Normal] 
+[P178|Normal] Tabla 2
+[P179|Normal] Requerimientos funcionales.
+[P180|Normal] 
+[P181|Normal] Requerimientos No Funcionales 
+[P182|Normal] Tabla 3
+[P183|Normal]  Requerimientos no funcionales.
+[P184|Normal] 
+[P185|Heading 2] Historias de Usuario 
+[P186|Normal] Las historias de usuario contienen la siguiente estructura estándar de la metodología SCRUM, en el que se detalla el rol del usuario, la funcionalidad que necesita y el valor que aporta al negocio. Cada historia incluye criterios de aceptación definidos, la estimación del esfuerzo utilizando puntos de historias basados en la secuencia de Fibonacci y el nivel de prioridad que ha establecido el responsable del producto. A continuación, se presenta el producto Backlog.
+[P187|Normal] 
+[P188|Heading 2] PRODUCT BACKLOG
+[P189|Normal] 
+[P190|Normal] Tabla 4
+[P191|Normal]  Plantilla de Product Backlog.
+[P192|Normal] 
+[P193|Heading 2] Historias de Usuario Detalladas
+[P194|Heading 2] Registro de Usuario
+[P195|Normal] Tabla 5
+[P196|Normal] Historia de usuario: registro de usuario.
+[P197|Normal] 
+[P198|Normal] Creación de Evaluación por Docente
+[P199|Normal] Tabla 6
+[P200|Normal] Historia de usuario: creación de evaluación por docente
+[P201|Normal] 
+[P202|Normal] Retroalimentación Personalizada del Agente IA
+[P203|Normal] Tabla 7
+[P204|Normal] Historia de usuario: retroalimentación personalizada desde el agente IA.
+[P205|Normal] 
+[P206|Normal] Resultados para Docente
+[P207|Normal] Tabla 8
+[P208|Normal] Historia de usuario: resultados para docente.
+[P209|Heading 2] 
+[P210|Heading 2] Diseño de Base de Datos y Diagramas Uml
+[P211|Normal] En esta sección se presenta la documentación gráfica del software, que detalla los módulos de gestión de acceso, evaluación, calificación y retroalimentación, así como el esquema de persistencia de datos que respalda su funcionamiento.
+[P212|Normal] 
+[P213|Normal] 
+[P214|Heading 2] Proceso de Diseño
+[P215|Normal] El diseño de la base de datos es una parte esencial del proceso formal de modelado y se lleva a cabo en tres niveles de abstracción. Primero, se establece el modelo conceptual a través de un diagrama entidad-relación (DER), el modelo conceptual, que nos permite identificar las entidades y relaciones dentro del dominio. Luego, se desarrolla el modelo lógico mediante un esquema relacional normalizado. Por último, se implementa el modelo físico en PostgreSQL, utilizando TypeORM como herramienta para el mapeo objeto relacional.
+[P216|Normal] 
+[P217|Heading 2] Modelo Entidad-Relación
+[P218|Normal] El modelo entidad-relación (DER) permite representar las entidades del dominio y sus atributos, adicionalmente de las relaciones que las unen. Se han determinado ocho entidades en el modelo: Users, AuthSessions, Quizzes, Questions, QuizSessions, Scores y Achievements.
+[P219|Normal] En la implementación del modelo físico en PostgreSQL mediante TypeORM, el esquema de persistencia se amplía hasta un total de once tablas. A su vez de las ocho mencionadas en el DER, se incorporan las tablas EmailVerificationTokens, PasswordResetTokens y FeedbackIA, que el backend desarrollado en NestJS emplea para gestionar la verificación de correos electrónicos, la recuperación de contraseñas y el almacenamiento de la retroalimentación generada por inteligencia artificial.
+[P220|Heading 4] Figura 1
+[P221|Heading 4] Diagrama Entidad-Relación 
+[P222|Heading 2] 
+[P223|Heading 2] Nota: Diagrama Entidad-Relacion (DER) del sistema , creado por por  , 2026.
+[P224|Heading 2] 
+[P225|Heading 2] Modelo Relacional 
+[P226|Normal] El modelo relacional que se ha implementado en PostgreSQL está formado por once tablas que se encargan de gestionar usuarios, autenticación, evaluaciones, sesiones, resultados y retroalimentación. La tabla de usuarios es el núcleo del esquema y se conecta con los procesos de acceso, creación de evaluaciones, resolución de pruebas y seguimiento del rendimiento. Las evaluaciones incluyen sus respectivas preguntas, mientras que las sesiones de resolución guardan las respuestas y generan los resultados consolidados en la tabla de puntajes. Así mismo, la tabla de retroalimentación de inteligencia artificial registra los comentarios generados por el software. Todas las tablas utilizan claves primarias UUID y aseguran la integridad referencial a través de claves foráneas.
+[P227|Normal] Figura 2 
+[P228|Normal] Modelo relacional de la base de datos 
+[P229|Normal] 
+[P230|Heading 2] 
+[P231|No Spacing] Nota: Modelo Relacional del sistema , , creado por  , 2026..
+[P232|Normal] 
+[P233|Heading 3] Análisis De Normalización
+[P234|Normal] 
+[P235|Normal] El esquema de la base de datos fue validado a partir de las formas normales Primera Forma Normal (1FN), Segunda Forma Normal (2FN), Tercera Forma Normal (3FN) y Forma Normal de Boyce-Codd (BCNF). Los resultados obtenidos muestran que todas las tablas cumplen, como mínimo, con las exigencias de la 3FN y que la mayoría satisface las exigencias de BCNF.
+[P236|Normal] Durante la fase del diseño fueron identificados y documentados dos casos de desnormalización controlada, justificados por criterios de rendimiento y uso del sistema:
+[P237|Normal] 
+[P238|Normal] quiz_sessions.answers (JSONB): este atributo contiene un conjunto de respuestas integradas en la propia sesión. Se optó por esta solución dado que la sesión se consulta como una totalidad en infinidad de ocasiones, el conjunto de respuestas va creciendo progresivamente con la ejecución de la evaluación y una vez terminada la evaluación, se encuentran fijadas en el contenido que ha sido almacenado. La elección de implementar, en su lugar, una tabla independiente llamada session_answers en el contexto relacional habría implicado realizar aún más operaciones de inserción para cada una de las respuestas y realizar más consultas para recuperar la sesión, sin aportar grandes ventajas funcionales.
+[P239|Normal] 
+[P240|Normal] scores.accuracy (FLOAT): Esta propiedad tiene valor de un cálculo realizado a partir de los campos correct_count y total_questions, se ha almacenado desnormalizado como forma de tener simplificadas las operaciones de ordenación que pida el aplicativo de ranking. Los registros de puntuación son inmutables una vez generados, por lo que el riesgo de inconsistencias como resultado de esta desnormalización es muy bajo.
+[P241|Normal] Ambas decisiones se encuentran documentadas en los archivos. entity.ts y quedan respaldadas por reglas de integridad verificadas en la capa de aplicación antes de que se persista cada registro.
+[P242|Normal] 
+[P243|Normal] 
+[P244|Normal] 
+[P245|Heading 3] Reglas de Normalización
+[P246|Normal] 
+[P247|Normal] Primera Forma Normal (1FN): En esta forma, todos los atributos deben contener valores atómicos, y no se permiten grupos repetitivos. Los datos estructurados, como options, answers y payload, se manejan utilizando el tipo de dato JSONB, siguiendo un esquema de desnormalización que está controlado y bien documentado.
+[P248|Normal] Segunda Forma Normal (2FN): Todas las tablas utilizan una clave primaria simple de tipo UUID, lo que elimina la posibilidad de dependencias parciales entre atributos y asegura que se cumpla con esta forma normal.
+[P249|Normal] Tercera Forma Normal (3FN): El esquema no presenta dependencias transitivas entre atributos que no son clave. Algunos datos derivados, como scores.accuracy y ciertos indicadores agregados, se almacenan de manera desnormalizada para mejorar el rendimiento del software de clasificación, aprovechando la naturaleza inmutable de esos registros.
+[P250|Normal] Forma Normal de Boyce-Codd (BCNF): Las dependencias funcionales que se han identificado en el esquema tienen como determinantes claves candidatas válidas. Por lo tanto, de cumplir con la 3FN, el diseño también satisface en gran medida los requisitos de la Forma Normal de Boyce-Codd (BCNF).
+[P251|Normal] 
+[P252|Heading 2] Diccionario de Datos
+[P253|Normal] El esquema físico de la base de datos se implementó en PostgreSQL, utilizando TypeORM como herramienta de mapeo objeto relacional (ORM). Este esquema consta de once tablas que derivan de las entidades definidas en los archivos. entity.ts del backend desarrollado con NestJS. A continuación, se presenta el diccionario de datos correspondiente, que incluye para cada tabla sus atributos, tipos de datos, restricciones y una descripción funcional.
+[P254|Normal] Tabla 9: 
+[P255|Normal] Diccionario de datos  users.
+[P256|Normal] 
+[P257|Normal] Tabla 10
+[P258|Normal] Diccionario de datos  auth_sessions.
+[P259|Normal] 
+[P260|Normal] Integridad referencial
+[P261|Normal] 
+[P262|Normal] Tabla 11
+[P263|Normal] Diccionario de datos  email_verification_tokens.
+[P264|Normal] 
+[P265|Normal] Integridad referencial
+[P266|Normal] 
+[P267|Normal] Tabla 12
+[P268|Normal] Diccionario de datos password_reset_tokens.
+[P269|Normal] 
+[P270|Normal] Integridad referencial
+[P271|Normal] 
+[P272|Normal] Tabla 13
+[P273|Normal] Diccionario de datos quizzes.
+[P274|Normal] 
+[P275|Normal] 
+[P276|Normal] Integridad referencial
+[P277|Normal] 
+[P278|Normal] Tabla 14
+[P279|Normal] Diccionario de datos  questions.
+[P280|Normal] 
+[P281|Normal] 
+[P282|Normal] Integridad referencial
+[P283|Normal] 
+[P284|Normal] Tabla 15
+[P285|Normal] Diccionario de datos  quiz_sessions.
+[P286|Normal] 
+[P287|Normal] 
+[P288|Normal] 
+[P289|Normal] Integridad referencial
+[P290|Normal] 
+[P291|Normal] Tabla 16
+[P292|Normal] Diccionario de datos  achievements
+[P293|Normal] 
+[P294|Normal] Integridad referencial
+[P295|Normal] 
+[P296|Normal] Tabla 17
+[P297|Normal] Diccionario de datos  feedback_ia.
+[P298|Normal] 
+[P299|Normal] Restricción adicional: un índice único sobre user_id y code para evitar que un mismo usuario tenga logros duplicados.
+[P300|Normal] Integridad referencial
+[P301|Normal] 
+[P302|Normal] Tabla 18
+[P303|Normal] Diccionario de datos  feedback_ia
+[P304|Normal] 
+[P305|Normal] Integridad referencial
+[P306|Normal] 
+[P307|Heading 2] El Diagrama De Clases UML
+[P308|Normal] El diagrama de clases UML ilustra la estructura del módulo de autenticación a través de las capas de dominio, aplicación e infraestructura, sirviendo como un claro ejemplo de la arquitectura hexagonal aplicada a los diferentes módulos del sistema. Este diagrama abarca áreas importantes como la autenticación, la evaluación de quizzes, la calificación y la gestión de usuarios.
+[P309|Normal] En la capa de dominio, encontramos las entidades principales, que incluyen User, Quiz, Question, QuizSession, SessionAnswer, Score, Notification, FeedbackIA, AuthSession, PasswordResetToken y EmailVerificationToken. También hay objetos de valor como Email, así como enumeraciones que definen categorías, tipos de preguntas, estados de sesión, idiomas, niveles de dificultad, roles, tipos de notificación, códigos de logro y estrategias de calificación, todos ellos que establecen las reglas del software.
+[P310|Normal] La capa de aplicación se encarga de los casos de uso que gestionan la autenticación, el flujo de quizzes, el procesamiento de respuestas y la evaluación de preguntas. Por último, la capa de infraestructura se ocupa de implementar los repositorios, los servicios de autenticación, la gestión de tokens, la integración con proveedores externos y el servicio de evaluación automática de respuestas.
+[P311|Normal] Finalmente, la capa de presentación está compuesta por los controladores del sistema, que se encargan de mostrar las funcionalidades relacionadas con la autenticación, los quizzes, las respuestas y los resultados.
+[P312|Normal] 
+[P313|Normal] Figura 3 
+[P314|Normal] Diagrama de clases UML
+[P315|Normal] 
+[P316|Heading 2]  	Nota: Diagrama Clases sistema , creado por  , 2026.
+[P317|Normal] Diseño de proveedores de IA
+[P318|Normal] El diseño del subsistema de inteligencia artificial se fundamenta en una arquitectura que es tanto extensible como desacoplada. La interfaz IAIQuestionProvider establece un contrato común para la generación de preguntas, mientras que BaseOllamaAIProvider aplica el patrón Template Method, ofreciendo un flujo general que es reutilizado por QwenProvider y MistralProvider. La creación de proveedores se centraliza a través de AIProviderFactory, que utiliza el patrón Factory, y la integración con servicios externos se lleva a cabo mediante OllamaAdapter, que implementa el patrón Adapter para separar la lógica de negocio de las bibliotecas externas, los objetos de valor como Email, HashedPassword y Points encapsulan reglas del dominio, ayudando a mantener la consistencia de los datos.
+[P319|Normal] Figura 2 1
+[P320|Normal] Diseño de proveedores de IA.
+[P321|Normal] 
+[P322|Normal] Nota: Este diagrama ilustra el diseño de proveedores de IA, creado por  , 2026.
+[P323|Normal] 
+[P324|Normal] Patrón Strategy para la Calificación de Respuestas
+[P325|Normal] Este diagrama ilustra la implementación del patrón de diseño Strategy en el proceso de calificación. La interfaz IGradingStrategy define el método común `grade()`, mientras que las clases ExactMatchStrategy, SimilarityStrategy y LLMRubricStrategy ponen en práctica diferentes algoritmos de evaluación. Este enfoque permite seleccionar de manera dinámica la estrategia de calificación más adecuada según el tipo de pregunta, lo que facilita la extensibilidad del sistema y reduce el acoplamiento entre la lógica de negocio y los métodos de evaluación.
+[P326|Normal] 
+[P327|Normal] Figura 2 2
+[P328|Normal] Patrón Strategy para la Calificación de Respuestas.
+[P329|Normal] 
+[P330|Normal] Nota: Este diagrama muestra el patrón Strategy para calificar respuestas, elaborado por  , 2026.
+[P331|Normal] Implementación del Patrón Command
+[P332|Normal] Este diagrama representa el patrón de diseño Command, donde la interfaz Command establece un contrato único a través del método Executes(). Las clases concretas GradeQuizCommand, GenerateFeedbackCommand y GenerateQuizCommand implementan esta interfaz para encapsular de manera desacoplada las acciones de calificar, retroalimentar y generar cuestionarios. Esta estructura unifica la ejecución de tareas independientes, facilitando la escalabilidad del software sin modificar los componentes que invocan los comandos.
+[P333|Normal]    Figura 2 3
+[P334|Normal]     Implementación del Patrón Command
+[P335|Normal] 
+[P336|Normal] Nota: Este diagrama detalla la implementación del Patrón Command, por , 2026.
+[P337|Heading 2] Diagrama de Casos de Uso
+[P338|Normal] El diagrama de casos de uso del aplicativo resalta cinco actores principales: el Estudiante (USER), el Docente (TEACHER), el Administrador (ADMIN), un sistema externo de autenticación OAuth como Google y Microsoft; y un servicio externo de inteligencia artificial que utiliza FastAPI. La estructura funcional del software se organiza en cinco paquetes: Autenticación, Creación y Publicación de Evaluaciones, Resolución de Evaluaciones, Historial y Retroalimentación del Score, Ranking y Administración.
+[P339|Normal] 
+[P340|Normal] En lo que respecta a la jerarquía de roles, el Docente tiene acceso a todas las funcionalidades del Estudiante, mientras que el Administrador no solo hereda las capacidades del Docente, sino que también añade funciones de gestión global de la plataforma. Las relaciones include y extend proporciona vincular los procesos de resolución de quizzes con la calificación mediante inteligencia artificial, la verificación de logros y el cálculo de puntajes.
+[P341|Heading 2] 
+[P342|Normal] A continuación, se presenta una descripción detallada de cada paquete funcional de la aplicación, respaldada por la implementación real en el código fuente, que incluye los módulos de NestJS y los routers de FastAPI.
+[P343|Normal] 
+[P344|Heading 2] Actores y Generalización
+[P345|Normal] El sistema está formado por cinco actores. El Estudiante es el usuario base del aplicativo. El Docente amplía sus capacidades y añade funciones para crear evaluaciones. El Administrador, por su parte, hereda las funcionalidades del Docente y suma capacidades de administración global.
+[P346|Normal] Los actores externos abarcan el sistema OAuth, que se encarga de la autenticación a través de Google y Microsoft, y el servicio de inteligencia artificial basado en FastAPI, que se ocupa de la generación y evaluación de contenido utilizando modelos LLM.
+[P347|Normal]  Figura 2 4
+[P348|Normal]  Diagrama de casos de uso: actores y generalización.
+[P349|Normal] 
+[P350|Normal] Nota: Este diagrama representa los actores y la generalización en los casos de uso, realizado por , 2026.
+[P351|Heading 3] Paquete de Autenticación
+[P352|Normal] El paquete de autenticación se enfoca en cómo los usuarios acceden a los sistemas. Incluye situaciones como iniciar sesión, usar OAuth para el acceso, registrarse, refrescar tokens y cerrar sesión.
+[P353|Normal] El proceso de iniciar sesión abarca la validación de credenciales, seguido por la emisión de tokens JWT y la creación de la sesión. En cuanto al registro de usuarios, se incluye un proceso más detallado para verificar el correo electrónico. La autenticación mediante OAuth se conecta con sistemas externos para validar el id_token.
+[P354|Normal] Figura 2 5
+[P355|Normal] Diagrama de casos de uso: paquete de autenticación.
+[P356|Normal] 
+[P357|Normal] Nota: Este diagrama ilustra el paquete de autenticación en los casos de uso, creado por , 2026.
+[P358|Normal] 
+[P359|Heading 3] Creación y Publicación de Evaluaciones
+[P360|Normal] Este paquete está diseñado para el rol de Docente e incluye funciones como crear evaluaciones, agregar preguntas, editar evaluaciones, publicarlas, despublicarlas o archivarlas, y generar preguntas usando inteligencia artificial.
+[P361|Normal] La generación de preguntas mediante IA enriquece el proceso de creación de evaluaciones y se vincula con un servicio externo de inteligencia artificial que utiliza modelos LLM como Qwen3 y Mistral para crear contenido educativo automáticamente.
+[P362|Normal] Figura 2 6
+[P363|Normal] Diagrama de casos de uso: creación y publicación de evaluaciones.
+[P364|Normal] 
+[P365|Normal] Nota: Este diagrama muestra el proceso de creación y publicación de evaluaciones, diseñado por , 2026.
+[P366|Normal] 
+[P367|Heading 3] Resolución de Evaluaciones
+[P368|Normal] El paquete de resolución detalla el recorrido del estudiante al realizar evaluaciones. Incluye listar las evaluaciones publicadas, iniciar un intento, responder preguntas, finalizar el intento, calcular el puntaje y generar retroalimentación.
+[P369|Normal] Las preguntas cerradas se califican localmente, mientras que las respuestas abiertas pueden ser evaluadas con IA, lo que extiende el proceso. Adicionalmente el software verifica logros y almacena el puntaje final.
+[P370|Normal] Este flujo se alinea con el endpoint POST quiz session del backend en NestJS y con la delegación de evaluación hacia el servicio de FastAPI.
+[P371|Normal] Figura 2 7
+[P372|Normal] Diagrama de casos de uso: resolución de evaluaciones.
+[P373|Normal] 
+[P374|Normal] Nota: Este diagrama detalla cómo se resuelven las evaluaciones, elaborado por , 2026.
+[P375|Normal] 
+[P376|Heading 3] Historial y Retroalimentación
+[P377|Normal] Este paquete reúne todas las herramientas necesarias para hacer un seguimiento del desempeño académico de los usuarios. Incluye la visualización del ranking, el acceso al historial de puntajes y logros, y un análisis de debilidades a través de inteligencia artificial.
+[P378|Normal] Estas funciones están disponibles para estudiantes, docentes y administradores, lo que permite monitorear el progreso académico y evaluar el rendimiento a lo largo del tiempo.
+[P379|Normal] El análisis de debilidades utiliza inteligencia artificial para identificar patrones de desempeño, detectar áreas que necesitan mejora y ofrecer retroalimentación pedagógica personalizada.
+[P380|Normal] Figura 2 8
+[P381|Normal] Diagrama de casos de uso: historial y retroalimentación.
+[P382|Normal] 
+[P383|Normal] Nota: Este diagrama representa el historial y la retroalimentación en los casos de uso, realizado por , 2026.
+[P384|Normal] 
+[P385|Heading 3] Administración
+[P386|Normal] El paquete de Administración está diseñado exclusivamente para el rol de Administrador y agrupa todas las funciones de gestión del sistema.
+[P387|Normal] Entre sus principales usos se encuentran la gestión de usuarios, la visualización de reportes agregados, el bloqueo y activación de cuentas, y la administración de secciones académicas.
+[P388|Normal] Estas funciones permiten supervisar el funcionamiento de la plataforma, garantizar el control de acceso y mantener la organización de los recursos académicos.
+[P389|Normal] 
+[P390|Normal] Figura 2 9
+[P391|Normal] Diagrama de casos de uso: administración.
+[P392|Normal] 
+[P393|Normal] Nota: Este diagrama ilustra la administración en los casos de uso, creado por , 2026.
+[P394|Heading 3] Diagrama de Secuencia: Inicio de Sesión OAuth
+[P395|Normal] El aplicativo ofrece dos formas de autenticación: a través de proveedores OAuth como Google o Microsoft, y mediante credenciales tradicionales que incluyen correo electrónico y contraseña.
+[P396|Normal] En el flujo de OAuth, el usuario elige autenticarse con Google o Microsoft desde la interfaz. Luego, el frontend redirige al proveedor de identidad para llevar a cabo la autenticación. Una vez que se valida, se obtiene un token de identidad que se envía al backend a través de un endpoint puente. Después, el servicio de autenticación verifica el proveedor, busca o registra al usuario, genera los tokens de acceso y refresco, guarda las credenciales de forma segura usando cookies HTTPOnly y finalmente redirige al usuario al sistema.
+[P397|Normal] 
+[P398|Normal] En el flujo tradicional, el usuario introduce sus credenciales en la interfaz. El frontend envía la solicitud al servicio de autenticación, donde se verifican las credenciales contra la base de datos. Si la validación es exitosa, se generan los tokens correspondientes, se almacenan las cookies seguras y se concede acceso al sistema.
+[P399|Normal] Figura 2 10
+[P400|No Spacing] Diagrama de secuencia: inicio de sesión.
+[P401|Normal] 
+[P402|Normal] Nota: Este diagrama muestra el proceso de inicio de sesión, diseñado, por , 2026.
+[P403|Normal] 
+[P404|Normal] 
+[P405|Normal] 
+[P406|Normal] Diagrama de Secuencia – Generación de Evaluación con IA
+[P407|Normal] Este diagrama ilustra cómo se generan automáticamente preguntas utilizando inteligencia artificial. El docente comienza completando un formulario donde indica varios parámetros, como el tema, la categoría, la dificultad, el idioma, el tipo de pregunta y la cantidad que necesita. Una vez enviado, este formulario llega al backend, donde un caso de uso específico se encarga de solicitar preguntas al módulo de inteligencia artificial, utilizando una estrategia que permite tolerar fallos.
+[P408|Normal] 
+[P409|Normal] En primer lugar, se recurre al proveedor principal; si este no está disponible, el producto digital cambia automáticamente a un proveedor alternativo. Las respuestas generadas pasan por un proceso de validación, normalización y eliminación de duplicados. Si la cantidad de preguntas generadas no es suficiente, el aplicativo hace solicitudes adicionales hasta alcanzar el número deseado.
+[P410|Normal] Finalmente, las preguntas generadas se presentan al docente para su revisión y, una vez que este las confirma, la evaluación se almacena en la plataforma.
+[P411|Normal] Figura 2 11
+[P412|Normal] Diagrama de secuencia: generación de evaluación con IA.
+[P413|Normal] 
+[P414|Normal] Nota: Este diagrama detalla cómo se genera una evaluación utilizando IA, elaborado por  , 2026.
+[P415|Normal] 
+[P416|Heading 3] Diagrama de Secuencia: Resolución de un Quiz
+[P417|Normal] Primero, el estudiante entra a la evaluación y el frontend solicita la información necesaria al backend, obteniendo así las preguntas relacionadas. Al iniciar la evaluación, se establece una sesión que comienza en estado IN_PROGRESS.
+[P418|Normal] 
+[P419|Normal] A lo largo de la resolución, cada respuesta que el estudiante envía se guarda y se procesa de manera individual. Las preguntas cerradas se evalúan con validaciones directas, mientras que las preguntas abiertas se envían a un servicio especializado en evaluación semántica, que se encarga de determinar la precisión de la respuesta y ofrecer retroalimentación.
+[P420|Normal] 
+[P421|Normal] Cuando el estudiante termina la evaluación, se cierra la sesión, actualizando su estado a COMPLETED, se calcula el puntaje obtenido, se almacenan los resultados y se genera la retroalimentación final, que luego se presenta al estudiante.
+[P422|Normal] Figura 2 12
+[P423|Normal] Diagrama de secuencia resolución de un quiz
+[P424|Normal] 
+[P425|Normal] Note. Sequence diagram: solution of a quiz, por  , 2026.
+[P426|Heading 3]        Diagrama de Estados: QuizSession
+[P427|Normal] El diagrama de estados de QuizSession ilustra el ciclo de vida de una sesión de evaluación a través de cuatro etapas: CREACION, EN_PROGRESO, COMPLETADO y ABANDONADO. La sesión comienza en CREACION y avanza a EN_PROGRESO cuando el estudiante envía su primera respuesta. Al concluir la evaluación, se calcula el puntaje, se validan los logros y la sesión se transforma en COMPLETADO. Durante este proceso, se genera el evento QUIZ_COMPLETED mediante EventEmitter2, siguiendo el patrón Observer. La transición a ABANDONADO se produce por inactividad prolongada o por el cierre anticipado de la sesión. Los estados COMPLETADO y ABANDONADO son finales; sin embargo, solo las sesiones completadas se tienen en cuenta para el cálculo de rankings, estadísticas y logros.
+[P428|Normal] Figura 2 13
+[P429|Normal]  Diagrama de estados para la sesión de quiz.
+[P430|Normal] 
+[P431|Normal] Nota: Diagrama de estados: QuizSession, por  , 2026.
+[P432|Normal] 
+[P433|Heading 3] Diagrama de Estados: Sesiones de Autenticación
+[P434|Normal] El flujo de auth_sessions arranca con la función login(), que establece una sesión en estado Active. Esta sesión puede cambiar a Revoked mediante logout() o change_password, o a Expired si se supera el tiempo de vida del refresh token, que está fijado en siete días. Este modelo refleja el control de revocación a través de is_revoked y la expiración de la sesión.
+[P435|Normal] Figura 2 14
+[P436|Normal] Diagrama de estados para las sesiones de autenticación.
+[P437|Normal] 
+[P438|Normal] Nota: Diagrama de estados: sesiones de autenticación, por , 2026.
+[P439|Normal] 
+[P440|Heading 3] Diagrama de Estados: Token de Verificación de Correo
+[P441|Normal] El ciclo del token de verificación de correo comienza cuando se ejecuta Request_Verify_Email, generando un token en estado Active. Luego, al ejecutar confirm_verify_email, se llama a markUsed(), lo que cambia el estado del token a Expired. Alternativamente, si el tiempo de vida del token se agota, se invalida automáticamente. Este comportamiento se relaciona con la entidad email_verification_tokens.
+[P442|Normal] Figura 2 15
+[P443|Normal] Diagrama de estados para el token de verificación de correo.
+[P444|Normal] 
+[P445|Normal] Nota: Diagrama de estados: token de verificación de correo, por , 2026.
+[P446|Normal] 
+[P447|Heading 3] Diagrama de Estados: Token de Restablecimiento de Contraseña
+[P448|Normal] El proceso de recuperación de contraseña comienza con Request_Password, que genera un token en estado Active. Después, Reset_Password llama a markUsed(), cambiando el estado a Used, o la aplicación puede invalidar el token si se supera su tiempo de vida de una hora. Este modelo se asocia con la tabla password_reset_tokens.
+[P449|Normal] 
+[P450|Normal] Figura 2 16
+[P451|Normal] Diagrama de estados para el token de restablecimiento de contraseña.
+[P452|Normal] 
+[P453|Normal] Nota: Diagrama de estados: token de restablecimiento de contraseña, por , 2026.
+[P454|Normal] 
+[P455|Heading 3] Diagrama de Estados: Verificación de Correo del Usuario
+[P456|Normal] El proceso de verificación de correo a nivel de usuario comienza tras el registro, donde la cuenta se encuentra en estado Required, indicando que el correo no ha sido verificado. Al ejecutar Verify_email_user, la cuenta pasa a Email_Verified. Este estado se refleja en el campo is_email_verified de la entidad users.
+[P457|Normal] Figura 2 17
+[P458|Normal] Diagrama de estados para la verificación del correo del usuario.
+[P459|Normal] 
+[P460|Normal] Nota: Diagrama de estados: verificación de correo del usuario, por , 2026.
+[P461|Heading 2] Diagrama de Arquitectura de Microservicios
+[P462|Normal] La arquitectura se compone de cuatro capas lógicas. En la capa de frontend, se emplea Next.js junto con Auth.js y un proxy para comunicarse con el backend. La capa de backend está construida en NestJS, organizada en módulos que incluyen Auth, Users, Quiz, Score, Notifications, AIClient y un JwtAuthGuard global.
+[P463|Normal] 
+[P464|Normal] El microservicio de inteligencia artificial se desarrolla en FastAPI, encargado de generar y evaluar respuestas. La capa de datos utiliza PostgreSQL a través de TypeORM y Redis para el almacenamiento en caché con un TTL de 60 segundos. Los usuarios acceden al aplicativo a través de CDN o Vercel Edge, y las solicitudes autenticadas se envían al backend mediante JWT. El backend se ocupa de la persistencia y delega las tareas de inteligencia artificial al microservicio FastAPI. 
+[P465|Normal] Los usuarios acceden al aplicativo a través de CDN o Vercel Edge. Las solicitudes autenticadas se envían al backend usando JWT, donde se gestiona la lógica de negocio y la persistencia de datos. Las tareas de inteligencia artificial se delegan al microservicio en FastAPI para la generación y evaluación de respuestas.
+[P466|Normal] Figura 2 18
+[P467|Normal] Diagrama de arquitectura de microservicios.
+[P468|Normal] 
+[P469|Normal] Nota: Diagrama de arquitectura de microservicios, por , 2026.
+[P470|Heading 2] 
+[P471|Heading 2] Prototipos de Interfaz: Figma
+[P472|Normal] Durante la Fase 2 del proyecto, que se llevó a cabo entre el 6 y el 24 de abril de 2026, se crearon los prototipos de la plataforma utilizando Figma. Una vez que se completaron, estos diseños fueron evaluados y validados por la dirección académica previo al inicio de la codificación del frontend. Las pantallas cubren los recorridos de presentación de la plataforma, autenticación de usuarios y los tres entornos de acceso del software: portal del estudiante, del docente y del administrador. Cada vista fue construida en Figma.
+[P473|Normal] 
+[P474|Heading 2] Página Principal (Landing Page)
+[P475|Normal] La página principal resalta la propuesta de valor de NeuroEdu IA a través de una sección hero que presenta un título en degradado, un botón de llamada a la acción que dice “Comenzar”, indicadores de tracción como son estudiantes activos, precisión de la IA y número de evaluaciones disponibles, contiene secciones informativas sobre las funcionalidades, los roles de usuario y el flujo de uso de la plataforma, junto con un pie de página que proporciona información de contacto. Esta interfaz los usuarios pueden acceder al registro e inicio de sesión.
+[P476|Normal] Figura 3 1
+[P477|Normal] Prototipo de la página principal (landing page).
+[P478|Normal] 
+[P479|Normal] Nota: Prototipo: página principal (landing page) , por  , 2026.
+[P480|Normal] 
+[P481|Heading 2] Interfaz de Autenticación
+[P482|Normal]  Las vistas destinadas al acceso y creación de cuentas presentan una estructura centrada mediante un contenedor visual que resalta sobre un fondo con degradado. Estas interfaces proporcionar el ingreso mediante cuentas de Google y Microsoft, realizan comprobaciones automáticas durante la captura de información, proporcionan retroalimentación sobre el nivel de seguridad de la contraseña durante el proceso de creación de cuentas e incluyen opciones orientadas a la recuperación del acceso. Estas funcionalidades corresponden a las historias de usuario 01, 02 y 03 definidas dentro del backlog y fueron desarrolladas mediante componentes y vistas implementadas con Next y TypeScript.
+[P483|Normal] Figura 3 2
+[P484|Normal] Prototipo de la interfaz de autenticación.
+[P485|Normal] 
+[P486|Normal] Nota: Prototipo: interfaz de autenticación, por , 2026.
+[P487|Normal] 
+[P488|Heading 3] Portal del Estudiante
+[P489|Normal] El portal del estudiante cuenta con 4 pantallas principales:
+[P490|Normal] Dashboard del estudiante: aquí se presenta un resumen de las evaluaciones pendientes y completadas, una racha de actividad y accesos rápidos. Implementa parcialmente las historias de usuario 08 y 13.
+[P491|Normal] Figura 3 3
+[P492|Normal] Prototipo del dashboard del estudiante.
+[P493|Normal] 
+[P494|Normal] Nota: Prototipo: dashboard del estudiante, por , 2026.
+[P495|Normal] 
+[P496|Normal] Listado de evaluaciones: ofrece información sobre cada evaluación, incluyendo título, descripción, tiempo estimado y un botón para comenzar.
+[P497|Normal] Figura 3 4
+[P498|Normal] Prototipo del listado de evaluaciones.
+[P499|Normal] 
+[P500|Normal] Nota: Prototipo: listado de evaluaciones, por , 2026.
+[P501|Normal] 
+[P502|Normal] Módulo de progreso: permite visualizar métricas de desempeño a través de gráficos que muestran puntos acumulados, precisión promedio, el mejor resultado obtenido, la evolución de los últimos 20 quizzes y la distribución del desempeño por rangos. Implementa 13.
+[P503|Normal] Figura 3 5
+[P504|Normal] módulo de progreso
+[P505|Normal] 
+[P506|Normal] Nota. Prototipo: módulo de progreso, por  , 2026.
+[P507|Normal] Feedback inteligente: presenta un análisis generado por el agente de IA que identifica áreas de bajo desempeño, ofrece recomendaciones de estudio y envía mensajes motivacionales personalizados. Implementa 09.
+[P508|Normal] Figura 3 6
+[P509|Normal] feedback inteligente
+[P510|Normal] 
+[P511|Normal] Nota. Prototipo: feedback inteligente, por  , 2026.
+[P512|Normal] 
+[P513|Heading 3] Portal del Docente
+[P514|Normal] El portal del docente está diseñado con tres pantallas principales:
+[P515|Normal] Dashboard del Docente: se presentan la clasificación de los estudiantes, indicadores del rendimiento promedio en evaluaciones y la distribución de resultados por nivel de dificultad. Esta sección se encuentra en fase de implementación.
+[P516|Normal] Figura 3 7
+[P517|Normal] dashboard del docente
+[P518|Normal] 
+[P519|Normal] Nota: Prototipo dashboard del docente, por  , 2026.
+[P520|Normal] 
+[P521|Normal] Gestión de Evaluaciones: Esta sección permite consultar el catálogo de evaluaciones, crearlas de forma convencional y generarlas mediante IA a través de un formulario donde se especifican el tema, el nivel de dificultad y la cantidad de preguntas. Corresponde a las historias de usuario 04, 05 y 06.
+[P522|Normal] Figura 3 8
+[P523|Normal] gestión de evaluaciones
+[P524|Normal] 
+[P525|Normal] Nota: gestión de evaluaciones, por , 2026.
+[P526|Normal] 
+[P527|Normal] Resultados Detallados: Muestra una tabla con información sobre los estudiantes, que comprende la calificación obtenida, el tiempo que han consumido y su precisión. Adicionalmente puedes filtrar por evaluación y rango de fechas. Esta funcionalidad está en la fase de implementación 10.
+[P528|Normal] Figura 3 9
+[P529|Normal] resultados detallados
+[P530|Normal] 
+[P531|Normal] Nota: resultados detallados [Prototipo de interfaz], por , 2026.
+[P532|Normal] 
+[P533|Normal] Figura 3 10
+[P534|Normal] resultados detallados 
+[P535|Normal] 
+[P536|Normal] Nota: resultados detallados [Prototipo de interfaz], por , 2026.
+[P537|Heading 3] Portal del Administrador
+[P538|Normal] El Portal del Administrador cuenta con tres pantallas principales:
+[P539|Normal] Dashboard del Administrador: se presentan estadísticas globales por rol estudiante, docente y administrador, el número de evaluaciones publicadas, sesiones realizadas y un top 10 de los estudiantes con mejor rendimiento. Esta sección implementa la 12.
+[P540|Normal] Figura 3 11
+[P541|Normal] dashboard del administrador
+[P542|Normal] 
+[P543|Normal] Nota: dashboard del administrador [Prototipo de interfaz], por , 2026.
+[P544|Normal] 
+[P545|Normal] Gestión de Usuarios: permite ver a los usuarios en un listado paginado, realizar búsquedas por nombre o correo, activar o desactivar cuentas y modificar roles. También implementa la 12.
+[P546|Normal] 
+[P547|Normal] Gestión Global de Evaluaciones: Esta función te permite revisar y moderar de manera centralizada el catálogo de evaluaciones de la plataforma. Implementa la 12.
+[P548|Normal] 
+[P549|Normal] 
+[P550|Normal] 
+[P551|Normal] Todos los prototipos han sido creados siguiendo los principios de Atomic Design y respetando las normas de accesibilidad de la WCAG 2.1 AA, como el contraste mínimo, la navegación por teclado y la implementación de etiquetas ARIA, aparte de utilizar los componentes definidos en la biblioteca de estilos TailwindCSS en el proyecto.
+[P552|Normal] 
+[P553|Normal] 
+[P554|Heading 2] Agente IA: Arquitectura y Cómo Funciona
+[P555|Normal] El agente de inteligencia artificial es el núcleo de la plataforma y se ha desarrollado como un microservicio utilizando FastAPI. Su diseño se divide en cuatro áreas funcionales: Grading, Feedback y Assistant, que ya están implementadas y en funcionamiento, y Analytics, que mantiene la estructura hexagonal de carpetas sin exponer endpoints en la versión actual del aplicativo. Cada área sigue una arquitectura hexagonal, garantizando una clara separación entre las capas de dominio, aplicación, infraestructura y presentación.
+[P556|Heading 2] 
+[P557|Heading 2] Contexto Grading: Calificación Automática
+[P558|Normal] En el contexto de Grading, se ofrecen los endpoints POST /grading/grade y POST /grading/batch. Su propósito es llevar a cabo la calificación automática de respuestas, utilizando el patrón Strategy, que permite elegir dinámicamente el modelo de evaluación más adecuado según el tipo de pregunta.
+[P559|Normal] Se emplean tres modelos principales:
+[P560|Normal] ExactMatchModel: diseñado para preguntas objetivas como opción múltiple o verdadero/falso. Realiza una comparación directa entre la respuesta del estudiante y la respuesta correcta.
+[P561|Normal] SimilarityModel: basado en Sentence Transformers, mide la similitud coseno entre la respuesta del estudiante y una respuesta de referencia, generando una puntuación normalizada que va de 0 a 1.
+[P562|Normal] NlpModel: utiliza el pipeline de spaCy para un análisis semántico más profundo, incorporando lematización, reconocimiento de entidades y análisis de dependencias, con el fin de evaluar respuestas más extensas con mayor precisión.
+[P563|Normal] La asignación del modelo se gestiona mediante el componente model_factory, encargado de determinar dinámicamente la estrategia de evaluación más apropiada según el tipo y la configuración de la pregunta. La persistencia de los resultados de calificación recae en el backend de NestJS, mientras que el procesamiento de evaluaciones por lotes se ejecuta de manera concurrente a través de asyncio.gather.
+[P564|Normal] 
+[P565|Heading 2] Contexto Feedback: Retroalimentación Pedagógica
+[P566|Normal] Su función es generar orientaciones pedagógicas ajustadas al perfil del estudiante, detectar las áreas que requieren refuerzo y elaborar planes de estudio con estructura y progresión definidas.
+[P567|Normal] La identificación de áreas con bajo rendimiento se basa en un umbral configurable, que por defecto se establece en un 60% de aciertos. El sistema utiliza un cliente LLM llamado OllamaClient en un entorno local, configurado por defecto con el modelo Llama 3.2 e integrado a través de la interfaz LLMClient del dominio.
+[P568|Normal] 
+[P569|Normal] Este contexto incluye un mecanismo RAG implementado mediante el adaptador RAGRetriever, que recupera contenido pedagógico institucional para acotar las respuestas al ámbito académico autorizado y minimizar el riesgo de alucinaciones del modelo, con recuperación sobre un corpus pedagógico en memoria.
+[P570|Heading 2] 
+[P571|Normal] 
+[P572|Heading 2] Interacción Entre Nestjs y Fastapi
+[P573|Normal] NestJS actúa como el orquestador principal del aplicativo. El módulo AIClientModule se encarga de manejar la comunicación con FastAPI mediante un cliente HTTP tipado, que está configurado con un tiempo de espera de 15 segundos y un mecanismo de contingencia que aplica una calificación local por coincidencia exacta en caso de que el microservicio no responda.
+[P574|Normal] La autenticación entre servicios se realiza mediante JWT firmado con una clave HMAC compartida. En las operaciones que requieren contexto de usuario, se propaga el token Bearer correspondiente para asegurar la trazabilidad de la sesión.
+[P575|Normal] 
+[P576|Heading 2] Patrones y Principios de Diseño
+[P577|Normal] El agente de inteligencia artificial fue creado siguiendo los principios SOLID, junto con una serie de patrones de diseño que aseguran la escalabilidad, mantenibilidad y extensibilidad del sistema.
+[P578|Normal] Se utilizan los siguientes patrones:
+[P579|Normal] Strategy: permite elegir dinámicamente el modelo de calificación según el tipo de pregunta y su contexto de evaluación.
+[P580|Normal] Factory: encapsula la creación de modelos a través de ModelFactory, centralizando la instanciación y facilitando la inCorporación de nuevos modelos.
+[P581|Normal] Adapter: integra componentes externos como OllamaClient y Sentence Transformers, ajustando sus interfaces al aplicativo interno sin un acoplamiento directo.
+[P582|Normal] Observer: gestiona eventos de dominio de forma desacoplada utilizando EventEmitter2 en NestJS, abarcando eventos como QUIZ_COMPLETED, SCORE_UPDATED y ACHIEVEMENT_UNLOCKED.
+[P583|Normal] Command: encapsula los casos de uso como unidades independientes de ejecución, lo que facilita su orquestación y reutilización.
+[P584|Normal] Template Method:: define una estructura base común en BaseUseCase, permitiendo reutilizar lógica compartida y especializar comportamientos en subclases.
+[P585|Normal] La estrategia de pruebas combina pruebas unitarias con simulaciones de modelos LLM, pruebas de integración en instancias locales de Ollama y pruebas funcionales que se ejecutan en el sistema local, con la infraestructura de datos en PostgreSQL y Redis configurada en contenedores Docker a través de docker-compose.dev.yml.
+[P586|Normal] 
+[P587|Heading 2] Estrategia Metodológica y Desarrollo
+[P588|Normal] Para este proyecto, se optó por la metodología Scrum como marco metodológico principal. Esta metodología permitió dividir el trabajo en ciclos iterativos, lo que garantizó entregas funcionales constantes y una sincronización precisa con el cronograma de actividades de 2026.
+[P589|Header] 
+[P590|Heading 2] Artefactos y Ceremonias 
+[P591|Header] 
+[P592|Normal] Para garantizar la transparencia y el progreso del proyecto, se implementaron los siguientes elementos:
+[P593|Normal] Product Backlog: Una lista priorizada de historias de usuario centradas en los módulos de acceso y evaluaciones creación, respuesta, calificación y feedback inteligente.
+[P594|Normal] Sprints de dos semanas: ciclos de desarrollo que incluyen entregables verificables al final de cada iteración.
+[P595|Normal] Daily meetings: Reuniones diarias para identificar obstáculos y ver los avances.
+[P596|Normal] sprint reviews y retrospectivas: para evaluar el avance del producto y reflexión sobre las mejoras de los procesos al término de cada sprint.
+[P597|Normal] Definition of Done (DoD): Para que una tarea se considere finalizada, se pidió que sea el código implementado y revisado, pruebas funcionales aprobadas, documentación técnica actualizada y validación de pantallas en Figma.
+[P598|Header] 
+[P599|Header] 
+[P600|Heading 2] Fases de Desarrollo y Cronograma
+[P601|Normal] La ejecución del proyecto se organizó en etapas progresivas, siguiendo la planificación establecida en el diagrama de Gantt, que abarca desde el 20 de marzo hasta el 05 de julio de 2026. Cada fase permitió avanzar de manera ordenada, esta estructuración temporal contribuyó a la ejecución de cinco etapas:
+[P602|Header] 
+[P603|Normal] Fase 1- Análisis y Levantamiento de Información (11 Mar – 25 Mar): Durante esta etapa, se identificó la problemática, se levantaron los requerimientos funcionales y no funcionales, y se definieron los criterios generales del sistema. Además, se consolidó la visión inicial del producto y se sentaron las bases para su planificación.
+[P604|Normal] Fase 2 – Diseño Funcional y Experiencia de Usuario (26 Mar – 24 Abr): Se crearon los prototipos de interfaz utilizando Figma, que incluyen los módulos de autenticación, registro y gestión de evaluaciones. Al mismo tiempo, se definieron los flujos de navegación y la interacción esperada de los usuarios con la plataforma.
+[P605|Normal] Fase 3 - Modelado de la Solución y Planeación Técnica (27 Abr – 15 May): En esta fase, se desarrollaron los artefactos de diseño necesarios para el desarrollo del sistema, como historias de usuario, modelos de datos, esquemas relacionales y representaciones arquitectónicas de los componentes. Estas actividades permitieron estructurar la información de manera adecuada y asegurar la mantenibilidad de la solución.
+[P606|Normal] Fase 4 – Construcción e Integración Tecnológica (15 May – 27May): Durante este periodo, se implementó la arquitectura basada en microservicios y se desarrollaron los componentes clave de la plataforma:
+[P607|Normal] Backend central NestJS: Implementación del servicio de autenticación, autorización, gestión de usuarios y la lógica de negocio.
+[P608|Normal] Servicio de Inteligencia Artificial con FastAPI: integración de modelos para generar evaluaciones automáticamente, calificaciones asistidas y retroalimentaciones personalizadas.
+[P609|Normal] Fase 5 – Testing Integral, Ajustes y Documentación (27 May – 05 Jun): Ejecución de pruebas funcionales de integración entre NestJS y FastAPI y pruebas de usuario sobre la interfaz. También se realizaron correcciones basadas en los resultados obtenidos, se consolidó la documentación técnica, entrega de recomendaciones de continuidad, académica del proyecto, y se preparó la presentación final.
+[P610|Header] 
+[P611|Heading 2] Implementación Técnica
+[P612|Normal] Durante la implementación del software, se optó por NestJS como backend principal gracias a su arquitectura modular y la capacidad de ofrecer la gestión de los usuarios y la lógica de negocio apropiada para la plataforma. A su vez, se decidió para el microservicio específico, como el que gestiona la inteligencia artificial, el uso de FastAPI.
+[P613|Normal] La comunicación entre los dos servicios se lleva a cabo a través de servicios web del tipo REST, utilizando un canal de transporte seguro que se basa en la seguridad de la capa de transporte (TLS) y el intercambio de datos en formato JSON. Se implementó un mecanismo de autenticación entre los servicios para asegurar interacciones seguras, enviando un token JSON Web Token firmado digitalmente en el encabezado Authorization Bearer.
+[P614|Normal] La capa de presentación se desarrolló mediante Next.js en versión 16 utilizando App Router. Por su parte, se aplicó para la organización de componentes visuales Atomic Design, mientras que para el diseño de las interfaces se utilizó Tailwind Cascading Style Sheets, para la autenticación se trabajó con Auth.js en versión 5, y para la gestión de la autenticación del cliente se utilizó Redux Toolkit.
+[P615|Normal] 
+[P616|Heading 1] Documentación Scrum
+[P617|Normal] Sprints
+[P618|Normal] Sprint 1: Gestión de Acceso y Seguridad.
+[P619|Normal] Periodo: 11 al 24 de marzo de 2026.
+[P620|Normal] Objetivo: Desarrollar un mecanismo de autenticación y administración de usuarios que garantice la seguridad y trazabilidad de la información.
+[P621|Normal] Historias de usuario: 01, 02 y 03.
+[P622|Normal] Resultado principal:
+[P623|Normal] Se habilitó el registro de usuarios, el inicio de sesión mediante JWT y la recuperación de credenciales.
+[P624|Normal] Dificultad atendida:
+[P625|Normal] La configuración de los procesos de cifrado y validación de contraseñas requirió algunos ajustes adicionales durante el desarrollo.
+[P626|Normal] 
+[P627|Normal] Sprint 2: Creación y Gestión de Evaluaciones 
+[P628|Normal] Periodo: 06 de abril y el 24 de abril de 2026
+[P629|Normal] Objetivo: Implementar los procesos relacionados con la creación, publicación y resolución de evaluaciones, tanto manuales como asistidas por inteligencia artificial.
+[P630|Normal] Historias de usuario:  04 hasta 08.
+[P631|Normal] Resultado principal:
+[P632|Normal] Se habilitó la generación automatizada de cuestionarios y se gestionó todo el ciclo de evaluación.
+[P633|Normal] Dificultad atendida:
+[P634|Normal] Fue necesario encontrar un equilibrio en la comunicación entre los servicios desarrollados en NestJS y FastAPI para garantizar un intercambio de información fluido y correcto.
+[P635|Normal] 
+[P636|Normal] Sprint 3: Calificación Automática, Retroalimentación con Inteligencia Artificial. 
+[P637|Normal] Periodo: 25 de abril al 27 de mayo de 2026.
+[P638|Normal] Objetivo: implementar mecanismos de evaluación automática y generar observaciones pedagógicas respaldadas por inteligencia artificial.
+[P639|Normal] Historias de usuarios:  09 hasta 12.
+[P640|Normal] Resultado principal:
+[P641|Normal] Se implementó la corrección automatizada de respuestas y se generaron comentarios personalizados para los estudiantes.
+[P642|Normal] Observación:
+[P643|Normal] La ejecución de las actividades se llevó a cabo según lo planeado, sin incidencias relevantes.
+[P644|Normal] 
+[P645|Normal] Sprint 4: Pruebas y Cierre.
+[P646|Normal] Periodo:  28 de mayo al 05 de Junio de 2026.
+[P647|Normal] Objetivo: Ejecutar pruebas funcionales, de integración y usabilidad sobre el módulo. realizar ajustes finales y consolidar la documentación del trabajo realizado.
+[P648|Normal] 
+[P649|Normal] 
+[P650|Heading 2] Reuniones Diarias
+[P651|Normal] Las reuniones diarias se llevaron a cabo cada día hábil durante los sprints activos, con una duración máxima de 15 minutos, en la cual cada miembro del equipo atendía a las tres preguntas con las que comenzaba la reunión: ¿Qué completé ayer? ¿Qué haré hoy? ¿Hay algún impedimento? Los impedimentos identificados se anotaron como tareas bloqueantes y muchísimas de ellas se resolvieron antes de la siguiente reunión diaria. El registro detallado de cada sprint se encuentra disponible en el documento de documentación Scrum que se incluye junto a este artículo.
+[P652|Heading 2] Definición de Terminado
+[P653|Normal] Una historia de usuario se consideró terminada cuando se cumplían todos los siguientes criterios:
+[P654|Normal] Código fuente desarrollado, validado a través de solicitud de integración y consolidado en la rama principal del repositorio.
+[P655|Normal] Pruebas unitarias escritas con una cobertura mínima del 80 por ciento para el servicio que correspondía.
+[P656|Normal] Pruebas funcionales ejecutadas y superadas, conforme a los criterios de aceptación definidos.
+[P657|Normal] Documentación técnica actualizada con contratos de API en Swagger, los comentarios en el código y el archivo de README.
+[P658|Normal] Pantallas fáciles de usar validadas en Figma y aprobadas anteriormente a la codificación del frontend.
+[P659|Normal] Integración verificada con endpoint accesible desde Next.js sin errores de CORS ni de autenticación.
+[P660|Normal] Datos persistidos correctamente en PostgreSQL según el esquema relacional definido.
+[P661|Normal] 
+[P662|Heading 1] Plan de Pruebas
+[P663|Normal] El plan de pruebas tiene como objetivo asegurar que el módulo de evaluaciones y sus componentes relacionados en el aplicativo cumplan con los requisitos funcionales y no funcionales establecidos. También se busca garantizar la calidad del software, la integridad y trazabilidad de los datos, una correcta integración entre microservicios y una experiencia de usuario satisfactoria.
+[P664|Normal] 
+[P665|Normal] Comprobar que el sistema de autenticación y autorización basado en JWT funcione correctamente para los roles de estudiante, docente y administrador.
+[P666|Normal] 
+[P667|Normal] Validar todos los flujos de creación, inicialización y resolución de evaluaciones, así como los procesos de calificación automática y la generación de retroalimentación inteligente.
+[P668|Normal] 
+[P669|Normal] Verificar la comunicación REST/JSON sobre HTTPS entre los microservicios desarrollados en NestJS y FastAPI, asegurando que la autenticación JWT mediante HMAC funcione bien para la interacción entre servicios.
+[P670|Normal] 
+[P671|Normal] Evaluar el rendimiento del aplicación bajo condiciones de carga concurrente, garantizando tiempos de respuesta adecuados en las API y cumpliendo con las métricas de Core Web Vitals.
+[P672|Normal] 
+[P673|Normal] Comprobar que se cumplan los criterios de accesibilidad establecidos en WCAG 2.1 nivel AA para la interfaz desarrollada con Next.js.
+[P674|Normal] 
+[P675|Normal] Confirmar la persistencia, integridad y trazabilidad de la información almacenada en PostgreSQL y Redis.
+[P676|Normal] 
+[P677|Normal] Validar la experiencia de usuario y la usabilidad de la plataforma de acuerdo con los prototipos aprobados en Figma.
+[P678|Heading 2] Estrategia General de Pruebas
+[P679|Normal] La estrategia de pruebas se fundamenta en la pirámide de pruebas, priorizando las pruebas unitarias, seguidas de las pruebas de integración y, por último, las pruebas funcionales o end to end. El proceso de validación se organiza en tres niveles principales:
+[P680|Heading 2] Pruebas unitarias
+[P681|Normal] Estas se centran en verificar de manera aislada cada componente de la aplicación, abarcando funciones puras, servicios y la lógica de negocio implementada en NestJS y FastAPI.
+[P682|Normal] 
+[P683|Heading 2] Pruebas de integración
+[P684|Normal] Aquí, el enfoque está en validar cómo interactúan los módulos, microservicios, bases de datos y APIs REST basadas en JSON, asegurando que todos los componentes se comuniquen correctamente. Incluso se incluye la integración con el ORM TypeORM y las bases de datos PostgreSQL y Redis, así como la comunicación segura entre servicios a través de HTTPS.
+[P685|Normal] 
+[P686|Heading 2] Pruebas funcionales o end to end
+[P687|Normal] Estas pruebas buscan validar los flujos completos desde la perspectiva del usuario. Incluyen procesos como la autenticación, la creación y resolución de evaluaciones, la calificación automática y la generación de feedback basado en la lógica de negocio.
+[P688|Normal] Por otro lado, el plan de pruebas contempla la validación de la persistencia, integridad y trazabilidad de los datos. Adicionalmente se incorporan pruebas de rendimiento bajo carga concurrente, analizando los tiempos de respuesta en las APIs y en el frontend, así como la evaluación de Core Web Vitals en Next.js. Se llevan a cabo pruebas de seguridad enfocadas en la validación de JWT, el control de permisos y la prevención de inyección SQL. De igual manera, se realizan pruebas de accesibilidad conforme a la norma WCAG 2.1 nivel AA y evaluaciones de usabilidad y experiencia de usuario basadas en los prototipos aprobados en Figma.
+[P689|Heading 2] Matriz de Casos de Pruebas
+[P690|Normal] Tabla 19
+[P691|Normal] Matriz de casos de prueba
+[P692|Normal] 
+[P693|Heading 2] Documentación General de Pruebas del Sistema de Evaluaciones Inteligentes
+[P694|Normal]  Este documento reúne las pruebas automáticas del sistema de evaluaciones inteligentes, que forma parte del módulo de evaluaciones de una plataforma neuroeducativa. La solución está compuesta por un frontend desarrollado en Next.js 16, un backend en NestJS 11 y un microservicio de inteligencia artificial en FastAPI. Incluye pruebas unitarias, de integración, funcionales, de usabilidad y de rendimiento.
+[P695|Normal] El plan de pruebas tiene por propósito verificar el correcto funcionamiento de la aplicación de evaluaciones inteligentes en sus tres niveles de arquitectura. La ejecución estuvo condicionada por la disponibilidad del entorno de integración continua y el horizonte temporal del proyecto. El criterio central es garantizar la estabilidad operativa, el desempeño bajo carga y la consistencia funcional del entorno digital.
+[P696|Heading 2] Criterios de aceptación
+[P697|Normal] El software se considerará aceptado si cumple con las siguientes condiciones:
+[P698|Normal] Debe tener al menos un 80 % de cobertura en las pruebas unitarias.
+[P699|Normal] No debe haber fallos críticos en las suites de pruebas unitarias y de integración.
+[P700|Normal] No debe haber fallos bloqueantes en las pruebas End-to-End (E2E).
+[P701|Normal] Los tiempos de respuesta deben ser inferiores a 300 ms con una carga de 100 usuarios concurrentes.
+[P702|Normal] Los tiempos de respuesta del modelo de inteligencia artificial deben ser menores a 15 segundos.
+[P703|Normal] Ante la presencia de defectos de carácter bloqueante o cuando la proporción de fallos exceda el 20% en alguna de las suites de prueba, el proceso de validación quedará suspendido hasta que se subsanen los problemas identificados.
+[P704|Normal] 
+[P705|Heading 2] Recursos y herramientas
+[P706|Normal] El ambiente de pruebas requiere una máquina con un mínimo de 16 GB de RAM y compatibilidad con Docker, con los servicios de PostgreSQL, Redis, el backend, el frontend y el microservicio de IA activos y operativos. Las versiones de referencia son Node.js 22, Python 3.12 y Docker Desktop. El conjunto de herramientas utilizado comprende:
+[P707|Normal] Jest, React Testing Library y jest-axe para las pruebas unitarias e integración del frontend.
+[P708|Normal] Playwright y axe-playwright para las pruebas funcionales y de accesibilidad E2E.
+[P709|Normal] Pytest, Pytest Asyncio y HTTPX para las pruebas del microservicio de inteligencia artificial.
+[P710|Normal] Mock Service Worker (MSW) para simular APIs durante las pruebas de integración del frontend.
+[P711|Normal] Locust se utiliza para pruebas de rendimiento, con escenarios de carga definidos en tests/performance.
+[P712|Normal] Lighthouse y Next Bundle Analyzer para análisis de rendimiento del frontend, pendiente de implementación.
+[P713|Normal] 
+[P714|Heading 2] Comandos de Ejecución
+[P715|Header] Frontend pruebas unitarias e integración: pnpm test
+[P716|Header] Frontend pruebas end to end: pnpm exec playwright test
+[P717|Header] Backend pruebas unitarias e integración: pnpm test
+[P718|Header] Microservicio de inteligencia artificial: python -m pytest tests -q
+[P719|Heading 1] 
+[P720|Heading 1] Los resultados de las pruebas
+[P721|Heading 2] Frontend
+[P722|Heading 3] Pruebas Unitarias
+[P723|Normal] Las pruebas unitarias del frontend se llevaron a cabo utilizando Jest, React Testing Library y jest-axe. Estas pruebas son fundamentales para asegurarnos de que los componentes de la interfaz, los hooks personalizados, las funciones utilitarias, los procesos de validación, la gestión del estado con Redux y el cumplimiento de los criterios de accesibilidad funcionen correctamente.
+[P724|Normal] Tabla 20
+[P725|Normal] Frontend Pruebas Unitarias
+[P726|Normal] 
+[P727|Normal] La ejecución resultó en 28 suites exitosas y 170 pruebas aprobadas, sin registrar fallos.
+[P728|Heading 2] Pruebas de Integración
+[P729|Normal] El proyecto incluye siete suites de integración que se encargan de validar la gestión de usuarios, el proceso de autenticación, la página y la ejecución de cuestionarios, el panel de retroalimentación inteligente, el asistente virtual y la clasificación de usuarios.
+[P730|Normal] Tabla 21
+[P731|Normal] Frontend Pruebas de Integración
+[P732|Normal] 
+[P733|Heading 2] Pruebas Funcionales
+[P734|Normal] Las pruebas funcionales de extremo a extremo emplean Playwright para validar el comportamiento de la aplicación desde la perspectiva del usuario final.
+[P735|Normal] Tabla 22 
+[P736|Normal] Frontend Pruebas Funcionales
+[P737|Normal] La ejecución confirmó tres escenarios exitosos relacionados con la administración de usuarios.
+[P738|Heading 2] Pruebas de Accesibilidad y Usabilidad
+[P739|Normal] La verificación del cumplimiento de las directrices WCAG 2.1 nivel AA se realiza mediante pruebas unitarias con jest axe. Las pruebas de navegación mediante teclado, adaptación a diferentes dispositivos, compatibilidad entre navegadores, contraste visual e internacionalización están planificadas para etapas posteriores.
+[P740|Normal] 
+[P741|Heading 2] Pruebas de Rendimiento
+[P742|Normal] Las pruebas de rendimiento basadas en Playwright, Lighthouse y herramientas de análisis de paquetes aún no se han implementado. Como trabajo futuro, se contempla la evaluación de Core Web Vitals y la simplificación del tamaño de los recursos distribuidos.
+[P743|Heading 2] Backend
+[P744|Heading 3] Pruebas Unitarias
+[P745|Normal] Las pruebas de la unidad del backend fueron ejecutadas con Jest para verificar los componentes de seguridad, los mecanismos de validación, la lógica de negocio y los objetos de valor.
+[P746|Normal] Tabla 23
+[P747|Normal] Backend Pruebas Unitarias
+[P748|Normal] 
+[P749|Normal] El resultado de la ejecución fue de 31 suites exitosas, 152 pruebas aprobadas y 3 pruebas marcadas como pendientes, sin ningún tipo de error reportado.
+[P750|Normal] 
+[P751|Heading 2] Pruebas de Integración
+[P752|Normal] Las pruebas de integración validan la correcta operación de la capa HTTP respecto del driver de la base de datos PostgreSQL.
+[P753|Normal] Tabla 24
+[P754|Normal]  Backend Pruebas de Integración
+[P755|Normal] 
+[P756|Heading 2] Pruebas de Usabilidad de la API
+[P757|Normal] Las pruebas de la usabilidad verifican las propiedades de la interfaz de programación de aplicaciones y el cumplimiento de los contratos aceptados.
+[P758|Normal] Tabla 25
+[P759|Normal] Pruebas de Usabilidad de la API
+[P760|Normal] 
+[P761|Heading 2] Microservicio de IA
+[P762|Heading 3] Pruebas Unitarias
+[P763|Normal] Las pruebas de la unidad del microservicio desarrollado con FastAPI validan la selección de los modelos, el procesamiento semántico, cumplimento de los casos de uso y objetos de valor.
+[P764|Normal] Tabla 26
+[P765|Normal] Microservicio de IA Pruebas Unitarias
+[P766|Normal] 
+[P767|Normal] El resultado de la ejecución fue de 119 pruebas de éxito y una prueba marcada como omitida debido a dependencias concretas de hardware para la aceleración de procesamiento.
+[P768|Heading 2] Pruebas de Integración
+[P769|Normal] Las pruebas de integración de los servicios HTTP del microservicio están implementadas en el repositorio: hay siete archivos que cubren los routers de calificación, retroalimentación, plan de estudio, asistente, estado conversacional y analítica.
+[P770|Normal] 
+[P771|Heading 2] Pruebas Funcionales
+[P772|Normal] Las pruebas funcionales del microservicio de extremo a extremo comprenden los siguientes cinco archivos que corresponden al flujo de calificación, flujo de retroalimentación, flujo del asistente, protección de autenticación y procesamiento por lotes.
+[P773|Header] 
+[P774|Heading 2] Pruebas de Usabilidad de la API
+[P775|Normal] La validación de la experiencia del usuario, la adecuada documentación y la coherencia de la API se tienen en cuenta para su implementación en futuras versiones.
+[P776|Normal] 
+[P777|Heading 2] Pruebas de Rendimiento
+[P778|Normal] Las pruebas de carga y de estrés realizadas con Locust incluyen escenarios definidos en el calificación y retroalimentación.
+[P779|Heading 2] Resultados Consolidados de las Pruebas
+[P780|Normal] Los resultados presentados corresponden a las ejecuciones reales realizadas y documentadas que se han llevado a cabo durante el proceso de validación del sistema.
+[P781|Normal] Tabla 27
+[P782|Normal] Resultados consolidados de ejecución
+[P783|Normal] 
+[P784|Normal] Los resultados obtenidos permiten observar altos índices de estabilidad y fiabilidad de los componentes desarrollados. Las pruebas unitarias y de integración han alcanzado un grado de éxito del cien por cien para los escenarios ejecutados. Así mismo, las pruebas funcionales existentes han mostrado el correcto funcionamiento de los módulos administrativos que se han desarrollado hasta ahora.
+[P785|Normal] Con estos resultados se da por concluida la documentación de pruebas de la Plataforma Inteligente de Evaluación Académica Asistida por Inteligencia Artificial.
+[P786|Normal] 
+[P787|Heading 2] Evidencia de Pruebas 
+[P788|Heading 3] Pruebas Unitarias del Frontend
+[P789|Normal] Captura de la ejecución de pruebas unitarias del frontend mediante ejecución de pnpm test con Jest sobre el directorio tests/unit. Todas las suites están en estado PASS y las pruebas cubren slices de redux como quizSlice authSlice y timerSlice así como hooks como useAuth useTimer useLocalStorage y useDebounce. Incluso se validan componentes de usuario interfaces de autenticación administración y auditorías accesibilidad. Esto confirma que los módulos documentados existen y funcionan tal como se espera.
+[P790|Normal] Figura 4 1
+[P791|Normal] Ejecución de pruebas unitarias del frontend
+[P792|Normal] 
+[P793|Normal] Nota. Ejecución de pruebas unitarias del frontend, por , 2026.
+[P794|Normal] Resultado final de la ejecución de pruebas unitarias del frontend. Se ejecutaron 28 suites en las que todas fueron aprobadas y se ejecutaron 170 pruebas, todas obteniendo un resultado satisfactorio. Tiempo total de ejecución: 87.5s. Se obtiene así el cumplimiento de los criterios determinados en el plan de pruebas.
+[P795|Normal] 
+[P796|Normal] Figura 3 13
+[P797|Normal] Resultado final de pruebas unitarias del frontend
+[P798|Normal] 
+[P799|Normal] Nota. Resultado final de pruebas unitarias del frontend, por , 2026.
+[P800|Heading 2] Pruebas unitarias e integración del backend en NestJS.
+[P801|Normal] Captura de la ejecución de pruebas del backend usando `pnpm test` con Jest. Todas las suites están en estado de PASS. Se validan los proveedores de inteligencia artificial como Ollama AI, abarcando casos de uso del módulo de cuestionarios, como la respuesta a preguntas y pruebas de integración HTTP para autenticación, que incluyen registro, inicio de sesión y renovación de token. Incluyendo las pruebas del módulo de cuestionarios, como la obtención de preguntas y la gestión de sesiones, así como del módulo de puntuación con el leaderboard y el envío de resultados. Los registros de NestJS muestran la ejecución real de los casos de uso.
+[P802|Normal] Figura 4 2
+[P803|Normal] Resultado final de pruebas del backend en NestJS.
+[P804|Normal] 
+[P805|Normal] Nota: Captura de pantalla del resultado final de pruebas del backend en NestJS, por  , 2026. 
+[P806|Normal] 
+[P807|Normal] Los resultados del backend arrojaron 31 suites aprobadas sobre 31 ejecutadas, con 152 pruebas superadas de un total de 155 y 3 casos marcados como pendientes, sin registro de fallos. El tiempo de ejecución total fue de 18.8 segundos. La batería cubre pruebas unitarias, de integración y de usabilidad de la API, contemplando versionado de endpoints, envolventes de respuesta normalizadas y contratos Swagger. Los casos pendientes responden a escenarios planificados para fases posteriores.
+[P808|Normal] Figura 4 3
+[P809|Normal] Ejecución de pruebas unitarias del microservicio de IA.
+[P810|Normal] 
+[P811|Normal] Nota: Captura de pantalla de la ejecución de pruebas unitarias del microservicio de IA, por  , 2026.
+[P812|Heading 2] Pruebas unitarias de microservicio de inteligencia artificial en FastAPI
+[P813|Normal] Ejecución de pruebas unitarias con pytest en el directorio de pruebas unitarias. Se reportan 119 pruebas aprobadas y 1 prueba omitida en un tiempo de 3.27 segundos. La prueba omitida depende de la GPU o de un modelo no disponible en el entorno local.
+[P814|Normal] Figura 4 4
+[P815|Normal] Ejecución completa de pruebas del microservicio de IA.
+[P816|Normal] 
+[P817|Normal] Nota: Captura de pantalla de la ejecución completa de pruebas del microservicio de IA, por [autor], 2026.
+[P818|Heading 2] Microservicio de inteligencia artificial FastAPI completa
+[P819|Normal] Se realizó la ejecución de pytest sobre el conjunto completo de pruebas, reportando 119 pruebas aprobadas y 1 prueba omitida en solo 1.56 segundos. Estas pruebas están relacionadas con los módulos de grading feedback assistant y analytics. Aunque los directorios de integración funcional, usabilidad y rendimiento están bien estructurados, aún no cuentan con pruebas activas.
+[P820|Normal] Figura 4 5
+[P821|Normal] Pruebas funcionales E2E administración de usuarios.
+[P822|Normal] 
+[P823|Normal] Nota: Captura de pantalla de las pruebas funcionales E2E para la administración de usuarios, por [autor], 2026.
+[P824|Normal] 
+[P825|Heading 2] Pruebas funcionales end to end frontend
+[P826|Normal] Se llevaron a cabo pruebas funcionales end to end utilizando Playwright en modo encabezado. Se validó el archivo admin users section spec ts con tres casos de prueba que verifican la visibilidad de la sección de administración según el rol del usuario. Se comprobó el comportamiento para el rol de estudiante, ocultando la sección para docente y administrador, y restaurando la visibilidad al volver a estudiante. Todas las pruebas se ejecutaron con éxito en un navegador real, con un tiempo aproximado de 1.5 minutos.
+[P827|Normal] Figura 4 6
+[P828|Normal] Pruebas funcionales: expiración de sesión.
+[P829|Normal] 
+[P830|Normal] Nota: Captura de pantalla de las pruebas funcionales sobre la expiración de sesión, por [autor], 2026.
+[P831|Heading 2] Pruebas Funcionales de Expiración de Sesión del Frontend
+[P832|Normal] Realizamos pruebas funcionales sobre el manejo de sesiones utilizando Playwright en modo con encabezado (--headed). Validamos el archivo session-expiry.spec.ts con dos casos de prueba que aseguran la seguridad frente a la pérdida de credenciales. El primero verifica que, si un endpoint protegido responde con un estado HTTP 401 debido a un token inválido o expirado, el usuario es redirigido de inmediato a la pantalla de /login. El segundo caso comprueba que, si un usuario sin sesión activa intenta acceder directamente a las rutas del dashboard, se le redirige forzosamente, insertando el parámetro de retorno from. Todas las pruebas se llevaron a cabo con éxito en un entorno de navegador real.
+[P833|Normal] Figura 4 7
+[P834|Normal] Pruebas funcionales: expiración de sesión.
+[P835|Normal] 
+[P836|Normal] Nota: Captura de pantalla de las pruebas funcionales sobre la expiración de sesión, por  , 2026.
+[P837|Normal] Figura 4 8
+[P838|Normal] Pruebas funcionales: expiración de sesión.
+[P839|Normal] 
+[P840|Normal] Nota: Captura de pantalla del resultado de las pruebas funcionales sobre la expiración de sesión, por , 2026.
+[P841|Normal] Figura 4 9
+[P842|Normal] Pruebas funcionales: flujo de cuestionarios.
+[P843|Normal] 
+[P844|Normal] Nota: Captura de pantalla de las pruebas funcionales sobre el flujo de cuestionarios, por , 2026.
+[P845|Normal] 
+[P846|Normal] Resultado: 2 pruebas aprobadas de 2 ejecutadas, sin fallos. El tiempo total de ejecución fue de 22.0 s. Este flujo confirma que el sistema protege adecuadamente las vistas restringidas y redirige de manera segura al formulario de inicio de sesión, manteniendo el origen de la navegación.
+[P847|Normal] 
+[P848|Heading 2] Flujo de cuestionarios: pruebas funcionales
+[P849|Normal] Las pruebas funcionales end to end fueron ejecutadas con Playwright en modo encabezado (--headed). Se validó el archivo quiz-flow.spec.ts desde el rol de estudiante, automatizando el arranque de sesión anterior a la navegación mediante el antes de cada uno de los test. La prueba validó el flujo de extremo a extremo de la carga del listado de evaluaciones que se hacen disponibles en la ruta /quiz, la detección de las tarjetas de los cuestionarios interactivos y el redireccionamiento satisfactorio a la interfaz de ejecución del examen (/play), garantizando de esta forma el correcto flujo de usuario en el sistema sin quiebres en su funcionalidad.
+[P850|Normal] Figura 4 10
+[P851|Normal] Pruebas funcionales: flujo de cuestionarios.
+[P852|Header] 
+[P853|Header] 
+[P854|Normal] Nota: Captura de pantalla de las pruebas funcionales sobre el flujo de cuestionarios, por , 2026.
+[P855|Normal] Figura 4 11
+[P856|Normal] Pruebas funcionales: creación de cuestionarios con IA
+[P857|Header] 
+[P858|Header] 
+[P859|Normal] Nota. Pruebas funcionales: creación de cuestionarios con IA, por , 2026.
+[P860|Header] 
+[P861|Normal] Figura 4 12
+[P862|Normal] Pruebas funcionales: creación de cuestionarios con IA 
+[P863|Header] 
+[P864|Normal] Nota. Pruebas funcionales: creación de cuestionarios con IA, por , 2026.
+[P865|Header] 
+[P866|Normal] Resultado: 1 suite validada de 1 ejecutada, sin errores indicados. Tiempo total de ejecución optimizado con sesión aislada y aserciones de URL situadas satisfactoriamente por el sistema.
+[P867|Header] 
+[P868|Heading 3] Pruebas de funcionalidades del módulo de feedback con Inteligencia Artificial
+[P869|Normal] Pruebas de funcionalidades de integración semántica llevadas a cabo con Playwright en modo con cabecera (--headed). Una vez validado el fichero ai-feedback.spec.ts bajo el rol de estudiante se ha procedido a verificar la carga dinámica de la sección correspondiente a las analíticas, tal y como la correcta disposición de los componentes de diagnosticador educativo, documentación en: subestándar de integración con el módulo repositorio de inteligencia Artificial. La prueba de funcionalidades confirma que el sistema csatisfactoriamente los planes de estudio, el desglose de debilidades detectadas en el último unit-test report y las recomendaciones académicas automatizadas que aporta el microservicio de Inteligencia Artificial.
+[P870|Normal] Lo que garantiza la correcta disposición para el usuario de la información crítica respecto de los componentes analíticos/adaptativos en el feedback educativo.
+[P871|Header] 
+[P872|Header] 
+[P873|Normal] Figura 4 13
+[P874|Normal] Pruebas funcionales: creación de cuestionarios con IA
+[P875|Header] 
+[P876|Header] 
+[P877|Header] 
+[P878|Header] 
+[P879|Normal] Nota. Pruebas funcionales: creación de cuestionarios con IA, por , 2026.
+[P880|Normal] Resultado: Escenarios de verificación aprobados sin fallos registrados. Una interfaz de feedback inteligente validada y unos tiempos de respuesta de los componentes analíticos optimizados.
+[P881|Normal] 
+[P882|Header] 
+[P883|Heading 2] Pruebas Funcionales del Módulo de Generación de Cuestionarios
+[P884|Normal] Se llevaron a cabo pruebas funcionales de extremo a extremo utilizando Playwright en modo con encabezado (--headed). Se validó el archivo generate-quiz.spec.ts desde las perspectivas de administrador y docente, asegurando que todo el proceso de creación de contenido educativo estructurado funcionara correctamente. La prueba demostró que había una interacción adecuada con el formulario de configuración de temas, que la solicitud de IA se procesó correctamente a través del gancho de interceptación del endpoint /api/v1/quiz/ai/generate, obteniendo un estado HTTP 201, y que las alertas de éxito se mostraron correctamente en la interfaz de usuario después de que se consolidó el nuevo examen en el sistema.
+[P885|Normal] Figura 4 14
+[P886|Normal] Pruebas funcionales: creación de cuestionarios con IA 
+[P887|Header] 
+[P888|Normal] Nota. Pruebas funcionales: creación de cuestionarios con IA , por  , 2026. 
+[P889|Normal] Figura 4 15 
+[P890|Normal] Pruebas funcionales: generación de exámenes con IA
+[P891|Header] 
+[P892|Normal] Nota. Pruebas funcionales: generación de exámenes con IA , por  , 2026.
+[P893|Normal] Figura 4 16 
+[P894|Normal] Pruebas funcionales: generación de exámenes con IA
+[P895|Header] 
+[P896|Normal] Nota. Pruebas funcionales: generación de exámenes con IA, por , 2026.
+[P897|Normal] Figura 4 17
+[P898|Normal] Pruebas funcionales: generación de exámenes con IA
+[P899|Header] 
+[P900|Normal] Nota. Pruebas funcionales: generación de exámenes con IA, por , 2026.
+[P901|Normal] Resultado: 1 suite aprobada de 1 ejecutada, sin fallos registrados. El flujo de aprovisionamiento de exámenes mediante Inteligencia Artificial se validó de manera satisfactoria.
+[P902|Header] 
+[P903|Heading 1] Resultados y Discusión
+[P904|Header] 
+[P905|Heading 2] 1. Productos y entregables
+[P906|Normal] Se creó una documentación detallada que abarca el análisis de historias de usuario, el backlog del producto y los criterios de aceptación. Posteriormente, se elaboró documentación técnica que incluye los modelos de arquitectura del sistema y modelos relacionales, los cuales respaldan la estructura de la base de datos.
+[P907|Normal] 
+[P908|Normal] Se construyeron prototipos de alta fidelidad en Figma para verificar la experiencia de usuario en los flujos principales: autenticación, registro, diseño y aplicación de evaluaciones, y visualización de la retroalimentación pedagógica generada por el agente de inteligencia artificial.
+[P909|Normal] 
+[P910|Normal] La arquitectura de microservicios fue definida mediante la implementación de servicios en NestJS y FastAPI, con APIs REST que fueron diseñadas, implementadas y validadas.
+[P911|Normal] 
+[P912|Normal] Se implementaron módulos de gestión de acceso, que incluyen login y registro, desarrollados en NestJS con autenticación JWT, manejo de sesiones y trazabilidad de datos.
+[P913|Normal] 
+[P914|Normal] El módulo de evaluaciones se desarrolló de manera funcional, abarcando la gestión de respuestas, calificación automática y generación de feedback a través de un agente de inteligencia artificial, todo integrado con el stack tecnológico del sistema.
+[P915|Normal] 
+[P916|Heading 2] 2. Discusión de implicaciones y contrastación
+[P917|Normal] 
+[P918|Normal] Los resultados obtenidos hacen posible transformar una evaluación estática en una herramienta diagnóstica más efectiva. La retroalimentación generada por el agente de inteligencia artificial reduce la carga cognitiva del usuario en comparación con los reportes tradicionales basados exclusivamente en texto.
+[P919|Normal] 
+[P920|Heading 2] 3. Cumplimiento de objetivos y limitaciones
+[P921|Normal] 
+[P922|Normal] Se lograron todos los objetivos establecidos para el periodo de práctica, alcanzando un 100 por ciento de ejecución. La principal limitación fue el tiempo disponible, lo que dificultó la integración completa de los 18 ejes globales del proyecto. Sin embargo, la metodología Scrum facilitó la entrega de un módulo de evaluación robusto y listo para escalar.
+[P923|Normal] 
+[P924|Heading 1] Consideraciones Sobre Mejoras y Trabajo Futuro
+[P925|Normal]  Como continuación natural del proyecto, se identificaron las siguientes áreas prioritarias de desarrollo futuro orientadas a subsanar las brechas registradas en la matriz de trazabilidad. Dado que todas ellas se apoyan en componentes, contratos de interfaz y patrones ya existentes en el sistema, su integración puede realizarse sin alterar la arquitectura general.
+[P926|Normal] Notificaciones en tiempo real y centro de notificaciones
+[P927|Normal] Se propone exponer el módulo de recom mediante Server-Sent Events o WebSocket e implementar en la interfaz un centro de notificaciones que permita que el estudiante reciba al instante sus calificaciones, logros y cambios de posición en el ranking. La entidad Notification y los eventos del dominio ya están definidos, por lo que el desarrollo se centra en el controlador del backend y en la suscripción del cliente.
+[P928|Header] 
+[P929|Normal] Fortalecimiento del agente de inteligencia artificial
+[P930|Header] 
+[P931|Normal] Se prevé construir el índice vectorial FAISS del sistema RAG, implementar un adaptador de OpenAI sobre la interfaz LLMClient para los entornos productivos y habilitar el streaming nativo del modelo junto al rendering progresivo en la interfaz de chat. Estas mejoras incrementarían la exactitud, la disponibilidad y la fluidez de la retroalimentación pedagógica.
+[P932|Normal] 
+[P933|Heading 1] Conclusiones 
+[P934|Normal] La construcción del módulo de evaluaciones inteligentes para la plataforma neuroeducativa de la Corporación C permitió alcanzar el objetivo fundacional del proyecto: abastecer la evaluación académica con capacidad diagnóstica a efectos de identificar fortalezas cognitivas, emocionales y metacognitivas de los estudiantes, así como la posibilidad de desarrollar retroalimentación pedagógica ajustada a cada perfil. La solución construida se articula a partir de una arquitectura basada en servicios que incluye un backend en NestJS, un servicio de inteligencia artificial en FastAPI y una interfaz de usuario en Next.js los cuales se encuentran relacionados a partir de servicios REST teniendo en cuenta un sistema de autenticación JWT.
+[P935|Normal] Los objetivos específicos que fueron planteados por el proyecto fueron alcanzados satisfactoriamente con el diseño de los prototipos de interfaz, la construcción de la arquitectura del backend, la definición del modelo de datos, la inCorporación del agente de retroalimentación basado en inteligencia artificial y su validación en el módulo desarrollado en el entorno de desarrollo.
+[P936|Normal] Desde el punto de vista técnico, el sistema incluye una evaluación híbrida que combina la comparación exacta para las preguntas cerradas junto a técnicas de similitud semántica a través de Sentence Transformers y el análisis linguístico mediante spaCy para preguntas abiertas. La estrategia de evaluación se selecciona de manera dinámica a través del patrón Factory.
+[P937|Normal] De acuerdo con la aproximación neuroeducativa que guía y delicadeza este proyecto, los resultados obtenidos corroboran que la inteligencia artificial en la evaluación académica no se reduce a la automatización de las valoraciones, sino que es una oportunidad de alinear la evaluación a los principios del aprendizaje significativo. El módulo realizado pone en evidencia que es posible desarrollar herramientas que, sin limitarse a definir el rendimiento, contribuyan a la interpretación de los patrones cognitivos y emocionales de cada estudiante mediante analítica de desempeño y feedback pedagógico. En este sentido, este estudio está desarrollando las bases técnicas y conceptuales para la construcción progresiva de la completa plataforma neuroeducativa, que tiene como finalidad la personalización de la experiencia educativa sin comprometer la calidad de la docencia y la seguridad de los datos.
+[P938|Normal]  
+[P939|Normal]  
+[P940|Normal] 
+[P941|Normal] 
+[P942|Heading 1] Referencias
+[P943|Normal] 
+[P944|Normal] Beal, C., & Hontvedt, M. (2023). Video-based mind maps in higher education: A design-based research study of pre-service teachers’ co-construction of shared knowledge. Learning Culture and Social Interaction, 41(100720), 100720. https://doi.org/10.1016/j.lcsi.2023.100720
+[P945|Normal] Belcic, I., & Stryker, C. (2025, mayo 2). Agentes de IA en 2025: expectativas frente a realidad. Ibm.com. https://www.ibm.com/es-es/think/insights/ai-agents-2025-expectations-vs-reality
+[P946|Normal] Burbano-Enríquez, B., Moncayo-Cueva, H., & Andrade-Zuleta, A. (2025). Neuroeducation and the influence of AI on early childhood education: A systematic review. Multidisciplinary Reviews, 9(6), 2026238. https://doi.org/10.31893/multirev.2026238
+[P947|Normal] Crompton, H., & Sykora, C. (2021). Developing instructional technology standards for educators: A design-based research study. Computers and Education Open, 2(100044), 100044. https://doi.org/10.1016/j.caeo.2021.100044
+[P948|Normal] Friedman, N., Fekete, T., Gal, K., & Shriki, O. (2019). EEG-based prediction of cognitive load in intelligence tests. Frontiers in Human Neuroscience, 13(191), 191. https://doi.org/10.3389/fnhum.2019.00191
+[P949|Normal] Jin, Z., Yin, J., Tian, Q., Zhou, X., Li, Y., Yang, T., & Luo, J. (2026). Can large language models teach creativity? Cognitive gains, affective gaps, and distinct neural patterns. Computers in Human Behavior: Artificial Humans, 8(100288), 100288. https://doi.org/10.1016/j.chbah.2026.100288
+[P950|Normal] Li, S., Zhang, H., Jia, Z., Zhong, C., Zhang, C., Shan, Z., Shen, J., & Babar, M. A. (2021). Understanding and addressing quality attributes of microservices architecture: A Systematic literature review. Information and Software Technology, 131(106449), 106449. https://doi.org/10.1016/j.infsof.2020.106449
+[P951|Normal] Morris, T. H., & Rohs, M. (2021). Digitization bolstering self-directed learning for information literate adults–A systematic review. Computers and Education Open, 2(100048), 100048. https://doi.org/10.1016/j.caeo.2021.100048
+[P952|Normal] Ouyang, F., & Jiao, P. (2021). Artificial intelligence in education: The three paradigms. Computers and Education: Artificial Intelligence, 2(100020), 100020. https://doi.org/10.1016/j.caeai.2021.100020
+[P953|Normal] Papadopoulos, P. M., Obwegeser, N., & Weinberger, A. (2021). Concurrent and retrospective metacognitive judgements as feedback in audience response systems: Impact on performance and self-assessment accuracy. Computers and Education Open, 2(100046), 100046. https://doi.org/10.1016/j.caeo.2021.100046
+[P954|Normal] Wang, Y.-H. (2020). Design-based research on integrating learning technology tools into higher education classes to achieve active learning. Computers & Education, 156(103935), 103935. https://doi.org/10.1016/j.compedu.2020.103935
+[P955|Normal] Waseem, M., Liang, P., Shahin, M., Di Salle, A., & Márquez, G. (2021). Design, monitoring, and testing of microservices systems: The practitioners’ perspective. The Journal of Systems and Software, 182(111061), 111061. https://doi.org/10.1016/j.jss.2021.111061
+[P956|Normal] Xu, X., Cao, X., & Wu, Q. (2026). Impact of educational agents on student’s learning outcomes: a meta-analysis. Frontiers in Psychology, 17(1707196), 1707196. https://doi.org/10.3389/fpsyg.2026.1707196
+[P957|Normal] Zhang, K., & Aslan, A. B. (2021). AI technologies for education: Recent research & future directions. Computers and Education: Artificial Intelligence, 2(100025), 100025. https://doi.org/10.1016/j.caeai.2021.100025
+[P958|Normal] 

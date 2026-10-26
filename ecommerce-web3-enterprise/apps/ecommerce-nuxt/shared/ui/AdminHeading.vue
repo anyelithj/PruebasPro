@@ -14,9 +14,11 @@ import navData from "@ecommerce/shared-types/admin-nav.json";
 const props = defineProps<{ navKey: string }>(); // Clave del ítem del menú ("payments", "content"...)
 const { locale } = useI18n();
 const lang = computed<AdminLocale>(() => (locale.value === "en" ? "en" : "es"));
-// "flatMap" => aplana los ítems de todos los grupos para buscar por clave (función pura sobre datos estáticos)
-const item = (navData as AdminNav).groups.flatMap((group) => group.items).find((entry) => entry.key === props.navKey);
-const title = computed(() => item?.label[lang.value] ?? props.navKey);
+// "flatMap" => aplana los ítems de todos los grupos para buscar por clave. "computed" => reactivo a "navKey" (el CMS
+// cambia la clave al elegir otro tipo de contenido sin desmontar el encabezado)
+const ITEMS = (navData as AdminNav).groups.flatMap((group) => group.items);
+const item = computed(() => ITEMS.find((entry) => entry.key === props.navKey));
+const title = computed(() => item.value?.label[lang.value] ?? props.navKey);
 useSeoMeta({ title }); // <title> = texto del menú (el sufijo del sitio lo agrega titleTemplate)
 </script>
 

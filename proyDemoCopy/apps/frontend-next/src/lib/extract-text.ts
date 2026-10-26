@@ -4,12 +4,13 @@ import { parse } from "node-html-parser";
 import { getCurrentUserPayload, getFreshAccessToken } from "@/lib/auth";
 import { apiUrl } from "@/lib/constants"; // [2026-10-23]: URL de NestJS para la transcripción de audio/video
 import { Role } from "@/lib/constants";
-import { OCR_LANG } from "@/lib/pdf-text";
+import { pdfToText, withOcrWorker } from "@/lib/extract-text-pdf"; // [2026-10-24]: PDF (líneas por posición + OCR de escaneos) en su propio módulo de servidor | antes importaba lib/pdf-text (código de navegador)
 import { safeFetch } from "@/lib/safe-fetch";
 // [extractText · 2026-10-23]: texto de un archivo (PDF, Word .docx, texto, imagen con OCR) o de un ENLACE (página web o archivo publicado)
 // [Uso]: letra de canciones (/musica/subir), diálogos por URL y contenido de actividades → un solo extractor para todo el portal
 // [Patrón]: Strategy (extractor por tipo) + Adapter (bytes → texto) | [Principio]: DRY + OCP (formato nuevo = una rama) | [Paradigma]: Funcional + asíncrono
 // [Tecnologías]: pdf.js legacy (Node), mammoth (.docx), Tesseract.js (OCR WebAssembly), node-html-parser — todas con `import()` dinámico
+// [2026-10-24]: `maxChars` opcional → Cursos importa contenido largo (COURSE_CONTENT_MAX_CHARS); el resto sigue con MAX_TEXT
 
 export interface ExtractedText {
   title: string; // Título del documento o de la página (si lo hay)
@@ -20,34 +21,8 @@ export interface ExtractedText {
 export const MAX_TEXT = 20_000; // Tope de caracteres devueltos (= DraftDialogueBody.text de NestJS)
 const EMPTY = { title: "", holder: "" };
 
-// [pdfToText]: pdf.js en Node (build legacy, sin worker del navegador) | `getTextContent` por página
-async function pdfToText(data: Uint8Array): Promise<string> {
-  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs"); // `import()` dinámico (ES2020): solo se carga si llega un PDF
-  const task = pdfjs.getDocument({ data, disableFontFace: true }); // Sin fuentes del sistema: solo se lee el texto
-  const doc = await task.promise;
-  let raw = "";
-  try {
-    for (let p = 1; p <= doc.numPages; p++) {
-      const { items } = await (await doc.getPage(p)).getTextContent();
-      for (const it of items) if ("str" in it) raw += it.str + (it.hasEOL ? "\n" : ""); // `in` (TS narrowing): solo fragmentos con texto
-      raw += "\n";
-    }
-  } finally {
-    void task.destroy(); // Libera memoria aunque falle una página
-  }
-  return raw;
-}
-
-// [ocr]: imagen → texto con Tesseract.js (idioma del contenido + español) | los modelos se descargan una vez y quedan en caché
-async function ocr(data: Buffer, language: string): Promise<string> {
-  const { createWorker } = await import("tesseract.js");
-  const worker = await createWorker([...new Set([OCR_LANG[language] ?? "eng", "spa"])].join("+")); // `Set` (ES2015): sin repetir
-  try {
-    return (await worker.recognize(data)).data.text;
-  } finally {
-    await worker.terminate(); // Libera el hilo de OCR
-  }
-}
+// [OCR de imágenes]: un worker por archivo (préstamo + liberación en lib/extract-text-pdf) | [2026-10-24]: antes había otra copia de createWorker aquí
+const ocr = (data: Buffer, language: string): Promise<string> => withOcrWorker(language, async (worker) => (await worker.recognize(data)).data.text);
 
 // [sheetToText · 2026-10-23]: Excel/ODS/CSV → una línea por fila (celdas separadas por « · ») | SheetJS ya instalado (exportación de recursos)
 async function sheetToText(data: Buffer): Promise<string> {
@@ -153,13 +128,14 @@ function htmlToText(html: string): ExtractedText {
 }
 
 // [textFromBytes]: elige el extractor por tipo MIME o extensión | [Patrón]: Strategy
-export async function textFromBytes(data: Buffer, type: string, name: string, language: string): Promise<ExtractedText> {
+// `maxChars = MAX_TEXT` (parámetro por defecto, ES2015): los llamadores existentes no cambian | [Principio]: OCP
+export async function textFromBytes(data: Buffer, type: string, name: string, language: string, maxChars = MAX_TEXT): Promise<ExtractedText> {
   const ext = name.split(".").pop()?.toLowerCase() ?? "";
   const mime = type.split(";")[0].trim().toLowerCase();
   const base = name.replace(/\.[^.]+$/, "").slice(0, 160); // Nombre del archivo sin extensión → título sugerido
   let out: ExtractedText;
   if (mime === "text/html" || mime === "application/xhtml+xml" || ext === "html" || ext === "htm") out = htmlToText(data.toString("utf-8"));
-  else if (mime === "application/pdf" || ext === "pdf") out = { ...EMPTY, title: base, text: await pdfToText(new Uint8Array(data)) };
+  else if (mime === "application/pdf" || ext === "pdf") out = { ...EMPTY, title: base, text: await pdfToText(new Uint8Array(data), language) }; // [2026-10-24]: + OCR de páginas escaneadas
   else if (ext === "docx" || mime.includes("wordprocessingml")) out = { ...EMPTY, title: base, text: (await (await import("mammoth")).extractRawText({ buffer: data })).value };
   else if (mime.startsWith("image/")) out = { ...EMPTY, title: base, text: await ocr(data, language) };
   else if (["xlsx", "xls", "ods", "csv"].includes(ext) || mime.includes("spreadsheet") || mime === "application/vnd.ms-excel") out = { ...EMPTY, title: base, text: await sheetToText(data) };
@@ -174,16 +150,16 @@ export async function textFromBytes(data: Buffer, type: string, name: string, la
   else if (looksLikeText(data)) out = { ...EMPTY, title: base, text: data.toString("utf-8") }; // [2026-10-23 · 4.º pase]: JSON, XML, VTT, código… cualquier archivo de texto
   else throw new Error(`Formato no admitido (${mime || ext || "desconocido"}). Usa PDF, Word, PowerPoint, Excel, OpenDocument, texto, imagen, audio/video o un enlace.`);
   // [Limpieza]: espacios repetidos fuera, líneas vacías múltiples → una
-  const text = out.text.replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim().slice(0, MAX_TEXT);
+  const text = out.text.replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim().slice(0, maxChars);
   if (!text) throw new Error("El archivo no tiene texto que se pueda leer.");
   return { ...out, text };
 }
 
 // [textFromUrl]: descarga con protección SSRF (safeFetch) y extrae según lo que devuelva el enlace (HTML, PDF, imagen…)
-export async function textFromUrl(url: string, language = "en"): Promise<ExtractedText> {
+export async function textFromUrl(url: string, language = "en", maxChars = MAX_TEXT): Promise<ExtractedText> {
   const res = await safeFetch(url);
   const name = new URL(res.url).pathname.split("/").pop() ?? "";
-  return textFromBytes(res.body, res.contentType, name, language);
+  return textFromBytes(res.body, res.contentType, name, language, maxChars);
 }
 
 // [toMarkdown · 2026-10-23]: texto plano extraído → Markdown legible (títulos, viñetas, párrafos) sin LLM | heurística: línea corta sin punto final = título | [Paradigma]: Funcional (pura)
@@ -211,4 +187,26 @@ export async function requireAuthor(): Promise<NextResponse | null> {
   if (!user) return NextResponse.json({ message: "Inicia sesión." }, { status: 401 });
   if (user.role !== Role.TEACHER && user.role !== Role.ADMIN) return NextResponse.json({ message: "No tienes permiso para importar contenido." }, { status: 403 });
   return null;
+}
+
+// [extractTextResponse · 2026-10-24]: cuerpo común de las Route Handlers de importación — multipart `file` (+ `language`) o JSON `{ url, language }` → { title, text, holder, markdown }
+// [Patrón]: Template Method (lectura de la petición → extractor → respuesta) | [Principio]: DRY (Cursos lo usa con un tope mayor; /api/media/extract-text puede migrar sin cambiar su contrato)
+// `maxChars`: tope de caracteres del texto devuelto | errores de lectura → 422 con el motivo legible
+export async function extractTextResponse(request: Request, maxChars = MAX_TEXT): Promise<NextResponse> {
+  const withMarkdown = (x: ExtractedText) => NextResponse.json({ ...x, markdown: toMarkdown(x.text, x.title) });
+  try {
+    if (request.headers.get("content-type")?.includes("multipart/form-data")) {
+      const form = await request.formData();
+      const file = form.get("file");
+      const language = String(form.get("language") ?? "en");
+      if (!(file instanceof File)) return NextResponse.json({ message: "Elige un archivo." }, { status: 400 });
+      if (file.size > MAX_MEDIA_BYTES) return NextResponse.json({ message: "El archivo supera 25 MB." }, { status: 413 });
+      return withMarkdown(await textFromBytes(Buffer.from(await file.arrayBuffer()), file.type, file.name, language, maxChars));
+    }
+    const body = (await request.json().catch(() => ({}))) as { url?: unknown; language?: unknown };
+    if (typeof body.url !== "string" || !URL.canParse(body.url)) return NextResponse.json({ message: "Escribe un enlace válido (https://…)." }, { status: 400 });
+    return withMarkdown(await textFromUrl(body.url, typeof body.language === "string" ? body.language : "en", maxChars));
+  } catch (err) {
+    return NextResponse.json({ message: err instanceof Error ? err.message : "No se pudo leer el contenido." }, { status: 422 });
+  }
 }

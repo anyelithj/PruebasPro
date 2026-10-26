@@ -82,8 +82,8 @@ export function EmailDesigner({ template, onDone }: Props) {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 text-sm">{t("name")}<input value={name} onChange={(e) => setName(e.target.value)} className="h-9 rounded-md border px-2" /></label>
-        <label className="flex flex-col gap-1 text-sm">{t("subject")}<input value={subject} onChange={(e) => setSubject(e.target.value)} className="h-9 rounded-md border px-2" /></label>
+        <label className="flex flex-col gap-1 text-sm">{t("name")}<input value={name} onChange={(e) => setName(e.target.value)} className="h-9 rounded-md border border-slate-300 px-3 text-sm" /></label>
+        <label className="flex flex-col gap-1 text-sm">{t("subject")}<input value={subject} onChange={(e) => setSubject(e.target.value)} className="h-9 rounded-md border border-slate-300 px-3 text-sm" /></label>
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[180px_1fr_1fr]">
         {/* Paleta: arrastrar al lienzo o pulsar para agregar al final */}
@@ -166,7 +166,7 @@ function BlockEditor({ block, onChange }: { block: EmailBlock; onChange: (patch:
           key === "align" ? (
             <label key={key} className="flex flex-col gap-1 text-sm">
               {t("fields.align")}
-              <select value={String(value)} onChange={(e) => onChange({ align: e.target.value as "left" | "center" })} className="h-9 rounded-md border px-2">
+              <select value={String(value)} onChange={(e) => onChange({ align: e.target.value as "left" | "center" })} className="h-9 rounded-md border border-slate-300 px-3 text-sm">
                 <option value="left">{t("left")}</option>
                 <option value="center">{t("center")}</option>
               </select>

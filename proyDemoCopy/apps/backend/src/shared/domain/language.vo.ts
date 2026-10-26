@@ -31,6 +31,18 @@ export const LANGUAGE_LABEL: Readonly<Record<Language, string>> = Object.freeze(
   },
 );
 
+// [Nombre en inglés]: los prompts del LLM se escriben en inglés → "in Inglés" confunde a modelos pequeños y responden en español | [Patrón]: Lookup Table
+export const LANGUAGE_NAME_EN: Readonly<Record<Language, string>> =
+  Object.freeze({
+    [Language.EN]: 'English',
+    [Language.ES]: 'Spanish',
+    [Language.FR]: 'French',
+    [Language.DE]: 'German',
+    [Language.PT]: 'Portuguese',
+    [Language.ZH]: 'Mandarin Chinese',
+    [Language.RU]: 'Russian',
+  });
+
 // [Type guard]: `value is Language` (TS) estrecha el tipo para el llamador | [Principio]: Type-Safe
 export function isLanguage(value: string): value is Language {
   return Object.values(Language).includes(value as Language);

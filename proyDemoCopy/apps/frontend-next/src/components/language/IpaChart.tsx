@@ -24,41 +24,50 @@ export function IpaChart() {
         <section key={t.id} id={t.id} aria-labelledby={`${t.id}-h`} className="scroll-mt-20 space-y-2">
           <h3 id={`${t.id}-h`} className="text-base font-bold">{t.title}</h3>
           <p className="text-xs text-muted-foreground">{t.intro}</p>
-          {/* [Responsive]: la tabla se desplaza en horizontal dentro de su caja en móvil (la página no) */}
-          <div className="overflow-x-auto rounded-xl border border-border">
-            <table className="w-full min-w-[640px] text-sm">
-              <caption className="sr-only">{t.title}: símbolo, ejemplo, grafías y regla</caption>
-              <thead className="bg-muted text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th scope="col" className="px-3 py-2">Sonido</th>
-                  <th scope="col" className="px-3 py-2">Ejemplo</th>
-                  <th scope="col" className="px-3 py-2">Se escribe</th>
-                  <th scope="col" className="px-3 py-2">Cuándo se aplica</th>
-                </tr>
-              </thead>
-              <tbody>
-                {t.phonemes.map((p) => (
-                  <tr key={p.symbol} className="border-t border-border align-top">
-                    <th scope="row" className="px-3 py-2">
-                      <span lang="en-fonipa" className="rounded-md bg-tone-brand-soft px-2 py-0.5 font-mono text-base font-bold text-tone-brand">/{p.symbol}/</span>
-                    </th>
-                    <td className="px-3 py-2">
-                      <span className="flex flex-wrap items-center gap-1.5">
-                        <span lang="en" className="font-semibold">{p.example}</span>
-                        <span lang="en-fonipa" className="font-mono text-xs text-muted-foreground">/{p.exampleIpa}/</span>
-                        <SpeakButton text={p.example} lang="en" variant="en-GB" label={`Escuchar «${p.example}» en acento británico`} />
-                        <span aria-hidden className="text-[10px] font-semibold text-muted-foreground">UK</span>
-                        <SpeakButton text={p.example} lang="en" variant="en-US" label={`Escuchar «${p.example}» en acento estadounidense`} />
-                        <span aria-hidden className="text-[10px] font-semibold text-muted-foreground">US</span>
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 font-mono text-xs">{p.spellings}</td>
-                    <td className="px-3 py-2 text-xs leading-relaxed">{p.ruleEs}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {/* [Tarjetas · 2026-10-25]: una tarjeta por fonema (/ɒ/ grande) con su tabla dentro: ejemplo con audio UK/US, grafías y regla de uso | [Responsive]: 1 → 2 → 3 columnas */}
+          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {t.phonemes.map((p) => (
+              <li key={p.symbol} className="flex flex-col overflow-hidden rounded-xl border border-border bg-card">
+                <div className="flex items-center justify-between gap-2 bg-tone-brand-soft px-4 py-3">
+                  <span lang="en-fonipa" className="font-mono text-3xl font-extrabold text-tone-brand">/{p.symbol}/</span>
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{t.title}</span>
+                </div>
+                <table className="w-full text-sm">
+                  <caption className="sr-only">Fonema /{p.symbol}/: ejemplo, grafías y regla</caption>
+                  <tbody>
+                    <tr className="border-t border-border align-top">
+                      <th scope="row" className="w-28 px-3 py-2 text-left text-[11px] font-semibold uppercase text-muted-foreground">Ejemplo</th>
+                      <td className="px-3 py-2">
+                        <span className="flex flex-wrap items-center gap-1.5">
+                          <span lang="en" className="font-semibold">{p.example}</span>
+                          <span lang="en-fonipa" className="font-mono text-xs text-muted-foreground">/{p.exampleIpa}/</span>
+                        </span>
+                      </td>
+                    </tr>
+                    <tr className="border-t border-border align-top">
+                      <th scope="row" className="px-3 py-2 text-left text-[11px] font-semibold uppercase text-muted-foreground">Sonido</th>
+                      <td className="px-3 py-2">
+                        <span className="flex flex-wrap items-center gap-1.5">
+                          <SpeakButton text={p.example} lang="en" variant="en-GB" label={`Escuchar «${p.example}» en acento británico`} />
+                          <span aria-hidden className="text-[10px] font-semibold text-muted-foreground">UK</span>
+                          <SpeakButton text={p.example} lang="en" variant="en-US" label={`Escuchar «${p.example}» en acento estadounidense`} />
+                          <span aria-hidden className="text-[10px] font-semibold text-muted-foreground">US</span>
+                        </span>
+                      </td>
+                    </tr>
+                    <tr className="border-t border-border align-top">
+                      <th scope="row" className="px-3 py-2 text-left text-[11px] font-semibold uppercase text-muted-foreground">Se escribe</th>
+                      <td className="px-3 py-2 font-mono text-xs">{p.spellings}</td>
+                    </tr>
+                    <tr className="border-t border-border align-top">
+                      <th scope="row" className="px-3 py-2 text-left text-[11px] font-semibold uppercase text-muted-foreground">Regla y uso</th>
+                      <td className="px-3 py-2 text-xs leading-relaxed">{p.ruleEs}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </li>
+            ))}
+          </ul>
         </section>
       ))}
     </section>

@@ -85,7 +85,7 @@ const ANGULAR_ITEMS: readonly NavItem[] = [
   // `also`: queda activo dentro de cada sección (pantallas del remoto Angular)
   // [2026-10-24]: apunta DIRECTO a la primera sección (Angular /practica) con `hard` → en Angular es routerLink (sin recargar) y en Next.js una sola carga
   // (antes /actividades era una página de Next.js que redirigía → dos cargas completas por clic) | /actividades sigue redirigiendo para enlaces antiguos
-  { href: "/practica", labelKey: "activities", icon: "gamepad-2", hard: true, also: ["/actividades", "/juegos", "/musica", "/dialogos", "/poliglota"] },
+  { href: "/practica", labelKey: "activities", icon: "gamepad-2", hard: true, also: ["/actividades", "/juegos", "/musica", "/dialogos", "/poliglota", "/lectura"] }, // [2026-10-25]: + /lectura (Actividades → Lectura)
   // [Traductor · 2026-10-23 · 4.º pase]: ítem PROPIO del menú (antes «Traducción» era un tipo de Recursos) → pantalla estilo Google Translate del remoto Angular (texto o cualquier archivo)
   { href: "/traductor", labelKey: "translator", icon: "languages", hard: true },
   { href: "/tutor", labelKey: "tutor", icon: "sparkles", hard: true },

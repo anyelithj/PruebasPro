@@ -244,6 +244,7 @@ async function ExamsTab({ sp }: { sp: SearchParams }) {
       limit: 10,
       category: sp.category,
       difficulty: sp.difficulty,
+      publishedOnly: false, // [2026-10-25]: Gestión lista también los borradores (antes un examen recién creado no aparecía en la tabla)
     });
   } catch (err) {
     error = err instanceof Error ? err.message : "Error cargando exámenes";

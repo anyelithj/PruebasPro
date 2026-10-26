@@ -157,13 +157,75 @@ export class CourseMaterialsUseCase {
       ...new Set([...(enrollment.completedMaterialIds ?? []), id]),
     ].filter((x) => valid.has(x));
     enrollment.completedMaterialIds = done;
-    enrollment.progress = Math.round((done.length / all.length) * 100);
+    await this.recompute(courseId, enrollment, all.length);
+    return { completedMaterialIds: done, progress: enrollment.progress };
+  }
+
+  // [completeTopic · 2026-10-25]: el alumno marca un SUBTEMA del temario como estudiado (o lo desmarca) → recalcula el progreso | idempotente
+  async completeTopic(
+    courseId: string,
+    topic: string,
+    done: boolean,
+    viewer: MaterialViewer,
+  ): Promise<{ completedTopics: string[]; progress: number }> {
+    const enrollment = await this.assertAccess(courseId, viewer);
+    if (!enrollment)
+      throw new ForbiddenException(
+        'Inscríbete en el curso para registrar tu progreso',
+      );
+    const topics = await this.topicsOf(courseId);
+    if (!topics.includes(topic))
+      throw new NotFoundException('Ese subtema no está en el temario');
+    const set = new Set(enrollment.completedTopics ?? []);
+    if (done) set.add(topic);
+    else set.delete(topic);
+    enrollment.completedTopics = topics.filter((t) => set.has(t));
+    const materials = await this.materials.count({ where: { courseId } });
+    await this.recompute(courseId, enrollment, materials, topics);
+    return {
+      completedTopics: enrollment.completedTopics,
+      progress: enrollment.progress,
+    };
+  }
+
+  // [topicsOf]: subtemas del temario = encabezados «## …» del contenido Markdown | SSOT con el frontend (lib/syllabus)
+  private async topicsOf(courseId: string): Promise<string[]> {
+    const row = await this.courses
+      .createQueryBuilder('c')
+      .select('c.id')
+      .addSelect('c.content')
+      .where('c.id = :courseId', { courseId })
+      .getOne();
+    const text = (row?.content ?? '').replace(/\r\n?/g, '\n').trim();
+    const titles = [...text.matchAll(/^##\s+(.+?)\s*$/gm)].map((m) =>
+      m[1].trim(),
+    );
+    // [2026-10-26]: texto antes del primer «## » = subtema «Introducción» (igual que parseSyllabus en Next) → antes marcarlo daba 404 y la barra no avanzaba
+    const head = text.split(/^##\s+/m)[0].trim();
+    return head ? ['Introducción', ...titles] : titles;
+  }
+
+  // [recompute]: progreso = (recursos vistos + subtemas estudiados) / (recursos + subtemas) — antes solo contaban los recursos
+  private async recompute(
+    courseId: string,
+    enrollment: CourseEnrollment,
+    materials: number,
+    topics?: string[],
+  ): Promise<void> {
+    const list = topics ?? (await this.topicsOf(courseId));
+    const total = materials + list.length;
+    const doneTopics = (enrollment.completedTopics ?? []).filter((t) =>
+      list.includes(t),
+    ).length;
+    const done = (enrollment.completedMaterialIds ?? []).length + doneTopics;
+    enrollment.progress = total
+      ? Math.min(100, Math.round((done / total) * 100))
+      : 0;
     enrollment.completedAt =
       enrollment.progress === 100
         ? (enrollment.completedAt ?? new Date())
         : null;
     await this.enrollments.save(enrollment);
-    return { completedMaterialIds: done, progress: enrollment.progress };
   }
 
   // [Listar]: orden estable (posición y fecha) — tras comprobar el acceso

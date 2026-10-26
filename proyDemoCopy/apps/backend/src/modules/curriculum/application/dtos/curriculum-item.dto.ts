@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsBoolean,
   IsEnum,
@@ -127,6 +128,20 @@ export class ChangeReviewStatusDto {
   @IsString()
   @MaxLength(2000)
   note?: string;
+}
+
+// [Publicación en lote · 2026-10-24]: ids de un tema completo + publicar/despublicar → una sola petición (evita el 429 del throttler)
+export class BulkPublishDto {
+  @ApiProperty({ type: [String], description: 'Ids (UUID) de los recursos' })
+  @IsArray()
+  @ArrayMinSize(1) // `@ArrayMinSize` (class-validator): al menos un recurso
+  @ArrayMaxSize(500) // Tope por petición (= MAX_IMPORT_ROWS del importador)
+  @IsUUID('all', { each: true }) // `each: true`: valida cada elemento del array (mismo criterio que ParseUUIDPipe)
+  ids!: string[];
+
+  @ApiProperty({ description: 'true = publicar · false = volver a borrador' })
+  @IsBoolean()
+  publish!: boolean;
 }
 
 // [Filtros de consulta]: query params → `@Type(() => Number)` (class-transformer) convierte strings a número

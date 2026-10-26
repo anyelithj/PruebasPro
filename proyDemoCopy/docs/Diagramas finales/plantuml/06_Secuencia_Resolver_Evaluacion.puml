@@ -1,0 +1,99 @@
+@startuml
+skinparam backgroundColor #FEFEFE
+skinparam participant {
+  FontName Arial
+  FontSize 11
+}
+
+actor "Estudiante" as USER
+participant "Next.js QuizPage" as FE
+participant "QuizController" as CONTROLLER
+participant "SubmitAnswerUseCase\n«Strategy»" as SUBMIT
+participant "EndSessionUseCase\n«orquestación»" as END
+participant "AIClientService\n«ACL»" as AI
+participant "FastAPI\n«Microservice»" as FASTAPI
+participant "QuizCompletedListener\n(ScoreModule)" as LISTENER
+database "PostgreSQL\nquiz_sessions · scores · achievements" as PG
+
+== Inicio del Quiz ==
+
+USER -> FE: 1: abre /quiz/:id
+FE -> CONTROLLER: 2: GET /quiz/:id
+CONTROLLER --> FE: Quiz + Questions
+
+FE -> CONTROLLER: 3: POST /quiz/:id/session
+CONTROLLER --> PG: INSERT quiz_sessions
+PG --> CONTROLLER: session creada
+CONTROLLER --> FE: sessionId
+
+== Bucle: por cada pregunta ==
+
+loop por cada pregunta
+  USER -> FE: Responde pregunta
+  FE -> CONTROLLER: 4: POST /quiz/session/:sid/answer
+  CONTROLLER -> SUBMIT: 5: execute({sid, qid, answer, timeMs})
+
+  alt MC | TF — Strategy local
+    SUBMIT -> SUBMIT: 6a: isCorrect = answer===correctAnswer\n+ score
+  else open_answer — Strategy IA + fallback local
+    SUBMIT -> AI: 6b: aiClient.grade(GradeAnswerInput)
+    AI -> FASTAPI: 7: POST /api/v1/grading/grade\n{ questionText, correctAnswer, userAnswer }\n— fallback local si falla
+    FASTAPI --> AI: 8: GradeAnswerResult\n{ isCorrect, score, feedback? }
+    AI --> SUBMIT: { isCorrect, score, feedback? }
+  end
+
+  SUBMIT -> PG: 9: UPDATE quiz_sessions.answers\n(jsonb append SessionAnswer)
+  PG --> SUBMIT: OK
+  SUBMIT --> CONTROLLER: 10: { isCorrect, scoreDelta, feedback? }
+  CONTROLLER --> FE: { correct, feedback?, score }
+  FE --> USER: Muestra retroalimentación
+end
+
+== Fin del Quiz ==
+
+USER -> FE: Finalizar quiz
+FE -> CONTROLLER: 11: POST /quiz/session/:sid/end
+CONTROLLER -> END: EndSessionUseCase.execute()
+END -> PG: 12: UPDATE quiz_sessions\n(status=completed, totalScore, completedAt)
+PG --> END: OK
+
+note right of END
+  «orquestación» EndSessionUseCase:
+    1) UPDATE quiz_sessions
+    2) emit QuizCompletedEvent
+    3) QuizCompletedListener → SaveScore · CheckAchievements
+    «Observer/EventEmitter2» — sin compensación, sin WS push
+end note
+
+END -> END: 13: emit(QUIZ_COMPLETED_EVENT)
+
+== Procesamiento asíncrono ==
+
+LISTENER -> LISTENER: 14: CalculateScore → SaveScore
+LISTENER -> PG: INSERT scores
+PG --> LISTENER: OK
+LISTENER -> PG: 15: CheckAchievements → INSERT achievements\n(emit AchievementUnlockedEvent)
+PG --> LISTENER: OK
+
+END --> CONTROLLER: 16: { sessionId, totalScore, status:completed, achievements }
+CONTROLLER --> FE: Resultado final del quiz
+FE --> USER: 17: Pantalla resultados con score y logros
+
+note right of FE
+  «Patrones — Resolver Quiz»
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  1. Composite — Quiz ◆── Questions
+  2. State Pattern — QuizSession.status
+  3. Strategy — grading local (MC/TF) vs grading IA (open_answer)
+  4. ACL / Adapter / Facade — AIClientService
+  5. Resiliencia / Fallback — exact-match local si FastAPI falla
+  6. Orquestación EndSession — UPDATE → emit → listener
+  7. Observer / Pub-Sub — EventEmitter2 + QuizCompletedListener
+  8. Repository — IQuizRepository · IScoreRepository
+  9. Domain Events — QuizCompletedEvent · AchievementUnlockedEvent
+  10. Command — SubmitAnswerUseCase · EndSessionUseCase
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Tablas: quiz_sessions · scores · achievements
+end note
+
+@enduml

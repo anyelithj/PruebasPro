@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod'; // [Tree-shaking · Zod 4]: import de namespace (`* as z`) → esbuild empaqueta solo las funciones usadas (con `{ z }` arrastraba Zod entero, ~450 kB)
 // [Modelo Notifications · Dominio]: aviso persistido y bandeja (contrato de /api/notifications/*) + reglas puras de la bandeja | [Patrón]: Schema-First (Zod) | [Principio]: SSOT + Type-Safe | [Paradigma]: Funcional (inmutable: cada regla devuelve una bandeja nueva)
 
 export const NotificationSchema = z.object({

@@ -7,7 +7,7 @@ import { languageLabel } from "@/lib/languages";
 import { fmt, getDictionary, plural } from "@aula/shared-i18n";
 import { getLocale } from "@/lib/i18n-server";
 import { ResourcePreview } from "@/components/curriculum/ResourcePreview";
-import { KIND_META, KINDS, type CurriculumItem, type CurriculumItemKind } from "@/types/curriculum";
+import { backLabel, KIND_META, KINDS, type CurriculumItem, type CurriculumItemKind } from "@/types/curriculum";
 import { TopicTitle } from "@/components/language/TopicTitle"; // [2026-10-19]: tema en el idioma estudiado con IPA, audio y traducción
 // [Página /resources/tema]: todas las fichas de un tema (idioma + nivel) — vocabulario con emoji/imagen y audio de pronunciación | [Patrón]: Container (RSC) + Presentational (ResourcePreview) | [Principio]: SRP + DRY | [Paradigma]: Declarativo
 // [Rendimiento]: una sola consulta filtrada por tema (máx. 100); solo los botones 🔊 se hidratan en el cliente
@@ -42,9 +42,10 @@ export default async function TopicPage(props: { searchParams: Promise<SearchPar
 
   return (
     <div className="fade-in w-full space-y-5 py-4">
-      {/* [Volver · 2026-10-24]: «← Volver a recursos» con el MISMO BackLink que el resto (antes «← Todos los temas») · `memo` → regresa al tipo/idioma/nivel filtrados */}
-      <BackLink href={`/resources?${new URLSearchParams(Object.entries({ language: sp.language, level: sp.level }).filter((e): e is [string, string] => Boolean(e[1])))}`} memo="resources">
-        {t.back}
+      {/* [Volver · 2026-10-24]: el MISMO BackLink que el resto (antes «← Todos los temas») · `memo` → regresa al tipo/idioma/nivel filtrados */}
+      {/* [Texto por tipo · 2026-10-24]: «Volver a vocabulario», «Volver a pronunciación»… (BACK_LABEL, SSOT) · sin tipo → texto genérico traducido */}
+      <BackLink href={`/resources?${new URLSearchParams(Object.entries({ language: sp.language, level: sp.level, kind }).filter((e): e is [string, string] => Boolean(e[1])))}`} memo="resources">
+        {kind ? backLabel(kind) : t.back}
       </BackLink>
 
       <header className="flex items-center gap-4">

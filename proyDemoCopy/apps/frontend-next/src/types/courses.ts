@@ -19,6 +19,9 @@ export interface CourseResponse {
   slug: string;
   shortDescription: string;
   description: string | null;
+  content: string | null; // [2026-10-24]: TEMARIO del curso en Markdown («## Subtema» + explicación) | solo en el DETALLE; en listados llega null
+  objectives?: string | null; // [2026-10-25]: ficha del curso (separada del temario)
+  audience?: string | null;
   category: CourseCategory;
   categoryLabel: string;
   group: CourseGroup;
@@ -49,9 +52,14 @@ export interface CourseResponse {
   loveOn: boolean;
   hasAccess: boolean; // [Acceso al material]: comprado (pago) o inscrito (gratis) — el backend lo exige al servir cada archivo
   completedMaterialIds: string[]; // [Línea de tiempo]: materiales ya marcados como completados
+  completedTopics?: string[]; // [2026-10-25]: subtemas del temario estudiados
   createdAt: string;
   updatedAt: string;
 }
+
+// [COURSE_CONTENT_MAX_CHARS · 2026-10-24]: tope de lo que DEVUELVE «Importar contenido del curso» (/api/courses/import), no de la columna (text ilimitado)
+// [2026-10-25]: 400 000 caracteres (≤ ~1,2 MB UTF-8 en el peor caso) < 2 MB de `useBodyParser('json')` (NestJS · main.ts) y de `serverActions.bodySizeLimit` (next.config.ts) | [Principio]: límites alineados en una sola cifra
+export const COURSE_CONTENT_MAX_CHARS = 400_000;
 
 export interface PaginatedCoursesResponse {
   data: CourseResponse[];

@@ -2,6 +2,8 @@
   StoreHeader.vue (widget) => cabecera de la tienda: logo, buscador (GET /products?q=: funciona sin JavaScript),
   secciones de contenido, idioma, carrito con contador y cuenta (login/registro o el MISMO menú de usuario del panel). Debajo, menú de
   categorías con <details> nativo (desplegable accesible por teclado sin JS). Sticky: carrito y búsqueda siempre a mano.
+  ESPEJO EXACTO de la cabecera de login/registro de Next.js (app/[locale]/(auth)/layout.tsx + StoreHeader.tsx): mismas
+  clases, mismos íconos SVG (manifiesto admin-nav.json) y mismo buscador => una sola aplicación a la vista del usuario.
 -->
 <script setup lang="ts">
 import { onMounted } from "vue";
@@ -14,6 +16,13 @@ import UserMenu from "./UserMenu.vue"; // Mismo menú de usuario que el panel (N
 import ThemeToggle from "~~/shared/ui/ThemeToggle.vue";
 import StoreSearch from "~~/features/search/ui/StoreSearch.vue"; // RF-06.1/06.2 autocompletado, voz, QR e imagen
 import { captureAttribution } from "~~/features/cart/model/attribution";
+import type { AdminNav } from "@ecommerce/shared-types"; // "import type" => solo tipos
+import navData from "@ecommerce/shared-types/admin-nav.json"; // Íconos compartidos con Next.js (carrito)
+
+const ICONS = (navData as AdminNav).icons;
+// Clases compartidas con la cabecera de Next.js (DRY entre microfrontends): botón de ícono de 36 px y enlaces de fila
+const ICON_LINK = "relative flex size-9 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900";
+const ROW_LINK = "shrink-0 whitespace-nowrap rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100";
 
 defineProps<{ categories: CategoryNode[] }>();
 const localePath = useLocalePath();
@@ -44,18 +53,22 @@ captureAttribution(useRoute().query); // RF-09.7 canal de origen (utm / enlaces 
       <NuxtLink :to="localePath(routes.home)" class="shrink-0 text-lg font-bold text-slate-900">eCommerce Web3</NuxtLink>
       <div class="mx-auto hidden w-full max-w-md md:block"><StoreSearch id="store-search" /></div>
       <div class="ml-auto flex items-center gap-1 text-sm">
-        <NuxtLink :to="switchLocalePath(locale === 'es' ? 'en' : 'es')" class="rounded-md px-2 py-2 text-slate-600 hover:bg-slate-100" :hreflang="locale === 'es' ? 'en' : 'es'">{{ locale === "es" ? "EN" : "ES" }}</NuxtLink>
+        <NuxtLink :to="switchLocalePath(locale === 'es' ? 'en' : 'es')" class="flex h-9 items-center rounded-md px-2 font-medium text-slate-600 hover:bg-slate-100" :hreflang="locale === 'es' ? 'en' : 'es'">{{ locale === "es" ? "EN" : "ES" }}</NuxtLink>
         <ThemeToggle />
-        <button v-if="isAuthenticated" type="button" :aria-label="$t('store.cart.badge', { count: cart.count })" aria-haspopup="dialog" class="relative flex size-10 items-center justify-center rounded-md hover:bg-slate-100" @click="cart.isOpen = true">
-          <span aria-hidden="true" class="text-xl">🛒</span>
+        <button v-if="isAuthenticated" type="button" :aria-label="$t('store.cart.badge', { count: cart.count })" :title="$t('store.cart.badge', { count: cart.count })" aria-haspopup="dialog" :class="ICON_LINK" @click="cart.isOpen = true">
+          <!-- eslint-disable-next-line vue/no-v-html -- SVG estático del manifiesto (repositorio), nunca datos del usuario -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="size-5" aria-hidden="true" v-html="ICONS.cart" />
           <span v-if="cart.count > 0" aria-hidden="true" class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs font-semibold text-white">{{ cart.count > 99 ? "99+" : cart.count }}</span>
         </button>
-        <a v-else :href="storeLoginUrl(storefrontUrl, locale)" :aria-label="$t('store.cart.badge', { count: 0 })" class="flex size-10 items-center justify-center rounded-md hover:bg-slate-100"><span aria-hidden="true" class="text-xl">🛒</span></a>
+        <a v-else :href="storeLoginUrl(storefrontUrl, locale)" :aria-label="$t('store.cart.badge', { count: 0 })" :title="$t('store.cart.badge', { count: 0 })" :class="ICON_LINK">
+          <!-- eslint-disable-next-line vue/no-v-html -- SVG estático del manifiesto -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="size-5" aria-hidden="true" v-html="ICONS.cart" />
+        </a>
         <!-- Menú de usuario ÚNICO: el mismo componente del panel (espejo del DropdownMenu de Next) -->
         <UserMenu v-if="isAuthenticated && user" />
         <template v-else>
-          <a :href="storeLoginUrl(storefrontUrl, locale)" class="rounded-md px-3 py-2 text-slate-900 hover:bg-slate-100">{{ $t("nav.signIn") }}</a>
-          <a :href="next('/register')" class="rounded-md bg-slate-900 px-3 py-2 font-medium text-slate-50 hover:bg-slate-700">{{ $t("nav.register") }}</a>
+          <a :href="storeLoginUrl(storefrontUrl, locale)" class="flex h-9 items-center rounded-md px-3 font-medium text-slate-900 hover:bg-slate-100">{{ $t("nav.signIn") }}</a>
+          <a :href="next('/register')" class="flex h-9 items-center rounded-md bg-slate-900 px-3 font-medium text-slate-50 hover:bg-slate-700">{{ $t("nav.register") }}</a>
         </template>
       </div>
     </div>
@@ -69,10 +82,10 @@ captureAttribution(useRoute().query); // RF-09.7 canal de origen (utm / enlaces 
             <NuxtLink v-for="child in category.children" :key="child.id" :to="localePath(routes.category(child.slug))" class="block rounded px-2 py-1 text-slate-700 hover:bg-slate-50">{{ child.name }}</NuxtLink>
           </div>
         </details>
-        <NuxtLink v-else :to="localePath(routes.category(category.slug))" class="shrink-0 rounded-md px-3 py-2 font-medium text-slate-700 hover:bg-slate-100">{{ category.name }}</NuxtLink>
+        <NuxtLink v-else :to="localePath(routes.category(category.slug))" :class="[ROW_LINK, 'font-medium']">{{ category.name }}</NuxtLink>
       </template>
-      <span aria-hidden="true" class="mx-2 h-5 w-px shrink-0 bg-slate-200" />
-      <NuxtLink v-for="link in LINKS" :key="link.to" :to="localePath(link.to)" class="shrink-0 whitespace-nowrap rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100" active-class="bg-slate-100 font-medium text-slate-900">{{ $t(link.key) }}</NuxtLink>
+      <span v-if="categories.length" aria-hidden="true" class="mx-2 h-5 w-px shrink-0 bg-slate-200" />
+      <NuxtLink v-for="link in LINKS" :key="link.to" :to="localePath(link.to)" :class="ROW_LINK" active-class="bg-slate-100 font-medium text-slate-900">{{ $t(link.key) }}</NuxtLink>
     </nav>
   </header>
 </template>

@@ -28,7 +28,7 @@ describe('SongPlayerPage', () => {
   it('karaoke: avatar, letra bilingüe con IPA, UK/US y prácticas', async () => {
     const { el } = await open(songDetail());
     expect(el.textContent).toContain('En reposo'); // Estado del avatar en texto
-    expect(el.textContent).toContain('Twinkle, twinkle, little star');
+    expect(el.textContent!.replace(/\s+/g, ' ')).toContain('Twinkle, twinkle, little star'); // Cada palabra es un botón del diccionario → espacios extra entre <span>
     expect(el.textContent).toContain('traducción 0');
     expect(el.querySelector('[lang="en-fonipa"]')?.textContent).toContain('/ipa-');
     expect(el.querySelector('[role="switch"]')).not.toBeNull(); // Interruptor UK/US (inglés)

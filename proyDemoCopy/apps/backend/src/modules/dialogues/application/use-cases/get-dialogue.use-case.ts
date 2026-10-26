@@ -10,6 +10,7 @@ import type { RangedSource } from '../../../../shared/http/ranged-response';
 import type { ObjectStore } from '../../../../shared/storage/object-store';
 import { Dialogue } from '../../domain/entities/dialogue.entity';
 import { DialogueTurn } from '../../domain/entities/dialogue-turn.entity';
+import { sanitizeTranslation } from '../../domain/translation-sanitizer';
 import { TurnEnricher } from './turn-enricher';
 // [UseCases DialogueAccess + GetDialogue · Sprint 9.3 · RF-123/RF-127]: carga un diálogo según el rol (con nivel sin confirmar solo para su autor o ADMIN) y lo devuelve con sus turnos, IPA y traducción; audio opcional por rangos | [Patrón]: Query + Guard reutilizable | [Principio]: SRP + mínimo privilegio + verificación humana + DRY | [Paradigma]: POO
 
@@ -81,12 +82,19 @@ export class GetDialogueUseCase {
   }
 
   // [fillTranslations · 2026-10-23]: turnos subidos cuando el LLM no tradujo («—» en la biblioteca) → se traducen al abrir y se guardan (relleno perezoso, una vez) | [Patrón]: Lazy Backfill | [Principio]: degradación elegante (si falla, se muestra igual)
+  // [2026-10-25]: también repara traducciones guardadas con JSON crudo (`{"<frase>": "<traducción>"}`) — se desenvuelven o, si no sirven, se vuelven a pedir
   private async fillTranslations(turns: DialogueTurn[], language: string, token: string): Promise<void> {
-    const missing = language === 'es' ? [] : turns.filter((t) => !t.translation?.trim());
-    if (!missing.length) return;
-    const ling = await this.enricher.enrich(missing.map((t) => t.text), language, token);
+    if (language === 'es') return;
+    // [Limpieza en sitio]: `filter` con efecto deliberado — muta el turno devuelto y lo marca para guardar si su traducción cambió
+    const cleaned = turns.filter((t) => {
+      const clean = sanitizeTranslation(t.text, t.translation);
+      return clean !== t.translation && ((t.translation = clean), true);
+    });
+    const missing = turns.filter((t) => !t.translation);
+    const ling = missing.length ? await this.enricher.enrich(missing.map((t) => t.text), language, token) : [];
     const filled = missing.filter((t, i) => (ling[i]?.translation ? ((t.translation = ling[i].translation), true) : false)); // Muta el turno devuelto y lo marca para guardar
-    if (filled.length) await this.turns.save(filled).catch(() => undefined);
+    const changed = [...new Set([...cleaned, ...filled])]; // `Set`: un turno limpiado y luego traducido se guarda una sola vez
+    if (changed.length) await this.turns.save(changed).catch(() => undefined);
   }
 
   async audio(actor: DialogueActor, id: string): Promise<RangedSource> {

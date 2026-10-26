@@ -113,6 +113,20 @@ FOLLOW_UPS = MappingProxyType(
     }
 )
 
+# [Respaldos contextuales · 2026-10-25]: sobre la palabra clave del tema que el alumno ACABA de decir ({w}) → el respaldo suena a
+# conversación y no a frase enlatada · mismo orden en «es» (traducción) | `str.format(w=…)` rellena la palabra
+FOCUS_FOLLOW_UPS = MappingProxyType(
+    {
+        "en": ("You mentioned {w}! What do you like most about it?", "Tell me more about {w}. Why is it special for you?"),
+        "es": ("¡Mencionaste {w}! ¿Qué es lo que más te gusta?", "Cuéntame más sobre {w}. ¿Por qué es especial para ti?"),
+        "fr": ("Tu as parlé de {w} ! Qu'est-ce que tu aimes le plus ?", "Parle-moi encore de {w}. Pourquoi c'est spécial pour toi ?"),
+        "de": ("Du hast {w} erwähnt! Was magst du daran am meisten?", "Erzähl mir mehr über {w}. Warum ist es besonders für dich?"),
+        "pt": ("Você falou de {w}! Do que você mais gosta?", "Conte mais sobre {w}. Por que é especial para você?"),
+        "zh": ("你提到了{w}！你最喜欢它的什么？", "再多说说{w}吧。为什么它对你很特别？"),
+        "ru": ("Ты упомянул {w}! Что тебе в этом нравится больше всего?", "Расскажи больше про {w}. Почему это особенное для тебя?"),
+    }
+)
+
 # [Despedidas · 2026-10-23]: si el alumno se despide, el avatar cierra la conversación (antes seguía preguntando casi lo mismo) | [Patrón]: Constant Object (MappingProxyType = solo lectura)
 FAREWELLS = MappingProxyType(
     {

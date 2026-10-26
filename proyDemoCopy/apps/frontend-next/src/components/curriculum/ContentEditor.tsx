@@ -6,6 +6,7 @@ import {
   type ContentByKind,
   type CurriculumItemKind,
   type ExampleValue,
+  type PronunciationWord,
   type ExerciseContent,
   type ExerciseType,
   type IpaValue,
@@ -89,6 +90,7 @@ function TextField({
 }
 
 // [RemoveButton]: botón accesible de quitar fila (nombre accesible explícito)
+// [Altura · 2026-10-24]: `btn` (40 px) = misma altura que `.control` → alineado con los campos de la fila (antes `btn-sm`, 32 px)
 function RemoveButton({
   onClick,
   label,
@@ -102,7 +104,7 @@ function RemoveButton({
       onClick={onClick}
       aria-label={label}
       title={label}
-      className="btn btn-ghost btn-sm shrink-0 px-2.5! text-tone-danger"
+      className="btn btn-ghost shrink-0 px-2.5! text-tone-danger"
     >
       ✕
     </button>
@@ -163,9 +165,36 @@ function ExamplesEditor({
         <button
           type="button"
           onClick={() => onChange([...items, { text: "", translationEs: "" }])}
-          className="btn btn-outline btn-sm"
+          className="btn btn-outline"
         >
           + Añadir ejemplo
+        </button>
+      )}
+    </fieldset>
+  );
+}
+
+// [WordsEditor · 2026-10-24]: palabras de ejemplo de un fonema (palabra + IPA opcional + traducción) | mismo patrón que ExamplesEditor | [Principio]: DRY (TextField, RemoveButton, replaceAt/removeAt)
+const MAX_WORDS = 20; // = words.max(20) del esquema del backend
+function WordsEditor({ value, onChange, language }: { value: PronunciationWord[] | undefined; onChange: (v: PronunciationWord[]) => void; language: Language | "" }) {
+  const items = value ?? []; // `??` (ES2020): contenido antiguo sin palabras
+  const s = sample(language);
+  return (
+    <fieldset className="space-y-2">
+      <legend className="mb-1 text-xs font-semibold text-muted-foreground">Palabras con este sonido (opcional) — se escuchan una a una en la ficha</legend>
+      {items.map((w, i) => (
+        <div key={i} className="grid gap-2 rounded-lg border border-border p-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
+          <TextField label={`Palabra ${i + 1}`} value={w.text} onChange={(text) => onChange(replaceAt(items, i, { ...w, text }))} placeholder={s.word} />
+          <TextField label="IPA (opcional)" hint="Si la dejas vacía se calcula sola." value={w.ipa} onChange={(ipa) => onChange(replaceAt(items, i, { ...w, ipa }))} placeholder="/hɒt/" mono />
+          <TextField label="Traducción" value={w.translationEs} onChange={(translationEs) => onChange(replaceAt(items, i, { ...w, translationEs }))} />
+          <div className="flex items-end">
+            <RemoveButton onClick={() => onChange(removeAt(items, i))} label={`Quitar palabra ${i + 1}`} />
+          </div>
+        </div>
+      ))}
+      {items.length < MAX_WORDS && (
+        <button type="button" onClick={() => onChange([...items, { text: "", ipa: "", translationEs: "" }])} className="btn btn-outline">
+          + Añadir palabra
         </button>
       )}
     </fieldset>
@@ -509,7 +538,7 @@ function VisualAid({
               <button
                 type="button"
                 onClick={() => onChange({ ...c, emoji: undefined })}
-                className="btn btn-ghost btn-sm text-tone-danger"
+                className="btn btn-ghost text-tone-danger"
               >
                 ✕ Quitar emoji
               </button>
@@ -519,7 +548,7 @@ function VisualAid({
             {/* [Input de archivo accesible]: <label> estilizado + input sr-only con foco visible */}
             <label
               htmlFor={fileId}
-              className="btn btn-outline btn-sm cursor-pointer has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
+              className="btn btn-outline cursor-pointer has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
             >
               <Image aria-hidden className="inline size-4 align-[-0.125em]" /> {c.image ? "Cambiar imagen" : "Adjuntar imagen"}
             </label>
@@ -537,7 +566,7 @@ function VisualAid({
               <button
                 type="button"
                 onClick={() => onChange({ ...c, image: undefined })}
-                className="btn btn-ghost btn-sm text-tone-danger"
+                className="btn btn-ghost text-tone-danger"
               >
                 ✕ Quitar imagen
               </button>
@@ -819,15 +848,33 @@ function PronunciationEditor({
           placeholder={sample(language).romanization}
         />
       )}
-      {/* [Regla fonética + frases · 2026-10-23]: qué sonido o patrón se practica y frases donde se oye */}
+      {/* [Ficha de fonema · 2026-10-24]: para un sonido como /ɒ/ → símbolo, CUÁNDO se usa (grafías y posiciones), CÓMO se pronuncia, palabras y frases donde se oye */}
       <TextField
-        label="Regla de pronunciación (en español)"
-        hint="El fonema o patrón que se practica y cómo se produce."
+        label="Fonema (símbolo IPA)"
+        hint="Opcional: el sonido que se practica, sin barras (p. ej. ɒ). La ficha lo muestra con un botón para escucharlo en la palabra clave."
+        value={c.phoneme}
+        onChange={(phoneme) => onChange({ ...c, phoneme: phoneme.replace(/\//g, "") })} // `replace(/\//g)`: sin barras → la ficha las añade
+        placeholder="ɒ"
+        mono
+      />
+      <TextField
+        label="Cuándo se usa (en español)"
+        hint="Qué letras o combinaciones producen el sonido y en qué posiciones."
         value={c.ruleEs}
         onChange={(ruleEs) => onChange({ ...c, ruleEs })}
-        placeholder="La terminación -ed suena /t/ después de un sonido sordo: worked /wɜːkt/."
+        placeholder="«o» en sílaba cerrada en inglés británico (hot, dog) y «a» tras w (want, watch)."
         multiline
       />
+      <TextField
+        label="Cómo se pronuncia (en español)"
+        hint="Posición de labios, lengua y mandíbula, comparada con el español."
+        value={c.articulationEs}
+        onChange={(articulationEs) => onChange({ ...c, articulationEs })}
+        placeholder="Una «o» corta con la boca bien abierta y los labios ligeramente redondeados."
+        multiline
+        rows={2}
+      />
+      <WordsEditor value={c.words} onChange={(words) => onChange({ ...c, words })} language={language} />
       <ExamplesEditor
         value={c.examples ?? []}
         onChange={(examples) => onChange({ ...c, examples })}
@@ -998,7 +1045,7 @@ function ExerciseEditor({ value: c, onChange }: EditorProps<"exercise">) {
             <button
               type="button"
               onClick={() => onChange({ ...c, options: [...options, ""] })}
-              className="btn btn-outline btn-sm"
+              className="btn btn-outline"
             >
               + Añadir opción
             </button>
@@ -1065,7 +1112,7 @@ function ExerciseEditor({ value: c, onChange }: EditorProps<"exercise">) {
               onClick={() =>
                 onChange({ ...c, answerKey: [...c.answerKey, ""] })
               }
-              className="btn btn-outline btn-sm"
+              className="btn btn-outline"
             >
               + Añadir respuesta válida
             </button>
@@ -1197,7 +1244,7 @@ function RubricEditor({ value: c, onChange }: EditorProps<"rubric">) {
                 ],
               })
             }
-            className="btn btn-outline btn-sm"
+            className="btn btn-outline"
           >
             + Añadir criterio
           </button>
@@ -1277,7 +1324,7 @@ function BandsEditor({
           onClick={() =>
             onChange([...cr.bands, { points: cr.maxPoints, descriptorEs: "" }])
           }
-          className="btn btn-ghost btn-sm"
+          className="btn btn-ghost"
         >
           + Añadir nivel
         </button>

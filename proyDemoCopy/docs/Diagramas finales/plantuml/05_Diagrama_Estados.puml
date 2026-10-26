@@ -1,0 +1,83 @@
+@startuml
+skinparam backgroundColor #FEFEFE
+skinparam state {
+  FontName Arial
+  FontSize 11
+  BackgroundColor #E8F5E9
+  BorderColor #2E7D32
+}
+skinparam note {
+  FontName Arial
+  FontSize 9
+}
+
+' === Estados de la Sesión (Auth) ===
+state "AuthSessions" as AUTH_S {
+  state "Active" as ACTIVE
+  state "Expired" as EXPIRED
+  state "Revoked" as REVOKED
+}
+
+[*] --> ACTIVE : login()/OAuthLogin()\nCreate refresh session
+ACTIVE --> EXPIRED : expires_session
+ACTIVE --> REVOKED : logout() / refresh Token()\nresetPassword()
+EXPIRED --> [*]
+REVOKED --> [*]
+
+' === Estados de UserVerified Email ===
+state "UserVerified Email" as UVE {
+  state "Not verified\n(isEmailVerified = false)" as NOT_VERIFIED
+  state "Verified\n(isEmailVerified = true)" as VERIFIED
+}
+
+[*] --> NOT_VERIFIED : register():\ninsert user
+NOT_VERIFIED --> VERIFIED : VerifyEmail(token)\n[token Active]
+VERIFIED --> [*]
+
+' === Estados de EmailVerificationToken ===
+state "EmailVerificationToken" as EVT {
+  state "Active" as EVT_ACTIVE
+  state "Used" as EVT_USED
+  state "Expired" as EVT_EXPIRED
+}
+
+[*] --> EVT_ACTIVE : register():\ninsert user + token
+EVT_ACTIVE --> EVT_USED : verifyEmail()\nmarkUsed()
+EVT_ACTIVE --> EVT_EXPIRED : isExpired()\nTTL expired
+EVT_USED --> [*]
+EVT_EXPIRED --> [*]
+
+' === Estados de PasswordResetToken ===
+state "PasswordResetTokens" as PRT {
+  state "Active" as PRT_ACTIVE
+  state "Used" as PRT_USED
+  state "Expired" as PRT_EXPIRED
+}
+
+[*] --> PRT_ACTIVE : requestPasswordReset():\nemitir token: TTL1h
+PRT_ACTIVE --> PRT_USED : resetPassword():\nmarkUsed()
+PRT_ACTIVE --> PRT_EXPIRED : isExpired()\nTTL expired
+PRT_USED --> [*]
+PRT_EXPIRED --> [*]
+
+' === Estados de QuizSession ===
+state "QuizSession" as QS {
+  state "in_progress\nSubmitAnswer()" as QS_IN_PROGRESS
+  state "completed" as QS_COMPLETED
+  state "abandoned" as QS_ABANDONED
+}
+
+[*] --> QS_IN_PROGRESS : startSession():\nInsert quiz_sessions
+QS_IN_PROGRESS --> QS_COMPLETED : endSession()/\ncalcula Score
+QS_IN_PROGRESS --> QS_ABANDONED : endSession(abandoned)\nwithout score
+QS_COMPLETED --> [*]
+QS_ABANDONED --> [*]
+
+note bottom of QS
+  **QuizSession - Estado ELIMINADO:**
+  ~~CREATION~~ (no existe en
+  SessionStatus; la sesi\u00f3n
+  nace directamente en IN_PROGRESS)
+end note
+
+@enduml

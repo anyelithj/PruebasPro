@@ -13,6 +13,7 @@ import {
   type GameSessionContent,
 } from '../../domain/entities/game-session.entity';
 import { RolePlayScenario } from '../../domain/entities/roleplay-scenario.entity';
+import { GameDeck } from '../../domain/entities/game-deck.entity';
 // [UseCase StartGameSession · Sprint 8.5 · RF-98/RF-100/RF-101]: crea la partida con su contenido — vocabulario del banco del usuario (o tarjetas propias si aún no tiene), tarjeta de tabú, tema, escenario o frases de comprensión | [Patrón]: Use Case (Command) + Factory (contenido según la familia del juego) | [Principio]: SRP + DRY (banco de Vocabulary, contenido de game-content) | [Paradigma]: POO + async/await
 
 export interface StartGameInput {
@@ -21,6 +22,7 @@ export interface StartGameInput {
   level?: string | null;
   difficulty?: number;
   scenarioId?: string;
+  deckId?: string; // [2026-10-25]: juego con material propio (Gestión → Actividades → Juegos) → sus palabras en vez del banco
 }
 
 const SIZE_BY_DIFFICULTY = [6, 8, 12]; // Palabras por partida según dificultad
@@ -44,6 +46,8 @@ export class StartGameSessionUseCase {
     private readonly entries: Repository<VocabularyEntry>,
     @InjectRepository(RolePlayScenario)
     private readonly scenarios: Repository<RolePlayScenario>,
+    @InjectRepository(GameDeck)
+    private readonly decks?: Repository<GameDeck>, // `?`: las pruebas antiguas construyen el caso de uso sin mazos
   ) {}
 
   async execute(userId: string, input: StartGameInput): Promise<GameSession> {
@@ -74,7 +78,23 @@ export class StartGameSessionUseCase {
               category: c.category,
             }));
 
-    const content: GameSessionContent = { vocabulary, fallback: bank.fallback };
+    // [Mazo propio · 2026-10-25]: el docente creó el juego con sus palabras → se barajan TODAS (el tamaño lo decidió él)
+    const deck = input.deckId
+      ? await this.decks?.findOneBy({ id: input.deckId, archivedAt: IsNull() })
+      : null;
+    if (input.deckId && !deck)
+      throw new NotFoundException('Juego no encontrado');
+    const content: GameSessionContent = {
+      vocabulary: deck
+        ? shuffle(deck.items).map((i) => ({
+            term: i.term,
+            translation: i.translation,
+            emoji: i.emoji,
+            category: i.category,
+          }))
+        : vocabulary,
+      fallback: deck ? false : bank.fallback,
+    };
     let scenarioId: string | null = null;
     switch (input.gameType) {
       case 'taboo':
@@ -126,8 +146,8 @@ export class StartGameSessionUseCase {
       this.sessions.create({
         userId,
         gameType: input.gameType,
-        language: input.language,
-        level: input.level ?? null,
+        language: deck?.language ?? input.language,
+        level: deck?.level ?? input.level ?? null,
         difficulty,
         scenarioId,
         content,

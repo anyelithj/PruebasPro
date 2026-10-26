@@ -20,7 +20,7 @@ export default async function CheckoutIndexPage({ params }: PageProps) {
   const storeCartUrl = `${config.cmsUrl}${locale === "es" ? "" : `/${locale}`}/cart`;
   return (
     <div className="mx-auto max-w-xl py-16">
-      {/* "Suspense" => requerido por Next 15 para Client Components que leen useSearchParams */}
+      {/* "Suspense" => requerido por Next 16 para Client Components que leen useSearchParams */}
       <Suspense>
         <StartCheckoutFromCart storeCartUrl={storeCartUrl} />
       </Suspense>

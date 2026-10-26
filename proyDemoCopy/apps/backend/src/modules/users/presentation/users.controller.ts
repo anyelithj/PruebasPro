@@ -22,9 +22,9 @@ import {
   IsString,
   MaxLength,
   MinLength,
-  Matches,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { OptionalPhone } from '../application/dtos/optional-phone.decorator'; // [2026-10-24]: decorador compuesto del teléfono
 import { Roles } from '../../../shared/decorators/roles.decorator';
 import { Role } from '../domain/value-objects/role.vo';
 import {
@@ -68,11 +68,8 @@ export class AdminCreateUserDto {
   @MaxLength(40)
   section?: string;
 
-  // [Teléfono · 2026-10-24]: opcional · dígitos, espacios, guiones, paréntesis y «+» inicial (7–20) | `@Matches` (class-validator)
-  @ApiProperty({ required: false, example: '+57 300 123 4567' })
-  @IsOptional()
-  @Matches(/^(\+?[0-9 ()-]{7,20})?$/, { // Vacío = borrar el teléfono
-    message: 'Teléfono no válido (solo números, espacios, guiones y + inicial).' })
+  // [Teléfono · 2026-10-24]: opcional · regla única en `@OptionalPhone` (users/domain/value-objects/phone.vo.ts) | vacío = borrar el teléfono | [Principio]: DRY
+  @OptionalPhone()
   phone?: string;
 }
 
@@ -101,11 +98,8 @@ export class AdminUpdateUserDto {
   @MaxLength(40)
   section?: string;
 
-  // [Teléfono · 2026-10-24]: opcional · dígitos, espacios, guiones, paréntesis y «+» inicial (7–20) | `@Matches` (class-validator)
-  @ApiProperty({ required: false, example: '+57 300 123 4567' })
-  @IsOptional()
-  @Matches(/^(\+?[0-9 ()-]{7,20})?$/, { // Vacío = borrar el teléfono
-    message: 'Teléfono no válido (solo números, espacios, guiones y + inicial).' })
+  // [Teléfono · 2026-10-24]: opcional · regla única en `@OptionalPhone` (users/domain/value-objects/phone.vo.ts) | vacío = borrar el teléfono | [Principio]: DRY
+  @OptionalPhone()
   phone?: string;
 }
 // [Controller Users]: lectura para ADMIN | [Patron]: Controller (MVC) | [Principio]: SRP

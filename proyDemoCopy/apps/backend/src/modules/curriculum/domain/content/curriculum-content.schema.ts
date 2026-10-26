@@ -34,6 +34,13 @@ const exampleSchema = z.object({
   romanization: optionalText(500), // Pinyin con tonos (zh) o transliteración (ru), opcional
 });
 
+// [Palabra de una ficha de fonema · 2026-10-24]: palabra en el idioma + IPA (opcional: la vista la calcula si falta) + traducción opcional
+const pronunciationWordSchema = z.object({
+  text: text(120),
+  ipa: optionalText(120),
+  translationEs: optionalText(300),
+});
+
 // [Registro tipo → esquema]: `Record<Enum, ZodType>` obliga (en compilación) a definir un esquema para CADA tipo | [Patrón]: Registry
 export const CURRICULUM_CONTENT_SCHEMAS = {
   [CurriculumItemKind.GRAMMAR_RULE]: z.object({
@@ -64,8 +71,12 @@ export const CURRICULUM_CONTENT_SCHEMAS = {
     ipa: ipaSchema, // Obligatoria en este tipo
     romanization: optionalText(200),
     audioRef: optionalText(300), // Referencia a audio en caché (clave), nunca audio embebido
-    ruleEs: optionalText(1000), // [2026-10-23]: regla fonética en español (p. ej. «la -ed suena /t/ tras sonido sordo»)
+    ruleEs: optionalText(1000), // [2026-10-23]: regla fonética en español (p. ej. «la -ed suena /t/ tras sonido sordo») = CUÁNDO se usa el sonido
     examples: z.array(exampleSchema).max(10).default([]), // [2026-10-23]: frases que aplican la regla (con su IPA en la vista)
+    // [Ficha de fonema · 2026-10-24]: para un sonido como /ɒ/ → símbolo, cómo se articula y palabras de ejemplo (cada una con audio en la vista)
+    phoneme: optionalText(20), // Símbolo IPA sin barras (p. ej. "ɒ")
+    articulationEs: optionalText(1000), // CÓMO se pronuncia: labios, lengua y mandíbula comparados con el español
+    words: z.array(pronunciationWordSchema).max(20).default([]), // Palabras donde aparece el sonido
   }),
   [CurriculumItemKind.COMMON_ERROR]: z.object({
     incorrect: text(500), // Forma errónea típica
@@ -110,25 +121,26 @@ export const CURRICULUM_CONTENT_SCHEMAS = {
     title: text(160),
     criteria: z
       .array(
-        z.object({
-          name: text(120), // Criterio (p. ej. "Coherencia")
-          descriptorEs: text(1000), // Qué se evalúa
-          maxPoints: z.number().int().min(1).max(100), // `z.number().int()` (Zod): entero positivo acotado
-          bands: z
-            .array(
-              z.object({
-                points: z.number().int().min(0).max(100),
-                descriptorEs: text(1000),
-              }),
-            )
-            .max(10)
-            .default([]),
-        })
-        // [Sprint 5.5 · niveles ≤ peso]: ninguna banda puede otorgar más puntos que el peso del criterio | [Patrón]: Specification
-        .refine((c) => c.bands.every((b) => b.points <= c.maxPoints), {
-          message: 'Cada banda debe tener points ≤ maxPoints del criterio',
-          path: ['bands'],
-        }),
+        z
+          .object({
+            name: text(120), // Criterio (p. ej. "Coherencia")
+            descriptorEs: text(1000), // Qué se evalúa
+            maxPoints: z.number().int().min(1).max(100), // `z.number().int()` (Zod): entero positivo acotado
+            bands: z
+              .array(
+                z.object({
+                  points: z.number().int().min(0).max(100),
+                  descriptorEs: text(1000),
+                }),
+              )
+              .max(10)
+              .default([]),
+          })
+          // [Sprint 5.5 · niveles ≤ peso]: ninguna banda puede otorgar más puntos que el peso del criterio | [Patrón]: Specification
+          .refine((c) => c.bands.every((b) => b.points <= c.maxPoints), {
+            message: 'Cada banda debe tener points ≤ maxPoints del criterio',
+            path: ['bands'],
+          }),
       )
       .min(1)
       .max(20),
@@ -171,6 +183,10 @@ const targetTexts = (
   const options = Array.isArray(c.options)
     ? (c.options as unknown[]).map((o) => ({ text: o }))
     : [];
+  // [2026-10-24]: las palabras de una ficha de fonema también deben estar en el idioma del recurso
+  const words = Array.isArray(c.words)
+    ? (c.words as Array<{ text?: unknown }>).map((w) => ({ text: w?.text }))
+    : [];
   return [
     { text: c.lemma },
     { text: c.text, translation: c.translationEs },
@@ -179,6 +195,7 @@ const targetTexts = (
     { text: c.correct },
     ...examples,
     ...options,
+    ...words,
   ].filter(
     (p): p is Pair & { text: string } =>
       typeof p.text === 'string' && p.text.trim() !== '',

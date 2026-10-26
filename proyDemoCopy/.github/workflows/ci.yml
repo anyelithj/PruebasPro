@@ -18,7 +18,7 @@ permissions:
   contents: read
 
 env:
-  NODE_VERSION: "22"
+  NODE_VERSION: "24.22.1" # [Node 24 LTS]: misma versión exacta que .nvmrc y las imágenes Docker (node:24.22.1-alpine)
   PNPM_VERSION: "10.12.1"
   PYTHON_VERSION: "3.13"
   HUSKY: "0" # Husky no instala git hooks en CI (no hay commits locales)
@@ -51,7 +51,7 @@ jobs:
           NEXT_TELEMETRY_DISABLED: "1"
 
   # ───────────────────────── Angular 22 (apps/frontend-angular/) ─────────────────────────
-  # [Mismo pipeline que Next.js]: instalar → lint → tipos de pruebas → Jest → build | Angular 22 exige Node ≥ 22.22.3 ("22" en setup-node = última 22.x)
+  # [Mismo pipeline que Next.js]: instalar → lint → tipos de pruebas → Jest → build | Angular 22 exige Node ^22.22.3 || ^24.15.0 (NODE_VERSION 24.22.1 lo cumple)
   frontend-angular:
     name: Frontend · Angular
     runs-on: ubuntu-latest
@@ -137,6 +137,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip # [Caché]: reutiliza las descargas de pip (clave = hash de los requirements)
           cache-dependency-path: apps/ai-service/requirements*.txt
+      - run: python -m pip install pip==26.2.2 # [pip fijado]: misma versión que la imagen Docker del ai-service
       # requirements-dev.txt ya incluye requirements.txt | índice CPU de PyTorch: evita bajar ~2 GB de librerías CUDA que CI no usa
       - run: pip install -r requirements-dev.txt --extra-index-url https://download.pytorch.org/whl/cpu
       - run: python -m ruff check .

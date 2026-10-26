@@ -1,7 +1,8 @@
 // PanelFrame.tsx (Client Component · React + Tailwind) => marco ÚNICO de todas las pantallas con sesión de Next.js
 // (panel admin, "Mi cuenta", chatbot y recomendaciones): menú lateral + barra superior + loader + contenido.
 // Espejo exacto en Nuxt: layouts/admin.vue + AdminSidebar.vue + AdminHeader.vue + TopLoader.vue.
-// Barra superior: botón de menú (abre el panel en móvil / lo oculta en escritorio), migas de pan calculadas desde el
+// Barra superior: botón de menú (solo móvil: abre el panel; en escritorio el botón "panel lateral" vive en el propio menú,
+// estilo Claude/Gemini), migas de pan calculadas desde el
 // manifiesto, acceso a la tienda y a las notificaciones, y el menú de usuario (DropdownMenu de Radix, sin cambios).
 // Patrones: Mediator (este componente guarda el estado que comparten menú y barra), Composite (slots: children, banner).
 // Accesibilidad: <header>/<main id="main-content">, aria-expanded/aria-controls en el botón de menú, migas con <nav>.
@@ -18,7 +19,7 @@ import { cn } from "@/shared/lib/cn";
 
 const COLLAPSED_KEY = "admin-sidebar-collapsed"; // Preferencia visual por navegador (misma clave en Nuxt)
 // Botón redondo de la barra superior (DRY)
-const NAV_BUTTON = "flex size-10 cursor-pointer items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500";
+const NAV_BUTTON = "flex size-9 cursor-pointer items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500";
 
 export function PanelFrame({ children, banner }: { children: ReactNode; banner?: ReactNode }) {
   const { locale, active, text } = usePanelNav();
@@ -35,8 +36,6 @@ export function PanelFrame({ children, banner }: { children: ReactNode; banner?:
       try { localStorage.setItem(COLLAPSED_KEY, value ? "0" : "1"); } catch { /* sin persistencia, sigue funcionando */ }
       return !value;
     });
-  // Botón de menú: en móvil abre el panel; en escritorio (lg = 1024 px) oculta/muestra el riel
-  const onMenuButton = () => (window.matchMedia("(min-width: 1024px)").matches ? toggleCollapsed() : setMobileOpen((open) => !open));
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -46,8 +45,9 @@ export function PanelFrame({ children, banner }: { children: ReactNode; banner?:
       {/* Columna de contenido: deja espacio al menú fijo (ancho completo o riel) */}
       <div className={cn("flex min-h-screen flex-col transition-[padding] duration-200 motion-reduce:transition-none", collapsed ? "lg:pl-[4.5rem]" : "lg:pl-72")}>
         <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/85 backdrop-blur supports-[backdrop-filter]:bg-white/70">
-          <div className="flex h-16 items-center gap-3 px-4 lg:px-6">
-            <button type="button" onClick={onMenuButton} aria-controls="panel-sidebar" aria-expanded={mobileOpen} className={NAV_BUTTON}>
+          <div className="mx-auto flex h-16 w-full max-w-[1400px] items-center gap-3 px-4 lg:px-6">
+            {/* lg:hidden => solo móvil/tablet; en escritorio se oculta/muestra desde el botón del propio menú */}
+            <button type="button" onClick={() => setMobileOpen((open) => !open)} aria-controls="panel-sidebar" aria-expanded={mobileOpen} className={cn(NAV_BUTTON, "lg:hidden")}>
               <span className="sr-only">{mobileOpen ? text("closeMenu") : text("openMenu")}</span>
               <NavIcon name="menu" className="size-5" />
             </button>

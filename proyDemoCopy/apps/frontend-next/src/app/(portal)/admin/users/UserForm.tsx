@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input"; // [2026-10-23]: icono de ojo para ver/ocultar | [Principio]: DRY (mismo componente que login/registro)
 import { toast } from "@/components/shared/Toaster";
+import { optionalPhone } from "@/lib/validations"; // [2026-10-24]: regla de teléfono única (registro, perfil y Gestión) | [Principio]: DRY
+import { PHONE_MAX_LENGTH, PHONE_PLACEHOLDER } from "@aula/shared-schemas"; // [2026-10-24]: límite y ejemplo compartidos | [Principio]: SSOT
 // [UserForm]: formulario ÚNICO de alta y edición de usuario (con `initial` edita, sin él crea) | [Patrón]: Presentational + Strategy (POST/PATCH según modo) | [Principio]: SRP + DRY | [Paradigma]: Declarativo
 
 // [Campos comunes]: los que se editan en ambos modos | [Principio]: DRY
@@ -18,7 +20,7 @@ const baseSchema = z.object({
   role: z.enum(["USER", "TEACHER", "ADMIN"]),
   section: z.string().trim().max(40).optional(),
   // [Teléfono · 2026-10-24]: opcional, misma regla que el DTO de NestJS (vacío = sin teléfono)
-  phone: z.string().trim().regex(/^(\+?[0-9 ()-]{7,20})?$/, "Teléfono no válido: solo números, espacios, guiones y + inicial").optional(),
+  phone: optionalPhone({ phoneInvalid: "Teléfono no válido: solo números, espacios, guiones y + inicial" }), // `optionalPhone` (Factory Zod): PHONE_PATTERN de @aula/shared-schemas
 });
 
 // [Alta]: además email y contraseña (el backend no los cambia en la edición) | `.extend` (Zod): hereda los campos base
@@ -139,7 +141,7 @@ export function UserForm({ initial }: UserFormProps) {
       {/* [Teléfono · 2026-10-24]: `type="tel"` + `autoComplete="tel"` (HTML) → teclado telefónico en móvil y autocompletado */}
       <div className="space-y-1.5">
         <Label htmlFor="phone">Teléfono</Label>
-        <Input id="phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="+57 300 123 4567" aria-describedby="phone-hint" {...register("phone")} />
+        <Input id="phone" type="tel" inputMode="tel" autoComplete="tel" placeholder={PHONE_PLACEHOLDER} maxLength={PHONE_MAX_LENGTH} aria-describedby="phone-hint" {...register("phone")} />
         <p id="phone-hint" className="text-xs text-muted-foreground">Opcional. Con indicativo del país.</p>
         {errors.phone && <p className="text-xs text-destructive">{errors.phone.message}</p>}
       </div>

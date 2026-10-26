@@ -20,9 +20,11 @@ export interface RowActionsProps {
   onDelete?: () => Promise<ActionResult>; // `?` (TS): sin ella no se muestra "Eliminar" (p. ej. docente sin permiso)
   deleteTitle: string; // Título del diálogo ("Eliminar curso")
   hard?: boolean; // [2026-10-23]: ver/editar son pantallas del remoto Angular (rewrites) → <a> con navegación completa en vez de <Link>
+  // [confirm · 2026-10-24]: "inline" → la confirmación de borrado aparece EN la fila (sin ventana modal; Gestión → Actividades) · por defecto "dialog" (comportamiento anterior)
+  confirm?: "dialog" | "inline";
 }
 
-export function RowActions({ title, viewHref, editHref, publish, onDelete, deleteTitle, hard = false }: RowActionsProps) {
+export function RowActions({ title, viewHref, editHref, publish, onDelete, deleteTitle, hard = false, confirm = "dialog" }: RowActionsProps) {
   const Nav: ElementType = hard ? "a" : Link; // `ElementType` (React): etiqueta o componente con la misma API (href, className)
   const { t } = usePreferences();
   const r = t.management.row;
@@ -83,14 +85,27 @@ export function RowActions({ title, viewHref, editHref, publish, onDelete, delet
           {r.delete}
         </button>
       )}
-      {error && !confirmOpen && (
+      {error && !(confirmOpen && confirm === "dialog") && (
         <span role="alert" className="text-[10px] text-destructive">
           {error}
         </span>
       )}
 
+      {/* [Confirmación en línea · 2026-10-24]: mismo texto y acciones que el diálogo, dentro de la fila | `autoFocus` lleva el foco a «Cancelar» (opción segura) | Esc cancela */}
+      {onDelete && confirm === "inline" && confirmOpen && (
+        <div role="group" aria-label={deleteTitle} onKeyDown={(e) => e.key === "Escape" && !pending && setConfirmOpen(false)} className="flex w-full flex-wrap items-center gap-2 rounded-lg border border-tone-danger-line bg-tone-danger-soft p-2 text-xs text-tone-danger">
+          <span className="min-w-0 flex-1">{fmt(r.deleteConfirm, { title })}</span>
+          <button type="button" autoFocus onClick={() => setConfirmOpen(false)} disabled={pending} className="btn btn-outline btn-sm">
+            {r.cancel}
+          </button>
+          <button type="button" onClick={() => run(onDelete, t.common.deleted, () => setConfirmOpen(false))} disabled={pending} className="btn btn-danger btn-sm">
+            {pending ? r.deleting : r.delete}
+          </button>
+        </div>
+      )}
+
       {/* [Confirmación accesible]: Dialog (foco atrapado + Esc) en vez de window.confirm | [Patrón]: Controlled Dialog */}
-      {onDelete && (
+      {onDelete && confirm === "dialog" && (
         <Dialog open={confirmOpen} onOpenChange={(o) => !pending && setConfirmOpen(o)}>
           <DialogContent className="max-w-md">
             <DialogHeader>

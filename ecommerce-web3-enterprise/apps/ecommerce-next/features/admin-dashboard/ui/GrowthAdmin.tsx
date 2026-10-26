@@ -46,7 +46,7 @@ export function ChurnPanel() {
           <div className="flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-2 text-sm">
               {t("minRisk")}
-              <select value={risk} onChange={(event) => setRisk(event.target.value as "MEDIUM" | "HIGH")} className="h-9 rounded-md border px-2">
+              <select value={risk} onChange={(event) => setRisk(event.target.value as "MEDIUM" | "HIGH")} className="h-9 rounded-md border border-slate-300 px-3 text-sm">
                 <option value="MEDIUM">{t("risks.MEDIUM")}</option>
                 <option value="HIGH">{t("risks.HIGH")}</option>
               </select>
@@ -181,10 +181,10 @@ export function MarkdownPlanner({ productId }: { productId: string }) {
         }}
       >
         <label className="flex flex-col gap-1 text-sm">{t("weeks")}
-          <input type="number" min={1} max={8} value={weeks} onChange={(event) => setWeeks(Number(event.target.value))} className="h-9 rounded-md border px-2" />
+          <input type="number" min={1} max={8} value={weeks} onChange={(event) => setWeeks(Number(event.target.value))} className="h-9 rounded-md border border-slate-300 px-3 text-sm" />
         </label>
         <label className="flex flex-col gap-1 text-sm">{t("unitCost")}
-          <input type="number" min={0} step="0.01" value={cost} onChange={(event) => setCost(event.target.value)} placeholder={t("unitCostHint")} className="h-9 rounded-md border px-2" />
+          <input type="number" min={0} step="0.01" value={cost} onChange={(event) => setCost(event.target.value)} placeholder={t("unitCostHint")} className="h-9 rounded-md border border-slate-300 px-3 text-sm" />
         </label>
         <label className="flex flex-col gap-1 text-sm sm:col-span-3">
           {t("balance", { revenue: Math.round(weight * 100), profit: Math.round((1 - weight) * 100) })}

@@ -135,7 +135,7 @@ services:
       - ecommerce-net
 
   # ---------------------------------------------------------------------
-  # Next.js 15 (Storefront + Cuenta — Fases 1-4)
+  # Next.js 16.4.1 (Storefront + Cuenta — Fases 1-4)
   # ---------------------------------------------------------------------
   ecommerce-next:
     profiles: ["app"]

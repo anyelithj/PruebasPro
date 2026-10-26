@@ -14,8 +14,12 @@ import { isSse } from '../utils/is-sse.util';
 const DEFAULT_TIMEOUT_MS = 30_000;
 // [Timeout extendido para rutas IA]: traducción Ollama puede tardar 60-90s en cold start | [Patrón]: Per-Route Policy
 const AI_LONG_TIMEOUT_MS = 600_000;
-const LONG_TIMEOUT_PATTERNS: RegExp[] = [
+export const LONG_TIMEOUT_PATTERNS: RegExp[] = [
   /\/quiz$/i,
+  // [2026-10-25]: TODO borrador o enriquecimiento con el LLM local (letra de canción, poliglota, gramática…) → antes caían en 30 s y respondían 408
+  /\/(draft|enrich)(\/|\?|$)/,
+  /\/polyglot\/(concepts\/[^/]+\/terms|topics\/[^/]+\/ipa)/, // IPA de cada término con el LLM local
+  /\/music\/lyrics\//, // Letra desde enlace (descarga + limpieza) y borrador con IA
   /\/ai\/feedback\//,
   // [/quiz/ai/generate]: Qwen3:8b / Mistral Nemo en CPU pueden tardar 60-120s en cold start | [Patrón]: Per-Route Policy
   /\/quiz\/ai\/generate$/,
@@ -36,6 +40,7 @@ const LONG_TIMEOUT_PATTERNS: RegExp[] = [
   /\/games\/(agent\/turn|sessions\/[^/]+\/rounds)$/,
   /\/speech\/(transcribe|fluency)$/,
   /\/practice\/(attempts|activities\/draft)$/,
+  /\/reading\/texts(\/draft|\/[^/?]+(\/enrich|\/sentences\/[^/?]+)?)?(\?|$)/, // [2026-10-25 · Lectura]: borrador con el LLM local y traducción/IPA por lotes al crear o editar
 ];
 
 @Injectable()

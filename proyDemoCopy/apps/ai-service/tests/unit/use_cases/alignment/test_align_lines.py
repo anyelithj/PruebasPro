@@ -3,6 +3,8 @@
 [Patrón]: AAA + prueba de extremo a extremo local.
 """
 
+from importlib.util import find_spec
+
 import pytest
 
 from src.modules.alignment.application.schemas.align_request import AlignRequest
@@ -42,6 +44,7 @@ async def test_rechaza_audio_vacio():
 
 
 @pytest.mark.skipif(espeak_binary() is None, reason="espeak-ng no instalado")
+@pytest.mark.skipif(find_spec("faster_whisper") is None, reason="faster-whisper no instalado")  # [2026-10-25]
 async def test_alineacion_real_de_un_dialogo_y_cancion_solo_propone():
     audio = await EspeakSpeech().synthesize("good morning. how are you today?", "en-us")
     uc = AlignLinesUseCase(WhisperTranscriber(), 10 * 1024 * 1024)

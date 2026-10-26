@@ -1,6 +1,6 @@
 // layout.tsx (account) => hub "Mi cuenta" dentro del MISMO marco del panel (PanelFrame): las secciones de la cuenta son
 // ítems del grupo "Mi cuenta" del menú lateral general (antes tenía otro menú, otra barra y otro diseño).
-// Rutas privadas: middleware.ts redirige a /login si no hay sesión.
+// Rutas privadas: proxy.ts redirige a /login si no hay sesión.
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { getTranslations } from "next-intl/server";

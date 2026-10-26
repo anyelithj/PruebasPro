@@ -11,7 +11,8 @@ const localePath = useLocalePath();
 <template>
   <div class="flex min-h-screen flex-col">
     <header class="absolute inset-x-0 top-0 z-10">
-      <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
+      <!-- max-w-7xl + px-4 => mismo contenedor que la cabecera de la tienda (alineación uniforme) -->
+      <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
         <NuxtLink :to="localePath(routes.landings)" class="font-semibold text-white drop-shadow">eCommerce Web3</NuxtLink>
       </div>
     </header>

@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-// Viewport separado de metadata (API de Next 15): responsive y color de la barra del navegador móvil
+// Viewport separado de metadata (API de Next 16): responsive y color de la barra del navegador móvil
 export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#0f172a" };
 
 export default async function LocaleLayout({ children, params }: Props) {

@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache"; // [Next.js]: invalida la caché de
 import { z } from "zod"; // [Zod]: validación de esquemas en runtime con inferencia de tipos TS
 import { changeMyPassword, updateMyProfile } from "@/lib/profile-api"; // [Facade]: cliente del backend NestJS PATCH /profile/me
 import { fmt, type Dictionary } from "@aula/shared-i18n";
+import { optionalPhone } from "@/lib/validations"; // [2026-10-24]: regla de teléfono compartida (registro, perfil y Gestión) | [Principio]: DRY
 import { getServerDictionary } from "@/lib/i18n-server"; // [i18n]: mensajes en el idioma del usuario (cookie ui-lang)
 // [Server Action perfil]: valida FormData y actualiza el perfil propio | [Patrón]: Command | [Principio]: SRP | [Paradigma]: Funcional + asíncrono
 // [Por qué]: profile-api usa `cookies()` de next/headers (solo servidor); antes se llamaba desde un Client Component y rompía la página
@@ -15,7 +16,7 @@ function buildProfileSchema(t: Dictionary) {
     lastName: z.string().trim().min(1, t.common.required).max(80, max(80)),
     section: z.string().trim().max(40, max(40)).optional(), // `optional` (Zod): docente/admin no envían sección
     bio: z.string().trim().max(300, max(300)).optional(), // [2026-10-23]: preferencias ahora en BD
-    phone: z.string().trim().regex(/^(\+?[0-9 ()-]{7,20})?$/, t.profile.phoneInvalid).optional(), // [2026-10-24]: misma regla que NestJS
+    phone: optionalPhone({ phoneInvalid: t.profile.phoneInvalid }), // [2026-10-24]: misma regla que NestJS (PHONE_PATTERN de @aula/shared-schemas)
     timezone: z.string().trim().max(64).optional(),
     preferredLanguage: z.enum(["es", "en", "pt"]).optional(),
   });

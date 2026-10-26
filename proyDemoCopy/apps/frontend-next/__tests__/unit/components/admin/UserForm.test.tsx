@@ -29,21 +29,21 @@ describe("UserForm (edición) · campo Sección por rol", () => {
 
   it("muestra Sección cuando el usuario es Estudiante (USER)", () => {
     render(<UserForm initial={{ ...base, role: "USER", section: "A" }} />);
-    expect(screen.getByLabelText("Sección")).toHaveValue("A");
+    expect(screen.getByLabelText("Sección / grupo")).toHaveValue("A");
   });
 
   it("oculta Sección cuando el usuario es Docente o Administrador", () => {
     const { rerender } = render(<UserForm initial={{ ...base, role: "TEACHER" }} />);
-    expect(screen.queryByLabelText("Sección")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Sección / grupo")).not.toBeInTheDocument();
     rerender(<UserForm initial={{ ...base, role: "ADMIN" }} />);
-    expect(screen.queryByLabelText("Sección")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Sección / grupo")).not.toBeInTheDocument();
   });
 
   it("oculta Sección al cambiar el rol de Estudiante a Docente", async () => {
     render(<UserForm initial={{ ...base, role: "USER", section: "A" }} />);
-    expect(screen.getByLabelText("Sección")).toBeInTheDocument();
+    expect(screen.getByLabelText("Sección / grupo")).toBeInTheDocument();
     await userEvent.selectOptions(screen.getByLabelText("Rol *"), "TEACHER");
-    expect(screen.queryByLabelText("Sección")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Sección / grupo")).not.toBeInTheDocument();
   });
 
   it("al guardar con rol no-Estudiante envía section=\"\" (PATCH)", async () => {
@@ -73,6 +73,7 @@ describe("UserForm (alta)", () => {
     await userEvent.type(screen.getByLabelText("Apellido *"), "Lovelace");
     await userEvent.type(screen.getByLabelText("Email *"), "ada@example.com");
     await userEvent.type(screen.getByLabelText("Contraseña *"), "Secreta123");
+    await userEvent.type(screen.getByLabelText("Repetir contraseña *"), "Secreta123"); // [2026-10-24]: el alta exige repetir la contraseña (refine de Zod)
     await userEvent.click(screen.getByRole("button", { name: "Crear usuario" }));
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/admin/users", expect.objectContaining({ method: "POST" })));
     unmount();

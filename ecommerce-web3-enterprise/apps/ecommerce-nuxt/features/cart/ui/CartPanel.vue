@@ -99,11 +99,11 @@ async function oneClick() {
       <!-- RF-07.3 cupón y puntos de fidelidad (la validación final la hace el checkout) -->
       <label class="flex flex-col gap-1 text-sm">
         <span>{{ $t("store.cart.coupon") }}</span>
-        <input v-model="coupon" type="text" autocomplete="off" maxlength="40" class="h-9 rounded-md border border-slate-300 px-3 uppercase focus:outline-none focus:ring-2 focus:ring-accent" >
+        <input v-model="coupon" type="text" autocomplete="off" maxlength="40" class="h-9 rounded-md border border-slate-300 px-3 uppercase focus:outline-none focus:ring-2 focus:ring-accent text-sm" >
       </label>
       <label v-if="maxPoints > 0" class="flex flex-col gap-1 text-sm">
         <span>{{ $t("store.cart.points", { balance: cart.cart.loyalty.balance, max: maxPoints }) }}</span>
-        <input v-model.number="points" type="number" min="0" :max="maxPoints" step="1" class="h-9 rounded-md border border-slate-300 px-3 focus:outline-none focus:ring-2 focus:ring-accent" >
+        <input v-model.number="points" type="number" min="0" :max="maxPoints" step="1" class="h-9 rounded-md border border-slate-300 px-3 focus:outline-none focus:ring-2 focus:ring-accent text-sm" >
         <span v-if="pointsValue > 0" class="text-xs text-emerald-700">{{ $t("store.cart.pointsValue", { value: money(pointsValue) }) }}</span>
       </label>
       <p class="text-xs text-slate-500">{{ $t("store.cart.shippingNote") }}</p>

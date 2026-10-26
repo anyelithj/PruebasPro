@@ -39,7 +39,7 @@ export function LanguageSwitcher() {
         value={locale}
         disabled={isPending}
         onChange={(event) => onChange(event.target.value as Locale)}
-        className="h-9 rounded-md border border-input bg-background px-2"
+        className="h-9 rounded-md border border-input bg-background px-3 text-sm"
       >
         {routing.locales.map((option) => (
           // "lang" en cada opción => el lector de pantalla pronuncia "English" con voz inglesa

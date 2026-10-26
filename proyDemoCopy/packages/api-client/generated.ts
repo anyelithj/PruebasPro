@@ -3430,6 +3430,32 @@ export interface paths {
         patch: operations["PolyglotTermsController_reviewOne"];
         trace?: never;
     };
+    "/api/v1/reading/texts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lecturas por idioma, nivel y género (publicadas · mine=true: Gestión) */
+        get: {
+            parameters: { query?: { language?: string; level?: string; genre?: string; mine?: string }; header?: never; path?: never; cookie?: never };
+            requestBody?: never;
+            responses: { 200: { headers: { [name: string]: unknown }; content?: never } };
+        };
+        put?: never;
+        /** Crear lectura (borrador): divide en frases y añade traducción e IPA por lotes */
+        post: {
+            parameters: { query?: never; header?: never; path?: never; cookie?: never };
+            requestBody: { content: { "application/json": Record<string, unknown> } };
+            responses: { 201: { headers: { [name: string]: unknown }; content?: never } };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/grammar/topics/draft": {
         parameters: {
             query?: never;

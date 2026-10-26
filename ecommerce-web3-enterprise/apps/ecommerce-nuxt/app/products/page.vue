@@ -54,12 +54,12 @@ const { data: spelling } = await useAsyncData(
         <input v-if="filters.brand" type="hidden" name="brand" :value="filters.brand" >
         <!-- RF-04.2 filtro por insignia (nuevos, ofertas, más vendidos) -->
         <label for="badge">{{ $t("store.catalog.badge") }}</label>
-        <select id="badge" name="badge" :value="filters.badge ?? ''" class="h-9 rounded-md border border-slate-300 px-2" @change="navigateTo({ query: { ...route.query, badge: ($event.target as HTMLSelectElement).value || undefined, page: 1 } })">
+        <select id="badge" name="badge" :value="filters.badge ?? ''" class="h-9 rounded-md border border-slate-300 px-3 text-sm" @change="navigateTo({ query: { ...route.query, badge: ($event.target as HTMLSelectElement).value || undefined, page: 1 } })">
           <option value="">{{ $t("store.catalog.allBadges") }}</option>
           <option v-for="badge in PRODUCT_BADGES" :key="badge" :value="badge">{{ $t(`store.product.badges.${badge}`) }}</option>
         </select>
         <label for="sort">{{ $t("store.catalog.sort") }}</label>
-        <select id="sort" name="sort" :value="filters.sort" class="h-9 rounded-md border border-slate-300 px-2" @change="navigateTo({ query: { ...route.query, sort: ($event.target as HTMLSelectElement).value, page: 1 } })">
+        <select id="sort" name="sort" :value="filters.sort" class="h-9 rounded-md border border-slate-300 px-3 text-sm" @change="navigateTo({ query: { ...route.query, sort: ($event.target as HTMLSelectElement).value, page: 1 } })">
           <option v-for="sort in PRODUCT_SORTS" :key="sort" :value="sort">{{ $t(`store.catalog.sorts.${sort}`) }}</option>
         </select>
         <noscript><button type="submit" class="rounded-md border px-3 py-2">{{ $t("store.catalog.apply") }}</button></noscript>

@@ -1,5 +1,5 @@
 import { languageMismatch, validateCurriculumContent } from '../../../src/modules/curriculum/domain/content/curriculum-content.schema';
-import { GenerateContentDraftQuery, generationFlags, requestHash, SuggestTopicsQuery } from '../../../src/modules/curriculum/application/queries/ai-draft.queries';
+import { GenerateContentDraftQuery, generationFlags, itemsOf, normalizeShape, phonemeOf, readableProblem, requestHash, SuggestTopicsQuery } from '../../../src/modules/curriculum/application/queries/ai-draft.queries';
 import type { CurriculumLlm, LlmMetrics } from '../../../src/modules/curriculum/domain/interfaces/curriculum-llm.interface';
 import { CurriculumItemKind } from '../../../src/modules/curriculum/domain/value-objects/curriculum-item-kind.vo';
 import { CefrLevel } from '../../../src/shared/domain/cefr-level.vo';
@@ -138,5 +138,66 @@ describe('Vocabulario con apoyo visual (emoji e imagen)', () => {
   it('rechaza imágenes que no son data URL de imagen', () => {
     expect(validateCurriculumContent(CurriculumItemKind.VOCABULARY, { ...base, image: 'https://evil.example/x.svg' }).ok).toBe(false);
     expect(validateCurriculumContent(CurriculumItemKind.VOCABULARY, { ...base, image: 'data:image/svg+xml;base64,PHN2Zz4=' }).ok).toBe(false);
+  });
+});
+
+// [2026-10-24]: reglas gramaticales y fichas de fonema generadas por modelos pequeños — forma tolerante sin inventar contenido
+
+describe('normalizeShape / itemsOf / phonemeOf', () => {
+  it('une explicaciones en lista, renombra claves y convierte ejemplos sueltos', () => {
+    const out = normalizeShape({ title: 'Present perfect', explanation: ['Se usa para experiencias.', 'Se forma con have.'], formula: 'have + participio', examples: ['I have eaten - He comido', 'No translation here', { text: 'She has gone.', translation: 'Se ha ido.' }] });
+    expect(out).toEqual({ title: 'Present perfect', explanationEs: 'Se usa para experiencias. Se forma con have.', structure: 'have + participio', examples: [{ text: 'I have eaten', translationEs: 'He comido' }, { text: 'She has gone.', translationEs: 'Se ha ido.' }] });
+  });
+  it('acepta {"items"}, arrays sueltos u otro nombre de lista', () => {
+    expect(itemsOf({ items: [1] })).toEqual([1]);
+    expect(itemsOf([{ title: 'a' }])).toEqual([{ title: 'a' }]);
+    expect(itemsOf({ rules: [{ title: 'a' }, { title: 'b' }] })).toHaveLength(2);
+    expect(itemsOf({ title: 'a', examples: [{ text: 'x' }] })).toEqual([{ title: 'a', examples: [{ text: 'x' }] }]);
+  });
+  it('extrae el fonema del tema del catálogo IPA', () => {
+    expect(phonemeOf('/ɒ/ · hot')).toBe('ɒ');
+    expect(phonemeOf('Vocales nasales')).toBeNull();
+  });
+});
+
+describe('GenerateContentDraftQuery — regla gramatical y fonema', () => {
+  it('acepta una regla con la explicación en lista y ejemplos como cadenas', async () => {
+    const rule = { title: 'Present perfect', explanationEs: ['Se usa para experiencias.', 'Se forma con have/has.'], examples: ['I have eaten - He comido'] };
+    const r = await make(llm(rule)).execute({ language: Language.EN, level: CefrLevel.B1, skill: LanguageSkill.GRAMMAR, kind: CurriculumItemKind.GRAMMAR_RULE, topic: 'Present perfect' }, 'u1');
+    expect(r.content).toMatchObject({ explanationEs: 'Se usa para experiencias. Se forma con have/has.', examples: [{ text: 'I have eaten', translationEs: 'He comido' }] });
+  });
+  it('ficha de fonema: completa el símbolo desde el tema y conserva palabras y articulación', async () => {
+    const sheet = { text: 'hot', ipa: { value: '/hɒt/' }, ruleEs: 'La o en sílaba cerrada.', articulationEs: 'Boca abierta, labios redondeados.', words: [{ text: 'dog', ipa: '/dɒɡ/', translationEs: 'perro' }, 'clock'], examples: [{ text: 'The dog is hot.', translationEs: 'El perro tiene calor.' }] };
+    const l = llm(sheet);
+    const r = await make(l).execute({ language: Language.EN, level: CefrLevel.A2, skill: LanguageSkill.PRONUNCIATION, kind: CurriculumItemKind.PRONUNCIATION, topic: '/ɒ/ · hot' }, 'u1');
+    expect(r.content).toMatchObject({ phoneme: 'ɒ', articulationEs: 'Boca abierta, labios redondeados.', words: [{ text: 'dog' }, { text: 'clock' }] });
+    expect(l.generateJson.mock.calls[0][0]).toMatch(/articulationEs/); // El prompt pide cómo se pronuncia
+  });
+});
+
+// [2026-10-24 · 422 en vocabulario francés]: salidas reales de qwen2.5:3b que antes se rechazaban (null en opcionales, IPA como cadena o vacía, categoría larga)
+describe('GenerateContentDraftQuery — normalización de vocabulario (fr)', () => {
+  const fr = { ...target, kind: CurriculumItemKind.VOCABULARY, topic: 'La maison' };
+  const run = (data: unknown) => make(llm(data)).execute(fr, 'u1');
+
+  it('quita null en campos opcionales (gender, ipa.source, romanization de ejemplos)', async () => {
+    const r = await run({ lemma: 'la maison', partOfSpeech: 'sustantivo', gender: null, translationEs: 'la casa', ipa: { value: '/la mɛ.zɔ̃/', variant: 'fr-FR', source: null }, romanization: null, emoji: '🏠', examples: [{ text: 'Ma maison est grande.', translationEs: 'Mi casa es grande.', romanization: null }] });
+    expect(r.content).toMatchObject({ lemma: 'la maison', ipa: { value: '/la mɛ.zɔ̃/', variant: 'fr-FR' } });
+    expect(r.content).not.toHaveProperty('gender');
+  });
+
+  it('IPA como cadena → objeto con la variante del idioma; IPA vacía → se omite', async () => {
+    expect((await run({ lemma: 'la maison', translationEs: 'la casa', ipa: '/mɛ.zɔ̃/' })).content.ipa).toEqual({ value: '/mɛ.zɔ̃/', variant: 'fr-FR' });
+    expect((await run({ lemma: 'la porte', translationEs: 'la puerta', ipa: { value: '', variant: 'fr-FR' } })).content).not.toHaveProperty('ipa');
+  });
+
+  it('recorta la categoría gramatical demasiado larga por palabra', async () => {
+    const r = await run({ lemma: 'le livre', translationEs: 'el libro', partOfSpeech: 'sustantivo masculino singular contable común' });
+    expect(r.content.partOfSpeech).toBe('sustantivo masculino singular contable');
+  });
+
+  it('el 422 explica el motivo en español', async () => {
+    await expect(run({ lemma: 'la maison' })).rejects.toThrow(/translationEs: falta el campo/);
+    expect(readableProblem('gender: Invalid input: expected string, received null')).toBe('gender: se esperaba texto y llegó vacío (null)');
   });
 });

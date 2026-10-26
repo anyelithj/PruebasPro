@@ -31,6 +31,7 @@ import { MusicModule } from './modules/music/music.module'; // [Sprint 9.2]: can
 import { DialoguesModule } from './modules/dialogues/dialogues.module'; // [Sprint 9.3]: temas, diálogos guionados con nivel y conversación con el avatar
 import { PolyglotModule } from './modules/polyglot/polyglot.module'; // [Sprints 10.5/10.6]: comparador de idiomas por tema con IPA y borrador con IA
 import { GrammarModule } from './modules/grammar/grammar.module'; // [Sprints 10.9/10.10]: fichas de gramática con ejemplos, IPA UK/US y traducción
+import { ReadingModule } from './modules/reading/reading.module'; // [2026-10-25 · Lectura]: textos por género con traducción, IPA, marcador y descarga
 import { SchedulerModule } from './modules/scheduler/scheduler.module'; // [Sprint 7.18]: purga nocturna (cron de Bull) y panel de colas
 import { RedisCacheModule } from './shared/cache/redis-cache.module'; // [Sprint 6.6]: caché distribuida
 import databaseConfig from './shared/config/database.config';
@@ -131,6 +132,7 @@ import { validateWeb3Env } from './shared/config/web3.config';
     DialoguesModule,
     PolyglotModule,
     GrammarModule,
+    ReadingModule,
     SchedulerModule,
   ],
   controllers: [AppController],

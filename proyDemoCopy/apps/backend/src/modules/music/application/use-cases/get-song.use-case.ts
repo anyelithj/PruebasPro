@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
 import { Song } from '../../domain/entities/song.entity';
 import { SongLine } from '../../domain/entities/song-line.entity';
+import { songBlockers } from '../../domain/song-readiness';
 // [UseCases SongAccess + GetSong · Sprint 9.2 · RF-117/RF-119]: carga una canción según el rol (borradores solo para su autor o ADMIN) y la devuelve con sus líneas, IPA, traducción y tiempos | [Patrón]: Query + Guard reutilizable | [Principio]: SRP + mínimo privilegio + DRY | [Paradigma]: POO
 
 export interface MusicActor {
@@ -58,6 +59,8 @@ export class GetSongUseCase {
       where: { songId: id },
       order: { position: 'ASC' },
     });
-    return { ...song, lines, editable: this.access.canEdit(actor, song) };
+    const editable = this.access.canEdit(actor, song);
+    // [2026-10-24 · blockers]: solo quien edita ve qué falta para publicar (checklist del asistente)
+    return { ...song, lines, editable, ...(editable ? { blockers: songBlockers(song, lines.length) } : {}) };
   }
 }

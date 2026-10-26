@@ -211,7 +211,7 @@ const localeOptions = [
             <img :src="item.url" alt="" width="56" height="56" class="size-14 rounded object-cover" >
             <label class="flex flex-1 flex-col gap-1 text-xs">
               {{ $t("cms.media.alt") }}
-              <input v-model="item.alt" class="h-9 rounded-md border border-slate-300 px-2 text-sm" :aria-invalid="!item.alt.trim() || undefined" required >
+              <input v-model="item.alt" class="h-9 rounded-md border border-slate-300 px-3 text-sm" :aria-invalid="!item.alt.trim() || undefined" required >
             </label>
             <ActionButton icon="delete" class="self-end" :label="$t('common.delete')" @click="removeMedia(index)" />
           </li>

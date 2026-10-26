@@ -8,7 +8,6 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { CEFR_LEVELS, LANGUAGES } from '@aula/shared-schemas';
 import { SessionService } from '@core/auth/session.service';
 import { I18nService } from '@core/i18n/i18n.service';
@@ -24,7 +23,6 @@ import { SongCardComponent } from '../components/song-card.component';
 @Component({
   selector: 'aula-music-hub-page',
   imports: [IconComponent, ActivitySectionsComponent, 
-    RouterLink,
     CardPageTemplate,
     SpinnerComponent,
     CollectionCardComponent,
@@ -36,12 +34,6 @@ import { SongCardComponent } from '../components/song-card.component';
     <!-- [2026-10-23 · 4.º pase]: mismo encabezado que Recursos → título «Actividades», la sección en el subtítulo y en la pill activa; sin caja (bare) -->
     <aula-card-page [heading]="i18n.t().common.activitySections.title" [subtitle]="tx.title + ' · ' + tx.subtitle" [bare]="true">
       <aula-activity-sections pageNav />
-      @if (staff()) {
-        <a pageActions routerLink="/musica/subir" class="btn btn-primary btn-sm"
-          ><aula-icon name="upload" /> {{ tx.upload }}</a
-        >
-      }
-
       <div class="mb-6 grid gap-3 rounded-xl bg-muted p-3 sm:grid-cols-2">
         <label class="text-xs font-semibold text-muted-foreground">
           {{ tx.language }}
@@ -189,86 +181,7 @@ import { SongCardComponent } from '../components/song-card.component';
         }
       </section>
 
-      @if (staff()) {
-        <section class="mb-8" aria-labelledby="music-mine">
-          <h2 id="music-mine" class="mb-3 text-lg font-extrabold tracking-tight">
-            {{ tx.mySongs }}
-          </h2>
-          @if (music.mine.status() === 'success') {
-            <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              @for (s of music.mine.data(); track s.id) {
-                <li>
-                  <aula-song-card
-                    [title]="s.title"
-                    [artist]="s.artist"
-                    [languageName]="i18n.languageName(s.language)"
-                    [level]="s.level"
-                    [statusLabel]="s.status === 'published' ? '' : tx.status[s.status]"
-                    [licenseLabel]="license(s)"
-                    [link]="['/musica/subir', s.id]"
-                    [actionLabel]="tx.edit"
-                  />
-                </li>
-              }
-            </ul>
-          } @else if (music.mine.status() === 'empty') {
-            <p class="text-sm text-muted-foreground">{{ tx.noMine }}</p>
-          }
-        </section>
-      }
-
-      @if (admin()) {
-        <section aria-labelledby="music-review">
-          <h2 id="music-review" class="mb-3 text-lg font-extrabold tracking-tight">
-            <aula-icon name="shield-check" /> {{ tx.reviewQueue }}
-          </h2>
-          @if (music.reviewQueue.status() === 'success') {
-            <ul class="divide-y divide-border rounded-xl border border-border">
-              @for (s of music.reviewQueue.data(); track s.id) {
-                <li class="flex flex-wrap items-center gap-3 p-3 text-sm">
-                  <a
-                    class="font-semibold text-primary hover:underline"
-                    [routerLink]="['/musica/subir', s.id]"
-                    >{{ s.title }}</a
-                  >
-                  <span class="text-xs text-muted-foreground"
-                    >{{ i18n.languageName(s.language) }} · {{ s.level }} · © {{ license(s) }}</span
-                  >
-                  <span class="ml-auto flex flex-wrap items-center gap-2">
-                    <input
-                      class="control h-9 w-56 text-xs"
-                      [attr.aria-label]="tx.rejectReason"
-                      [placeholder]="tx.rejectReason"
-                      (input)="setReason(s.id, $any($event.target).value)"
-                    />
-                    <button
-                      type="button"
-                      class="btn btn-outline btn-sm"
-                      [disabled]="music.busy() || !reasons()[s.id]?.trim()"
-                      (click)="music.review(s.id, 'rejected', reasons()[s.id])"
-                    >
-                      ✕ {{ tx.reject }}
-                    </button>
-                    <button
-                      type="button"
-                      class="btn btn-primary btn-sm"
-                      [disabled]="music.busy()"
-                      (click)="music.review(s.id, 'published')"
-                    >
-                      ✓ {{ tx.publish }}
-                    </button>
-                  </span>
-                </li>
-              }
-            </ul>
-          } @else if (music.reviewQueue.status() === 'empty') {
-            <p class="text-sm text-muted-foreground">{{ tx.noReview }}</p>
-          }
-          @if (music.actionError()) {
-            <p role="alert" class="mt-2 text-sm text-tone-danger">{{ music.actionError() }}</p>
-          }
-        </section>
-      }
+      <!-- [2026-10-26]: Actividades = solo escuchar y practicar · subir, editar, revisar y publicar → Gestión → Actividades (tabla) -->
     </aula-card-page>
   `,
 })
@@ -283,9 +196,7 @@ export default class MusicHubPage {
   protected readonly creating = signal(false);
   protected readonly newTitle = signal('');
   protected readonly newTheme = signal('');
-  protected readonly reasons = signal<Record<string, string>>({});
   protected readonly staff = computed(() => this.session.hasRole('TEACHER', 'ADMIN'));
-  protected readonly admin = computed(() => this.session.hasRole('ADMIN'));
 
   constructor() {
     // [Filtros]: idioma o nivel nuevos → se recargan colecciones y canciones publicadas
@@ -294,14 +205,6 @@ export default class MusicHubPage {
       void this.music.loadCollections(f);
       void this.music.loadSongs(f);
     });
-    effect(() => {
-      if (this.staff()) void this.music.loadMine();
-      if (this.admin()) void this.music.loadReviewQueue();
-    });
-  }
-
-  protected setReason(id: string, value: string): void {
-    this.reasons.update((r) => ({ ...r, [id]: value }));
   }
 
   protected license(s: Song): string {

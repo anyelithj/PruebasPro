@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return { title: t("metaTitle"), description: t("metaDescription"), robots: { index: false } };
 }
 
-// "async" => Server Component asíncrono: en Next 15 params y searchParams son Promesas
+// "async" => Server Component asíncrono: en Next 16 params y searchParams son Promesas
 export default async function ForgotPasswordPage({ params, searchParams }: PageProps) {
   await initPage(params);
   const t = await getTranslations("auth.forgot");

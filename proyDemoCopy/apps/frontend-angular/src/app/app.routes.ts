@@ -28,10 +28,12 @@ export const routes: Routes = [
   // [Sprint 7.7]: pago con ETH de prueba (Sepolia) y billetera SIWE | `checkout/cripto` va ANTES de `checkout` (ruta más específica primero)
   {
     path: 'checkout/cripto',
+    data: { preload: false }, // [Rendimiento]: viem (~500 kB) se descarga solo al visitar la pantalla → IdlePreloadingStrategy la omite
     loadChildren: () => import('@features/web3/web3.routes').then((m) => m.CRYPTO_ROUTES),
   },
   {
     path: 'wallet',
+    data: { preload: false }, // [Rendimiento]: viem (~500 kB) se descarga solo al visitar la pantalla → IdlePreloadingStrategy la omite
     loadChildren: () => import('@features/web3/web3.routes').then((m) => m.WALLET_ROUTES),
   },
   // [Sprint 7.4]: checkout con Stripe (tarjeta) e historial de pagos
@@ -103,6 +105,11 @@ export const routes: Routes = [
   {
     path: 'gramatica',
     loadChildren: () => import('@features/grammar/grammar.routes').then((m) => m.GRAMMAR_ROUTES),
+  },
+  // [2026-10-25 · Lectura]: textos por género con IPA, traducción, audio con resaltado y marcador
+  {
+    path: 'lectura',
+    loadChildren: () => import('@features/reading/reading.routes').then((m) => m.READING_ROUTES),
   },
   { path: '', pathMatch: 'full', redirectTo: 'tutor' },
   { path: '**', redirectTo: 'tutor' }, // Ruta desconocida dentro del remoto → pantalla principal

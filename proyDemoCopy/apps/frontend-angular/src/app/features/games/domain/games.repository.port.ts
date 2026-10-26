@@ -18,6 +18,7 @@ import type {
 
 export abstract class GamesRepository {
   abstract catalog(): Observable<Catalog>;
+  abstract decks(): Observable<GameDeck[]>; // [2026-10-26]: juegos con material propio publicados en Gestión
   abstract start(input: StartInput): Observable<GameSession>;
   abstract mine(): Observable<GameSession[]>;
   abstract session(id: string): Observable<SessionDetail>;
@@ -42,4 +43,14 @@ export abstract class GamesRepository {
     words: WordStamp[],
     targetVocabulary: string[],
   ): Observable<Record<string, unknown>>;
+}
+
+// [GameDeck · 2026-10-26]: lo mínimo que el hub necesita de GET /games/decks (se juega con ?mazo=)
+export interface GameDeck {
+  id: string;
+  title: string;
+  gameType: string;
+  language: string;
+  level: string | null;
+  items: unknown[];
 }

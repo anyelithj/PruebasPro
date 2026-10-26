@@ -11,7 +11,7 @@ import AvatarConversationPage from '@features/dialogues/presentation/pages/avata
 import { session, sessionAs, topic, turn } from '@testing/music-dialogues';
 // [Spec AvatarConversationPage · Sprint 9.12]: objetivos y vocabulario antes de empezar → apertura del avatar con IPA y traducción → turno escrito por SSE con corrección suave bajo el turno → terminar; transcripción de una sesión anterior | [Herramienta]: render() + voz falsa + msw
 
-const speech = { speak: jest.fn((_t: string, _l: string, _r: number, h: { end?: () => void } = {}) => h.end?.()), stop: jest.fn(), hasVoice: () => true, speaking: () => false, accent: () => 'uk', setAccent: jest.fn() };
+const speech = { speak: jest.fn((_t: string, _l: string, _r: number, h: { end?: () => void } = {}) => h.end?.()), stop: jest.fn(), hasVoice: () => true, hasNaturalVoice: () => true, speaking: () => false, accent: () => 'uk', setAccent: jest.fn() };
 const providers = [{ provide: DialoguesRepository, useClass: DialoguesHttpRepository }, DialoguesFacade, sessionAs('USER'), { provide: SpeechSynthesisService, useValue: speech }];
 const sse = [
   `event: user\ndata: ${JSON.stringify(turn(1, 'user', 'I likes pasta', 'Se dice «I like».'))}\n\n`,

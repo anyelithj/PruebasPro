@@ -1,5 +1,5 @@
 import { Sparkles, TriangleAlert } from "lucide-react"; // [2026-10-23]: iconos SVG uniformes (antes emojis)
-import { BackLink } from "@/components/shared/BackLink"; // [2026-10-23]: enlace «volver» uniforme (icono + texto)
+import { ResourceBackLink } from "@/components/curriculum/ResourceBackLink"; // [2026-10-24]: «Volver a vocabulario / pronunciación…» según el tipo
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getCurriculumItem, searchCurriculumSources } from "@/lib/curriculum-api";
@@ -53,7 +53,7 @@ export default async function CurriculumItemPage(props: { params: Promise<{ id: 
   return (
     // [Semántica]: <div> (el layout del portal ya aporta el <main>)
     <div className="w-full space-y-5 py-4">
-      <BackLink href="/admin/curriculum" memo="content">Volver a recursos</BackLink>
+      <ResourceBackLink kind={item.kind} href={`/admin/curriculum?kind=${item.kind}`} memo="content" />
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs text-muted-foreground">

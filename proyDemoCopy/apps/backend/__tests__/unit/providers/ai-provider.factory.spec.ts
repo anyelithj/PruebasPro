@@ -60,3 +60,16 @@ describe('AIProviderFactory.generateWithFallback', () => {
     await expect(factory.generateWithFallback(opts)).rejects.not.toThrow(/desconocido/i);
   });
 });
+
+// [2026-10-24]: los tres motores configurados con el MISMO tag (p. ej. qwen2.5:3b) → el fallback cruzado no repite el mismo fallo
+describe('AIProviderFactory — motores con el mismo modelo', () => {
+  it('no reintenta con otro motor que usa el mismo tag', async () => {
+    const fail = jest.fn(async () => {
+      throw new Error('RAM insuficiente');
+    });
+    const aya = { id: AIProvider.AYA, modelTag: 'qwen2.5:3b', generateQuestions: fail };
+    const qwen = { id: AIProvider.QWEN, modelTag: 'qwen2.5:3b', generateQuestions: fail };
+    await expect(build(true, aya, qwen).generateWithFallback(opts)).rejects.toBeInstanceOf(ServiceUnavailableException);
+    expect(fail).toHaveBeenCalledTimes(1);
+  });
+});

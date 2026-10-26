@@ -27,7 +27,7 @@ export const productListQuerySchema = z.object({
 
 export type ProductListQuery = z.infer<typeof productListQuerySchema>;
 
-// parseProductQuery => Record de searchParams (Next 15) -> consulta tipada
+// parseProductQuery => Record de searchParams (Next 16) -> consulta tipada
 export function parseProductQuery(searchParams: Record<string, string | string[] | undefined>): ProductListQuery {
   // Normaliza parámetros repetidos a su primer valor
   const flat = Object.fromEntries(Object.entries(searchParams).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value]));

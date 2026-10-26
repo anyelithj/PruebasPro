@@ -1,5 +1,5 @@
 import { KindIcon } from "@/components/shared/KindIcon"; // [2026-10-23]: iconos SVG uniformes por tipo de recurso
-import { BackLink } from "@/components/shared/BackLink"; // [2026-10-23]: enlace «volver» uniforme (icono + texto)
+import { ResourceBackLink } from "@/components/curriculum/ResourceBackLink"; // [2026-10-24]: «Volver a vocabulario / pronunciación…» según el tipo
 import type { Metadata } from "next";
 import { DownloadMenu } from "@/components/curriculum/DownloadMenu"; // [2026-10-23]: descargar el tema
 import Link from "next/link";
@@ -48,7 +48,7 @@ export default async function AdminTopicPage(props: { searchParams: Promise<Sear
 
   return (
     <div className="w-full space-y-5 py-4">
-      <BackLink href="/admin/curriculum" memo="content">Volver a recursos</BackLink>
+      <ResourceBackLink kind={kind} href={kind ? `/admin/curriculum?kind=${kind}` : "/admin/curriculum"} memo="content" />
 
       <header className="surface flex flex-wrap items-center gap-4 p-5">
         <span className="grid size-16 shrink-0 place-items-center rounded-2xl bg-tone-brand-soft text-tone-brand">

@@ -9,6 +9,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUrl,
   IsUUID,
   Max,
   MaxLength,
@@ -55,6 +56,19 @@ export class LyricsBody {
   @IsString() @MinLength(1) @MaxLength(12000) lyrics!: string; // Una línea por verso; las líneas vacías separan estrofas
   // [2026-10-19 · modo]: true (por defecto) = IPA y traducción automáticas · false = manual (el docente las escribe)
   @IsOptional() @IsBoolean() auto?: boolean;
+}
+
+// [2026-10-24 · Letra desde un enlace]: página pública con la letra (NestJS la descarga como navegador, con protección SSRF)
+export class LyricsUrlBody {
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true }) @MaxLength(2000) url!: string;
+}
+
+// [2026-10-24 · Letra con IA]: idioma, nivel y tema de la canción didáctica (el docente revisa el borrador antes de guardarlo)
+export class LyricsDraftBody {
+  @IsEnum(Language) language!: Language;
+  @IsEnum(CefrLevel) level!: CefrLevel;
+  @IsString() @MinLength(3) @MaxLength(200) topic!: string;
+  @IsOptional() @IsString() @MaxLength(160) title?: string;
 }
 
 export class LinePatchBody {

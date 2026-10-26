@@ -77,7 +77,7 @@ async function addToCart() {
     <div class="flex items-end gap-3">
       <label class="flex flex-col gap-1 text-sm font-medium text-slate-700">
         {{ $t("store.product.quantity") }}
-        <select v-model.number="quantity" class="h-12 rounded-md border border-slate-300 px-3 text-sm">
+        <select v-model.number="quantity" class="h-9 rounded-md border border-slate-300 px-3 text-sm">
           <option v-for="value in maxQuantity" :key="value" :value="value">{{ value }}</option>
         </select>
       </label>

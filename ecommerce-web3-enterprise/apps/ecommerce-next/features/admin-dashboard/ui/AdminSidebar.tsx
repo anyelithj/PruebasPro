@@ -2,7 +2,9 @@
 // y chatbot), dibujado desde el manifiesto COMPARTIDO con Nuxt (@ecommerce/shared-types/admin-nav.json). Nuxt tiene el
 // espejo exacto (AdminSidebar.vue): mismo diseño, orden, textos e íconos => el usuario no distingue qué app sirve la pantalla.
 // Diseño "pro sidebar": fondo oscuro, marca, tarjeta del usuario (avatar, rol, en línea), buscador de opciones, grupos
-// plegables (acordeón), ítem activo resaltado, riel de solo íconos (escritorio) y panel deslizable con fondo (móvil).
+// desplegables (acordeón EXCLUSIVO: un grupo abierto a la vez => el menú nunca genera scroll), ítem activo resaltado,
+// riel de solo íconos (escritorio) y panel deslizable con fondo (móvil). Botón ocultar/mostrar estilo Claude/Gemini:
+// ícono "panel lateral" arriba, junto a la marca (expandido) o solo en el riel (colapsado).
 // Patrones: Composite (grupos -> ítems como datos), Adapter (itemHref traduce un ítem a URL de Next o de Nuxt),
 // Strategy (navVisible decide qué ve cada rol), Shared Kernel (manifiesto compartido). Paradigma declarativo + funcional.
 // Accesibilidad: <nav> con nombre, acordeón WAI-ARIA (aria-expanded/aria-controls), aria-current="page", foco visible,
@@ -15,6 +17,7 @@ import type { AdminLocale, AdminNav, AdminNavGroup, AdminNavItem, AdminNavText }
 import navData from "@ecommerce/shared-types/admin-nav.json"; // Manifiesto JSON (lo resuelve el bundler, sin fetch)
 import { Link, usePathname } from "@/shared/lib/i18n/navigation"; // Link con prefijo de idioma (next-intl)
 import { useAuth } from "@/shared/hook/useAuth"; // Facade sobre la sesión de next-auth
+import { useAdminDashboard } from "../model/dashboard.store"; // Redux: pestaña activa de cada sección (?tab= del menú)
 import { config } from "@/shared/constants/config";
 import { panelHome } from "@/shared/constants/routes"; // Inicio del panel por rol (fuente única, DRY)
 import { cn } from "@/shared/lib/cn";
@@ -29,20 +32,35 @@ export function NavIcon({ name, className = "size-4" }: { name: string; classNam
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className={cn("shrink-0", className)} aria-hidden="true" dangerouslySetInnerHTML={{ __html: NAV.icons[name] ?? "" }} />;
 }
 
-// navVisible => regla de visibilidad por rol (la misma en AdminSidebar.vue): "account" para toda sesión; ADMIN todo;
-// VENDOR además todo ítem (de Next o de Nuxt) que no sea solo-ADMIN ("adminOnly" en el manifiesto) — Strategy por rol
+// navVisible => regla de visibilidad por rol (la misma en usePanelNav.ts de Nuxt) — Strategy por rol:
+// ADMIN ve todo; un ítem "adminOnly" solo ADMIN; grupos "everyone" (Mi cuenta, IA) toda sesión; VENDOR el resto
 export const navVisible = (group: AdminNavGroup, item: AdminNavItem, roles: readonly string[]) =>
-  group.key === "account" || roles.includes("ADMIN") || (roles.includes("VENDOR") && !item.adminOnly);
+  roles.includes("ADMIN") || (!item.adminOnly && (Boolean(group.everyone) || roles.includes("VENDOR")));
 
-// matchLength => cuánto de la URL coincide con el ítem (0 = nada); el ítem activo es el de mayor coincidencia
-const matchLength = (item: AdminNavItem, path: string) =>
-  Math.max(0, ...[item.path, ...(item.match ?? [])].map((prefix) => (path === prefix || path.startsWith(`${prefix}/`) || (prefix.endsWith("-") && path.startsWith(prefix)) ? prefix.length : 0)));
+// splitPath => "/dashboard/customers?tab=segments" -> ["/dashboard/customers", "segments"] (función pura, sin estado)
+const splitPath = (path: string): [string, string | null] => {
+  const [pathname = "", search = ""] = path.split("?"); // Desestructuración con valores por defecto (tipado seguro)
+  return [pathname, new URLSearchParams(search).get("tab")]; // URLSearchParams => API web estándar para leer la query
+};
+
+// matchScore => cuánto de la URL coincide con el ítem (0 = nada); el ítem activo es el de mayor puntaje.
+// Ítem con "?tab=": +1 si esa pestaña es la activa de su sección (Redux), 0 si hay otra activa, y sin pestaña elegida
+// empata con el ítem sin query (gana el primero del grupo: "Clientes")
+const matchScore = (item: AdminNavItem, path: string, tabs: Readonly<Record<string, string>>) => {
+  const [itemPath, tab] = splitPath(item.path);
+  const base = Math.max(0, ...[itemPath, ...(item.match ?? [])].map((prefix) => (path === prefix || path.startsWith(`${prefix}/`) || (prefix.endsWith("-") && path.startsWith(prefix)) ? prefix.length : 0)));
+  if (!base || !tab) return base; // Sin coincidencia o ítem sin pestaña => puntaje por longitud de ruta
+  const current = tabs[itemPath.split("/").at(-1) ?? ""]; // Sección = último segmento de la ruta ("customers")
+  if (!current) return base;
+  return current === tab ? base + 1 : 0;
+};
 
 // usePanelNav => Hook compartido por el menú y la barra superior (DRY): idioma, textos, grupos visibles e ítem activo
 export function usePanelNav() {
   const locale: AdminLocale = useLocale() === "en" ? "en" : "es";
   const pathname = usePathname(); // Ruta SIN prefijo de idioma
   const { user } = useAuth();
+  const { tabs } = useAdminDashboard(); // Pestaña activa por sección: marca el ítem "?tab=" correcto del CRM
   const roles = useMemo(() => user?.roles ?? [], [user]);
   // "useMemo" => solo se recalcula si cambian los roles (la lista del menú es estable entre renders)
   const groups = useMemo(() => NAV.groups.map((group) => ({ ...group, items: group.items.filter((item) => navVisible(group, item, roles)) })).filter((group) => group.items.length > 0), [roles]);
@@ -50,11 +68,11 @@ export function usePanelNav() {
   const active = useMemo(() => {
     let best: { group: AdminNavGroup; item: AdminNavItem; score: number } | null = null;
     for (const group of groups) for (const item of group.items) {
-      const score = item.app === "next" ? matchLength(item, pathname) : 0;
+      const score = item.app === "next" ? matchScore(item, pathname, tabs) : 0;
       if (score > (best?.score ?? 0)) best = { group, item, score };
     }
     return best;
-  }, [groups, pathname]);
+  }, [groups, pathname, tabs]);
   const text = (key: AdminNavText) => NAV.text[key][locale];
   return { locale, groups, active, text, user };
 }
@@ -76,6 +94,8 @@ const ITEM = "group/item relative flex cursor-pointer items-center gap-2.5 round
 const ITEM_ACTIVE = "bg-indigo-500/15 text-white";
 const ICON_BOX = "flex size-6 shrink-0 items-center justify-center rounded-md bg-slate-800 text-slate-400 transition-colors group-hover/item:text-indigo-300";
 const ICON_BOX_ACTIVE = "bg-indigo-500 text-white group-hover/item:text-white";
+// Botón "panel lateral" (36 px, como Claude/Gemini): mismo estilo en escritorio (ocultar/mostrar) y móvil (cerrar)
+const SIDEBAR_TOGGLE = "size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400";
 
 interface Props {
   collapsed: boolean; // Riel de solo íconos (escritorio)
@@ -89,18 +109,15 @@ export function AdminSidebar({ collapsed, mobileOpen, onToggleCollapsed, onClose
   const [query, setQuery] = useState(""); // Filtro del buscador del menú
   const pathname = usePathname();
 
-  // Acordeón: el grupo de la ruta activa se abre solo; el usuario puede abrir/cerrar los demás
-  const [open, setOpen] = useState<Set<string>>(() => new Set(active ? [active.group.key] : ["account"]));
+  // Acordeón EXCLUSIVO (Dropdown): un solo grupo abierto (string | null) => la lista nunca crece hasta generar scroll.
+  // El grupo de la ruta activa se abre solo; abrir otro cierra el anterior
+  const activeGroup = active?.group.key;
+  const [open, setOpen] = useState<string | null>(activeGroup ?? "account");
   useEffect(() => {
-    if (active) setOpen((prev) => (prev.has(active.group.key) ? prev : new Set(prev).add(active.group.key)));
-  }, [active]);
+    if (activeGroup) setOpen(activeGroup); // Al navegar a otra sección se despliega su grupo
+  }, [activeGroup]);
   useEffect(() => onCloseMobile(), [pathname]); // eslint-disable-line react-hooks/exhaustive-deps -- al navegar se cierra el panel móvil
-  const toggleGroup = (key: string) =>
-    setOpen((prev) => {
-      const next = new Set(prev);
-      if (!next.delete(key)) next.add(key); // "delete" devuelve false si no estaba => se abre
-      return next;
-    });
+  const toggleGroup = (key: string) => setOpen((prev) => (prev === key ? null : key)); // Mismo grupo => se pliega
 
   // Buscador: filtra por texto sin tildes ("normalize NFD" + quitar diacríticos) y abre todos los grupos con resultados
   const normalize = (value: string) => value.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
@@ -154,14 +171,20 @@ export function AdminSidebar({ collapsed, mobileOpen, onToggleCollapsed, onClose
           collapsed ? "lg:w-[4.5rem]" : "lg:w-72"
         )}
       >
-        {/* Marca: vuelve al inicio del panel según el rol (panelHome) */}
-        <div className="flex h-16 shrink-0 items-center gap-3 border-b border-white/10 px-4">
-          <Link href={panelHome(user?.roles ?? [])} className={cn("flex min-w-0 items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400", collapsed && "lg:mx-auto")}>
+        {/* Marca + botón ocultar/mostrar (estilo Claude/Gemini): expandido => marca a la izquierda y botón "panel lateral"
+            a la derecha; colapsado (riel) => solo el botón, centrado, en el mismo lugar (el usuario no lo busca) */}
+        <div className={cn("flex h-16 shrink-0 items-center gap-3 border-b border-white/10 px-4", collapsed && "lg:justify-center lg:px-0")}>
+          <Link href={panelHome(user?.roles ?? [])} className={cn("flex min-w-0 items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400", collapsed && "lg:hidden")}>
             <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-sm font-bold text-white shadow">W3</span>
-            <span className={cn("truncate font-semibold text-white", collapsed && "lg:sr-only")}>{config.siteName}</span>
+            <span className="truncate font-semibold text-white">{config.siteName}</span>
           </Link>
-          <button type="button" onClick={onCloseMobile} className="ml-auto rounded-md p-1.5 text-slate-400 hover:bg-white/10 hover:text-white lg:hidden" aria-label={text("closeMenu")}>
-            <NavIcon name="close" className="size-5" />
+          {/* aria-expanded => estado del menú para lectores de pantalla; title => tooltip nativo (sin JS extra) */}
+          <button type="button" onClick={onToggleCollapsed} aria-expanded={!collapsed} aria-controls="panel-sidebar" title={collapsed ? text("expand") : text("collapse")} className={cn(SIDEBAR_TOGGLE, "ml-auto hidden lg:flex", collapsed && "lg:ml-0")}>
+            <span className="sr-only">{collapsed ? text("expand") : text("collapse")}</span>
+            <NavIcon name="sidebar" className="size-5" />
+          </button>
+          <button type="button" onClick={onCloseMobile} className={cn(SIDEBAR_TOGGLE, "ml-auto flex lg:hidden")} aria-label={text("closeMenu")}>
+            <NavIcon name="sidebar" className="size-5" />
           </button>
         </div>
 
@@ -193,7 +216,7 @@ export function AdminSidebar({ collapsed, mobileOpen, onToggleCollapsed, onClose
         <nav aria-label={text("menu")} className="flex-1 overflow-y-auto overscroll-contain px-3 py-2 [scrollbar-color:theme(colors.slate.700)_transparent] [scrollbar-width:thin]">
           {filtered.length === 0 && <p className="px-3 py-2 text-sm text-slate-500">{text("noResults")}</p>}
           {filtered.map((group) => {
-            const expanded = collapsed || searching || open.has(group.key);
+            const expanded = collapsed || searching || open === group.key;
             const panelId = `nav-panel-${group.key}`;
             return (
               <section key={group.key} aria-label={group.label[locale]} className={cn("mb-0.5", collapsed && "lg:mb-2 lg:border-t lg:border-white/10 lg:pt-3 lg:first:border-t-0 lg:first:pt-0")}>
@@ -216,18 +239,14 @@ export function AdminSidebar({ collapsed, mobileOpen, onToggleCollapsed, onClose
           })}
         </nav>
 
-        {/* Pie: volver a la tienda + ocultar/mostrar el menú (solo escritorio) */}
-        <div className={cn("flex shrink-0 items-center gap-1 border-t border-white/10 p-3", collapsed && "lg:flex-col")}>
-          <a href={storeHref(locale)} title={text("store")} className={cn(ITEM, "flex-1", collapsed && "lg:w-full lg:justify-center lg:px-0")}>
+        {/* Pie: volver a la tienda (el botón ocultar/mostrar vive arriba, junto a la marca) */}
+        <div className="flex shrink-0 items-center border-t border-white/10 p-3">
+          <a href={storeHref(locale)} title={collapsed ? text("store") : undefined} className={cn(ITEM, "flex-1", collapsed && "lg:justify-center lg:px-0")}>
             <span className={ICON_BOX}>
               <NavIcon name="store" />
             </span>
             <span className={cn("truncate", collapsed && "lg:sr-only")}>{text("store")}</span>
           </a>
-          <button type="button" onClick={onToggleCollapsed} aria-pressed={collapsed} aria-controls="panel-sidebar" title={collapsed ? text("expand") : text("collapse")} className="hidden size-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-slate-400 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 lg:flex">
-            <span className="sr-only">{collapsed ? text("expand") : text("collapse")}</span>
-            <NavIcon name="collapse" className={cn("size-4 transition-transform", collapsed && "rotate-180")} />
-          </button>
         </div>
       </aside>
     </>

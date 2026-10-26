@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod'; // [Tree-shaking · Zod 4]: import de namespace (`* as z`) → esbuild empaqueta solo las funciones usadas (con `{ z }` arrastraba Zod entero, ~450 kB)
 import { LANGUAGES } from '@aula/shared-schemas';
 // [Modelo Vocabulary · Dominio · Sprint 8.3]: consulta de traducción e IPA (LanguageLookup) y entrada del banco de vocabulario (VocabularyEntry) — contrato de /api/vocabulary/* de NestJS | [Patrón]: Schema-First (Zod) + funciones puras | [Principio]: SSOT + Type-Safe | [Paradigma]: Funcional
 // [Tolerancia]: la traducción la hace un LLM local → puede faltar (`model: "unavailable"`); el IPA (espeak-ng) es determinista y siempre llega

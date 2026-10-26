@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod'; // [Tree-shaking · Zod 4]: import de namespace (`* as z`) → esbuild empaqueta solo las funciones usadas (con `{ z }` arrastraba Zod entero, ~450 kB)
 import { LANGUAGES } from '@aula/shared-schemas';
 // [Modelo Dictionary · core · Sprint 10.3 · RF-136/RF-137]: entrada del diccionario (palabra en su frase: traducción según el contexto, IPA y ejemplos) y palabras marcadas «aprendiendo/aprendido» — contrato de /api/vocabulary/lookup/word y /api/vocabulary/words | [Patrón]: Schema-First (Zod) + funciones puras | [Principio]: SSOT + Type-Safe + DRY (lo usan el popover, Poliglota y Gramática) | [Paradigma]: Funcional
 

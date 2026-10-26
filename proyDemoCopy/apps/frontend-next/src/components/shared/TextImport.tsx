@@ -1,6 +1,7 @@
 "use client"; // [Next.js]: Client Component → selector de archivo, estado de carga y fetch al BFF
 import { FileUp, Link2, Loader2 } from "lucide-react"; // [lucide-react]: iconos SVG uniformes del portal
-import { useId, useState } from "react"; // [React]: useId → ids accesibles únicos · useState → estado local
+import { useId, useState } from "react";
+import { youtubeEmbed } from "@/lib/youtube"; // [React]: useId → ids accesibles únicos · useState → estado local
 // [TextImport · 2026-10-23]: «Importar contenido» desde un ARCHIVO (PDF, Word, Excel, texto, imagen con OCR, audio/video con transcripción) o un ENLACE → texto + Markdown | espejo Next de la molécula Angular `aula-text-import`
 // [Patrón]: Presentational + Adapter (BFF /api/media/extract-text) + Callback (onText) | [Principio]: SRP + DRY (cursos, actividades y cualquier formulario que lo necesite) | [Paradigma]: Declarativo + asíncrono
 
@@ -19,9 +20,10 @@ interface TextImportProps {
   language?: string; // Idioma del contenido → OCR y transcripción más precisos
   onText: (result: ImportedText) => void; // [Callback]: el formulario decide qué campo rellenar
   label?: string; // Título del bloque
+  endpoint?: string; // [2026-10-24]: Route Handler que extrae (por defecto /api/media/extract-text; Cursos usa /api/courses/import con tope mayor) | [Principio]: OCP
 }
 
-export function TextImport({ language = "en", onText, label = "Importar contenido" }: TextImportProps) {
+export function TextImport({ language = "en", onText, label = "Importar contenido", endpoint = "/api/media/extract-text" }: TextImportProps) {
   const id = useId(); // `useId` (React 18+): ids estables entre servidor y cliente
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState<string | null>(null); // Mensaje de progreso o null
@@ -32,7 +34,7 @@ export function TextImport({ language = "en", onText, label = "Importar contenid
     setError(null);
     setBusy(what);
     try {
-      const res = await fetch("/api/media/extract-text", { method: "POST", body, headers: json ? { "Content-Type": "application/json" } : undefined });
+      const res = await fetch(endpoint, { method: "POST", body, headers: json ? { "Content-Type": "application/json" } : undefined });
       const data = (await res.json().catch(() => ({}))) as Partial<ImportedText> & { message?: string };
       if (!res.ok) throw new Error(data.message ?? `HTTP ${res.status}`);
       onText({ title: data.title ?? "", text: data.text ?? "", markdown: data.markdown ?? data.text ?? "", holder: data.holder ?? "" });
@@ -41,6 +43,13 @@ export function TextImport({ language = "en", onText, label = "Importar contenid
     } finally {
       setBusy(null);
     }
+  };
+
+  // [fromUrl · 2026-10-25]: un video de YouTube no se «lee»: entra como enlace y el Markdown lo muestra incrustado
+  const fromUrl = () => {
+    const link = url.trim();
+    if (youtubeEmbed(link)) return onText({ title: "Video", text: link, markdown: link, holder: "" });
+    void run(JSON.stringify({ url: link, language }), true, "Leyendo el enlace…");
   };
 
   const fromFile = (file: File | undefined) => {
@@ -66,8 +75,8 @@ export function TextImport({ language = "en", onText, label = "Importar contenid
         {/* [Enlace]: <form> propio anidado no es válido en HTML → div + botón type=button */}
         <div className="flex flex-1 gap-2">
           <label htmlFor={`${id}-url`} className="sr-only">Enlace</label>
-          <input id={`${id}-url`} type="url" inputMode="url" placeholder="https://…" value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (url.trim()) void run(JSON.stringify({ url: url.trim(), language }), true, "Leyendo el enlace…"); } }} className="control min-w-0 flex-1" />
-          <button type="button" className="btn btn-outline btn-sm" disabled={Boolean(busy) || !URL.canParse(url.trim())} onClick={() => void run(JSON.stringify({ url: url.trim(), language }), true, "Leyendo el enlace…")}>
+          <input id={`${id}-url`} type="url" inputMode="url" placeholder="https://…" value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (url.trim()) fromUrl(); } }} className="control min-w-0 flex-1" />
+          <button type="button" className="btn btn-outline btn-sm" disabled={Boolean(busy) || !URL.canParse(url.trim())} onClick={() => fromUrl()}>
             <Link2 aria-hidden className="size-4" /> Importar
           </button>
         </div>

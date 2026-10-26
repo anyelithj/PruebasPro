@@ -1,0 +1,93 @@
+@startuml
+skinparam backgroundColor #FEFEFE
+skinparam rectangle {
+  FontName Arial
+  FontSize 10
+  BackgroundColor #FEFEFE
+  BorderColor #333333
+}
+skinparam database {
+  FontName Arial
+  FontSize 10
+}
+skinparam actor {
+  FontName Arial
+  FontSize 12
+}
+
+title "Arquitectura Microservicios"
+
+actor "Usuario" as USER
+
+package "Presentación" {
+  rectangle "Next.js 16\n(frontend)" as NEXTJS
+  rectangle "BFF - Route Handlers app/api/*\nproxy HTTP a NestJS\nauth, admin/users, quiz, ai/feedback\n(cookies HttpOnly)" as BFF
+  rectangle "APP\nSERVER" as APP_SERVER
+  rectangle "EDGE\nSERVICES" as EDGE
+}
+
+rectangle "Proveedores OAuth\n(Externo)\nGoogle | Microsoft Entra ID\n(proveedores de next-auth)" as OAUTH_EXT
+
+package "Backend" as BACKEND_PKG {
+  rectangle "auth\nPunte JWT + OAuth;\nsessions/tokens\nPassport(jwt, local)" as AUTH
+  rectangle "IA\ngrading-feedback-weaknesses\nCliente HTTP -> FastAPI" as IA_MOD
+  rectangle "users\nGestión de usuarios\nroles admin/docente/estudiante" as USERS
+  rectangle "Score\nLeaderboard\ncaché Redis - TTL 60s" as SCORE
+  rectangle "Quiz\ngeneración de preguntas con IA\n(qwen->mistral); sesiones\nde evaluación, sin caché" as QUIZ
+}
+
+package "Datos\n(docker-compose.dev)" as DATA_PKG {
+  database "PostgreSQL 16\n12 TypeORM entities:\nuser, quiz, question, quiz_session,\nscore, achievement, feedback_ia,\nnotification, session, token,\nemail_verification_token,\npassword_reset_token" as PG
+  database "caché TTL 60s\nRedis\nCache efectivo (@nestjs/cache-manager)\nCache-Aside | TTL 60s\nSOLO leaderboard (score)" as REDIS
+}
+
+package "Microservicio IA" as IA_PKG {
+  rectangle "grading\nCalificación de respuestas según\ntipo de pregunta:\n-exact_match (MC/TF)\n-similarity (open_answer)\n-NLP (SpaCy, solo lote)" as GRADING
+  rectangle "feedback\nEl agente IA ofrece\nretroalimentación sobre resultados\ny análisis de debilidades\nRAG: corpus educativo + Ollama\nfallback si tarda >30s" as FB_MS
+  note right of GRADING
+    prefijo /api/v1
+    routers en uso:
+    grading, feedback
+  end note
+}
+
+rectangle "LLM Local\nOllama(auto-alojado)\nRuta1: quiz(Nest directo):\nQwen3 8B / Mistral Nemo\nRuta2: Feedback RAG(FastAPI):\nllama 3.2:1b\nModelos configurables por env" as OLLAMA
+
+rectangle "Ruta 2: RAG" as RAG
+
+' === Conexiones ===
+USER --> NEXTJS : HTTPS
+NEXTJS --> BFF : render / fetch
+BFF --> BACKEND_PKG : REST /api/v1/* (Bearer JWT)
+
+NEXTJS --> AUTH : Rest /api/v1 (JWT)
+NEXTJS --> USERS
+NEXTJS --> QUIZ
+NEXTJS --> SCORE
+
+AUTH --> PG : TypeORM (auth_sessions · *_tokens)
+USERS --> PG : TypeORM (users)
+QUIZ --> PG : TypeORM (quizzes · questions)
+SCORE --> PG : TypeORM (scores · achievements)
+
+QUIZ --> OLLAMA : HTTP :11434  QwenProvider / MistralProvider\n(generación de preguntas · SIN caché · NO pasa por FastAPI)
+
+QUIZ --> IA_MOD : AIClientService.grade / feedback / weaknesses
+IA_MOD --> FB_MS : HTTP REST /grading/grade · /feedback/generate · /feedback/weaknesses «ACL»
+IA_MOD --> GRADING : grading
+FB_MS --> OLLAMA : HTTP :11434 (calificación/feedback)
+GRADING --> OLLAMA
+OLLAMA --> RAG
+
+SCORE --> REDIS : GetLeaderboard Cache-Aside (ttl 60s)
+
+NEXTJS --> OAUTH_EXT : OIDC
+AUTH --> OAUTH_EXT : JWKS
+
+show legend
+legend top center
+  LEYENDA
+  Implementado | PARCIAL | PREVISTO
+endlegend
+
+@enduml

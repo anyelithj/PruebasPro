@@ -9,8 +9,16 @@ import {
   Post,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { IsIn, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import {
+  IsIn,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { OptionalPhone } from '../application/dtos/optional-phone.decorator'; // [2026-10-24]: decorador compuesto del teléfono
 import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
 import type { JwtPayload } from '../../../shared/decorators/current-user.decorator';
 import { GetProfileUseCase } from '../application/use-cases/get-profile.use-case';
@@ -45,11 +53,8 @@ export class UpdateProfileDto {
   @MaxLength(300)
   bio?: string;
 
-  // [Teléfono · 2026-10-24]: opcional · dígitos, espacios, guiones, paréntesis y «+» inicial (7–20) | `@Matches` (class-validator)
-  @ApiProperty({ required: false, example: '+57 300 123 4567' })
-  @IsOptional()
-  @Matches(/^(\+?[0-9 ()-]{7,20})?$/, { // Vacío = borrar el teléfono
-    message: 'Teléfono no válido (solo números, espacios, guiones y + inicial).' })
+  // [Teléfono · 2026-10-24]: opcional · regla única en `@OptionalPhone` (users/domain/value-objects/phone.vo.ts) | vacío = borrar el teléfono | [Principio]: DRY
+  @OptionalPhone()
   phone?: string;
 
   @ApiProperty({ required: false, example: 'America/Bogota' })

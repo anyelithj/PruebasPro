@@ -45,26 +45,48 @@ import {
 // [Garantía]: la salida del LLM pasa por el MISMO esquema Zod que el contenido manual + la regla de coherencia de idioma
 
 // [Versión del prompt]: cambiarla invalida la caché de borradores (evita reutilizar salidas de un prompt antiguo)
-export const PROMPT_VERSION = 'content-v4'; // v4: instrucciones de traducción e IPA por variante + limpieza de género (invalida borradores v3 de baja calidad)
+export const PROMPT_VERSION = 'content-v5'; // v5 (2026-10-24): reglas gramaticales robustas + ficha de fonema (cuándo/cómo/palabras/frases) → invalida los borradores v4
 
 // [Forma JSON esperada por tipo]: descripción compacta que va dentro del prompt (espejo de curriculum-content.schema.ts) | `Record<Enum, string>` exhaustivo | [Patrón]: Lookup Table
 const SHAPE: Readonly<Record<CurriculumItemKind, string>> = {
   [CurriculumItemKind.VOCABULARY]:
     '{"lemma": palabra en el idioma, "partOfSpeech": categoría en español (sustantivo, verbo…), "gender": género si aplica o "", "translationEs": traducción, "ipa": {"value": "/IPA/", "variant": código BCP-47 del idioma (p. ej. fr-FR), "source": "diccionario de referencia"}, "romanization": solo zh/ru o "", "emoji": un emoji que represente la palabra o "", "examples": [{"text": frase en el idioma, "translationEs": traducción}] (2 ejemplos)}',
+  // [2026-10-24]: tipos explícitos ("texto", lista de OBJETOS) → los modelos pequeños devolvían explanationEs como lista o los ejemplos como cadenas sueltas y el esquema los rechazaba
   [CurriculumItemKind.GRAMMAR_RULE]:
-    '{"title": nombre de la regla, "structure": fórmula corta, "explanationEs": explicación clara en español (3-5 frases), "examples": [{"text": frase en el idioma, "translationEs": traducción}] (3 ejemplos)}',
+    '{"title": nombre corto de la regla (texto), "structure": fórmula corta (texto, p. ej. "Sujeto + have/has + participio"), "explanationEs": explicación clara en español en UN solo texto de 3-5 frases (cuándo y cómo se usa), "examples": [{"text": frase en el idioma, "translationEs": su traducción al español}] (3 objetos)}',
   [CurriculumItemKind.EXAMPLE]:
     '{"text": una frase natural en el idioma, "translationEs": traducción, "romanization": solo zh/ru o ""}',
   [CurriculumItemKind.TRANSLATION]:
     '{"source": texto corto (1-3 frases) en el idioma, "targetEs": traducción al español, "notes": matices o alternativas en español}',
+  // [Ficha de fonema · 2026-10-24]: para un sonido como /ɒ/ → cuándo se usa, cómo se pronuncia, palabras y frases donde se oye (la vista añade el audio de cada una)
   [CurriculumItemKind.PRONUNCIATION]:
-    '{"text": palabra o frase en el idioma, "ipa": {"value": "/IPA/", "variant": código BCP-47 del idioma, "source": "diccionario de referencia"}, "romanization": solo zh/ru o "", "ruleEs": la regla de pronunciación (fonema, sonido o patrón) explicada en español en 1-2 frases, "examples": [{"text": frase en el idioma donde se oye ese sonido, "translationEs": traducción}] (3 ejemplos)}',
+    '{"text": palabra CLAVE en el idioma donde se oye claramente el sonido, "phoneme": símbolo IPA del sonido practicado SIN barras (p. ej. "ɒ"), "ipa": {"value": "/IPA de la palabra clave/", "variant": código BCP-47 del idioma, "source": "diccionario de referencia"}, "romanization": solo zh/ru o "", "ruleEs": CUÁNDO se usa este sonido: qué letras o combinaciones lo producen y en qué posiciones, en español (2-3 frases), "articulationEs": CÓMO se pronuncia: labios, lengua y mandíbula comparados con un sonido del español (1-2 frases), "words": [{"text": palabra en el idioma que contiene el sonido, "ipa": "/IPA/", "translationEs": traducción}] (5 objetos), "examples": [{"text": frase en el idioma con varias palabras que tienen el sonido, "translationEs": traducción}] (3 objetos)}',
   [CurriculumItemKind.COMMON_ERROR]:
     '{"incorrect": frase con el error típico de hispanohablantes, "correct": la forma correcta, "explanationEs": por qué es un error, en español}',
   [CurriculumItemKind.EXERCISE]:
     '{"prompt": enunciado (en el idioma; si es de completar, marca el hueco con ___), "type": "multiple_choice", "options": [4 opciones en el idioma], "answerKey": [la opción correcta, copiada EXACTAMENTE de options], "explanationEs": explicación en español}',
   [CurriculumItemKind.RUBRIC]:
     '{"title": nombre de la rúbrica, "criteria": [{"name": criterio, "descriptorEs": qué se evalúa, "maxPoints": entero 1-10, "bands": [{"points": entero, "descriptorEs": descripción}]}] (3-4 criterios)}',
+};
+
+// [Tokens de salida por elemento · 2026-10-24]: margen según la longitud de la forma JSON | `Partial<Record>`: el resto usa 450
+const TOKENS_PER_ITEM: Readonly<Partial<Record<CurriculumItemKind, number>>> = {
+  [CurriculumItemKind.GRAMMAR_RULE]: 650,
+  [CurriculumItemKind.PRONUNCIATION]: 800,
+  [CurriculumItemKind.RUBRIC]: 700,
+};
+
+// [Instrucciones por tipo · 2026-10-24]: cada tipo recibe SOLO las reglas que le aplican (antes la regla gramatical recibía también las de traducción, IPA y género → confundía al modelo)
+// [Patrón]: Lookup Table + Strategy | [Principio]: ISP aplicado al prompt (cada tipo, sus instrucciones)
+const LEXICAL = new Set<CurriculumItemKind>([
+  CurriculumItemKind.VOCABULARY,
+  CurriculumItemKind.PRONUNCIATION,
+]); // Llevan IPA de palabra
+const KIND_RULES: Readonly<Partial<Record<CurriculumItemKind, string>>> = {
+  [CurriculumItemKind.GRAMMAR_RULE]:
+    'Regla gramatical: "title" es el nombre de la regla en español o en el idioma (p. ej. "Present perfect"); si creas varias, cada una trata un ASPECTO DISTINTO del tema (afirmativa, negativa, preguntas, usos…) con un título diferente. "explanationEs" es UN texto (no una lista). Cada ejemplo es un OBJETO con "text" en el idioma y "translationEs" en español.',
+  [CurriculumItemKind.PRONUNCIATION]:
+    'Pronunciación: si el tema es un fonema (p. ej. "/ɒ/ · hot"), TODO el recurso trata de ESE sonido: "phoneme" es ese símbolo, y la palabra clave, las 5 palabras y las 3 frases lo contienen. Explica en "ruleEs" cuándo aparece (grafías y posiciones) y en "articulationEs" cómo se produce. Si creas varios, cada uno usa una palabra clave distinta.',
 };
 
 // [Qué es un "tema" según el tipo]: orienta a la IA para que las sugerencias encajen con lo que se va a crear | [Patrón]: Lookup Table
@@ -157,9 +179,13 @@ export function requestHash(
 // [cleanDraft]: correcciones deterministas SIN inventar contenido | [Paradigma]: Funcional
 // - variante IPA ausente → la del idioma · - romanización solo en zh/ru (los modelos pequeños la inventan para otros idiomas)
 function cleanDraft(language: Language, raw: unknown): Record<string, unknown> {
-  const draft = (
-    raw && typeof raw === 'object' && !Array.isArray(raw) ? { ...raw } : {}
-  ) as Record<string, unknown>;
+  const draft = normalizeShape(
+    (raw && typeof raw === 'object' && !Array.isArray(raw)
+      ? { ...raw }
+      : {}) as Record<string, unknown>,
+  );
+  normalizeIpa(draft);
+  clipOptionalTexts(draft);
   const ipa = draft.ipa as { value?: string; variant?: string } | undefined;
   if (ipa?.value && !ipa.variant) ipa.variant = DEFAULT_VARIANT[language];
   // [answerKey · 2026-10-20]: los modelos pequeños devuelven a veces la respuesta como texto ("A") en vez de lista (["A"]) → se envuelve (no se inventa nada)
@@ -181,18 +207,207 @@ function cleanDraft(language: Language, raw: unknown): Record<string, unknown> {
   return draft;
 }
 
+// [Normalización de forma · 2026-10-24]: correcciones ESTRUCTURALES sin inventar contenido — los modelos locales pequeños (qwen2.5:3b) devuelven a menudo:
+//   · claves sin el sufijo "Es" ("explanation", "translation") o sinónimos ("formula", "rule") → se renombran
+//   · textos como lista de frases (["Se usa…", "Se forma…"]) → se unen en un texto
+//   · ejemplos como cadenas («I have eaten - He comido») → objeto {text, translationEs}; los que no traen traducción se descartan (el esquema la exige)
+// [Bug que corrige]: las reglas gramaticales generadas por IA fallaban con «La IA devolvió un contenido no válido (explanationEs: Expected string…)»
+// [Patrón]: Normalizer / Anti-Corruption Layer (LLM → dominio) | [Paradigma]: Funcional (copia, sin efectos fuera)
+const KEY_ALIASES: Readonly<Record<string, string>> = {
+  explanation: 'explanationEs',
+  explicacion: 'explanationEs',
+  translation: 'translationEs',
+  traduccion: 'translationEs',
+  formula: 'structure',
+  pattern: 'structure',
+  rule: 'ruleEs',
+  articulation: 'articulationEs',
+  example: 'examples',
+};
+const TEXT_FIELDS = [
+  'title',
+  'structure',
+  'explanationEs',
+  'ruleEs',
+  'articulationEs',
+  'translationEs',
+  'text',
+  'lemma',
+] as const;
+// [Separadores habituales]: «frase - traducción» / «frase = traducción» / «frase → traducción» (PAIR_RE) y «frase (traducción)» (PAREN_RE) | `+?` (RegExp): captura perezosa → corta en el PRIMER separador
+const PAIR_RE = /^(.+?)\s+(?:[-–—=→]|->)\s+(.+)$/;
+const PAREN_RE = /^(.+?)\s*\((.+)\)\s*$/;
+
+function renameKeys(o: Record<string, unknown>): Record<string, unknown> {
+  // `Object.entries/fromEntries` (ES2019): renombra solo si la clave canónica no existe ya
+  return Object.fromEntries(
+    Object.entries(o).map(([k, v]) => {
+      const canonical = KEY_ALIASES[k];
+      return canonical && !(canonical in o) ? [canonical, v] : [k, v];
+    }),
+  );
+}
+
+// [toExample]: objeto o cadena → {text, translationEs} | null si no hay traducción posible (no se inventa)
+function toExample(e: unknown): Record<string, unknown> | null {
+  if (typeof e === 'string') {
+    const m = PAIR_RE.exec(e.trim()) ?? PAREN_RE.exec(e.trim()); // `??` (ES2020): primer patrón que encaje
+    return m ? { text: m[1].trim(), translationEs: m[2].trim() } : null;
+  }
+  if (!e || typeof e !== 'object') return null;
+  const o = renameKeys(withoutNulls(e as Record<string, unknown>)); // Sin `null` en romanization/translationEs opcionales
+  return typeof o.text === 'string' &&
+    typeof o.translationEs === 'string' &&
+    o.translationEs.trim()
+    ? o
+    : null;
+}
+
+// [withoutNulls · 2026-10-24]: los modelos locales devuelven `null` en campos opcionales ("gender": null, "source": null) y Zod solo admite `undefined` → 422 «expected string, received null» en vocabulario francés | `null` = «sin dato» → se quita la clave (no se inventa nada) | [Paradigma]: Funcional (copia)
+const withoutNulls = (o: Record<string, unknown>): Record<string, unknown> =>
+  Object.fromEntries(Object.entries(o).filter(([, v]) => v !== null)); // `Object.fromEntries` (ES2019): reconstruye el objeto sin las claves nulas
+
+// [normalizeIpa · 2026-10-24]: IPA como cadena ("/mɛ.zɔ̃/") → {value}; objeto con `value` vacío → sin IPA (es opcional en vocabulario y FastAPI la completa después) | [Patrón]: Normalizer
+function normalizeIpa(d: Record<string, unknown>): void {
+  const ipa = d.ipa;
+  if (typeof ipa === 'string') {
+    if (ipa.trim()) d.ipa = { value: ipa.trim() };
+    else delete d.ipa;
+    return;
+  }
+  if (!ipa || typeof ipa !== 'object' || Array.isArray(ipa)) return; // Forma desconocida: el esquema dará el error legible
+  const clean = withoutNulls(ipa as Record<string, unknown>);
+  if (typeof clean.value !== 'string' || !clean.value.trim()) delete d.ipa;
+  else d.ipa = clean;
+}
+
+// [Topes de los textos opcionales cortos]: espejo de curriculum-content.schema (partOfSpeech ≤ 40, gender ≤ 20, emoji ≤ 16) | un "sustantivo masculino singular contable…" demasiado largo se recorta por palabra en vez de rechazar el recurso entero
+const OPTIONAL_TEXT_LIMITS: Readonly<Record<string, number>> = {
+  partOfSpeech: 40,
+  gender: 20,
+};
+function clipOptionalTexts(d: Record<string, unknown>): void {
+  for (const [field, max] of Object.entries(OPTIONAL_TEXT_LIMITS)) {
+    const v = d[field];
+    if (typeof v !== 'string' || v.length <= max) continue;
+    const cut = v.slice(0, max); // `slice` (JS): primeros `max` caracteres
+    const lastSpace = cut.lastIndexOf(' ');
+    d[field] = (lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trim(); // Corta en el último espacio → nunca media palabra
+  }
+  // [Emoji]: un "emoji" larguísimo no es un emoji (el modelo escribió texto) → se descarta (apoyo visual opcional)
+  if (typeof d.emoji === 'string' && [...d.emoji].length > 4) delete d.emoji; // `[...str]` (ES2015): cuenta puntos de código, no unidades UTF-16
+}
+
+// [readableProblems · 2026-10-24]: mensajes de Zod (inglés técnico) → español para el docente: «gender: tipo incorrecto (llegó vacío)» en vez de «Invalid input: expected string, received null» | [Patrón]: Error Translation | [Paradigma]: Funcional (pura)
+const TYPE_ES: Readonly<Record<string, string>> = {
+  string: 'texto',
+  object: 'objeto',
+  array: 'lista',
+  number: 'número',
+  null: 'vacío (null)',
+  boolean: 'sí/no',
+};
+export function readableProblem(problem: string): string {
+  return problem
+    .replace(
+      /Invalid input: expected (\w+), received undefined/g,
+      'falta el campo',
+    )
+    .replace(
+      /Invalid input: expected (\w+), received (\w+)/g,
+      (_m, exp: string, got: string) =>
+        `se esperaba ${TYPE_ES[exp] ?? exp} y llegó ${TYPE_ES[got] ?? got}`,
+    )
+    .replace(
+      /Too small: expected string to have >=1 characters?/g,
+      'está vacío',
+    )
+    .replace(
+      /Too big: expected string to have <=(\d+) characters?/g,
+      'demasiado largo (máx. $1 caracteres)',
+    )
+    .replace(
+      /Too big: expected array to have <=(\d+) items?/g,
+      'demasiados elementos (máx. $1)',
+    );
+}
+
+export function normalizeShape(
+  d: Record<string, unknown>,
+): Record<string, unknown> {
+  const out = renameKeys(withoutNulls(d));
+  for (const f of TEXT_FIELDS) {
+    const v = out[f];
+    // Lista de textos → un solo texto (las explicaciones se separan por espacio; nunca se pierde una frase)
+    if (Array.isArray(v) && v.every((x) => typeof x === 'string'))
+      out[f] = v.join(' ');
+  }
+  if (out.examples !== undefined) {
+    const list = Array.isArray(out.examples) ? out.examples : [out.examples]; // Un solo ejemplo suelto → lista
+    out.examples = list
+      .map(toExample)
+      .filter((x): x is Record<string, unknown> => x !== null);
+  }
+  if (Array.isArray(out.words))
+    // Palabras de una ficha de fonema: cadena → {text}; objeto → claves canónicas
+    out.words = out.words
+      .map((w) =>
+        typeof w === 'string'
+          ? { text: w }
+          : w && typeof w === 'object'
+            ? renameKeys(withoutNulls(w as Record<string, unknown>))
+            : null,
+      )
+      .filter(
+        (w): w is Record<string, unknown> =>
+          !!w && typeof w.text === 'string' && w.text.trim() !== '',
+      );
+  if (typeof out.phoneme === 'string')
+    out.phoneme = out.phoneme.replace(/[/[\]]/g, '').trim(); // Sin barras ni corchetes
+  return out;
+}
+
+// [itemsOf · 2026-10-24]: lista de borradores en la respuesta — {"items": [...]}, un array suelto, {"rules": [...]} u otro nombre, o un único objeto
+export function itemsOf(data: unknown): unknown[] {
+  if (Array.isArray(data)) return data;
+  if (!data || typeof data !== 'object') return [data];
+  const o = data as Record<string, unknown>;
+  if (Array.isArray(o.items)) return o.items;
+  if (headlineText(o)) return [o]; // Ya es un elemento (tiene lemma/text/title…)
+  // Primera propiedad que sea una lista de objetos (p. ej. "rules", "grammar_rules")
+  const list = Object.values(o).find(
+    (v) =>
+      Array.isArray(v) &&
+      v.length > 0 &&
+      v.every((x) => x && typeof x === 'object' && !Array.isArray(x)),
+  );
+  return (list as unknown[] | undefined) ?? [o];
+}
+
+// [phonemeOf · 2026-10-24]: tema «/ɒ/ · hot» (catálogo IPA) → "ɒ" | null si el tema no es un fonema
+export const phonemeOf = (topic: string): string | null =>
+  /\/([^/\s]{1,8})\//.exec(topic)?.[1] ?? null;
+
 // [swapPinyin]: campo de texto sin caracteres chinos + romanización CON caracteres → estaban al revés | también en los ejemplos | Funcional (muta la copia)
 const HAN_RE = /\p{Script=Han}/u;
 function swapPinyin(d: Record<string, unknown>): void {
   for (const field of ['lemma', 'text']) {
     const main = d[field];
     const rom = d.romanization;
-    if (typeof main === 'string' && typeof rom === 'string' && !HAN_RE.test(main) && HAN_RE.test(rom)) {
+    if (
+      typeof main === 'string' &&
+      typeof rom === 'string' &&
+      !HAN_RE.test(main) &&
+      HAN_RE.test(rom)
+    ) {
       d[field] = rom;
       d.romanization = main;
     }
   }
-  if (Array.isArray(d.examples)) (d.examples as Array<Record<string, unknown>>).forEach((e) => e && typeof e === 'object' && swapPinyin(e));
+  if (Array.isArray(d.examples))
+    (d.examples as Array<Record<string, unknown>>).forEach(
+      (e) => e && typeof e === 'object' && swapPinyin(e),
+    );
 }
 
 // [Banderas deterministas]: reglas explícitas, sin LLM | [Patrón]: Specification | lo generado nunca se presenta como verificado
@@ -328,21 +543,27 @@ export class GenerateContentDraftQuery {
       const missing = count - valid.length;
       const res = await this.llm.generateJson(
         this.prompt(input, missing, problems, avoid, repeated),
-        Math.min(350 + 450 * missing, 3500),
+        // [Presupuesto de tokens por tipo · 2026-10-24]: reglas y fichas de fonema son más largas → antes se cortaban (JSON incompleto)
+        Math.min(350 + (TOKENS_PER_ITEM[input.kind] ?? 450) * missing, 3500),
         [0.3, 0.6, 0.85][attempt],
       );
       metrics = res.metrics;
-      const data = res.data as { items?: unknown } | null;
-      // Un elemento → objeto; varios → {"items": [...]} (se toleran ambas formas)
-      const raws: unknown[] = Array.isArray(data?.items) ? data.items : [data];
+      // Un elemento → objeto; varios → {"items": [...]} (se toleran también arrays sueltos y otros nombres de lista: itemsOf)
+      const raws = itemsOf(res.data);
       problems = [];
       repeated = [];
       for (const raw of raws.slice(0, missing + 2)) {
         if (valid.length >= count) break;
-        const result = validateCurriculumContent(
-          input.kind,
-          cleanDraft(input.language, raw),
-        ); // [Validación de dominio]: mismo esquema que el contenido manual
+        const draft = cleanDraft(input.language, raw);
+        // [Fonema del tema · 2026-10-24]: tema «/ɒ/ · hot» y la IA no indicó el símbolo → se toma del tema (determinista)
+        const phoneme = phonemeOf(input.topic);
+        if (
+          input.kind === CurriculumItemKind.PRONUNCIATION &&
+          phoneme &&
+          !draft.phoneme
+        )
+          draft.phoneme = phoneme;
+        const result = validateCurriculumContent(input.kind, draft); // [Validación de dominio]: mismo esquema que el contenido manual
         if (!result.ok) {
           problems.push(result.errors.join('; '));
           continue;
@@ -369,7 +590,7 @@ export class GenerateContentDraftQuery {
     }
     if (!valid.length || !metrics) {
       throw new UnprocessableEntityException(
-        `La IA devolvió un contenido no válido (${problems.slice(0, 3).join(' | ')}). Intenta de nuevo o complétalo a mano.`,
+        `La IA devolvió un contenido no válido (${[...new Set(problems)].slice(0, 3).map(readableProblem).join(' | ')}). Intenta de nuevo, prueba otro tema o complétalo a mano.`, // `new Set`: sin repetir el mismo motivo de cada intento
       );
     }
 
@@ -425,6 +646,7 @@ export class GenerateContentDraftQuery {
     const lang = LANGUAGE_LABEL[input.language];
     const kindLabel = CURRICULUM_ITEM_KIND_LABEL_ES[input.kind];
     const skill = LANGUAGE_SKILL_LABEL_ES[input.skill];
+    const lexical = LEXICAL.has(input.kind); // ¿Lleva IPA y traducción de palabra?
     return [
       `Eres un profesor experto de ${lang} para hispanohablantes.`,
       count === 1
@@ -432,11 +654,19 @@ export class GenerateContentDraftQuery {
         : `Crea ${count} recursos ORIGINALES y DISTINTOS entre sí de tipo "${kindLabel}" para nivel MCER ${input.level}, habilidad "${skill}", tema "${input.topic}".`,
       `IDIOMA OBLIGATORIO: las palabras, frases y opciones del recurso se escriben en ${lang} (código ${input.language}), NUNCA en español. Solo los campos que terminan en "Es" (traducciones y explicaciones) van en español.`,
       // [Calidad de traducción e IPA]: instrucciones explícitas para modelos pequeños (errores observados: sweater → "gorro", hoodie → "hoodie", IPA americana con variante en-GB)
-      'translationEs: la traducción española MÁS COMÚN y exacta de la palabra (no una palabra parecida ni otra prenda u objeto); no copies la palabra original salvo que en español se use igual (p. ej. "hotel").',
-      `IPA: transcripción fonética de la variante ${DEFAULT_VARIANT[input.language]}${input.language === Language.EN ? ' (inglés británico: NO rótico, p. ej. "water" /ˈwɔːtə/, "sweater" /ˈswetə/)' : ''}, entre barras.`,
-      GENDERED.has(input.language)
-        ? 'gender: el género gramatical del sustantivo en el idioma objetivo, o "" si no aplica.'
-        : 'gender: siempre "" (este idioma no tiene género gramatical).',
+      // [2026-10-24]: solo para tipos léxicos (vocabulario y pronunciación) → la regla gramatical ya no recibe instrucciones de IPA/género que no le aplican
+      lexical
+        ? 'translationEs: la traducción española MÁS COMÚN y exacta de la palabra (no una palabra parecida ni otra prenda u objeto); no copies la palabra original salvo que en español se use igual (p. ej. "hotel").'
+        : '',
+      lexical
+        ? `IPA: transcripción fonética de la variante ${DEFAULT_VARIANT[input.language]}${input.language === Language.EN ? ' (inglés británico: NO rótico, p. ej. "water" /ˈwɔːtə/, "sweater" /ˈswetə/)' : ''}, entre barras.`
+        : '',
+      input.kind === CurriculumItemKind.VOCABULARY
+        ? GENDERED.has(input.language)
+          ? 'gender: el género gramatical del sustantivo en el idioma objetivo, o "" si no aplica.'
+          : 'gender: siempre "" (este idioma no tiene género gramatical).'
+        : '',
+      KIND_RULES[input.kind] ?? '',
       ROMANIZED.has(input.language) ? '' : 'No incluyas romanización.',
       'No copies material protegido ni preguntas de exámenes oficiales.',
       input.guidance ?? '', // [Etapa 5]: formato de la certificación + originalidad

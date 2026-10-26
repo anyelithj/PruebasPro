@@ -47,10 +47,10 @@ export type AdminLocale = "es" | "en";
 export interface AdminNavItem {
   readonly key: string; // Identificador estable (clave React/Vue y pruebas)
   readonly app: "next" | "nuxt"; // Aplicación que sirve la ruta (en la otra se navega con <a> normal)
-  readonly path: string; // Ruta SIN prefijo de idioma ni base de la app
+  readonly path: string; // Ruta SIN prefijo de idioma ni base de la app; admite query ("?tab=segments", "?kind=landing")
   readonly icon: string; // Clave de "icons"
   readonly rf?: string; // Requisito funcional (RF) de la especificación que cubre la pantalla (se muestra junto al título)
-  readonly adminOnly?: boolean; // true => solo ADMIN (oculto al rol VENDOR)
+  readonly adminOnly?: boolean; // true => solo ADMIN (oculto al rol VENDOR y a los clientes)
   readonly match?: readonly string[]; // Prefijos extra de ruta que también activan el ítem ("?" => propiedad opcional)
   readonly label: Readonly<Record<AdminLocale, string>>;
   readonly description?: Readonly<Record<AdminLocale, string>>; // Subtítulo del encabezado de la página (opcional)
@@ -58,10 +58,11 @@ export interface AdminNavItem {
 export interface AdminNavGroup {
   readonly key: string;
   readonly label: Readonly<Record<AdminLocale, string>>;
+  readonly everyone?: boolean; // true => grupo visible para toda sesión (sus ítems adminOnly siguen siendo solo ADMIN)
   readonly items: readonly AdminNavItem[];
 }
 // AdminNavText => claves de texto de la interfaz del panel (una traducción para Next y Nuxt)
-export type AdminNavText = "panel" | "menu" | "search" | "noResults" | "collapse" | "expand" | "openMenu" | "closeMenu" | "store" | "notifications" | "online" | "loading" | "breadcrumb" | "themeDark" | "themeLight" | "cart" | "chat";
+export type AdminNavText = "panel" | "menu" | "search" | "noResults" | "collapse" | "expand" | "openMenu" | "closeMenu" | "store" | "notifications" | "online" | "loading" | "breadcrumb" | "themeDark" | "themeLight" | "cart" | "chat" | "more";
 export interface AdminNav {
   readonly groups: readonly AdminNavGroup[];
   readonly text: Readonly<Record<AdminNavText, Readonly<Record<AdminLocale, string>>>>;
@@ -70,6 +71,9 @@ export interface AdminNav {
 }
 
 // Reglas del menú (las aplican AdminSidebar.tsx y AdminSidebar.vue; este paquete solo exporta tipos, sin runtime):
-// - Visibilidad: el grupo "account" lo ve toda sesión; ADMIN ve todo; VENDOR ve además todo ítem (Next o Nuxt) sin adminOnly.
+// - Visibilidad: ADMIN ve todo; un ítem adminOnly solo lo ve ADMIN; los grupos "everyone" (Mi cuenta, IA) los ve toda
+//   sesión; VENDOR ve además todo ítem (Next o Nuxt) sin adminOnly.
+// - Organización: máximo 6 ítems por grupo, una sola responsabilidad por grupo, acordeón exclusivo (un grupo abierto).
+// - Query en "path": el ítem cuya query coincide con la URL gana (puntaje +1) sobre el mismo path sin query.
 // - Inicio del panel: ADMIN -> /dashboard (resumen); VENDOR -> /dashboard/products (su catálogo); resto -> /account.
 // - Ítem activo: el de ruta (o "match") más larga que coincide con la URL (/account no queda activo en /account/orders).

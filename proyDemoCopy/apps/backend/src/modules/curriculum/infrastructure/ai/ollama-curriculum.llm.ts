@@ -26,7 +26,11 @@ export class OllamaCurriculumLlm implements CurriculumLlm {
   }
 
   // [generateJson]: una inferencia JSON + métricas del modelo y de la memoria | [Patrón]: Adapter
-  async generateJson(prompt: string, maxTokens: number, temperature = 0.3): Promise<LlmResult> {
+  async generateJson(
+    prompt: string,
+    maxTokens: number,
+    temperature = 0.3,
+  ): Promise<LlmResult> {
     const res = await this.ollama.generate({
       model: this.model,
       prompt,
@@ -45,16 +49,16 @@ export class OllamaCurriculumLlm implements CurriculumLlm {
         `IA no disponible (${this.model}): el modelo devolvió un JSON inválido. Intenta de nuevo.`,
       );
     }
+    // [Modelo real · 2026-10-24]: si el configurado no cabía en RAM, OllamaClient respondió con uno de respaldo → la traza registra el que generó de verdad
+    const used = res.model ?? this.model;
     // [Métricas]: info del modelo y memoria en paralelo (`Promise.all`, ES2015); si fallan, quedan en null
     const [info, ps] = await Promise.all([
-      this.ollama.showModel(this.model),
+      this.ollama.showModel(used),
       this.ollama.memory(),
     ]);
-    const loaded = ps?.models?.find(
-      (m) => m.name === this.model || m.model === this.model,
-    );
+    const loaded = ps?.models?.find((m) => m.name === used || m.model === used);
     const metrics: LlmMetrics = {
-      model: this.model,
+      model: used,
       modelDigest: loaded?.digest ?? null,
       quantization: info?.details?.quantization_level ?? null,
       parameterSize: info?.details?.parameter_size ?? null,

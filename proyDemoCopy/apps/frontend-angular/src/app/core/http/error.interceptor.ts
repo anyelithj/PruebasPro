@@ -9,6 +9,7 @@ export class ApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    readonly code?: string, // [2026-10-25]: código estable del backend (p. ej. SPEECH_ENGINE_MISSING) → la fachada elige el respaldo sin leer el texto
   ) {
     super(message);
     this.name = 'ApiError';
@@ -25,10 +26,11 @@ const DEFAULT_MESSAGES: Record<number, string> = {
 };
 
 // [parseBody]: con `responseType: 'text'` (streaming del tutor) el error llega como texto JSON → se intenta parsear
-function parseBody(raw: unknown): { message?: string | string[] } | null {
-  if (typeof raw !== 'string') return raw as { message?: string | string[] } | null;
+type ErrorBody = { message?: string | string[]; code?: unknown };
+function parseBody(raw: unknown): ErrorBody | null {
+  if (typeof raw !== 'string') return raw as ErrorBody | null;
   try {
-    return JSON.parse(raw) as { message?: string | string[] };
+    return JSON.parse(raw) as ErrorBody;
   } catch {
     return null;
   }
@@ -48,7 +50,8 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
     catchError((err: unknown) => {
       if (!(err instanceof HttpErrorResponse)) return throwError(() => err);
       if (err.status === 401) events.publish('session-expired', { url: location.pathname }); // [Shell]: Next.js decide (login)
-      return throwError(() => new ApiError(err.status, messageOf(err)));
+      const code = parseBody(err.error)?.code;
+      return throwError(() => new ApiError(err.status, messageOf(err), typeof code === 'string' ? code : undefined));
     }),
   );
 };

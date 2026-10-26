@@ -21,6 +21,9 @@ async function bootstrap(): Promise<void> {
   // [Trust proxy]: necesario para detectar IP real detrás de Nginx/CDN
   app.set('trust proxy', 1);
 
+  // [Body parser · 2026-10-25]: `useBodyParser` (NestJS · Express) sube el límite JSON de 100 KB (por defecto) a 2 MB → el contenido Markdown de un curso (columna `text`, sin MaxLength) se puede guardar | conserva `rawBody: true` (webhook de Stripe) | [Principio]: límite explícito (mitiga DoS por cuerpos enormes)
+  app.useBodyParser('json', { limit: '2mb' });
+
   // [Helmet]: seteo de headers de seguridad (CSP, HSTS, X-Frame-Options, etc.)
   app.use(helmet());
 
@@ -65,6 +68,11 @@ async function bootstrap(): Promise<void> {
 
   const port = parseInt(process.env.PORT ?? '4000', 10);
   await app.listen(port);
+  // [2026-10-24 · Keep-alive]: el BFF de Next (undici) reutiliza sockets; con el valor por defecto de Node (5 s) NestJS cerraba el socket ocioso justo cuando Next lo reutilizaba → `ECONNRESET` | [Patrón]: Server timeout > client timeout | [Principio]: Fail Safe
+  // `getHttpServer()` (NestJS): `http.Server` de Node; `headersTimeout` debe ser mayor que `keepAliveTimeout` (regla de Node)
+  const httpServer = app.getHttpServer() as import('http').Server; // `import('http').Server` (TS): tipo inline sin import adicional
+  httpServer.keepAliveTimeout = 65_000;
+  httpServer.headersTimeout = 66_000;
 
   logger.log(`API listening on http://localhost:${port}/${apiPrefix}`);
   if (process.env.NODE_ENV !== 'production') {

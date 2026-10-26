@@ -32,6 +32,12 @@ _SPANISH_MARKERS = frozenset(
 )
 
 
+# [2026-10-25 · «El rooster's beak is a mix of…»]: artículo español al inicio de una oración seguido de minúscula, en idiomas cuyo
+# artículo no es «el/la/los/las» (en, de) — «La Paz is…» (mayúscula: nombre propio) no cuenta | `(?:^|[.!?]\s+)`: inicio de oración
+SPANISH_LEAD = re.compile(r"(?:^|[.!?]\s+)(El|La|Los|Las|el|la|los|las)\s+(?=[a-záéíóúñ])")
+_LEAD_LANGS = frozenset({"en", "de"})
+
+
 def drifted_to_spanish(text: str, language: str) -> bool:
     """¿Respuesta en español cuando el idioma objetivo es otro? Heurística sin dependencias: «¿/¡/ñ» o ≥ 30 % de marcadores españoles.
 
@@ -41,6 +47,8 @@ def drifted_to_spanish(text: str, language: str) -> bool:
     if language == "es" or not text.strip():
         return False
     if language not in ("pt",) and any(c in text for c in "¿¡ñ"):
+        return True
+    if language in _LEAD_LANGS and SPANISH_LEAD.search(text):
         return True
     w = words(text)
     return len(w) >= 3 and sum(x in _SPANISH_MARKERS for x in w) / len(w) >= 0.3

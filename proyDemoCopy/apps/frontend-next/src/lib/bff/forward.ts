@@ -26,6 +26,7 @@ const ROUTES: ReadonlyArray<{ prefix: ApiPrefix; methods: readonly string[]; max
   // [Sprints 10.2/10.5/10.9/10.13]: diccionario (/vocabulary/words ya entra por «vocabulary»), poliglota y gramática (Angular /poliglota, /gramatica y <aula-word-lookup>)
   { prefix: "polyglot", methods: ["GET", "POST", "PATCH", "DELETE"] },
   { prefix: "grammar", methods: ["GET", "POST", "PATCH", "DELETE"] },
+  { prefix: "reading", methods: ["GET", "POST", "PATCH", "DELETE"] }, // [2026-10-25 · Lectura]: textos, frases, marcador y descarga PDF/TXT (Angular /lectura y Gestión → Actividades → Lectura)
   { prefix: "practice", methods: ["GET", "POST", "PATCH", "DELETE"] }, // [Sprints 8.12/8.14/8.15]: actividades, ítems, intentos con corrección y borrador de IA (Angular /practica)
   { prefix: "help", methods: ["GET", "POST", "PATCH", "DELETE"] }, // [Sprints 7.10/7.11]: FAQ (pública), manual, Agente Guía (SSE por POST), valoración y borrado de la conversación // [Sprint 7.8]: emitir, listar, PDF (302 a URL firmada) y verificar · /verify es @Public en NestJS (sin cookie no se envía Bearer)
 ];

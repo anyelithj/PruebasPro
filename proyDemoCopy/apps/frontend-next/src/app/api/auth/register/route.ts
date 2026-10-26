@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { register } from "@/lib/auth";
 import { ApiError } from "@/lib/errors";
+import { PHONE_PATTERN } from "@aula/shared-schemas"; // [2026-10-24]: misma regex que el formulario y el DTO de NestJS | [Principio]: SSOT
 
 // [Schema server-side]: el cliente ya validó confirmPassword + acceptTerms. Aquí solo lo que se envía a NestJS | [Principio]: SSOT pragmático
 const serverRegisterSchema = z.object({
@@ -13,6 +14,8 @@ const serverRegisterSchema = z.object({
     .min(8, "Mínimo 8 caracteres")
     .max(128)
     .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, "Debe incluir mayúscula, minúscula y dígito"),
+  // [Teléfono · 2026-10-24]: opcional · `.trim()` + `.regex` (Zod) | vacío = sin teléfono
+  phone: z.string().trim().regex(PHONE_PATTERN, "Teléfono no válido").optional(),
 });
 // [Route Handler /api/auth/register]: BFF para crear cuenta | [Patrón]: Adapter + Facade | [Principio]: SRP | [Paradigma]: Funcional + asíncrono
 
@@ -42,6 +45,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       password: parsed.data.password,
       firstName: parsed.data.firstName,
       lastName: parsed.data.lastName,
+      // `||` (JS): "" → undefined → el campo no viaja a NestJS (alta sin teléfono)
+      phone: parsed.data.phone || undefined,
     });
     return NextResponse.json({ user: data.user }, { status: 201 });
   } catch (err) {

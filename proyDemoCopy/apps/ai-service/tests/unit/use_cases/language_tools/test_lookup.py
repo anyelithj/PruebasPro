@@ -107,3 +107,47 @@ async def test_lines_traduce_en_un_solo_lote():
     llm = FakeLlm({"translations": ["¡Genial!", "¿A qué hora almuerzas?"]})
     out = await EnrichLinesUseCase(TranslateTextUseCase(llm, "m"), EspeakPhonetizer()).execute(LinesRequest(language="en", lines=["Great!", "What time do you have lunch?"]))
     assert [x.translation for x in out.lines] == ["¡Genial!", "¿A qué hora almuerzas?"] and llm.calls == 1
+
+
+# ───── 2026-10-24 · IPA de francés: lote alineado, caché y resultado parcial (nunca 503 por una palabra) ─────
+class _FlakyPhonetizer:
+    """Doble: el texto completo falla (timeout) y una palabra queda sin IPA → la respuesta es parcial, no 503."""
+
+    engine = "fake"
+
+    async def ipa(self, text: str, voice: str) -> str:
+        from src.modules.language_tools.domain.interfaces.speech_synthesizer import SpeechUnavailableError
+
+        raise SpeechUnavailableError("El fonetizador no respondió a tiempo")
+
+    async def ipa_words(self, words: list[str], voice: str) -> list[str]:
+        return ["mɛzɔ̃" if w == "maison" else "" for w in words]
+
+
+async def test_ipa_parcial_si_falla_el_texto_completo():
+    res = await TranscribeIpaUseCase(_FlakyPhonetizer()).execute(IpaRequest(text="maison xyz", language="fr"))
+    assert res.results["default"].full == "mɛzɔ̃"
+    assert [w.ipa for w in res.results["default"].words] == ["mɛzɔ̃", ""]
+
+
+@needs_espeak
+async def test_ipa_frances_lote_alineado_con_signos_y_cache(monkeypatch):
+    from src.modules.language_tools.infrastructure.clients import espeak_phonetizer as mod
+
+    mod._CACHE.clear()
+    calls = {"n": 0}
+    real = mod._run
+
+    def counting(args, text):  # Cuenta procesos espeak-ng lanzados
+        calls["n"] += 1
+        return real(args, text)
+
+    monkeypatch.setattr(mod, "_run", counting)
+    ph = EspeakPhonetizer()
+    items = ["Bonjour, ça va?", "—", "week-end", "aujourd'hui", "la maison"]
+    out = await ph.ipa_words(items, "fr-fr")
+    assert len(out) == len(items) and out[1] == "" and all(out[i] for i in (0, 2, 3, 4))
+    assert "(en)" not in out[2]  # Sin marcas de cambio de idioma
+    assert calls["n"] == 1  # Un solo proceso para todo el lote (antes: uno por palabra en serie)
+    await ph.ipa_words(items, "fr-fr")
+    assert calls["n"] == 1  # Segunda vez: todo sale de la caché LRU

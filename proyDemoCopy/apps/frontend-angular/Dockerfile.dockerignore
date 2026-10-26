@@ -1,0 +1,12 @@
+# [Dockerfile.dockerignore · BuildKit]: ignore propio de este Dockerfile (el contexto es la raíz del monorepo) | [Rendimiento]: sin node_modules/.next/dist el contexto pasa de cientos de MB a pocos MB
+# [Correctitud]: sin esto `COPY apps/frontend-angular/ ./` pisaría el node_modules instalado en la imagen con el del host (symlinks de pnpm rotos)
+**/node_modules
+**/.next
+**/dist
+**/.angular
+**/coverage
+**/.env
+**/.env.*
+.git
+apps/backend
+apps/ai-service

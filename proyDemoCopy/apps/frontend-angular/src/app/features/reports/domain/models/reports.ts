@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod'; // [Tree-shaking · Zod 4]: import de namespace (`* as z`) → esbuild empaqueta solo las funciones usadas (con `{ z }` arrastraba Zod entero, ~450 kB)
 // [Modelo Reports · Dominio]: exportación del reporte (PDF / Excel) y su ciclo de vida asíncrono (contrato de /api/reports/export*) | [Patrón]: Schema-First (Zod) + State (status) | [Principio]: SSOT + Type-Safe | [Paradigma]: Funcional
 
 export const REPORT_FORMATS = ['pdf', 'xlsx', 'docx'] as const; // Espejo de ReportExport.format (NestJS) · [2026-10-19]: + Word

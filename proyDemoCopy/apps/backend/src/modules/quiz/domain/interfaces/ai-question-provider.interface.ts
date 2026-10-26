@@ -41,6 +41,8 @@ export interface GenerateAIQuestionsOptions {
 export interface IAIQuestionProvider {
   // [id]: identificador del provider concreto. Usado por la factory para enrutar selección | [Patrón]: Self-describing | [Principio]: SRP
   readonly id: AIProvider;
+  // [modelTag · 2026-10-24]: tag de Ollama que usa el motor (opcional, `?` TS) → la factory detecta motores que apuntan al MISMO modelo (elegir otro motor no cambiaría nada)
+  readonly modelTag?: string;
 
   // [generateQuestions]: produce N preguntas coherentes en el idioma destino | [Principio]: SRP
   generateQuestions(

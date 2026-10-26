@@ -63,6 +63,7 @@ export class ActivitySectionsComponent {
       { label: s.music, link: '/musica', icon: 'music' },
       { label: s.dialogues, link: '/dialogos', icon: 'messages-square' },
       { label: s.polyglot, link: '/poliglota', icon: 'globe' },
+      { label: s.reading, link: '/lectura', icon: 'book-open' }, // [2026-10-25]: Lectura
     ];
   });
 }

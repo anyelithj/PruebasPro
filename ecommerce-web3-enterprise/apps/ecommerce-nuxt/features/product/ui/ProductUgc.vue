@@ -59,7 +59,7 @@ async function share(event: Event) {
       <summary class="cursor-pointer text-sm font-medium">{{ $t("store.ugc.share") }}</summary>
       <div class="mt-3 flex flex-col gap-2">
         <label class="flex flex-col gap-1 text-sm">{{ $t("store.ugc.caption") }}
-          <input v-model="caption" maxlength="1000" class="h-9 rounded-md border px-2" >
+          <input v-model="caption" maxlength="1000" class="h-9 rounded-md border border-slate-300 px-3 text-sm" >
         </label>
         <label class="flex flex-col gap-1 text-sm">{{ $t("store.ugc.file") }}
           <input type="file" accept="image/jpeg,image/png,image/webp,video/mp4" :disabled="sending" class="text-sm" @change="share" >

@@ -1,5 +1,5 @@
 // Spinner.tsx (shadcn/ui) => indicador de carga giratorio (SVG + animate-spin, sin dependencias).
-// LinkPending => spinner que aparece DENTRO de un <Link> mientras Next navega a esa ruta ("useLinkStatus", Next 15.3+):
+// LinkPending => spinner que aparece DENTRO de un <Link> mientras Next navega a esa ruta ("useLinkStatus", Next 16.3+):
 // el usuario ve al instante que su clic se registró aunque la página tarde en compilar o en traer datos.
 "use client";
 

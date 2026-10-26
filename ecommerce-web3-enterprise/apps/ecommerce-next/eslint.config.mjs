@@ -11,8 +11,9 @@ import reactHooks from "eslint-plugin-react-hooks"; // Reglas de los Hooks de Re
 export default [
   // "..." (spread) => inserta todos los bloques de la config compartida, en orden
   ...sharedConfig,
-  // Preset "Core Web Vitals" de Next: además marca como error lo que degrada LCP/CLS/INP (performance + SEO)
-  nextPlugin.flatConfig.coreWebVitals,
+  // Preset "Core Web Vitals" de Next: además marca como error lo que degrada LCP/CLS/INP (performance + SEO).
+  // Next 16: el plugin expone los presets flat en "configs" ("flatConfig" se eliminó)
+  nextPlugin.configs["core-web-vitals"],
   // Preset recomendado de React Hooks (rules-of-hooks + exhaustive-deps)
   reactHooks.configs["recommended-latest"],
 ];

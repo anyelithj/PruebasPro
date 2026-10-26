@@ -9,7 +9,7 @@ import type {
 
 @Injectable()
 export class LanguageToolsSpeechAdapter implements SpeechSynthesisPort {
-  readonly engine = 'espeak-ng-v2'; // [2026-10-20]: v2 = voz más pausada → claves de caché nuevas // Debe coincidir con el motor de FastAPI (cabecera X-Engine)
+  readonly engine = 'espeak-ng-v3'; // [2026-10-24]: v3 = WAV con cabecera correcta (antes stdout con tamaños 0x7FFFF000) → la caché vieja se regenera sola // Debe coincidir con el motor de FastAPI (cabecera X-Engine)
 
   constructor(private readonly ai: AIClientService) {}
 

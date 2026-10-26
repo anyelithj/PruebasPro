@@ -44,7 +44,12 @@ export class UpdateProfileUseCase {
     if (input.section !== undefined)
       partial.section = input.section?.trim() || null;
     // `for…of` (ES2015) sobre claves opcionales: "" → null (borrar), undefined → no tocar | [Principio]: DRY
-    for (const key of ['bio', 'phone', 'timezone', 'preferredLanguage'] as const)
+    for (const key of [
+      'bio',
+      'phone',
+      'timezone',
+      'preferredLanguage',
+    ] as const)
       if (input[key] !== undefined) partial[key] = input[key]?.trim() || null;
 
     const updated = await this.repo.update(userId, partial);

@@ -72,6 +72,7 @@ const PATHS = {
     'M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2zM18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1',
   // [Fase 10]: Poliglota y Gramática (lucide «globe», «book-open»)
   globe: 'M2 12a10 10 0 1 0 20 0a10 10 0 1 0-20 0M12 2a14.5 14.5 0 0 0 0 20a14.5 14.5 0 0 0 0-20M2 12h20',
+  bookmark: 'm19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z', // [2026-10-25 · Lectura]: marcador de lectura
   'book-open':
     'M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4a4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3a3 3 0 0 0-3-3z',
   // [Iconos de interfaz · 2026-10-23]: trazos de lucide 1.16 (generados desde lucide-react) → sustituyen a los emojis de botones, títulos y avisos

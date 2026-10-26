@@ -3,7 +3,8 @@
 #   docker build -f apps/ecommerce-next/Dockerfile --target production -t ecommerce-next .
 
 # ---------- STAGE BASE ----------
-FROM node:20-alpine AS base
+# Node.js 24.22.1 (LTS) fijado por versión exacta: misma versión en Docker, CI (ci.yml) y local (.nvmrc)
+FROM node:24.22.1-alpine AS base
 # "corepack enable" => usa la versión de pnpm fijada en "packageManager" (misma en local, CI y Docker)
 RUN corepack enable
 WORKDIR /repo
@@ -38,7 +39,7 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
 RUN pnpm run build
 
 # ---------- STAGE PRODUCTION: usa el output "standalone" (ver next.config.ts) ----------
-FROM node:20-alpine AS production
+FROM node:24.22.1-alpine AS production
 WORKDIR /app
 ENV NODE_ENV=production
 # "HOSTNAME=0.0.0.0" => el server standalone escucha en todas las interfaces (necesario dentro de Docker)

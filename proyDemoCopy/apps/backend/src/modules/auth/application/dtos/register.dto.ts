@@ -9,6 +9,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { Role } from '../../../users/domain/value-objects/role.vo';
+import { OptionalPhone } from '../../../users/application/dtos/optional-phone.decorator'; // [2026-10-24]: misma regla de teléfono que Mi perfil y Gestión | [Principio]: DRY
 // [DTO Register]: input del endpoint POST /auth/register | [Patrón]: DTO | [Principio]: SRP + ISP | [Paradigma]: POO + Declarativo (decorators)
 
 export class RegisterDto {
@@ -42,6 +43,10 @@ export class RegisterDto {
   @MinLength(1)
   @MaxLength(80)
   lastName!: string;
+
+  // [Teléfono · 2026-10-24]: opcional en el alta pública (mismo dominio que Mi perfil) | `@OptionalPhone` = IsOptional + IsString + MaxLength + Matches | `?:` (TS): propiedad opcional
+  @OptionalPhone()
+  phone?: string;
 
   // [Rol opcional]: default USER en backend (no se confía en el cliente para roles altos)
   @ApiProperty({ enum: Role, required: false, default: Role.USER })

@@ -129,9 +129,9 @@ function ReceiveForm({ order, onDone }: { order: PurchaseOrder; onDone: () => vo
               <td className="py-1">{item.variant.sku}</td>
               <td className="tabular-nums">{item.open}</td>
               {(["accepted", "rejected"] as const).map((key) => (
-                <td key={key}><input aria-label={`${t(key)} ${item.variant.sku}`} type="number" min={0} max={item.open} value={lines[item.id]?.[key] ?? 0} onChange={(e) => setLines((c) => ({ ...c, [item.id]: { ...c[item.id]!, [key]: Number(e.target.value) } }))} className="h-9 w-20 rounded-md border px-2" /></td>
+                <td key={key}><input aria-label={`${t(key)} ${item.variant.sku}`} type="number" min={0} max={item.open} value={lines[item.id]?.[key] ?? 0} onChange={(e) => setLines((c) => ({ ...c, [item.id]: { ...c[item.id]!, [key]: Number(e.target.value) } }))} className="h-9 w-20 rounded-md border border-slate-300 px-3 text-sm" /></td>
               ))}
-              <td><input aria-label={`${t("qcNotes")} ${item.variant.sku}`} value={lines[item.id]?.qcNotes ?? ""} onChange={(e) => setLines((c) => ({ ...c, [item.id]: { ...c[item.id]!, qcNotes: e.target.value } }))} className="h-9 w-full rounded-md border px-2" /></td>
+              <td><input aria-label={`${t("qcNotes")} ${item.variant.sku}`} value={lines[item.id]?.qcNotes ?? ""} onChange={(e) => setLines((c) => ({ ...c, [item.id]: { ...c[item.id]!, qcNotes: e.target.value } }))} className="h-9 w-full rounded-md border border-slate-300 px-3 text-sm" /></td>
             </tr>
           ))}
         </tbody>
@@ -169,7 +169,7 @@ export function SuppliersRankingTab() {
         />
       </section>
       <section className="flex flex-col gap-3">
-        <SectionHeader title={t("priceComparison")} description={t("priceComparisonHint")} actions={<input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("searchSku")} aria-label={t("searchSku")} className="h-9 rounded-md border px-2 text-sm" />} />
+        <SectionHeader title={t("priceComparison")} description={t("priceComparisonHint")} actions={<input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("searchSku")} aria-label={t("searchSku")} className="h-9 rounded-md border border-slate-300 px-3 text-sm" />} />
         {q.length >= 2 && (
           <DataTable
             caption={t("priceComparison")}
@@ -202,7 +202,7 @@ export function ValuationTab() {
         description={t("valuationHint")}
         actions={
           <label className="flex items-center gap-2 text-sm">{t("method")}
-            <select value={method} onChange={(e) => setMethod(e.target.value as "AVERAGE" | "FIFO")} className="h-9 rounded-md border px-2">
+            <select value={method} onChange={(e) => setMethod(e.target.value as "AVERAGE" | "FIFO")} className="h-9 rounded-md border border-slate-300 px-3 text-sm">
               <option value="AVERAGE">{t("methods.AVERAGE")}</option>
               <option value="FIFO">FIFO</option>
             </select>
@@ -337,7 +337,7 @@ function AuditScanner({ auditId, onClosed }: { auditId: string; onClosed: () => 
     <section aria-labelledby="audit-scan" className="flex flex-col gap-3 rounded-lg border p-4">
       <h3 id="audit-scan" className="font-semibold">{t("scanTitle")}</h3>
       <form className="flex flex-wrap gap-2" onSubmit={(e) => { e.preventDefault(); submit(code); }}>
-        <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="SKU:ABC-123" aria-label={t("code")} autoFocus className="h-9 flex-1 rounded-md border px-2" />
+        <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="SKU:ABC-123" aria-label={t("code")} autoFocus className="h-9 flex-1 rounded-md border border-slate-300 px-3 text-sm" />
         <Button type="submit" loading={scan.isPending}>{t("add")}</Button>
         {typeof window !== "undefined" && window.BarcodeDetector && <Button type="button" variant="secondary" onClick={() => setCamera((c) => !c)}>{camera ? t("cameraOff") : t("cameraOn")}</Button>}
       </form>
@@ -377,7 +377,7 @@ function QrLabels() {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex gap-2 print:hidden">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("searchSku")} aria-label={t("searchSku")} className="h-9 flex-1 rounded-md border px-2" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("searchSku")} aria-label={t("searchSku")} className="h-9 flex-1 rounded-md border border-slate-300 px-3 text-sm" />
         <Button onClick={() => ids.length && labels.mutate(ids, { onError: (e) => toast.error(errorMessage(e)) })} loading={labels.isPending}>{t("generate", { n: ids.length })}</Button>
         {labels.data && <Button variant="secondary" onClick={() => window.print()}>{t("print")}</Button>}
       </div>

@@ -1,0 +1,156 @@
+@startuml
+' Diagrama Entidad-Relación (notación de entidad)
+' NOTA: PlantUML no soporta notación Chen-style (elipses para atributos).
+' Se usa notación de entidad (rectángulos con campos) como alternativa.
+
+skinparam backgroundColor #FEFEFE
+skinparam entity {
+  BackgroundColor #E3F2FD
+  BorderColor #1565C0
+  FontName Arial
+  FontSize 9
+}
+
+entity "users" as users {
+  *id: UUID <<PK>>
+  --
+  *email: VARCHAR(320) <<UQ>>
+  *password_hash: VARCHAR(255)
+  *first_name: VARCHAR(80)
+  *last_name: VARCHAR(80)
+  *role: VARCHAR(10)
+  section: VARCHAR(40)
+  *is_active: BOOLEAN
+  *is_email_verified: BOOLEAN
+  *created_at: TIMESTAMP
+  *updated_at: TIMESTAMP
+}
+
+entity "auth_sessions" as auth_sessions {
+  *id: UUID <<PK>>
+  --
+  *user_id: UUID <<FK>>
+  *refresh_token_hash: VARCHAR(255)
+  user_agent: VARCHAR(255)
+  ip_address: VARCHAR(64)
+  *expires_at: TIMESTAMPTZ
+  *is_revoked: BOOLEAN
+  *created_at: TIMESTAMP
+}
+
+entity "email_verification_tokens" as evt {
+  *id: UUID <<PK>>
+  --
+  *user_id: UUID <<FK>>
+  *token_hash: VARCHAR(255) <<UQ>>
+  *expires_at: TIMESTAMPTZ
+  used_at: TIMESTAMPTZ
+  *created_at: TIMESTAMP
+}
+
+entity "password_reset_tokens" as prt {
+  *id: UUID <<PK>>
+  --
+  *user_id: UUID <<FK>>
+  *token_hash: VARCHAR(255) <<UQ>>
+  *expires_at: TIMESTAMPTZ
+  used_at: TIMESTAMPTZ
+  *created_at: TIMESTAMP
+}
+
+entity "quizzes" as quizzes {
+  *id: UUID <<PK>>
+  --
+  *title: VARCHAR(160)
+  description: TEXT
+  *category: VARCHAR(20)
+  *difficulty: VARCHAR(10)
+  *language: VARCHAR(2)
+  *author_id: UUID <<FK>>
+  *source: VARCHAR(32)
+  *time_per_question_seconds: INT
+  *is_published: BOOLEAN
+  *created_at: TIMESTAMP
+  *updated_at: TIMESTAMP
+}
+
+entity "questions" as questions {
+  *id: UUID <<PK>>
+  --
+  *quiz_id: UUID <<FK>>
+  *text: TEXT
+  *type: VARCHAR(20)
+  options: JSONB
+  *correct_answer: TEXT
+  *difficulty: VARCHAR(10)
+  *language: VARCHAR(2)
+  *position: INT
+  time_limit_seconds: INT
+  explanation: TEXT
+  feedback: TEXT
+}
+
+entity "quiz_sessions" as quiz_sessions {
+  *id: UUID <<PK>>
+  --
+  *user_id: UUID <<FK>>
+  *quiz_id: UUID <<FK>>
+  *status: VARCHAR(15)
+  *answers: JSONB
+  *total_score: FLOAT
+  *correct_count: INT
+  *started_at: TIMESTAMP
+  completed_at: TIMESTAMPTZ
+}
+
+entity "feedback_ia" as feedback_ia {
+  *id: UUID <<PK>>
+  --
+  *session_id: UUID <<FK>>
+  *question_id: UUID <<FK>>
+  *user_id: UUID <<FK>>
+  *content: TEXT
+  suggestion: TEXT
+  *score: FLOAT
+  *is_correct: BOOLEAN
+  confidence: FLOAT
+  *model: VARCHAR(64)
+  *strategy_used: VARCHAR(20)
+  latency_ms: INT
+  *created_at: TIMESTAMP
+}
+
+entity "scores" as scores {
+  *id: UUID <<PK>>
+  --
+  *user_id: UUID <<FK>>
+  *quiz_id: UUID <<FK>>
+  *session_id: UUID
+  *points: FLOAT
+  *correct_count: INT
+  *total_questions: INT
+  *accuracy: FLOAT
+  *created_at: TIMESTAMP
+}
+
+'=== RELACIONES ===
+users ||..o{ auth_sessions : "1:N"
+users ||..o{ evt : "1:N"
+users ||..o{ prt : "1:N"
+users ||..o{ quizzes : "1:N (author)"
+users ||..o{ quiz_sessions : "1:N"
+users ||..o{ feedback_ia : "1:N"
+users ||..o{ scores : "1:N"
+quizzes ||..o{ questions : "1:N"
+quizzes ||..o{ quiz_sessions : "1:N"
+quizzes ||..o{ scores : "1:N"
+quiz_sessions ||..o{ feedback_ia : "1:N"
+questions ||..o{ feedback_ia : "1:N"
+
+note bottom of users
+  **Tablas NO incluidas (incompletas):**
+  - achievements (solo backend)
+  - notifications (mÃ³dulo vacÃ­o)
+end note
+
+@enduml

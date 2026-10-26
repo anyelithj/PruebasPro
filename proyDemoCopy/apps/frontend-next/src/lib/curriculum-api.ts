@@ -78,6 +78,17 @@ export async function changeCurriculumStatus(id: string, body: unknown): Promise
   return apiFetch(`/curriculum/${encodeURIComponent(id)}/status`, { method: "POST", body, bearer: await bearer() });
 }
 
+// [Command · 2026-10-24]: POST /curriculum/status/bulk — publica/despublica varios recursos en UNA petición (idempotente; fallos por id sin abortar el lote)
+export interface BulkPublishResult {
+  total: number;
+  changed: number;
+  unchanged: number;
+  failed: Array<{ id: string; message: string }>;
+}
+export async function bulkPublishCurriculum(ids: string[], publish: boolean): Promise<BulkPublishResult> {
+  return apiFetch<BulkPublishResult>("/curriculum/status/bulk", { method: "POST", body: { ids, publish }, bearer: await bearer() });
+}
+
 // [Command · Etapa 4]: POST /curriculum/contradictions/scan — compara fuentes y marca CONTRADICCION_DETECTADA
 export async function scanContradictions(body: { language: string; kind?: string }): Promise<ScanResult> {
   return apiFetch<ScanResult>("/curriculum/contradictions/scan", { method: "POST", body, bearer: await bearer() });

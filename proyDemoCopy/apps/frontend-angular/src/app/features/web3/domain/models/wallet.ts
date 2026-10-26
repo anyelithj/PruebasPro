@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod'; // [Tree-shaking · Zod 4]: import de namespace (`* as z`) → esbuild empaqueta solo las funciones usadas (con `{ z }` arrastraba Zod entero, ~450 kB)
 // [Modelo Web3 · Dominio]: billetera vinculada, reto SIWE y pago cripto (contrato de /api/web3/*) + reglas puras | [Patrón]: Schema-First (Zod) | [Principio]: SSOT + Type-Safe | [Paradigma]: Funcional
 // [Montos]: `amountWei` llega como texto decimal → se convierte a bigint solo al enviar la transacción (sin pérdida de precisión)
 

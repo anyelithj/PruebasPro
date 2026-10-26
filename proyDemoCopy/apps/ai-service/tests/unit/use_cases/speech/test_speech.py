@@ -3,6 +3,8 @@
 [Patrón]: AAA + prueba de extremo a extremo local (sin red salvo la primera descarga del modelo).
 """
 
+from importlib.util import find_spec
+
 import pytest
 
 from src.modules.language_tools.infrastructure.clients.espeak_speech import EspeakSpeech, espeak_binary
@@ -44,6 +46,8 @@ async def test_transcribir_rechaza_vacio_y_demasiado_grande():
 
 
 @pytest.mark.skipif(espeak_binary() is None, reason="espeak-ng no instalado")
+# [2026-10-25]: sin faster-whisper en el venv se omite (la ausencia la cubre test_speech_engine_missing.py)
+@pytest.mark.skipif(find_spec("faster_whisper") is None, reason="faster-whisper no instalado")
 async def test_transcripcion_real_con_marcas_por_palabra():
     audio = await EspeakSpeech().synthesize("good morning my friend", "en-us")
     res = await TranscribeAudioUseCase(WhisperTranscriber(), max_bytes=10 * 1024 * 1024).execute(audio, "en")

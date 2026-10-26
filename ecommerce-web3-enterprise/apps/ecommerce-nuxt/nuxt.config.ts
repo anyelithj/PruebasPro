@@ -58,8 +58,8 @@ export default defineNuxtConfig({
       htmlAttrs: { lang: "es" },
       titleTemplate: "%s · eCommerce Web3",
       meta: [{ name: "theme-color", content: "#0f172a" }],
-      // Tema antes de pintar (cookie "theme" compartida con Next.js; sin cookie => preferencia del sistema): sin parpadeo
-      script: [{ innerHTML: `(function(){try{var m=document.cookie.match(/(?:^|; )theme=(dark|light)/);var d=m?m[1]==="dark":matchMedia("(prefers-color-scheme: dark)").matches;document.documentElement.classList.toggle("dark",d)}catch(e){}})()`, tagPosition: "head" }],
+      // Tema antes de pintar (cookie "theme" compartida con Next.js; sin cookie => CLARO por defecto): sin parpadeo
+      script: [{ innerHTML: `(function(){try{var m=document.cookie.match(/(?:^|; )theme=(dark|light)/);var d=!!m&&m[1]==="dark";document.documentElement.classList.toggle("dark",d)}catch(e){}})()`, tagPosition: "head" }],
       link: [
         { rel: "icon", href: `${BASE}favicon.ico` },
         { rel: "manifest", href: `${BASE}manifest.webmanifest` },

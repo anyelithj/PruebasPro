@@ -1,0 +1,111 @@
+@startuml
+skinparam backgroundColor #FEFEFE
+skinparam participant {
+  FontName Arial
+  FontSize 10
+}
+
+actor "Docente\n(TEACHER)" as TEACHER
+participant "Next.js\nCreateQuizPage" as FE
+participant "NestJS\nQuizController\n«Decorator(@Roles)»" as CONTROLLER
+participant "CreateQuizUseCase\n«Command»" as CREATE
+participant "GenerateAiQuestionsUseCase\n«Command»" as AI_GEN
+participant "AIProviderFactory\n«Factory»\nQwenProvider | MistralProvider" as AI_FACTORY
+participant "cache-manager\n«Cache-Aside» TTL 1h" as CACHE
+participant "QuizRepository\n«Adapter (TypeORM)»\n«Composite» «UoW»" as REPO
+participant "EventEmitter2\n«Observer / Pub-Sub»" as EVENTS
+database "PostgreSQL\nquizzes · questions" as PG
+
+== Flujo: Generar Preguntas con IA ==
+
+TEACHER -> FE: 1: abre /quiz/new\n(Crear Evaluación)
+
+alt origen: generar preguntas con IA
+  TEACHER -> FE: Configura tema, dificultad, cantidad
+  FE -> CONTROLLER: 2a: POST /quiz/generate-questions\n(Bearer JWT · @Roles TEACHER|ADMIN)
+  CONTROLLER -> AI_GEN: 3a: GenerateAiQuestionsUseCase.execute(\n{topic, difficulty, count, language})
+
+  alt cache HIT: clave topic+difficulty+count
+    AI_GEN -> CACHE: 4a: cache.get(cacheKey)
+    CACHE --> AI_GEN: [HIT] Question[] (cached)
+  else cache MISS: llamar provider LLM
+    AI_GEN -> AI_FACTORY: [MISS] factory.getProvider().\ngenerateQuestions(prompt)
+    AI_FACTORY --> AI_GEN: Question[] generadas por LLM HTTP
+    AI_GEN -> CACHE: cache.set(cacheKey, questions, TTL 1h)
+  end
+
+  note right of AI_FACTORY
+    «Factory» AIProviderFactory selecciona
+    QwenProvider o MistralProvider
+    «Resiliencia/Fallback» si provider primario
+    falla → provider secundario
+  end note
+
+  AI_GEN --> CONTROLLER: 6a: { questions: Question[] preview }
+  CONTROLLER --> FE: Preguntas generadas
+  FE --> TEACHER: Vista previa de preguntas
+
+else origen: creación manual desde formulario
+  TEACHER -> FE: 2b: Docente compone preguntas\nmanualmente (formulario)
+  FE -> FE: 3b: validación local +\nacumulación Question[]\nen Redux quizSlice
+end
+
+== Flujo: Guardar Evaluación ==
+
+TEACHER -> FE: 9: click "Guardar"
+FE -> CONTROLLER: POST /quiz\n(Bearer JWT · @Roles TEACHER|ADMIN)
+
+note right of CONTROLLER
+  «Chain of Responsibility» pipeline NestJS
+  JwtAuthGuard → RolesGuard → ValidationPipe
+  → CreateQuizUseCase.execute(dto, authorId)
+  «Decorator» @UseGuards · @Roles
+end note
+
+CONTROLLER -> CREATE: 10: execute(dto, authorId)
+CREATE -> CREATE: 11: derivar position de cada question\n+ heredar language del quiz (default policy)
+CREATE -> REPO: 12: repo.createQuiz({ title, description, category,\ndifficulty, language, authorId, source:'custom'|'ai',\nisPublished:false, questions })
+
+note right of REPO
+  «Composite» Quiz ◆── Questions @OneToMany cascade
+  «Unit of Work» TypeORM QueryRunner asegura
+  atomicidad del agregado
+end note
+
+REPO -> PG: 13: BEGIN tx\nINSERT quizzes\nINSERT questions[] (cascade insert · Composite)\nCOMMIT
+PG --> REPO: OK
+REPO --> CREATE: 14: Quiz persistido (id, questions[])
+CREATE -> EVENTS: 15: emit(QUIZ_CREATED_EVENT,\nQuizCreatedEvent(quizId, authorId, title))
+CREATE --> CONTROLLER: Quiz
+CONTROLLER --> FE: 16: 201 Created { quiz }
+FE --> TEACHER: Redirige a edición / lista
+
+== PUBLICACIÓN: transición BORRADOR → PUBLICADA (State Pattern) ==
+
+TEACHER -> FE: 17: click "Publicar"
+FE -> CONTROLLER: PATCH /quiz/:id { isPublished: true }
+CONTROLLER -> PG: 18: UPDATE quizzes SET is_published=true,\nupdated_at=now() WHERE id=:id AND author_id=:userId
+PG --> CONTROLLER: 19: Quiz { isPublished:true, updatedAt }
+CONTROLLER --> FE: 20: 200 OK { quiz publicado }
+FE --> TEACHER: 21: redirect a /quiz\n(lista pública actualizada)
+
+note right of EVENTS
+  «Patrones — Crear/Publicar Evaluación»
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  1. Command — CreateQuizUseCase · GenerateAiQuestionsUseCase
+  2. Composite — Quiz ◆── Questions @OneToMany cascade
+  3. Factory — AIProviderFactory (Qwen | Mistral)
+  4. Cache-Aside — cache-manager TTL 1h (evita LLM redundantes)
+  5. Resiliencia/Fallback — Qwen → Mistral
+  6. Builder / Default Policy — position + language
+  7. Decorator — @UseGuards · @Roles · ValidationPipe
+  8. Chain of Responsibility — Guards → Pipes → Interceptors
+  9. Unit of Work — TypeORM tx (quiz + questions atómico)
+  10. State Pattern — Quiz.isPublished: BORRADOR → PUBLICADA
+  11. Domain Event — QuizCreatedEvent (Observer/Pub-Sub)
+  12. Repository — IQuizRepository (Port) + TypeORM (Adapter)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Tablas: quizzes · questions
+end note
+
+@enduml

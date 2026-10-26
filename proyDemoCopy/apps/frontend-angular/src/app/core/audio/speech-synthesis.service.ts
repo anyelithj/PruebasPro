@@ -20,6 +20,17 @@ const VOICE_LANG: Readonly<Record<string, string>> = {
 // [NATURAL · 2026-10-20]: voces neuronales/naturales que traen Edge, Chrome, Windows 11 y macOS → suenan humanas (espeak-ng suena robótico)
 const NATURAL = /natural|neural|online|google|premium|enhanced|siri/i;
 
+// [SpeakHooks]: eventos de una frase hablada | `error` opcional: si falta, un fallo se notifica como `end` (compatibilidad)
+export interface SpeakHooks {
+  boundary?: (charIndex: number) => void;
+  end?: () => void;
+  error?: (reason: string) => void;
+}
+
+// [2026-10-24]: errores de SpeechSynthesis que son cortes voluntarios, no fallos del motor
+const STOPPED: ReadonlySet<string> = new Set(['interrupted', 'canceled']);
+const START_TIMEOUT_MS = 4000; // Una voz en red (Google/Microsoft Online) tarda ~1 s en empezar; 4 s = no va a sonar
+
 // [readAccent]: preferencia guardada o «us» | `RegExp` sobre `document.cookie` (DOM) | [Paradigma]: función pura sobre un string
 const readAccent = (cookie: string): Accent =>
   /(?:^|;\s*)aula-accent=uk(?:;|$)/.test(cookie) ? 'uk' : 'us';
@@ -34,6 +45,10 @@ export class SpeechSynthesisService {
   // `'speechSynthesis' in window`: detección de capacidad → el botón de sonido se oculta si el navegador no habla
   readonly supported = typeof window !== 'undefined' && 'speechSynthesis' in window;
   readonly speaking = signal(false);
+  private current: SpeechSynthesisUtterance | null = null; // Frase en curso
+  private pending: ReturnType<typeof setTimeout> | undefined; // `speak` diferido un tick tras `cancel`
+  private watchdog: ReturnType<typeof setTimeout> | undefined; // Vigilante de arranque
+  private interrupt: (() => void) | null = null; // Cierra la frase vigente como «terminada» cuando se corta a propósito
 
   constructor() {
     // [Sincronía entre widgets]: otro Angular Element (o el shell) cambió el acento → este servicio lo refleja
@@ -68,28 +83,56 @@ export class SpeechSynthesisService {
   }
 
   // [speak]: pronuncia el texto; cancela lo que estuviera sonando (un solo audio a la vez) | `rate` < 1 → más lento para aprendices
-  // [hooks · Sprint 9.12]: `boundary` = palabra que empieza a sonar (resaltado y boca del avatar) · `end` = terminó o falló
-  speak(
-    text: string,
-    language: string,
-    rate = 0.9,
-    hooks: { boundary?: (charIndex: number) => void; end?: () => void } = {},
-  ): void {
-    if (!this.supported || !text.trim()) return hooks.end?.(); // Sin voz: el llamador sigue su flujo como si hubiera terminado
+  // [hooks · Sprint 9.12]: `boundary` = palabra que empieza a sonar (resaltado y boca del avatar) · `end` = terminó (o falló sin `error`)
+  // [2026-10-24]: `error` = la voz del sistema NO sonó (error del motor, voz en red caída, nunca empezó) → el llamador puede usar el audio del servidor
+  speak(text: string, language: string, rate = 0.9, hooks: SpeakHooks = {}): void {
+    const fail = (reason: string) => (hooks.error ? hooks.error(reason) : hooks.end?.());
+    if (!this.supported || !text.trim()) return fail('unsupported'); // Sin voz: el llamador sigue su flujo
     const synth = window.speechSynthesis;
-    synth.cancel();
+    this.stop();
     const u = new SpeechSynthesisUtterance(text); // `SpeechSynthesisUtterance` (Web Speech API)
     u.lang = this.voiceLang(language);
     u.rate = rate;
     // [Voz]: la mejor instalada del idioma (natural > misma región > mismo idioma); si no hay, el navegador elige por `lang`
     u.voice = this.bestVoice(language);
-    u.onstart = () => this.speaking.set(true);
-    u.onboundary = (e) => e.name !== 'sentence' && hooks.boundary?.(e.charIndex); // No todos los navegadores informan palabras
-    u.onend = u.onerror = () => {
-      this.speaking.set(false);
-      hooks.end?.();
+    // [settle · Guard]: cada frase termina UNA sola vez (Chrome puede disparar `error` y `end`, o el vigilante y el motor a la vez)
+    let settled = false;
+    let started = false;
+    const settle = (ok: boolean, reason = '') => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(this.watchdog);
+      if (this.current === u) {
+        this.current = null;
+        this.interrupt = null;
+        this.speaking.set(false); // Solo la frase vigente apaga el indicador (un `interrupted` tardío de la anterior no)
+      }
+      if (ok) hooks.end?.();
+      else fail(reason);
     };
-    synth.speak(u);
+    u.onstart = () => {
+      started = true;
+      clearTimeout(this.watchdog);
+      this.speaking.set(true);
+    };
+    u.onboundary = (e) => e.name !== 'sentence' && hooks.boundary?.(e.charIndex); // No todos los navegadores informan palabras
+    u.onend = () => settle(true);
+    // `interrupted`/`canceled` = lo cortó el propio usuario o una frase nueva → no es un fallo (no se cambia de motor)
+    u.onerror = (e) => settle(STOPPED.has(e.error), e.error);
+    this.interrupt = () => settle(true); // `stop()` → `end` determinista aunque la frase aún no hubiera empezado
+    this.current = u; // [Chrome]: sin una referencia viva el recolector borra la frase y `onend` nunca llega
+    // [Chrome · cancel → speak]: hablar en el MISMO tick que `cancel()` a veces descarta la frase en silencio → se espera un tick
+    this.pending = setTimeout(() => {
+      if (synth.paused) synth.resume(); // Chrome deja la cola en pausa tras ~15 s en segundo plano
+      synth.speak(u);
+      // [Vigilante]: si la voz no arranca en START_TIMEOUT_MS (voz en red sin conexión, motor del SO colgado) → se da por fallida
+      this.watchdog = setTimeout(() => {
+        if (this.current === u && !started) {
+          synth.cancel();
+          settle(false, 'no-start');
+        }
+      }, START_TIMEOUT_MS);
+    }, 0);
   }
 
   // [bestVoice · 2026-10-20]: puntúa las voces del idioma — natural/neuronal +2, misma región +1 | null = ninguna instalada
@@ -113,6 +156,11 @@ export class SpeechSynthesisService {
   }
 
   stop(): void {
+    clearTimeout(this.pending); // Frase programada que aún no empezó → ya no se dice
+    clearTimeout(this.watchdog);
+    this.interrupt?.(); // El llamador recibe su `end` (estado del avatar coherente)
+    this.interrupt = null;
+    this.current = null;
     if (this.supported) window.speechSynthesis.cancel();
     this.speaking.set(false);
   }

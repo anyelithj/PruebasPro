@@ -1,5 +1,5 @@
 // layout.tsx (commerce) => carrito y checkout comparten el mismo chrome de la tienda (DRY con SiteChrome).
-// Estas rutas son privadas: middleware.ts ya redirige a /login si no hay sesión (defensa en el borde).
+// Estas rutas son privadas: proxy.ts ya redirige a /login si no hay sesión (defensa en el borde).
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { initPage } from "@/shared/lib/i18n/server";

@@ -1,6 +1,9 @@
 import { ActivitySectionsComponent } from '@shared/ui/molecules/pill-nav/pill-nav.component'; // [2026-10-23]: pills de secciones de Actividades
 import { IconComponent } from '@shared/ui/atoms/icon/icon.component';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { catchError, of } from 'rxjs';
+import { GamesRepository } from '../../domain/games.repository.port';
 import { RouterLink } from '@angular/router';
 import { CEFR_LEVELS, LANGUAGES } from '@aula/shared-schemas';
 import { I18nService } from '@core/i18n/i18n.service';
@@ -89,6 +92,28 @@ import { GameCardComponent } from '../components/game-card.component';
           <p role="alert" class="text-sm text-tone-danger">{{ games.catalog.error() }}</p>
         }
         @case ('success') {
+          <!-- [2026-10-26]: juegos creados en Gestión (material propio, publicados) del idioma elegido → antes no aparecían aquí -->
+          @if (myDecks().length) {
+            <section class="mb-8" aria-labelledby="family-decks">
+              <h2 class="mb-3 text-lg font-extrabold tracking-tight" id="family-decks">{{ tx.createdGames }}</h2>
+              <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                @for (d of myDecks(); track d.id) {
+                  <li>
+                    <aula-game-card
+                      [link]="link(d.gameType)"
+                      [query]="{ mazo: d.id, lang: d.language }"
+                      [icon]="info(d.gameType).icon"
+                      [name]="d.title"
+                      [skill]="d.level ?? ''"
+                      [description]="tx.names[d.gameType] + ' · ' + d.items.length"
+                      [mic]="false"
+                      [playLabel]="tx.play"
+                    />
+                  </li>
+                }
+              </ul>
+            </section>
+          }
           @for (family of families; track family) {
             <section class="mb-8" [attr.aria-labelledby]="'family-' + family">
               <h2 class="mb-1 text-lg font-extrabold tracking-tight" [id]="'family-' + family">
@@ -201,6 +226,13 @@ export default class GamesHubPage {
       this.families.map((f) => [f, games.filter((g) => GAME_INFO[g.type].family === f)]),
     ) as Record<(typeof FAMILY_ORDER)[number], typeof games>;
   });
+  private readonly decks = toSignal(inject(GamesRepository).decks().pipe(catchError(() => of([]))), { initialValue: [] });
+  // [myDecks]: mazos publicados del idioma y nivel elegidos con un juego conocido
+  protected readonly myDecks = computed(() =>
+    this.decks()
+      .filter((d) => d.gameType in GAME_INFO && d.language.toLowerCase() === this.language() && (!this.level() || d.level === this.level()))
+      .map((d) => ({ ...d, gameType: d.gameType as GameType })),
+  );
   protected readonly recent = computed(() => (this.games.history.data() ?? []).slice(0, 8));
   protected readonly query = computed(() => ({
     lang: this.language(),

@@ -239,6 +239,7 @@ export interface CreateUserInput {
   lastName: string;
   role: "USER" | "TEACHER" | "ADMIN";
   section?: string;
+  phone?: string; // [2026-10-24]: opcional
 }
 
 export async function createUser(input: CreateUserInput): Promise<AdminUser> {
@@ -265,6 +266,7 @@ export interface UpdateUserInput {
   lastName?: string;
   role?: "USER" | "TEACHER" | "ADMIN";
   section?: string;
+  phone?: string; // [2026-10-24]: opcional · vacío = borrar
 }
 
 export async function updateUser(userId: string, input: UpdateUserInput): Promise<AdminUser> {

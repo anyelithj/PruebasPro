@@ -87,7 +87,7 @@ export function SupportTab() {
         actions={
           <label className="flex items-center gap-2 text-sm">
             {t("period")}
-            <select value={days} onChange={(event) => setDays(Number(event.target.value))} className="h-9 rounded-md border px-2">
+            <select value={days} onChange={(event) => setDays(Number(event.target.value))} className="h-9 rounded-md border border-slate-300 px-3 text-sm">
               {[7, 30, 90].map((value) => <option key={value} value={value}>{t("days", { n: value })}</option>)}
             </select>
           </label>
@@ -156,14 +156,14 @@ function ReplyForm({ conversationId, onDone }: { conversationId: string; onDone:
     >
       <label className="flex flex-col gap-1 text-sm">
         {t("template")}
-        <select className="h-9 rounded-md border px-2" defaultValue="" onChange={(event) => setContent(canned.data?.find((item) => String(item.id) === event.target.value)?.content ?? content)}>
+        <select className="h-9 rounded-md border border-slate-300 px-3 text-sm" defaultValue="" onChange={(event) => setContent(canned.data?.find((item) => String(item.id) === event.target.value)?.content ?? content)}>
           <option value="">—</option>
           {(canned.data ?? []).map((item) => <option key={item.id} value={String(item.id)}>/{item.shortCode}</option>)}
         </select>
       </label>
       <label className="flex flex-col gap-1 text-sm">
         {t("message")}
-        <textarea value={content} onChange={(event) => setContent(event.target.value)} rows={5} maxLength={2000} required className="rounded-md border p-2" />
+        <textarea value={content} onChange={(event) => setContent(event.target.value)} rows={5} maxLength={2000} required className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
       </label>
       <Button type="submit" loading={isPending} disabled={!parsed.success} className="self-start">{t("send")}</Button>
     </form>

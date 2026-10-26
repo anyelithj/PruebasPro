@@ -1,0 +1,17 @@
+# [.dockerignore · ai-service]: fuera del contexto de build lo que no va en la imagen | [Seguridad]: ningún .env con secretos | [Rendimiento]: contexto pequeño → build más rápido
+.env
+.env.*
+!.env.example
+.venv
+venv
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.coverage
+tests
+data
+*.gguf
+Dockerfile
+.dockerignore

@@ -1,4 +1,5 @@
-// middleware.ts => se ejecuta ANTES de renderizar cada página (Edge Middleware de Next.js). Responsabilidades
+// proxy.ts (Next.js 16: antes "middleware.ts", convención renombrada a "proxy") => se ejecuta ANTES de renderizar cada
+// página (runtime Node.js). "export default" sigue siendo válido. Responsabilidades
 // encadenadas (Chain of Responsibility):
 //   1. La TIENDA vive en Nuxt: las URLs públicas de tienda que quedaron de Next (enlaces viejos, buscadores) se
 //      redirigen allá con 301; la raíz "/" de Next lleva a la landing de la tienda (la app SIEMPRE entra por ahí).

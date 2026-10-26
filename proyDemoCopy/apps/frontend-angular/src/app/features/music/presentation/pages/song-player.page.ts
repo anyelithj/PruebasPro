@@ -1,4 +1,3 @@
-import { BackLinkComponent } from '@shared/ui/atoms/back-link/back-link.component';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -10,7 +9,7 @@ import {
   input,
   viewChild,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ReturnLinkComponent } from '@core/layout/return-to';
 import { I18nService } from '@core/i18n/i18n.service';
 import { LevelTintDirective } from '@shared/ui/atoms/level-tint/level-tint.directive';
 import { SpinnerComponent } from '@shared/ui/atoms/spinner/spinner.component';
@@ -27,8 +26,7 @@ import { PracticeLinkComponent } from '../components/practice-link.component';
 @Component({
   selector: 'aula-song-player-page',
   imports: [
-    BackLinkComponent,
-    RouterLink,
+    ReturnLinkComponent,
     CardPageTemplate,
     SpinnerComponent,
     LevelTintDirective,
@@ -53,7 +51,7 @@ import { PracticeLinkComponent } from '../components/practice-link.component';
           : ''
       "
     >
-      <a aulaBackLink pageBack routerLink="/musica">{{ tx.back }}</a>
+      <aula-return-link pageBack fallback="/musica" [label]="tx.back" /> <!-- [2026-10-25]: con ?volver= regresa a Gestión → Actividades -->
       <div pageActions class="flex flex-wrap gap-2">
         @if (song?.status === 'published') {
           <aula-practice-link [songId]="id()!" [label]="tx.player.practice" />

@@ -11,6 +11,7 @@ const HUBS = {
   music: "/musica",
   dialogues: "/dialogos",
   polyglot: "/poliglota",
+  reading: "/lectura", // [2026-10-25]: lista de lecturas del estudiante (Angular)
 } as const satisfies Partial<Record<ActivityTab, string>>;
 
 export default async function ActivitiesPage(props: { searchParams: Promise<{ tab?: string }> }) {

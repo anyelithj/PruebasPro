@@ -69,7 +69,7 @@ function PersonalShopperForm() {
       }}
     >
       <label htmlFor="shopper-message" className="text-sm font-medium">{t("shopperLabel")}</label>
-      <textarea id="shopper-message" rows={3} minLength={10} maxLength={1000} required value={message} onChange={(event) => setMessage(event.target.value)} className="rounded-md border border-slate-300 p-2 text-sm" />
+      <textarea id="shopper-message" rows={3} minLength={10} maxLength={1000} required value={message} onChange={(event) => setMessage(event.target.value)} className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
       <Button type="submit" size="sm" loading={request.isPending} className="self-start">{t("shopperSubmit")}</Button>
     </form>
   );

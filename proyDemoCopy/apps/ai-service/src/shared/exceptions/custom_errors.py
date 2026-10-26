@@ -59,3 +59,13 @@ class ExternalServiceError(DomainError):
 
     status_code = 502
     code = "EXTERNAL_SERVICE_ERROR"
+
+
+class SpeechEngineUnavailableError(ModelInferenceError):
+    """El motor de voz a texto (faster-whisper) no está instalado o no carga en este equipo.
+
+    [Patrón]: Specialization (subclase de ModelInferenceError → mismo 503, código propio).
+    [Principio]: OCP + SRP — distingue «falta la dependencia» (lo arregla el admin) de «falló la inferencia» (reintentar).
+    """
+
+    code = "SPEECH_ENGINE_MISSING"  # Código estable que NestJS y el frontend usan para ofrecer el respaldo (dictado del navegador / escribir)

@@ -73,6 +73,9 @@ export class GetProfileUseCase {
       [userId], // [Seguridad]: parámetro posicional → sin inyección SQL
     );
     const level = [row?.cert, row?.course].find((l) => l && CEFR.test(l)); // `find` (ES2015): el certificado manda sobre el curso
-    return { enrolledCourses: Number(row?.enrolled ?? 0), level: level ?? null };
+    return {
+      enrolledCourses: Number(row?.enrolled ?? 0),
+      level: level ?? null,
+    };
   }
 }

@@ -3,7 +3,7 @@ import { RememberReturn } from "@/components/shared/RememberReturn"; // [2026-10
 import Link from "next/link";
 import { LayoutGrid, Plus } from "lucide-react";
 import { getCurrentUserPayload } from "@/lib/auth";
-import { ACTIVITY_TAB_KEYS, ACTIVITY_TABS, listActivities, parseTab, STATUS_LABEL, withReturn, type ActivityRow, type ActivityTab } from "@/lib/activities-api";
+import { ACTIVITY_TAB_KEYS, ACTIVITY_TABS, BLOCKER_LABEL, listActivities, parseTab, STATUS_LABEL, withReturn, type ActivityRow, type ActivityTab } from "@/lib/activities-api";
 import { LANGUAGES, languageLabel } from "@/lib/languages";
 import { CEFR_LEVELS } from "@/lib/constants";
 import { ManagementHeader } from "@/components/portal/ManagementHeader";
@@ -19,7 +19,7 @@ import { deleteActivityAction, setActivityPublishedAction } from "./actions";
 
 export const metadata: Metadata = {
   title: "Gestión · Actividades",
-  description: "Crea, edita, revisa y elimina actividades: práctica, juegos, música, diálogos, poliglota y gramática.",
+  description: "Crea, edita, revisa y elimina actividades: práctica, juegos, música, diálogos, poliglota y lectura.",
   robots: { index: false, follow: false },
 };
 
@@ -152,7 +152,7 @@ export default async function ActivitiesManagementPage(props: { searchParams: Pr
                 {pg.rows.map((r) => (
                   <tr key={r.id} className="border-t border-border hover:bg-muted/40">
                     <td className="px-4 py-2">
-                      <a href={r.viewHref} className="flex items-center gap-2 font-semibold text-primary hover:underline">
+                      <a href={`/admin/activities/ver/${tab}/${encodeURIComponent(r.id)}`} className="flex items-center gap-2 font-semibold text-primary hover:underline">
                         <TabIcon aria-hidden className="size-5 shrink-0" />
                         {r.title}
                       </a>
@@ -177,15 +177,28 @@ export default async function ActivitiesManagementPage(props: { searchParams: Pr
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
+                      {/* [2026-10-24 · Checklist]: requisitos que faltan para publicar (antes «Publicar» fallaba en el servidor con «Falta subir el audio») → enlace directo a completarlos */}
+                      {r.status !== "published" && r.blockers?.length ? (
+                        <p className="mt-1 text-[11px] leading-tight text-tone-warning">
+                          Para publicar falta: {r.blockers.map((b) => BLOCKER_LABEL[b] ?? b).join(", ")}.{" "}
+                          {r.editHref && (
+                            <a href={withReturn(r.editHref, tab)} className="font-semibold underline">
+                              Completar
+                            </a>
+                          )}
+                        </p>
+                      ) : null}
                     </td>
                     <td className="px-4 py-2">
                       <RowActions
                         hard
+                        confirm="inline" // [2026-10-24 · Sin modales]: confirmar el borrado dentro de la fila
                         title={r.title}
-                        viewHref={r.viewHref}
+                        viewHref={`/admin/activities/ver/${tab}/${encodeURIComponent(r.id)}`} // [2026-10-25]: «Ver» = revisión (vista previa + publicar), como en Recursos
                         editHref={r.editHref ? withReturn(r.editHref, tab) : undefined}
                         // [Publicar / Despublicar · 2026-10-23]: igual que Recursos; solo en secciones con estado (no juegos ni diálogos)
-                        publish={def.publish && r.status ? { isPublished: r.status === "published", toggle: setActivityPublishedAction.bind(null, tab, r.id, r.status !== "published") } : undefined}
+                        // [2026-10-24]: sin «Publicar» mientras falten requisitos (la celda Estado dice cuáles); «Despublicar» siempre disponible
+                        publish={def.publish && r.status && (r.status === "published" || !r.blockers?.length) ? { isPublished: r.status === "published", toggle: setActivityPublishedAction.bind(null, tab, r.id, r.status !== "published") } : undefined}
                         onDelete={def.remove ? deleteActivityAction.bind(null, tab, r.id) : undefined}
                         deleteTitle={`Eliminar «${r.title}»${def.removeNote ? ` · ${def.removeNote}` : ""}`}
                       />

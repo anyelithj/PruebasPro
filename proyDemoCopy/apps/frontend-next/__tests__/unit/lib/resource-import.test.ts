@@ -1,5 +1,6 @@
 // [Test importación de recursos]: texto libre y tablas → contenidos por tipo | [Patrón]: Unit Test de funciones puras
-import { rowsToContents, splitLine, templateCsv, textToRows } from "@/lib/resource-import";
+import { extractedToContents, rowsToContents, splitLine, templateCsv, textToGrammar, textToRows } from "@/lib/resource-import";
+import { pdfItemsToText, type PdfTextItem } from "@/lib/pdf-text";
 
 describe("splitLine / textToRows", () => {
   it("reconoce separadores habituales y quita viñetas o numeración", () => {
@@ -43,5 +44,52 @@ describe("rowsToContents", () => {
   it("genera plantilla CSV con BOM para Excel", () => {
     expect(templateCsv("vocabulary")?.startsWith("﻿\"palabra\"")).toBe(true);
     expect(templateCsv("rubric")).toBeNull();
+  });
+});
+
+// [2026-10-24]: PDF con tablas/listas, encabezados tras un título y reglas gramaticales desde documentos
+describe("pdfItemsToText", () => {
+  // `item` (factory): fragmento de pdf.js en (x, y) con altura 10
+  const item = (str: string, x: number, y: number, width = str.length * 5): PdfTextItem => ({ str, transform: [10, 0, 0, 10, x, y], width, height: 10 });
+  it("une por línea (misma y) y separa columnas lejanas con tabulador", () => {
+    const text = pdfItemsToText([item("manzana", 200, 700), item("apple", 50, 700), item("pear", 50, 680), item("pera", 200, 680)]);
+    expect(text).toBe("apple\tmanzana\npear\tpera");
+    expect(textToRows(text)).toEqual([["apple", "manzana"], ["pear", "pera"]]);
+  });
+  it("pone espacio entre palabras sueltas cercanas", () => {
+    expect(pdfItemsToText([item("apple", 50, 700, 25), item("-", 78, 700, 3), item("manzana", 84, 700)])).toBe("apple - manzana");
+  });
+});
+
+describe("importación ampliada", () => {
+  it("encuentra los encabezados aunque haya un título antes (English | Spanish)", () => {
+    const r = rowsToContents("vocabulary", [["Fruits vocabulary"], ["English", "Spanish"], ["apple", "manzana"]], "en");
+    expect(r.contents).toEqual([{ lemma: "apple", translationEs: "manzana", examples: [] }]);
+  });
+  it("columnas separadas por 3+ espacios (OCR)", () => {
+    expect(splitLine("apple    manzana")).toEqual(["apple", "manzana"]);
+  });
+  it("regla gramatical desde un documento: título, fórmula, explicación y ejemplos", () => {
+    const doc = ["Present perfect", "Se usa para experiencias y acciones pasadas con relevancia en el presente.", "Fórmula: have/has + participio", "Ejemplos:", "I have been to London. - He estado en Londres.", "She has finished her homework."].join("\n");
+    expect(textToGrammar(doc, "en")).toEqual({
+      title: "Present perfect",
+      explanationEs: "Se usa para experiencias y acciones pasadas con relevancia en el presente.",
+      structure: "have/has + participio",
+      examples: [
+        { text: "I have been to London.", translationEs: "He estado en Londres." },
+        { text: "She has finished her homework.", translationEs: "" },
+      ],
+    });
+  });
+  it("regla gramatical desde Excel: una regla por fila y filas de continuación con más ejemplos", () => {
+    const rows = [["regla", "explicacion", "formula", "ejemplo", "traduccion del ejemplo"], ["Present perfect", "Pasado con relevancia.", "have/has + participio", "I have lost my keys.", "He perdido mis llaves."], ["", "", "", "She has left.", "Ella se ha ido."]];
+    const r = extractedToContents("grammar_rule", { rows, text: "" }, "en");
+    expect(r.contents).toHaveLength(1);
+    expect(r.contents[0]).toMatchObject({ title: "Present perfect", structure: "have/has + participio" });
+    expect((r.contents[0].examples as unknown[]).length).toBe(2);
+  });
+  it("usa el tema como título si el documento no trae uno", () => {
+    const r = extractedToContents("grammar_rule", { rows: [], text: "Se usa para hablar de hábitos y rutinas que se repiten cada semana." }, "en", "Presente simple");
+    expect(r.contents[0]).toMatchObject({ title: "Presente simple" });
   });
 });

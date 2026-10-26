@@ -9,6 +9,7 @@ import {
   DIALOGUE_AGENT,
   type DialogueAgentPort,
 } from '../../domain/interfaces/dialogue-agent.interface';
+import { sanitizeTranslation } from '../../domain/translation-sanitizer';
 import { TurnEnricher } from './turn-enricher';
 import { EndDialogueSessionUseCase } from './end-dialogue-session.use-case';
 import { OwnedDialogueSession } from './get-dialogue-session.use-case';
@@ -70,7 +71,8 @@ export class SubmitUserTurnUseCase {
         speaker: 'user',
         text,
         ...userLing,
-        translation: userLing.translation || reply.learnerTranslation || null, // [2026-10-23]: nunca «—» si el avatar ya tradujo lo que dijo el usuario
+        // [2026-10-23]: respaldo con la traducción del avatar · [2026-10-25]: también saneada (antes llegaba JSON crudo)
+        translation: userLing.translation || sanitizeTranslation(text, reply.learnerTranslation),
         correction: reply.correction,
       }),
       this.turns.create({
@@ -80,7 +82,7 @@ export class SubmitUserTurnUseCase {
         speaker: 'avatar',
         text: reply.reply,
         ...avatarLing,
-        translation: avatarLing.translation || reply.translation || null, // [2026-10-20]: nunca «—» si el avatar ya tradujo su frase
+        translation: avatarLing.translation || sanitizeTranslation(reply.reply, reply.translation), // [2026-10-20 / 2026-10-25]: respaldo saneado
         correction: null,
       }),
     ]);

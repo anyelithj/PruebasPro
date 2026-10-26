@@ -19,8 +19,19 @@ const ORIGIN: Record<AnsweredBy, 'fromFaq' | 'fromManual' | 'fromLlm' | null> = 
     <div class="flex h-full flex-col gap-3">
       @let m = t.modes[facade.mode()];
       <!-- [2026-10-19]: la presentación y el ejemplo cambian con el modo (Tutor · Soporte · Guía) -->
-      <p class="text-xs text-muted-foreground">{{ m.intro }}</p>
+      @if (facade.mode() !== 'tutor') {
+        <p class="text-xs text-muted-foreground">{{ m.intro }}</p>
+      }
       <div #scroller role="log" aria-live="polite" [attr.aria-busy]="facade.streaming()" [attr.aria-label]="t.guideTitle" tabindex="0" class="min-h-40 flex-1 space-y-3 overflow-y-auto rounded-xl border border-border bg-background p-3" [style.max-height]="maxHeight()">
+        <!-- [2026-10-25]: el tutor ABRE la conversación con su saludo (burbuja), como un chat real -->
+        @if (facade.mode() === 'tutor') {
+          <div class="flex">
+            <article class="max-w-[90%] rounded-2xl bg-muted px-3 py-2 text-sm">
+              <span class="mb-0.5 block text-[11px] font-bold opacity-80">Aula · {{ m.label }}</span>
+              <p>{{ m.intro }}</p>
+            </article>
+          </div>
+        }
         @for (turn of facade.turns(); track $index; let i = $index) {
           <div class="flex" [class.justify-end]="turn.role === 'user'">
             <!-- [Semántica · 2026-10-23]: cada mensaje es un <article> dentro del registro (role="log") -->

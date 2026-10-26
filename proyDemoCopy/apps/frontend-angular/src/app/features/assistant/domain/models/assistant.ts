@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod'; // [Tree-shaking · Zod 4]: import de namespace (`* as z`) → esbuild empaqueta solo las funciones usadas (con `{ z }` arrastraba Zod entero, ~450 kB)
 import { parseSseText, type SseData, type SseMessage } from '@shared/utils/event-source';
 // [Modelo Assistant · Dominio]: mensaje al tutor, turnos de la conversación y trozos del flujo SSE (session/token/done) + parser puro del flujo | [Patrón]: Schema-First (Zod) + Tagged Union (ChatChunk) | [Principio]: SSOT + Type-Safe | [Paradigma]: Funcional
 

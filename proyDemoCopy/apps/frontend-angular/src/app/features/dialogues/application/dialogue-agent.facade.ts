@@ -1,6 +1,8 @@
 import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom, type Subscription } from 'rxjs';
 import { LipSyncService } from '@core/audio/lip-sync.service';
+import { ServerAudioService } from '@core/audio/server-audio.service';
+import { isServerSpeechDown } from '@core/audio/server-speech';
 import { SpeechSynthesisService } from '@core/audio/speech-synthesis.service';
 import type { AvatarState } from '@shared/ui/organisms/avatar-stage/avatar-state';
 import type { Recording } from '@shared/ui/organisms/voice-recorder/voice-recorder.component';
@@ -13,6 +15,7 @@ import { TurnSchema, type Session, type Topic, type Turn } from '../domain/model
 export class DialogueAgentFacade {
   private readonly repo = inject(DialoguesRepository);
   private readonly speech = inject(SpeechSynthesisService);
+  private readonly voice = inject(ServerAudioService); // [2026-10-24]: voz natural → audio del servidor comprobado (no mudo) → voz del sistema
   readonly lipSync = inject(LipSyncService);
 
   readonly session = signal<Session | null>(null);
@@ -27,13 +30,15 @@ export class DialogueAgentFacade {
   readonly busy = computed(() => this.state() === 'thinking' || this.state() === 'listening');
   readonly ended = computed(() => this.session()?.status === 'ended');
   readonly noVoice = signal(false);
+  // [2026-10-25]: el servidor no pudo transcribir (faster-whisper no instalado o caído) → la página muestra el respaldo (dictado/escribir), no un error
+  readonly serverSpeechDown = signal(false);
   private stream: Subscription | null = null;
   private pendingRecording: Blob | null = null; // [2026-10-20]: voz del próximo turno del usuario (se sube cuando NestJS devuelve su id)
 
   constructor() {
     inject(DestroyRef).onDestroy(() => {
       this.stream?.unsubscribe();
-      this.speech.stop();
+      this.voice.stop();
       this.lipSync.detach();
     });
   }
@@ -75,7 +80,7 @@ export class DialogueAgentFacade {
     this.error.set(null);
     this.partial.set('');
     this.state.set('thinking');
-    this.speech.stop();
+    this.voice.stop();
     this.stream?.unsubscribe();
     this.stream = this.repo.streamTurn(s.id, text.trim()).subscribe({
       next: (m) => {
@@ -115,10 +120,15 @@ export class DialogueAgentFacade {
           'No se entendió la grabación. Habla más cerca del micrófono o escribe tu respuesta.',
         );
       this.state.set('idle');
+      this.serverSpeechDown.set(false);
       return text;
     } catch (err) {
+      // [2026-10-25]: servidor sin voz a texto (503 SPEECH_ENGINE_MISSING, caído, sin red) → respaldo, no error; `pendingRecording` se conserva
+      // y se guarda en «Mis grabaciones» cuando el alumno envíe el texto dictado o escrito
+      const down = isServerSpeechDown(err);
+      this.serverSpeechDown.set(down);
       // [2026-10-20]: si el reconocimiento en vivo del navegador ya escribió el texto, un fallo de Whisper (p. ej. falta de RAM) no es un error para el alumno
-      if (fallback.trim()) this.state.set('idle');
+      if (down || fallback.trim()) this.state.set('idle');
       else this.fail(err);
       return null;
     }
@@ -142,21 +152,25 @@ export class DialogueAgentFacade {
   }
 
   listening(): void {
-    this.speech.stop();
+    this.voice.stop();
     this.state.set('listening');
   }
 
-  // [say]: el avatar habla el turno; cada palabra que suena abre la boca (LipSyncService.pulse) y el turno queda resaltado
+  // [say]: el avatar habla el turno y queda resaltado mientras suena | [2026-10-24]: antes solo usaba la voz del navegador y, si esa
+  // voz no sonaba (o el WAV del servidor llegaba mudo), la respuesta de AULA quedaba en silencio → ServerAudioService encadena
+  // voz natural → audio del servidor comprobado → voz del sistema | boca del avatar: eventos de palabra (voz del sistema) o volumen real (audio del servidor)
   say(index: number): void {
     const turn = this.turns()[index];
     const s = this.session();
     if (!turn || !s) return;
+    this.voice.stop(); // Cierra lo que sonaba ANTES de marcar el turno nuevo (su `end` ya no lo desmarca)
     this.speakingIndex.set(index);
     this.state.set('speaking');
-    this.speech.speak(turn.text, s.language, 0.9, {
+    void this.voice.play(turn.text, s.language, 0.9, {
       boundary: () => this.lipSync.pulse(),
+      audio: (el) => this.lipSync.attach(el),
       end: () => {
-        this.lipSync.level.set(0);
+        this.lipSync.detach();
         this.speakingIndex.set(null);
         if (this.state() === 'speaking') this.state.set('idle');
       },
@@ -168,7 +182,7 @@ export class DialogueAgentFacade {
     if (!s) return;
     try {
       this.session.set(await firstValueFrom(this.repo.endSession(s.id)));
-      this.speech.stop();
+      this.voice.stop();
       this.state.set('idle');
     } catch (err) {
       this.fail(err);

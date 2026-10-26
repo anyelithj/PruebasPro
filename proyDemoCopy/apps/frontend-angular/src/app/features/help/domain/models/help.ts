@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod'; // [Tree-shaking · Zod 4]: import de namespace (`* as z`) → esbuild empaqueta solo las funciones usadas (con `{ z }` arrastraba Zod entero, ~450 kB)
 import { AUDIENCES } from '@aula/shared-schemas';
 import { LOCALES } from '@aula/shared-i18n';
 import type { SseData, SseMessage } from '@shared/utils/event-source';
@@ -86,6 +86,7 @@ export interface GuideQuestion {
   locale: HelpLocale;
   mode?: BotMode;
   language?: string; // Solo tutor: idioma que estudia
+  level?: string; // [2026-10-25] Solo tutor: nivel MCER
 }
 
 // [GuideChunk]: unión discriminada del flujo SSE del Agente Guía (el del tutor + `sources`)

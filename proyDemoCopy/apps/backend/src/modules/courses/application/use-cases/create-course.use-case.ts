@@ -50,6 +50,9 @@ export class CreateCourseUseCase {
       slug: input.slug,
       shortDescription: input.shortDescription,
       description: input.description ?? null,
+      content: input.content ?? null, // [2026-10-24]: contenido Markdown del curso
+      objectives: input.objectives ?? null,
+      audience: input.audience ?? null,
       category: input.category,
       instructor: input.instructor,
       instructorTitle: input.instructorTitle ?? null,

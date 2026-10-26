@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod'; // [Tree-shaking · Zod 4]: import de namespace (`* as z`) → esbuild empaqueta solo las funciones usadas (con `{ z }` arrastraba Zod entero, ~450 kB)
 import { LANGUAGES } from '@aula/shared-schemas';
 // [Modelo Polyglot · Dominio · Sprints 10.7/10.8]: temas, conceptos, términos con IPA, tabla comparativa y vistas guardadas — contrato de /api/polyglot/* de NestJS | [Patrón]: Schema-First (Zod) | [Principio]: SSOT + Type-Safe | [Paradigma]: Declarativo
 

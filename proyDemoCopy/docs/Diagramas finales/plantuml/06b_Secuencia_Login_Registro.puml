@@ -1,0 +1,82 @@
+@startuml
+skinparam backgroundColor #FEFEFE
+skinparam participant {
+  FontName Arial
+  FontSize 11
+}
+
+actor "Usuario" as USER
+participant "Next.js LoginPage" as FE
+participant "Auth.js v5\n«Strategy»" as AUTH_JS
+participant "OAuth Google/MS\n«external»" as OAUTH
+participant "bridge endpoint\n«ACL»" as BRIDGE
+participant "AuthController" as CTRL
+participant "OAuthLoginUseCase\n«Command»" as UC
+participant "OAuthVerifierRegistry\n«Factory»" as REGISTRY
+participant "OAuthVerifier\n«Strategy»" as VERIFIER
+database "PostgreSQL\nusers · auth_sessions" as PG
+
+== Inicio de Sesión OAuth ==
+
+USER -> FE: 1: click "Sign in with Google"
+FE -> AUTH_JS: 2: signIn('google')
+AUTH_JS --> FE: 3: 302 → authorize URL
+FE -> OAUTH: 4: authorize + consent
+OAUTH --> FE: 5: 302 callback?code
+FE -> AUTH_JS: 6: GET callback?code
+AUTH_JS -> OAUTH: 7: code → id_token
+OAUTH --> AUTH_JS: 8: id_token + access_token
+AUTH_JS --> FE: 9: 302 → /bridge
+FE -> BRIDGE: 10: GET /bridge
+BRIDGE -> CTRL: 11: POST /auth/oauth { provider, idToken }
+CTRL -> UC: 12: execute(dto, ctx)
+UC -> REGISTRY: 13: registry.get(provider)
+REGISTRY --> UC: 14: IOAuthVerifier
+UC -> VERIFIER: 15: verify(idToken)
+VERIFIER -> OAUTH: 16: JWKS lookup
+OAUTH --> VERIFIER: JWKS response
+VERIFIER --> UC: 17: VerifiedOAuthProfile
+
+alt [user no existe] / [user existe]
+  UC -> PG: 18a: users.findByEmail → null
+  UC -> PG: 19a: users.create(...) + INSERT users
+  PG --> UC: 20a: nuevo User
+  PG --> UC: 18b/20b: users.findByEmail → User existente
+end
+
+UC -> UC: 21: tokens.issuePair(user)
+UC -> PG: 22: authRepo.createSession(...)\nINSERT auth_sessions
+PG --> UC: 23: Session persistida
+
+note right of UC
+  emit UserLoggedInEvent — background
+  (sin listeners activos)
+  «EventEmitter2» «Observer»
+end note
+
+UC -> UC: 24: emit(USER_LOGGED_IN_EVENT) «EventEmitter2»
+UC --> CTRL: 27: AuthResponseDto
+CTRL --> BRIDGE: 28: 200 OK + body
+BRIDGE -> AUTH_JS: 29: setCookie httpOnly + signOut Auth.js
+BRIDGE --> FE: 30: 302 → /dashboard
+FE --> USER: 31: Dashboard renderizado
+
+note right of BRIDGE
+  «Patrones invocados en login OAuth»
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  1. Provider Pattern — Auth.js SessionProvider + jwt callback
+  2. ACL — bridge endpoint (Auth.js → JWT NestJS)
+  3. Decorator — @UseGuards · @Public · ValidationPipe
+  4. Chain of Responsibility — pipeline NestJS Guards→Pipes→Interceptors
+  5. Factory — OAuthVerifierRegistry.get(provider)
+  6. Strategy — Google/MicrosoftOAuthVerifier
+  7. Adapter — JwtTokenService · TypeORM Repos
+  8. Repository (Port) — IUserRepo · IAuthRepo
+  9. Observer / Pub-Sub — EventEmitter2 emit UserLoggedInEvent
+  10. State — Session.isRevoked
+  11. Command — OAuthLoginUseCase.execute()
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Tablas tocadas: users · auth_sessions
+end note
+
+@enduml

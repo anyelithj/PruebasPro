@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getUser } from "@/lib/quiz-api";
 import { DeactivateUserButton } from "@/components/admin/DeactivateUserButton";
+import { PhoneLink } from "@/components/shared/PhoneLink"; // [2026-10-24]: teléfono como enlace `tel:` (o «—»)
 // [Página /admin/users/:id]: "Ver" usuario — ficha de solo lectura con accesos a editar, historial y activar/desactivar | [Patrón]: Container (RSC) + Presentational | [Principio]: SRP | [Paradigma]: Declarativo
 
 export const metadata: Metadata = {
@@ -27,6 +28,8 @@ export default async function UserDetailPage(props: { params: Promise<{ id: stri
   // [Ficha]: pares etiqueta/valor → <dl> semántico (lectores de pantalla anuncian la relación) | [Patrón]: Data-driven rendering
   const rows: ReadonlyArray<[string, ReactNode]> = [
     ["Email", <span key="e" className="font-mono text-xs">{user.email}</span>],
+    // [Fix 2026-10-24]: la ficha no mostraba el teléfono aunque GET /users/:id ya lo devuelve | `key` (React): identidad estable del nodo dentro del array
+    ["Teléfono", <PhoneLink key="p" phone={user.phone} />],
     ["Rol", ROLE_LABEL[user.role]],
     ...(user.role === "USER" ? [["Sección", user.section || "—"] as [string, ReactNode]] : []), // Spread condicional: solo estudiantes tienen sección
     ["Estado", user.isActive ? <span key="s" className="text-tone-brand">Activo</span> : <span key="s" className="text-muted-foreground">Inactivo</span>],

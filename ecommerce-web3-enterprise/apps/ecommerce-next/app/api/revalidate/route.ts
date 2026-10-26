@@ -1,4 +1,4 @@
-// route.ts (POST /api/revalidate) => revalidación ISR bajo demanda (Route Handler de Next.js 15).
+// route.ts (POST /api/revalidate) => revalidación ISR bajo demanda (Route Handler de Next.js 16).
 // Express la llama tras modificar el catálogo: las páginas cacheadas con esa etiqueta se regeneran en la
 // siguiente visita, sin esperar el vencimiento de 60 s (datos frescos + páginas estáticas rápidas).
 import { timingSafeEqual } from "node:crypto";
@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ success: false, message: "Etiquetas inválidas", code: "VALIDATION_ERROR" }, { status: 400 });
   }
-  parsed.data.tags.forEach((tag) => revalidateTag(tag)); // Marca como obsoletos los fetch con esa etiqueta
+  // Next 16: revalidateTag(tag, perfil) => "max" = stale-while-revalidate (sirve lo cacheado y refresca en segundo plano)
+  parsed.data.tags.forEach((tag) => revalidateTag(tag, "max")); // Marca como obsoletos los fetch con esa etiqueta
   return NextResponse.json({ success: true, data: { revalidated: parsed.data.tags } });
 }

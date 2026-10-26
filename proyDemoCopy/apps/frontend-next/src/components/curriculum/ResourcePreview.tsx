@@ -78,6 +78,12 @@ function EnIpa({ text, lang, ipa }: { text: string; lang?: string; ipa?: IpaValu
   return <Ipa ipa={ipa} />;
 }
 
+// [WordIpa · 2026-10-24]: IPA de una palabra de la ficha de fonema — la escrita por el docente/IA o, si falta, la calculada (espeak-ng vía IpaTextHost) | [Principio]: DRY (reutiliza EnIpa)
+function WordIpa({ text, lang, ipa, variant }: { text: string; lang?: string; ipa?: string; variant?: string }) {
+  const value = ipa?.trim() ? `/${ipa.trim().replace(/^\/|\/$/g, "")}/` : ""; // Barras normalizadas: «hɒt» y «/hɒt/» se ven igual
+  return <EnIpa text={text} lang={lang} ipa={value ? { value, variant: variant ?? lang ?? "" } : undefined} />;
+}
+
 // `{ [K in Kind]: (c: ContentByKind[K]) => ReactNode }` (TS mapped type): cada renderizador recibe SU forma tipada | [Tipado seguro]
 // `lang` (opcional): idioma del recurso → activa los botones de audio
 const RENDERERS: { [K in CurriculumItemKind]: (c: ContentByKind[K], lang?: string) => ReactNode } = {
@@ -155,17 +161,54 @@ const RENDERERS: { [K in CurriculumItemKind]: (c: ContentByKind[K], lang?: strin
       {c.notes && <dd className="text-xs text-muted-foreground">{c.notes}</dd>}
     </dl>
   ),
+  // [Pronunciación · 2026-10-24]: ficha de FONEMA (p. ej. /ɒ/) → símbolo + botón para oírlo en la palabra clave, CUÁNDO se usa, CÓMO se pronuncia,
+  // palabras con el sonido (cada una con audio, IPA y traducción) y frases donde se oye | sin fonema → la ficha de palabra/frase de siempre
+  // [A11y]: cada bloque lleva icono + título (el color nunca va solo, WCAG 1.4.1) · `lang="…-fonipa"`: el lector de pantalla trata el símbolo como transcripción
   pronunciation: (c, lang) => (
-    <>
+    <article className="space-y-2.5">
+      {c.phoneme && (
+        <header className="flex items-center gap-3 rounded-xl bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 px-3 py-2.5 text-white shadow-md shadow-primary/20">
+          <span lang="und-fonipa" className="font-mono text-3xl font-extrabold leading-none">/{c.phoneme}/</span>
+          <span className="text-xs leading-snug text-white/90">Sonido de «{c.text}»: escúchalo con los botones de audio</span>
+        </header>
+      )}
       <p className="flex items-center gap-2 text-lg font-extrabold">
         {c.text} <Say text={c.text} lang={lang} variant={c.ipa?.variant} /> <Say text={c.text} lang={lang} variant={c.ipa?.variant} slow />
       </p>
       <EnIpa text={c.text} lang={lang} ipa={c.ipa} />
       {c.romanization && <p className="text-xs text-muted-foreground">{c.romanization}</p>}
-      {/* [Regla fonética + frases · 2026-10-23]: el sonido explicado y frases donde se oye (cada una con su IPA) */}
-      {c.ruleEs && <p className="mt-2 rounded-lg bg-tone-info-soft px-2 py-1.5 text-sm text-tone-info"><Volume1 aria-hidden className="inline size-4 align-[-0.125em]" /> {c.ruleEs}</p>}
-      <Examples items={c.examples} lang={lang} />
-    </>
+      {c.ruleEs && (
+        <GrammarSection icon={Lightbulb} title="Cuándo se usa" tone="border-tone-brand-line bg-tone-brand-soft text-tone-brand">
+          <p className="text-sm leading-relaxed">{c.ruleEs}</p>
+        </GrammarSection>
+      )}
+      {c.articulationEs && (
+        <GrammarSection icon={Volume1} title="Cómo se pronuncia" tone="border-tone-info-line bg-tone-info-soft text-tone-info">
+          <p className="text-sm leading-relaxed">{c.articulationEs}</p>
+        </GrammarSection>
+      )}
+      {c.words?.length ? (
+        <GrammarSection icon={Puzzle} title="Palabras con este sonido" tone="border-tone-warning-line bg-tone-warning-soft text-tone-warning">
+          {/* `<ul>` semántico: cada palabra con audio normal/lento, IPA (la del docente o calculada) y traducción */}
+          <ul className="space-y-1.5 text-sm">
+            {c.words.map((w, i) => (
+              <li key={`${w.text}-${i}`} className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                <span className="font-semibold">{w.text}</span>
+                <Say text={w.text} lang={lang} variant={c.ipa?.variant} />
+                <Say text={w.text} lang={lang} variant={c.ipa?.variant} slow />
+                <WordIpa text={w.text} lang={lang} ipa={w.ipa} variant={c.ipa?.variant} />
+                {w.translationEs && <span className="text-muted-foreground">· {w.translationEs}</span>}
+              </li>
+            ))}
+          </ul>
+        </GrammarSection>
+      ) : null}
+      {c.examples?.length ? (
+        <GrammarSection icon={MessageCircle} title="Frases donde se oye" tone="border-border bg-muted text-foreground">
+          <Examples items={c.examples} lang={lang} />
+        </GrammarSection>
+      ) : null}
+    </article>
   ),
   common_error: (c) => (
     <>

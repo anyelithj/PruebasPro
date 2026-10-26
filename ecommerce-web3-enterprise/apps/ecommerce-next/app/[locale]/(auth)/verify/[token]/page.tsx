@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title: t("metaTitle"), robots: { index: false } };
 }
 
-// Next.js 15 tipa params/searchParams como Promise (Server Components async)
+// Next.js 16 tipa params/searchParams como Promise (Server Components async)
 export default async function VerifyEmailPage({ params, searchParams }: Props) {
   await initPage(params);
   const t = await getTranslations("auth.verify");

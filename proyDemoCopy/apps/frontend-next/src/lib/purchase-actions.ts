@@ -1,5 +1,6 @@
 "use server"; // [Next.js]: Server Action → el token viaja solo en el servidor (cookie httpOnly)
-import { completeMaterial, purchaseCourse } from "./courses-api"; // [Facade]: POST /courses/:id/purchase (cursos gratuitos) y …/materials/:mid/complete
+import { revalidatePath } from "next/cache";
+import { completeMaterial, completeTopic, purchaseCourse } from "./courses-api"; // [Facade]: POST /courses/:id/purchase (cursos gratuitos) y …/materials/:mid/complete
 // [Server Actions de acceso a cursos]: inscribirse gratis y avanzar en la línea de tiempo | [Patrón]: Command | [Principio]: SRP | [Paradigma]: asíncrono
 // [Sprint 7.4]: los cursos de pago se cobran en la pantalla Angular /checkout (Stripe) y el webhook de NestJS da el acceso
 
@@ -22,5 +23,15 @@ export async function enrollAction(courseId: string) {
 
 // [completeMaterialAction]: marca un material como completado → { completedMaterialIds, progress }
 export async function completeMaterialAction(courseId: string, materialId: string) {
-  return toResult(() => completeMaterial(courseId, materialId));
+  const res = await toResult(() => completeMaterial(courseId, materialId));
+  // [2026-10-25]: la barra «Tu progreso» del curso es del servidor → sin revalidar, la caché de cliente (staleTimes 30 s) la mostraba sin moverse
+  if (res.ok) revalidatePath(`/courses/${courseId}`);
+  return res;
+}
+
+// [completeTopicAction · 2026-10-25]: marca/desmarca un subtema del temario → el progreso del curso se recalcula en NestJS
+export async function completeTopicAction(courseId: string, topic: string, done: boolean) {
+  const res = await toResult(() => completeTopic(courseId, topic.slice(0, 300), done));
+  if (res.ok) revalidatePath(`/courses/${courseId}`);
+  return res;
 }

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ChangeReviewStatusCommand } from './application/commands/change-review-status.command';
+import { BulkPublishCommand } from './application/commands/bulk-publish.command';
 import { DeleteCurriculumItemCommand } from './application/commands/delete-curriculum-item.command';
 import { CreateCurriculumItemCommand } from './application/commands/create-curriculum-item.command';
 import { UpdateCurriculumItemCommand } from './application/commands/update-curriculum-item.command';
@@ -74,6 +75,7 @@ const curriculumRepositoryProvider = {
     CreateCurriculumItemCommand,
     UpdateCurriculumItemCommand,
     ChangeReviewStatusCommand,
+    BulkPublishCommand, // [2026-10-24]: publicar un tema completo en una petición (sin 429)
     DeleteCurriculumItemCommand, // Baja definitiva (ADMIN)
     // Lado lectura (Queries)
     ListCurriculumItemsQuery,

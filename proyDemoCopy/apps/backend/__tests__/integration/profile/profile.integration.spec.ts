@@ -6,6 +6,7 @@ import { GetProfileUseCase } from '../../../src/modules/users/application/use-ca
 import { UpdateProfileUseCase } from '../../../src/modules/users/application/use-cases/update-profile.use-case';
 import { GetUserHistoryUseCase } from '../../../src/modules/users/application/use-cases/get-user-history.use-case';
 import { DeleteAccountUseCase } from '../../../src/modules/users/application/use-cases/delete-account.use-case';
+import { ChangePasswordUseCase } from '../../../src/modules/users/application/use-cases/change-password.use-case';
 import { HttpExceptionFilter } from '../../../src/shared/filters/http-exception.filter';
 import { TransformInterceptor } from '../../../src/shared/interceptors/transform.interceptor';
 import { Role } from '../../../src/modules/users/domain/value-objects/role.vo';
@@ -45,6 +46,8 @@ describe('ProfileController (integration)', () => {
         { provide: UpdateProfileUseCase, useValue: updateProfileUC },
         { provide: GetUserHistoryUseCase, useValue: getHistoryUC },
         { provide: DeleteAccountUseCase, useValue: deleteAccountUC },
+        // [Mock · DI NestJS]: el controlador también inyecta ChangePasswordUseCase (PATCH /profile/me/password) → doble vacío para que el módulo compile
+        { provide: ChangePasswordUseCase, useValue: { execute: jest.fn() } },
       ],
     }).compile();
 

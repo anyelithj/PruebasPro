@@ -8,10 +8,12 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
+from dataclasses import asdict
 
 from fastapi import FastAPI
 
 from src.routers import register_routers
+from src.shared.clients.whisper_transcriber import speech_engine_status
 from src.shared.config.settings import get_settings
 from src.shared.exceptions.handlers import register_exception_handlers
 from src.shared.middleware.cors_middleware import setup_cors
@@ -50,6 +52,16 @@ async def _warmup(logger: logging.Logger) -> None:
         logger.warning("Warm-up RAG falló (%s); se reintentará en el primer uso", exc)
 
 
+async def _probe_speech(logger: logging.Logger) -> None:
+    """[2026-10-25]: comprueba al arrancar que faster-whisper importa (sin cargar el modelo).
+
+    [Principio]: Fail Fast visible — si falta, el WARNING (una sola vez) sale en el arranque y no en la primera grabación.
+    """
+    status = await asyncio.to_thread(speech_engine_status)  # `to_thread`: importar ctranslate2 bloquea ~1 s
+    if status.available:
+        logger.info("Voz a texto lista: %s %s (%s)", status.engine, status.model, status.compute_type)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     """Hook startup/shutdown — limpieza de recursos al cerrar. [Patrón]: Lifecycle."""
@@ -58,8 +70,10 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     # [Sprint 5.3 · warm-up]: carga el modelo de embeddings y el índice del tutor en segundo plano
     # (tarda ~1 min en CPU) → el servicio arranca de inmediato y la primera consulta no espera.
     warmup = asyncio.create_task(_warmup(logger))
+    speech_probe = asyncio.create_task(_probe_speech(logger))  # En segundo plano: no retrasa el arranque
     yield
     warmup.cancel()
+    speech_probe.cancel()
     logger.info("Lifespan: shutdown")
 
 
@@ -96,8 +110,10 @@ def create_app() -> FastAPI:
 
     # [Health endpoint]: usado por orquestadores (k8s readiness/liveness)
     @app.get("/health", tags=["meta"], include_in_schema=False)
-    async def health() -> dict[str, str]:
-        return {"status": "ok"}
+    async def health() -> dict[str, object]:
+        # [2026-10-25]: `status` sigue «ok» (el servicio vive aunque falte la voz) + estado del motor de voz a texto
+        # → diagnóstico rápido de «No module named 'faster_whisper'» sin leer logs
+        return {"status": "ok", "speech": asdict(await asyncio.to_thread(speech_engine_status))}
 
     return app
 

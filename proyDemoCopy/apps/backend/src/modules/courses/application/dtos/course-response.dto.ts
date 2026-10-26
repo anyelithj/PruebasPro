@@ -15,6 +15,10 @@ export class CourseResponseDto {
   @ApiProperty() slug!: string;
   @ApiProperty() shortDescription!: string;
   @ApiProperty({ required: false, nullable: true }) description!: string | null;
+  // [Contenido Markdown · 2026-10-24]: solo llega en el DETALLE (los listados no seleccionan la columna) → null en listados
+  @ApiProperty({ required: false, nullable: true }) content!: string | null;
+  @ApiProperty({ required: false, nullable: true }) objectives!: string | null;
+  @ApiProperty({ required: false, nullable: true }) audience!: string | null;
 
   @ApiProperty({ enum: CourseCategory }) category!: CourseCategory;
   @ApiProperty() categoryLabel!: string;
@@ -67,6 +71,12 @@ export class CourseResponseDto {
   })
   completedMaterialIds!: string[];
 
+  @ApiProperty({
+    type: [String],
+    description: 'Subtemas del temario estudiados',
+  })
+  completedTopics!: string[];
+
   @ApiProperty() createdAt!: string;
   @ApiProperty() updatedAt!: string;
 
@@ -86,6 +96,9 @@ export class CourseResponseDto {
     dto.slug = course.slug;
     dto.shortDescription = course.shortDescription;
     dto.description = course.description;
+    dto.content = course.content ?? null; // `??` (ES2020): columna no seleccionada (listados) → null
+    dto.objectives = course.objectives ?? null;
+    dto.audience = course.audience ?? null;
     dto.category = course.category;
     dto.categoryLabel = courseCategoryLabel(course.category, course.group);
     dto.group = course.group;
@@ -116,6 +129,7 @@ export class CourseResponseDto {
     dto.loveOn = enrollment?.reactionLove ?? false;
     dto.hasAccess = Boolean(enrollment?.purchasedAt); // `Boolean()` (JS): compra o inscripción (también en gratuitos)
     dto.completedMaterialIds = enrollment?.completedMaterialIds ?? [];
+    dto.completedTopics = enrollment?.completedTopics ?? [];
     dto.createdAt = course.createdAt.toISOString();
     dto.updatedAt = course.updatedAt.toISOString();
     return dto;

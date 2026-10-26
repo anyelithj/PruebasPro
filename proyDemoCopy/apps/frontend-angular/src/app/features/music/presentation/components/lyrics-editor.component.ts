@@ -7,10 +7,13 @@ import {
   input,
   output,
   signal,
+  untracked,
 } from '@angular/core';
 import type { LinePatch, SongLine } from '../../domain/models/music';
 import { ModeSwitchComponent } from '@shared/ui/molecules/mode-switch/mode-switch.component';
 import { TextImportComponent } from '@shared/ui/molecules/text-import/text-import.component';
+import { TextImportService } from '@core/media/text-import.service';
+import { LyricsImportService } from '../../infrastructure/lyrics-import.service';
 // [LyricsEditorComponent · Presentacional · Sprint 9.9 · RF-117]: pegar la letra y revisar el IPA y la traducción de cada línea (la corrección manual prevalece sobre la automática) | [Patrón]: Presentational Component + Dirty Tracking (solo se envían las líneas cambiadas) | [Principio]: SRP + verificación humana | [Paradigma]: Declarativo + Reactivo
 // [A11y]: tabla con encabezados y campos con etiqueta oculta por línea · scroll horizontal solo dentro de la tabla en móvil
 
@@ -38,6 +41,8 @@ export interface LyricsLabels {
 @Component({
   selector: 'aula-lyrics-editor',
   imports: [IconComponent, ModeSwitchComponent, TextImportComponent],
+  // [2026-10-24 · DI jerárquica]: <aula-text-import> de ESTE editor lee los enlaces con el extractor de letras de NestJS (el resto del portal sigue con el general)
+  providers: [{ provide: TextImportService, useClass: LyricsImportService }],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
@@ -56,7 +61,7 @@ export interface LyricsLabels {
       <!-- [2026-10-23]: la letra también llega de un PDF, un Word, una imagen (OCR) o un enlace → rellena el área de texto para revisarla -->
       <aula-text-import
         [language]="language()"
-        [labels]="{ file: lb.importFile, url: lb.importUrl, read: lb.importRead, reading: lb.importReading }"
+        [labels]="{ file: lb.importFile, url: '', read: lb.importRead, reading: lb.importReading }"
         (imported)="draft.set($event.text)"
       />
       <label class="block text-xs font-semibold text-muted-foreground">
@@ -158,6 +163,7 @@ export class LyricsEditorComponent {
   readonly language = input('en');
   readonly busy = input(false);
   readonly labels = input.required<LyricsLabels>();
+  readonly initial = input(''); // [2026-10-24]: letra propuesta (p. ej. la generada con IA) mientras aún no hay líneas guardadas
   readonly loadLyrics = output<{ lyrics: string; auto: boolean }>();
   protected readonly mode = signal<string>('auto');
   readonly save = output<LinePatch[]>();
@@ -173,6 +179,14 @@ export class LyricsEditorComponent {
       const ls = this.lines();
       if (ls.length) this.draft.set(ls.map((l) => l.text).join('\n'));
       this.changes.set({});
+    });
+    // [initial]: rellena el área vacía o la que solo muestra la letra ya guardada (nunca pisa cambios sin guardar del docente) | `untracked`: no depende de `draft` ni de `lines`
+    // [2026-10-24]: «Importar la letra desde este enlace» (paso del audio) también llega por aquí aunque la canción ya tenga versos
+    effect(() => {
+      const text = this.initial();
+      const current = untracked(this.draft).trim();
+      const saved = untracked(this.lines).map((l) => l.text).join('\n').trim();
+      if (text && (!current || current === saved)) this.draft.set(text);
     });
   }
 

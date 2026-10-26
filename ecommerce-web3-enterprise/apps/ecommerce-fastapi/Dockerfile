@@ -12,8 +12,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     POETRY_VIRTUALENVS_CREATE=false \
     POETRY_NO_INTERACTION=1
+# "ARG" => versiones fijadas en build (reproducibles; se cambian con --build-arg sin editar el archivo)
+# pip 26.2.2 (gestor de paquetes) y certifi 2026.10.19 (bundle de CAs de Mozilla para HTTPS saliente: requests/httpx)
+ARG PIP_VERSION=26.2.2
+ARG CERTIFI_VERSION=2026.10.19
 # "RUN" => ejecuta en build | "--no-cache-dir" => no guarda la cache de pip dentro de la imagen
-RUN pip install --no-cache-dir "poetry>=2,<3"
+# 1) actualiza pip a la versión fijada  2) instala Poetry 2  3) certifi también queda fijado en poetry.lock (misma versión)
+RUN pip install --no-cache-dir "pip==${PIP_VERSION}" \
+ && pip install --no-cache-dir "poetry>=2,<3" "certifi==${CERTIFI_VERSION}"
 # "WORKDIR" => carpeta de trabajo; uvicorn importa "app.main" relativo a ella
 WORKDIR /app
 # "COPY" => solo el manifiesto primero: la capa de dependencias se cachea mientras pyproject.toml no cambie

@@ -5,6 +5,10 @@ import type {
   CollectionInput,
   LinePatch,
   LineTiming,
+  LyricsDraft,
+  LyricsDraftInput,
+  LyricsLoad,
+  MediaLinkRules,
   PracticeRef,
   Song,
   SongDetail,
@@ -28,12 +32,15 @@ export abstract class MusicRepository {
   abstract createSong(input: SongInput): Observable<Song>;
   abstract uploadAudio(id: string, file: Blob): Observable<Song>;
   abstract uploadAudioUrl(id: string, url: string): Observable<Song>; // [2026-10-23]: enlace directo .mp3/.mp4…
+  abstract mediaLinkRules(): Observable<MediaLinkRules>; // [2026-10-24]: dominios de letras/streaming para validar el enlace del audio antes de enviarlo
   abstract audioUrl(id: string): string; // El <audio> pide los rangos (206) directamente
   abstract loadLyrics(
     id: string,
     lyrics: string,
     auto?: boolean, // false = modo manual (sin IPA ni traducción automáticas)
-  ): Observable<{ lines: SongLine[]; enriched: boolean }>;
+  ): Observable<LyricsLoad>;
+  abstract reEnrich(id: string): Observable<LyricsLoad>; // [2026-10-24]: reintenta IPA y traducción solo de los versos que faltan
+  abstract draftLyrics(input: LyricsDraftInput): Observable<LyricsDraft>; // [2026-10-24]: letra original con IA (borrador)
   abstract patchLines(
     id: string,
     lines: LinePatch[],

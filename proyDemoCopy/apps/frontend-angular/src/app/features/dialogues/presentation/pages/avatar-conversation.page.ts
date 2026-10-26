@@ -5,13 +5,16 @@ import {
   Component,
   computed,
   effect,
+  type ElementRef,
   inject,
   input,
   signal,
   untracked,
+  viewChild,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { CEFR_LEVELS, LANGUAGES } from '@aula/shared-schemas';
+import { speechFallbackNotice } from '@core/audio/server-speech';
 import { SpeechSynthesisService } from '@core/audio/speech-synthesis.service';
 import { I18nService } from '@core/i18n/i18n.service';
 import { AvatarStageComponent } from '@shared/ui/organisms/avatar-stage/avatar-stage.component';
@@ -191,11 +194,16 @@ interface LiveRecognition {
                   (started)="listen()"
                   (recorded)="recorded($event)"
                 />
+                <!-- [2026-10-25 · Respaldo]: servidor sin voz a texto → aviso accionable (role="status": informa sin interrumpir) -->
+                @if (speechNotice(); as notice) {
+                  <p class="text-xs font-semibold text-tone-warning" role="status"><aula-icon name="info" /> {{ notice }}</p>
+                }
                 @if (reviewing()) {
                   <p class="text-xs font-semibold text-tone-brand" role="status"><aula-icon name="pen-line" /> {{ cv.review }}</p>
                 }
                 <form class="flex flex-wrap gap-2" (submit)="$event.preventDefault(); send()">
                   <input
+                    #answer
                     class="control min-w-0 flex-1"
                     [class.ring-2]="reviewing()"
                     [class.ring-primary]="reviewing()"
@@ -239,6 +247,8 @@ export default class AvatarConversationPage {
   protected readonly draft = signal('');
   protected readonly follow = signal(true);
   protected readonly reviewing = signal(false); // Texto dictado pendiente de revisar
+  protected readonly speechNotice = signal<string | null>(null); // [2026-10-25]: aviso de respaldo si el servidor no transcribe
+  private readonly answer = viewChild<ElementRef<HTMLInputElement>>('answer'); // `viewChild` (Angular 17.2+): signal con el campo de respuesta
   private readonly speech = inject(SpeechSynthesisService);
   private live: LiveRecognition | null = null;
   protected readonly names = computed(() =>
@@ -332,7 +342,14 @@ export default class AvatarConversationPage {
     // [2026-10-20]: la transcripción en vivo del navegador queda en el campo aunque Whisper falle; si Whisper responde, la reemplaza
     const text = await this.agent.transcribe(rec, this.draft());
     if (text) this.draft.set(text);
-    this.reviewing.set(!!this.draft().trim()); // El alumno revisa y envía (no se envía solo)
+    const hasText = !!this.draft().trim();
+    this.reviewing.set(hasText); // El alumno revisa y envía (no se envía solo)
+    // [Respaldo · 2026-10-25]: sin voz a texto en el servidor → dictado del navegador (si lo hubo) o escribir; la grabación sigue pendiente y se guarda al enviar
+    const labels = this.i18n.t().media.recorder;
+    this.speechNotice.set(
+      this.agent.serverSpeechDown() ? `${speechFallbackNotice(labels, hasText)} ${labels.keptOnSend}` : null,
+    );
+    if (this.agent.serverSpeechDown()) this.answer()?.nativeElement.focus(); // [A11y]: el foco va al campo para escribir o corregir
   }
 
   protected async remove(): Promise<void> {

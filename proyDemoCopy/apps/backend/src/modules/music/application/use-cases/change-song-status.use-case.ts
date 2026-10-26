@@ -7,9 +7,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Song, type SongStatus } from '../../domain/entities/song.entity';
 import { SongLine } from '../../domain/entities/song-line.entity';
-import { licenseProblem } from '../../domain/value-objects/license.vo';
+import { blockersMessage, songBlockers } from '../../domain/song-readiness';
 import { type MusicActor, SongAccess } from './get-song.use-case';
-// [UseCase ChangeSongStatus · Sprint 9.2 · RF-116/RF-128]: el docente envía a revisión (o la retira de ella); el ADMIN publica o rechaza con motivo; solo se publica con licencia declarada, audio y letra | [Patrón]: State Machine (transiciones permitidas por rol) + Specification (licenseProblem) | [Principio]: mínimo privilegio + verificación humana + Fail Fast | [Paradigma]: POO + funcional
+// [UseCase ChangeSongStatus · Sprint 9.2 · RF-116/RF-128]: el docente envía a revisión (o la retira de ella); el ADMIN publica o rechaza con motivo; solo se publica con licencia declarada, audio y letra | [Patrón]: State Machine (transiciones permitidas por rol) + Specification (songBlockers) | [Principio]: mínimo privilegio + verificación humana + Fail Fast | [Paradigma]: POO + funcional
+// [2026-10-24]: los requisitos viven en domain/song-readiness (SSOT) → el 400 enumera TODO lo que falta y la UI muestra la misma lista antes de llamar
 
 // [Transiciones]: estado actual → estados a los que puede pasar (y quién)
 const AUTHOR: Partial<Record<SongStatus, SongStatus[]>> = {
@@ -45,10 +46,11 @@ export class ChangeSongStatusUseCase {
         `No se puede pasar de «${song.status}» a «${to}»`,
       );
     if (to === 'review' || to === 'published') {
-      const problem =
-        licenseProblem(song.license) ??
-        (!song.audioKey ? 'Falta subir el audio' : null) ??
-        ((await this.lines.countBy({ songId: id })) ? null : 'Falta la letra');
+      // [Specification]: licencia, audio y letra — mismo cálculo que ve la UI en `blockers`
+      const problem = blockersMessage(
+        song,
+        songBlockers(song, await this.lines.countBy({ songId: id })),
+      );
       if (problem) throw new BadRequestException(problem);
     }
     if (to === 'rejected' && !note.trim())

@@ -3,12 +3,15 @@
 [Patrón]: Adapter (implementa SpeechSynthesizer).
 [Principio]: SRP + DIP.
 [Paradigma]: Asíncrono (`asyncio.to_thread` + subprocess bloqueante: funciona con cualquier event loop; en Windows uvicorn --reload usa SelectorEventLoop, que no soporta subprocesos asyncio).
-[Seguridad]: el texto entra por stdin (`--stdin`), nunca como argumento → no puede interpretarse como opción ni como comando.
+[Seguridad]: el texto entra por stdin (`--stdin`), nunca como argumento → no puede interpretarse como opción ni como comando;
+el archivo temporal lo crea `mkstemp` (nombre aleatorio, permisos 0600 del usuario actual) y se borra siempre.
 """
 
 import asyncio
+import os
 import shutil
 import subprocess
+import tempfile
 from functools import lru_cache
 from pathlib import Path
 
@@ -35,11 +38,39 @@ def espeak_binary() -> str | None:
     )
 
 
+# `-s 140` palabras/min (175 por defecto sonaba atropellado) · `-g 1` pausa corta entre palabras · `-p 45` tono algo más grave y natural
+_VOICE_ARGS = ("-s", "140", "-g", "1", "-p", "45")
+
+
+def _run_espeak(binary: str, text: str, voice: str) -> tuple[int, bytes, bytes]:
+    """Ejecuta espeak-ng escribiendo el WAV en un ARCHIVO temporal (no en stdout) y devuelve (código, wav, stderr).
+
+    [Por qué · 2026-10-24]: con `--stdout` espeak-ng no puede volver atrás en la tubería para escribir los tamaños reales y deja
+    0x7FFFF000 en las cabeceras RIFF/data (≈ 2 GB anunciados para un audio de 200 KB); en Windows además la salida estándar de
+    espeak-ng.exe no siempre está en modo binario. Resultado: decodificadores estrictos (Media Foundation, Safari) daban un audio mudo.
+    Con `-w archivo` espeak-ng cierra el WAV con `fseek` y la cabecera queda correcta en todas las plataformas.
+    """
+    # `tempfile.mkstemp` (stdlib): crea y cierra el archivo → en Windows otro proceso (espeak-ng) puede abrirlo para escribir
+    fd, path = tempfile.mkstemp(prefix="aula-tts-", suffix=".wav")
+    os.close(fd)
+    try:
+        proc = subprocess.run(
+            [binary, "-v", voice, *_VOICE_ARGS, "-w", path, "--stdin"],
+            input=text.encode("utf-8"),
+            capture_output=True,
+            timeout=_TIMEOUT_S,
+        )
+        return proc.returncode, Path(path).read_bytes(), proc.stderr
+    finally:
+        # `missing_ok` (Python 3.8+): si espeak-ng falló antes de crear nada, no hay nada que borrar
+        Path(path).unlink(missing_ok=True)
+
+
 class EspeakSpeech:
     """Sintetiza WAV con espeak-ng."""
 
-    # [2026-10-20]: «-v2» = parámetros nuevos (velocidad/entonación) → NestJS genera audios nuevos en vez de reutilizar los robóticos cacheados
-    engine = "espeak-ng-v2"
+    # [2026-10-24]: «-v3» = WAV con cabecera correcta (archivo temporal en vez de stdout) → NestJS regenera los audios cacheados con la cabecera rota
+    engine = "espeak-ng-v3"
 
     async def synthesize(self, text: str, voice: str) -> bytes:
         binary = espeak_binary()
@@ -47,26 +78,16 @@ class EspeakSpeech:
             raise SpeechUnavailableError(
                 "Motor de voz no disponible: instala espeak-ng o define ESPEAK_NG_PATH"
             )
-        # `subprocess.run` en un hilo (`asyncio.to_thread`): sin shell → sin inyección; no bloquea el event loop
+        # `asyncio.to_thread`: el subproceso bloqueante corre en un hilo (sin shell → sin inyección; no bloquea el event loop)
         try:
-            proc = await asyncio.to_thread(
-                subprocess.run,
-                # `-s 140` palabras/min (175 por defecto sonaba atropellado) · `-g 1` pausa corta entre palabras · `-p 45` tono algo más grave y natural
-                [binary, "-v", voice, "-s", "140", "-g", "1", "-p", "45", "--stdin", "--stdout"],
-                input=text.encode("utf-8"),
-                capture_output=True,
-                timeout=_TIMEOUT_S,
-            )
+            code, audio, stderr = await asyncio.to_thread(_run_espeak, binary, text, voice)
         except subprocess.TimeoutExpired as exc:
             raise SpeechUnavailableError(
                 "El motor de voz no respondió a tiempo"
             ) from exc
-        audio = proc.stdout
-        if proc.returncode != 0 or not audio.startswith(
-            b"RIFF"
-        ):  # RIFF = cabecera de un WAV válido
+        if code != 0 or not audio.startswith(b"RIFF"):  # RIFF = cabecera de un WAV válido
             raise SpeechUnavailableError(
-                f"espeak-ng falló: {proc.stderr.decode('utf-8', 'ignore')[:200]}"
+                f"espeak-ng falló: {stderr.decode('utf-8', 'ignore')[:200]}"
             )
         return audio
 

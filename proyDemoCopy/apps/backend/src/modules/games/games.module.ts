@@ -53,6 +53,9 @@ import { GameSessionsController } from './presentation/game-sessions.controller'
 import { GameCatalogController } from './presentation/game-catalog.controller';
 import { GameCatalogUseCase } from './application/use-cases/game-catalog.use-case';
 import { GameSetting } from './domain/entities/game-setting.entity';
+import { GameDeck } from './domain/entities/game-deck.entity';
+import { GameDecksUseCase } from './application/use-cases/game-decks.use-case';
+import { GameDecksController } from './presentation/game-decks.controller';
 import { RolePlayScenariosController } from './presentation/role-play-scenarios.controller';
 import { SpeechController } from './presentation/speech.controller';
 // [GamesModule · Sprint 8.5 · RF-98 a RF-105]: partidas, rondas, mazo SM-2, métricas de fluidez y escenarios de role-play + puertas al agente de juegos y a Speech (FastAPI) | [Patrón]: Module + DI Container + Ports & Adapters (GAME_AGENT → GameAgentClient, SPEECH → SpeechClient) + Domain Event (GameCompleted → Score) | [Principio]: DIP + SRP + DRY (VocabularyEntry por export de Vocabulary)
@@ -66,6 +69,7 @@ import { SpeechController } from './presentation/speech.controller';
       FluencyMetric,
       RolePlayScenario,
       GameSetting, // [2026-10-24]: ajustes editables del catálogo
+      GameDeck, // [2026-10-25]: juegos con material propio
     ]),
     HttpModule,
     VocabularyModule, // VocabularyEntry: palabras de las partidas y del mazo
@@ -76,6 +80,7 @@ import { SpeechController } from './presentation/speech.controller';
     FluencyMetricsController,
     RolePlayScenariosController,
     GameCatalogController, // [2026-10-24]: /games/catalog (antes GET dentro de GameSessionsController)
+    GameDecksController, // [2026-10-25]: /games/decks
     GameRoundsController,
     GameSessionsController,
     SpeechController,
@@ -86,6 +91,7 @@ import { SpeechController } from './presentation/speech.controller';
     { provide: SPEECH, useClass: SpeechClient },
     OwnedSession,
     GameCatalogUseCase,
+    GameDecksUseCase,
     StartGameSessionUseCase,
     ListMySessionsUseCase,
     GetGameSessionUseCase,

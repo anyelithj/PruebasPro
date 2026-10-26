@@ -16,6 +16,7 @@ const fillRequired = async () => {
   await userEvent.type(screen.getByLabelText("Apellido *"), "Lovelace");
   await userEvent.type(screen.getByLabelText("Email *"), "ada@test.com");
   await userEvent.type(screen.getByLabelText("Contraseña *"), "Secret12");
+  await userEvent.type(screen.getByLabelText("Repetir contraseña *"), "Secret12"); // [2026-10-24]: el alta exige repetir la contraseña (refine de Zod)
 };
 
 const lastPostBody = () => {
@@ -35,29 +36,29 @@ describe("NewUserPage · campo Sección por rol", () => {
   it("muestra el campo Sección por defecto (rol Estudiante)", () => {
     render(<NewUserPage />);
     expect(screen.getByLabelText("Rol *")).toHaveValue("USER");
-    expect(screen.getByLabelText("Sección")).toBeInTheDocument();
+    expect(screen.getByLabelText("Sección / grupo")).toBeInTheDocument();
   });
 
   it("oculta Sección al elegir Docente y Administrador", async () => {
     render(<NewUserPage />);
     await userEvent.selectOptions(screen.getByLabelText("Rol *"), "TEACHER");
-    expect(screen.queryByLabelText("Sección")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Sección / grupo")).not.toBeInTheDocument();
     await userEvent.selectOptions(screen.getByLabelText("Rol *"), "ADMIN");
-    expect(screen.queryByLabelText("Sección")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Sección / grupo")).not.toBeInTheDocument();
   });
 
   it("vuelve a mostrar Sección al regresar a Estudiante", async () => {
     render(<NewUserPage />);
     await userEvent.selectOptions(screen.getByLabelText("Rol *"), "TEACHER");
-    expect(screen.queryByLabelText("Sección")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Sección / grupo")).not.toBeInTheDocument();
     await userEvent.selectOptions(screen.getByLabelText("Rol *"), "USER");
-    expect(screen.getByLabelText("Sección")).toBeInTheDocument();
+    expect(screen.getByLabelText("Sección / grupo")).toBeInTheDocument();
   });
 
   it("envía la sección cuando el rol es Estudiante", async () => {
     render(<NewUserPage />);
     await fillRequired();
-    await userEvent.type(screen.getByLabelText("Sección"), "11-1");
+    await userEvent.type(screen.getByLabelText("Sección / grupo"), "11-1");
     await userEvent.click(screen.getByRole("button", { name: "Crear usuario" }));
     await waitFor(() =>
       expect(global.fetch).toHaveBeenCalledWith(

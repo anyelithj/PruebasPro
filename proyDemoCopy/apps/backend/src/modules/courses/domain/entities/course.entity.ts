@@ -35,6 +35,18 @@ export class Course {
   @Column({ type: 'text', nullable: true })
   description!: string | null;
 
+  // [Contenido del curso · 2026-10-24]: temario/apuntes en Markdown SIN límite de longitud (`text` de PostgreSQL) | separado de la descripción (resumen corto)
+  // `select: false` (TypeORM): los listados no cargan este texto (puede pesar cientos de KB) → solo el detalle lo pide con addSelect | [Rendimiento]
+  @Column({ type: 'text', nullable: true, select: false })
+  content?: string | null;
+
+  // [2026-10-25]: ficha del curso separada del TEMARIO → objetivos y público (Markdown corto); la presentación es `description`
+  @Column({ type: 'text', nullable: true })
+  objectives!: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  audience!: string | null;
+
   // [Categoría fina]: 12 diplomados + master + facultades + competencias + dimensiones + STEM, etc.
   @Column({ type: 'enum', enum: CourseCategory })
   category!: CourseCategory;

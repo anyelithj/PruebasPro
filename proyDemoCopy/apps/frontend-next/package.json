@@ -31,7 +31,7 @@
     "emojibase-data": "^17.0.0",
     "lucide-react": "^1.16.0",
     "mammoth": "^1.13.0",
-    "next": "16.2.6",
+    "next": "16.4.1",
     "next-auth": "5.0.0-beta.31",
     "node-html-parser": "^9.0.4",
     "pdfjs-dist": "^6.3.289",
@@ -50,20 +50,20 @@
   },
   "devDependencies": {
     "@lhci/cli": "^0.15.1",
-    "@next/bundle-analyzer": "^16.2.6",
+    "@next/bundle-analyzer": "16.4.1",
     "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
-    "@types/node": "^20",
+    "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@typescript-eslint/eslint-plugin": "^8.59.3",
     "@typescript-eslint/parser": "^8.59.3",
     "axe-playwright": "^2.2.2",
     "eslint": "^9",
-    "eslint-config-next": "16.2.6",
+    "eslint-config-next": "16.4.1",
     "husky": "^9.1.7",
     "jest": "^30.4.2",
     "jest-axe": "^10.0.0",
@@ -76,5 +76,8 @@
     "prettier-plugin-tailwindcss": "^0.8.0",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": "^24.22.1"
   }
 }

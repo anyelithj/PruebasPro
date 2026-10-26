@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { firstValueFrom, map } from 'rxjs';
-import { z } from 'zod';
+import * as z from 'zod'; // [Tree-shaking · Zod 4]: import de namespace (`* as z`) → esbuild empaqueta solo las funciones usadas (con `{ z }` arrastraba Zod entero, ~450 kB)
 import { API_URL } from '@core/http/api-url.token';
 // [TextImportService · core/media · 2026-10-23]: texto de un archivo (PDF, Word .docx, texto, imagen con OCR) o de un enlace → Route Handler de Next.js /api/media/extract-text
 // [Uso]: letra de canciones y cualquier formulario que quiera «importar desde archivo o URL» | [Patrón]: Facade + Adapter (HTTP → texto validado) | [Principio]: DRY (un extractor para todo el portal) + Fail Fast (Zod) | [Paradigma]: Asíncrono

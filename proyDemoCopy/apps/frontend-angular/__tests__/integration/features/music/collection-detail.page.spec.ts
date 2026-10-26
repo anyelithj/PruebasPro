@@ -25,7 +25,7 @@ async function open(role: 'USER' | 'TEACHER', songs: unknown[] = [song()], statu
 describe('CollectionDetailPage', () => {
   it('lista las canciones con enlace; el autor puede archivar', async () => {
     const { el } = await open('TEACHER');
-    expect(el.textContent).toContain('🧸 Canciones infantiles');
+    expect(el.textContent).toContain('Canciones infantiles'); // El encabezado de la página muestra el título (el emoji va en la tarjeta del hub)
     expect(el.querySelector('a[href="/musica/cancion/s1"]')).not.toBeNull();
     expect(getByRole(el, 'button', 'Archivar colección')).toBeTruthy();
   });

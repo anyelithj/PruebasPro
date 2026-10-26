@@ -56,7 +56,7 @@ function RolesTab() {
   const parents = [{ value: "", label: t("none") }, ...(roles.data?.data ?? []).map((role) => ({ value: role.id, label: role.name }))];
   const fields = [
     { name: "name", label: t("roleName"), hint: t("roleHint") },
-    { name: "description", label: t("description"), type: "textarea" },
+    { name: "description", label: t("description"), type: "textarea" as const },
     { name: "parentId", label: t("parentRole"), type: "select" as const, options: parents, hint: t("parentHint") },
     { name: "permissionIds", label: t("tabs.permissions"), type: "checkboxes" as const, options },
   ];
@@ -102,7 +102,7 @@ function PermissionsTab() {
         fields: [
           { name: "action", label: t("action"), type: "select", options: toOptions(PERMISSION_ACTIONS) },
           { name: "resource", label: t("resource"), hint: t("resourceHint") },
-          { name: "description", label: t("description"), type: "textarea" },
+          { name: "description", label: t("description"), type: "textarea" as const },
         ],
       }}
       // Acción y recurso son la identidad del permiso (los guards los usan): solo se edita la descripción
@@ -152,7 +152,7 @@ function AutomationTab() {
   const format = useFormat();
   const fields = [
     { name: "name", label: t("name") },
-    { name: "description", label: t("description"), type: "textarea" },
+    { name: "description", label: t("description"), type: "textarea" as const },
     { name: "triggerType", label: t("trigger"), type: "select" as const, options: toOptions(TRIGGER_TYPES, (value) => t(`triggers.${value}`)) },
     { name: "event", label: t("event"), type: "select" as const, options: [{ value: "", label: "—" }, ...toOptions(EVENTS)], hint: t("eventHint") },
     { name: "webhookPath", label: t("webhookPath"), hint: t("webhookPathHint") },

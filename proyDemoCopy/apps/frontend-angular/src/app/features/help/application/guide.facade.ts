@@ -19,6 +19,7 @@ export class GuideFacade {
   readonly isEmpty = computed(() => this.turns().length === 0);
   readonly mode = signal<BotMode>('guide'); // [2026-10-19]: Tutor · Soporte · Guía (cada modo es una conversación aparte)
   readonly language = signal('en'); // Idioma que estudia (modo tutor)
+  readonly level = signal('A1'); // [2026-10-25]: nivel MCER (modo tutor) → el tutor gradúa reglas y ejemplos
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.sub?.unsubscribe()); // Cerrar el widget/página cancela la respuesta en curso
@@ -30,7 +31,7 @@ export class GuideFacade {
     this.error.set(null);
     this.streaming.set(true);
     this.turns.update((t) => [...t, { role: 'user', content: text }, { role: 'assistant', content: '' }]);
-    this.sub = this.repo.ask({ message: text, sessionId: this.sessionId(), route: /^\/[\w\-/]*$/.test(route) ? route : undefined, locale: this.i18n.locale(), mode: this.mode(), language: this.mode() === 'tutor' ? this.language() : undefined }).subscribe({
+    this.sub = this.repo.ask({ message: text, sessionId: this.sessionId(), route: /^\/[\w\-/]*$/.test(route) ? route : undefined, locale: this.i18n.locale(), mode: this.mode(), language: this.mode() === 'tutor' ? this.language() : undefined, level: this.mode() === 'tutor' ? this.level() : undefined }).subscribe({
       next: (chunk) => {
         switch (chunk.type) {
           case 'session':

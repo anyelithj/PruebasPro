@@ -155,6 +155,21 @@ export const RESOURCE_KINDS: readonly CurriculumItemKind[] = KINDS.filter((k) =>
 // [KIND_LABEL]: derivada de KIND_META (compatibilidad con código existente) | `Object.fromEntries` (ES2019) | [Principio]: DRY
 export const KIND_LABEL = Object.fromEntries(KINDS.map((k) => [k, KIND_META[k].label])) as Readonly<Record<CurriculumItemKind, string>>;
 
+// [BACK_LABEL · 2026-10-24]: texto del enlace «Volver a …» según el TIPO del recurso abierto («Volver a vocabulario», «Volver a regla gramatical»…) | [Patrón]: Lookup Table
+// [Principio]: DRY + SSOT — un solo mapa para todas las páginas de recursos (Gestión y estudiantes) | `Record<Kind, string>` exhaustivo: un tipo nuevo obliga a añadir su texto (TS)
+export const BACK_LABEL: Readonly<Record<CurriculumItemKind, string>> = {
+  vocabulary: "Volver a vocabulario",
+  grammar_rule: "Volver a regla gramatical",
+  example: "Volver a frase de ejemplo",
+  translation: "Volver a traducción",
+  pronunciation: "Volver a pronunciación",
+  common_error: "Volver a error frecuente",
+  exercise: "Volver a ejercicio",
+  rubric: "Volver a rúbrica",
+};
+// [backLabel]: sin tipo conocido (p. ej. «Crear recurso» o un tema mixto) → texto genérico | `?` (TS): parámetro opcional
+export const backLabel = (kind?: CurriculumItemKind): string => (kind ? BACK_LABEL[kind] : "Volver a recursos");
+
 export const PROVENANCE_LABEL: Readonly<Record<Provenance, string>> = {
   manual: "Creado por el equipo",
   imported: "Tomado de una fuente externa",
@@ -238,7 +253,9 @@ export interface VocabularyContent { lemma: string; partOfSpeech?: string; gende
 export type ExampleContent = ExampleValue;
 export interface TranslationContent { source: string; targetEs: string; notes?: string }
 // `ruleEs` + `examples` (2026-10-23): regla fonética y frases que la aplican
-export interface PronunciationContent { text: string; ipa: IpaValue; romanization?: string; audioRef?: string; ruleEs?: string; examples?: ExampleValue[] }
+// [2026-10-24]: ficha de FONEMA (p. ej. /ɒ/) → `phoneme` (símbolo), `articulationEs` (cómo se pronuncia), `ruleEs` (cuándo se usa), `words` (palabras de ejemplo) y `examples` (frases)
+export interface PronunciationWord { text: string; ipa?: string; translationEs?: string }
+export interface PronunciationContent { text: string; ipa: IpaValue; romanization?: string; audioRef?: string; phoneme?: string; ruleEs?: string; articulationEs?: string; words?: PronunciationWord[]; examples?: ExampleValue[] }
 export interface CommonErrorContent { incorrect: string; correct: string; explanationEs: string; ruleKey?: string }
 export type ExerciseType = "multiple_choice" | "true_false" | "fill_blank" | "open_answer";
 export interface ExerciseContent { prompt: string; type: ExerciseType; options?: string[]; answerKey: string[]; explanationEs?: string; rubricKey?: string }
@@ -271,7 +288,7 @@ export const EMPTY_CONTENT: { readonly [K in CurriculumItemKind]: ContentByKind[
   vocabulary: { lemma: "", partOfSpeech: "", gender: "", translationEs: "", romanization: "", examples: [] },
   example: { text: "", translationEs: "", romanization: "" },
   translation: { source: "", targetEs: "", notes: "" },
-  pronunciation: { text: "", ipa: { value: "", variant: "", source: "" }, romanization: "", ruleEs: "", examples: [] },
+  pronunciation: { text: "", ipa: { value: "", variant: "", source: "" }, romanization: "", phoneme: "", ruleEs: "", articulationEs: "", words: [], examples: [] },
   common_error: { incorrect: "", correct: "", explanationEs: "", ruleKey: "" },
   exercise: { prompt: "", type: "multiple_choice", options: ["", ""], answerKey: [], explanationEs: "" },
   rubric: { title: "", criteria: [{ name: "", descriptorEs: "", maxPoints: 5, bands: [] }] },
