@@ -1,10 +1,11 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import type { SocialUrlField } from '../../domain/value-objects/social-links.vo'; // [2026-10-28]: claves de las redes sociales
 import {
   USER_REPOSITORY,
   type IUserRepository,
 } from '../../domain/interfaces/user.repository.interface';
 
-export interface UpdateProfileInput {
+export type UpdateProfileInput = {
   firstName?: string;
   lastName?: string;
   section?: string | null;
@@ -12,7 +13,7 @@ export interface UpdateProfileInput {
   phone?: string | null; // [2026-10-24]
   timezone?: string | null;
   preferredLanguage?: string | null;
-}
+} & Partial<Record<SocialUrlField, string | null>>; // [2026-10-28]: linkedinUrl/twitterUrl/spotifyUrl/youtubeUrl | intersección (TS `&`): reutiliza las claves del VO
 
 export interface UpdateProfileResult {
   id: string;
@@ -49,6 +50,10 @@ export class UpdateProfileUseCase {
       'phone',
       'timezone',
       'preferredLanguage',
+      'linkedinUrl', // [2026-10-28]: redes sociales → mismo trato ("" borra, undefined no toca)
+      'twitterUrl',
+      'spotifyUrl',
+      'youtubeUrl',
     ] as const)
       if (input[key] !== undefined) partial[key] = input[key]?.trim() || null;
 

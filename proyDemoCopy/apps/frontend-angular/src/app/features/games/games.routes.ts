@@ -5,6 +5,7 @@ import { GamesFacade } from './application/games.facade';
 import { SpeechFacade } from './application/speech.facade';
 import { GamesRepository } from './domain/games.repository.port';
 import { GamesHttpRepository } from './infrastructure/games.http-repository';
+import { IPA_TEXT_PROVIDERS } from '@features/vocabulary/ipa-text.providers'; // [2026-10-28]: <aula-say> (IPA + traducción + sonido) en los ítems
 // [Rutas Games · Sprints 8.8–8.11]: /juegos (hub) y una ruta por juego, escenarios de role-play, progreso de fluidez y resultado — lazy y con sesión | [Patrón]: Composition Root por funcionalidad (puerto → adaptador) + Lazy Loading por pantalla | [Principio]: DIP + OCP (juego nuevo = una línea)
 // [Integración]: Next.js reescribe /juegos (ANGULAR_PREFIXES) · los segmentos coinciden con GAME_INFO[tipo].route (SSOT del catálogo)
 
@@ -17,6 +18,7 @@ export const GAMES_ROUTES: Routes = [
       GamesFacade,
       GameAgentFacade,
       SpeechFacade,
+      ...IPA_TEXT_PROVIDERS, // `...` (ES2015): puerto del vocabulario + caché de IPA compartida por la ruta
     ],
     children: [
       {
@@ -34,6 +36,11 @@ export const GAMES_ROUTES: Routes = [
         path: 'memory',
         title: 'Parejas · Aula de Idiomas',
         loadComponent: () => import('./presentation/pages/memory.page'),
+      },
+      {
+        path: 'ahorcado', // [2026-11-06]
+        title: 'Ahorcado · Aula de Idiomas',
+        loadComponent: () => import('./presentation/pages/hangman.page'),
       },
       {
         path: 'bingo',

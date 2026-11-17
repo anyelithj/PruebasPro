@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { apiFetch } from "./api-client";
 import { COOKIE_NAMES, Role } from "./constants";
+import { refreshOnce } from "./token-refresh";
 // [Helpers de auth]: server-side login/logout/me + cookies httpOnly | [Patrón]: Facade | [Principio]: SRP + DRY | [Paradigma]: Funcional + asíncrono
 
 // [Forma de respuesta NestJS]: copia mínima de AuthResponseDto | [Principio]: SSOT
@@ -19,6 +20,12 @@ export interface AuthResponse {
   accessExpiresIn: number;
   tokenType: "Bearer";
   user: AuthUser;
+}
+
+// [TwoFactorChallenge · 2026-11-16]: respuesta de /auth/login cuando el usuario activó el 2FA (sin tokens todavía) | literal `true` (TS) → unión discriminada
+export interface TwoFactorChallenge {
+  twoFactorRequired: true;
+  challengeId: string;
 }
 
 // [Inputs]: equivalentes a DTOs backend
@@ -60,10 +67,22 @@ export async function clearAuthCookies(): Promise<void> {
 }
 
 // [login]: delega a NestJS, guarda cookies en éxito | [Patrón]: Facade
-export async function login(input: LoginInput): Promise<AuthResponse> {
-  const res = await apiFetch<AuthResponse>("/auth/login", {
+// [2026-11-16 · 2FA]: si NestJS pide el segundo factor NO hay cookies todavía → se devuelve el reto tal cual | operador `in` (JS): estrecha la unión
+export async function login(input: LoginInput): Promise<AuthResponse | TwoFactorChallenge> {
+  const res = await apiFetch<AuthResponse | TwoFactorChallenge>("/auth/login", {
     method: "POST",
     body: input,
+  });
+  if ("twoFactorRequired" in res) return res;
+  await setAuthCookies(res);
+  return res;
+}
+
+// [verifyTwoFactor · 2026-11-16]: canjea reto + código OTP por la sesión y pone las cookies httpOnly | [Patrón]: Facade | [Principio]: DRY (setAuthCookies)
+export async function verifyTwoFactor(challengeId: string, code: string): Promise<AuthResponse> {
+  const res = await apiFetch<AuthResponse>("/auth/2fa/verify", {
+    method: "POST",
+    body: { challengeId, code },
   });
   await setAuthCookies(res);
   return res;
@@ -105,6 +124,16 @@ export async function getCurrentAccessToken(): Promise<string | null> {
 // [getFreshAccessToken]: devuelve un access token válido; si está vencido o por vencer (<60s) usa el refresh token para rotar el par y re-setear cookies | [Patrón]: Token Refresh + Fail-soft | [Principio]: SRP
 // [Uso]: SOLO en Route Handlers / Server Actions (cookies().set requiere contexto mutable). En RSC el set se ignora silenciosamente.
 export async function getFreshAccessToken(): Promise<string | null> {
+  try {
+    return await renewAccessToken();
+  } catch {
+    // [Fail-soft]: si el refresh falla (refresh vencido/revocado), devuelve el access actual | [Patrón]: Graceful Degradation
+    return (await cookies()).get(COOKIE_NAMES.access)?.value ?? null;
+  }
+}
+
+// [renewAccessToken · 2026-10-31]: como getFreshAccessToken pero LANZA si el refresh falla → /api/auth/me distingue «sesión terminada» de «backend caído» | [Principio]: SRP
+export async function renewAccessToken(): Promise<string | null> {
   const store = await cookies();
   const access = store.get(COOKIE_NAMES.access)?.value ?? null;
 
@@ -120,17 +149,9 @@ export async function getFreshAccessToken(): Promise<string | null> {
   const refresh = store.get(COOKIE_NAMES.refresh)?.value;
   if (!refresh) return access; // [Sin refresh]: devuelve lo que haya (puede ser null → 401 aguas abajo)
 
-  try {
-    const res = await apiFetch<AuthResponse>("/auth/refresh", {
-      method: "POST",
-      body: { refreshToken: refresh },
-    });
-    await setAuthCookies(res);
-    return res.accessToken;
-  } catch {
-    // [Fail-soft]: si el refresh falla (refresh vencido/revocado), devuelve el access actual | [Patrón]: Graceful Degradation
-    return access;
-  }
+  const res = await refreshOnce<AuthResponse>(refresh); // [Fix 2026-10-31]: refresh de un solo uso → las peticiones simultáneas comparten una rotación (antes la segunda perdía la sesión)
+  await setAuthCookies(res);
+  return res.accessToken;
 }
 
 // [decodeJwtPayload]: extrae payload SIN verificar firma. Solo para routing UX
@@ -156,16 +177,31 @@ export async function getCurrentUserRole(): Promise<Role | null> {
 }
 
 // [getCurrentUserPayload]: lee sub/email/role del JWT — solo lectura UX, no autorización | [Principio]: SRP
-export async function getCurrentUserPayload(): Promise<{
+export async function getCurrentUserPayload(): Promise<UserPayload | null> {
+  return userPayloadOf(await getCurrentAccessToken());
+}
+
+// `export interface` (TS): datos de sesión que la UI y los guards del BFF leen del JWT | [Principio]: SSOT (antes el tipo estaba repetido en línea)
+export interface UserPayload {
   sub: string;
   email: string;
   role: Role;
-} | null> {
-  const token = await getCurrentAccessToken();
+}
+
+// [userPayloadOf · Fix 2026-10-28]: token → { sub, email, role } o null | [Paradigma]: Funcional (pura) | [Principio]: DRY (getCurrentUserPayload + getFreshUserPayload)
+function userPayloadOf(token: string | null): UserPayload | null {
   if (!token) return null;
   const payload = decodeJwtPayload<{ sub?: string; email?: string; role?: Role }>(token);
   if (!payload?.sub || !payload?.email || !payload?.role) return null;
   return { sub: payload.sub, email: payload.email, role: payload.role };
+}
+
+// [getFreshUserPayload · Fix 2026-10-28]: como getCurrentUserPayload pero RENOVANDO antes el access token si venció (usa el refresh token)
+// [Causa del 401 en POST /api/courses/import]: el `proxy.ts` excluye `/api/*` de su matcher → nadie renovaba la sesión en los Route Handlers;
+// la cookie de acceso tiene `maxAge` = TTL del JWT (15 min) → el navegador la BORRA al vencer y `requireAuthor` veía «sin sesión» aunque el refresh siguiera vigente
+// [Uso]: SOLO Route Handlers / Server Actions (cookies().set necesita contexto mutable; en un RSC rotaría el refresh sin poder guardarlo) | [Patrón]: Token Refresh + Guard
+export async function getFreshUserPayload(): Promise<UserPayload | null> {
+  return userPayloadOf(await getFreshAccessToken());
 }
 
 // [displayNameFromEmail]: vive en config/navigation.ts (compartido con Angular) | re-export → los imports existentes de @/lib/auth siguen funcionando | [Principio]: DRY

@@ -73,10 +73,10 @@ const LEVELS = [30, 60, 90] as const; // Segundos por nivel
           </button>
         }
         @if (speech.transcribing()) {
-          <p role="status" class="text-sm text-muted-foreground">{{ tx.transcribing }}</p>
+          <p role="status" class="text-muted-foreground">{{ tx.transcribing }}</p>
         }
         @if (speech.error(); as err) {
-          <p role="alert" class="text-sm text-tone-danger">{{ err }}</p>
+          <p role="alert" class="text-tone-danger">{{ err }}</p>
         }
         @if (metric()) {
           <aula-oral-round-result

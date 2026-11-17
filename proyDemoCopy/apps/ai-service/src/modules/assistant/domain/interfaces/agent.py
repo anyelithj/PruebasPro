@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol
 
 from src.modules.assistant.domain.entities.conversation import Conversation
+from src.modules.assistant.domain.value_objects.language_usage import LanguageUsage
 from src.modules.assistant.domain.value_objects.screen_context import ScreenContext
 
 AnsweredBy = Literal["faq", "manual", "llm", "engine", "none"]  # [Sprint 8.7]: «engine» = motor determinista del juego
@@ -17,12 +18,12 @@ AnsweredBy = Literal["faq", "manual", "llm", "engine", "none"]  # [Sprint 8.7]: 
 
 @dataclass(frozen=True)
 class Source:
-    """Cita de una respuesta: FAQ o sección del manual (trazabilidad: de dónde salió)."""
+    """Cita de una respuesta: FAQ, sección del manual o fragmento del temario (trazabilidad: de dónde salió)."""
 
-    kind: Literal["faq", "manual"]
-    id: str  # Id de la FAQ o «slug#sección» del manual
-    title: str  # Pregunta de la FAQ o título de la sección
-    ref: str | None = None  # Artículo del manual al que enlaza (slug), si hay
+    kind: Literal["faq", "manual", "curriculum"]  # [Tarea 9]: «curriculum» = fragmento del RAG del tutor
+    id: str  # Id de la FAQ, «slug#sección» del manual o id del fragmento
+    title: str  # Pregunta de la FAQ, título de la sección o tema del recurso
+    ref: str | None = None  # Artículo del manual al que enlaza (slug) o fuente del recurso (URL / archivo), si hay
 
 
 @dataclass(frozen=True)
@@ -31,6 +32,7 @@ class AgentReply:
     sources: list[Source] = field(default_factory=list)
     answered_by: AnsweredBy = "llm"
     game_state: dict[str, Any] | None = None  # [Sprint 8.7]: eventos de la partida (acierto, falta, objetivos) para NestJS
+    language_usage: LanguageUsage | None = None  # [2026-10-28]: % de palabras del alumno en el idioma meta vs meta del nivel (solo tutor)
 
 
 class Agent(Protocol):

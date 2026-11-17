@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
+import { assertUniqueTitle } from '../../../../shared/application/unique-title'; // [2026-10-28]: regla anti-duplicados compartida (DRY)
 import {
   PracticeActivity,
   type ActivityStatus,
@@ -43,6 +44,17 @@ export class UpdateActivityUseCase {
       throw new BadRequestException(
         'Agrega al menos un ítem antes de publicar',
       );
+    // [Fix 2026-10-28 · Sin duplicados]: cambio de título, nivel o habilidad que choca con otra actividad vigente → 409 (la propia no cuenta)
+    if (patch.title !== undefined || patch.level !== undefined || patch.skill !== undefined) {
+      const level = patch.level ?? activity.level;
+      await assertUniqueTitle(
+        this.activities,
+        patch.title ?? activity.title,
+        { language: activity.language, level, skill: patch.skill ?? activity.skill, archivedAt: IsNull() },
+        { label: 'una actividad de práctica', language: activity.language, level },
+        activity.id,
+      );
+    }
     Object.assign(
       activity,
       Object.fromEntries(

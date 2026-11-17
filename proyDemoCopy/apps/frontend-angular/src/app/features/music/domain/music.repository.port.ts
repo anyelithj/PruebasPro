@@ -13,7 +13,7 @@ import type {
   Song,
   SongDetail,
   SongFilter,
-  SongInput,
+  SongInput, SongPatch,
   SongLine,
   SongPracticeKind,
   SongStatus,
@@ -30,6 +30,7 @@ export abstract class MusicRepository {
   abstract listSongs(filter: SongFilter): Observable<Song[]>;
   abstract getSong(id: string): Observable<SongDetail>;
   abstract createSong(input: SongInput): Observable<Song>;
+  abstract updateSong(id: string, patch: SongPatch): Observable<Song>; // [2026-11-10]
   abstract uploadAudio(id: string, file: Blob): Observable<Song>;
   abstract uploadAudioUrl(id: string, url: string): Observable<Song>; // [2026-10-23]: enlace directo .mp3/.mp4…
   abstract mediaLinkRules(): Observable<MediaLinkRules>; // [2026-10-24]: dominios de letras/streaming para validar el enlace del audio antes de enviarlo

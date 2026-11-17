@@ -21,6 +21,7 @@ export const GAME_TYPES = [
   'listen_reformulate',
   'quick_qa',
   'recovery_drills',
+  'hangman', // [2026-11-06]
 ] as const;
 export type GameType = (typeof GAME_TYPES)[number];
 export type GameFamily = 'vocab' | 'agent' | 'listening' | 'oral';
@@ -39,6 +40,7 @@ export const GAME_INFO: Readonly<Record<GameType, GameInfo>> = Object.freeze({
   bingo: { route: 'bingo', icon: 'target', family: 'vocab' },
   quick_sort: { route: 'clasificar', icon: 'archive', family: 'vocab' },
   recovery_drills: { route: 'recuperacion', icon: 'zap', family: 'vocab' },
+  hangman: { route: 'ahorcado', icon: 'puzzle', family: 'vocab' }, // [2026-11-06]
   forbidden_word: { route: 'palabra-prohibida', icon: 'ban', family: 'agent' },
   taboo: { route: 'tabu', icon: 'message-circle-off', family: 'agent' },
   twenty_questions: { route: '20-preguntas', icon: 'circle-help', family: 'agent' },

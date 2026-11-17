@@ -83,7 +83,7 @@ export default async function LanguagePage(props: { params: Promise<Params> }) {
         </section>
         <nav className="section" aria-labelledby="lang-others">
           <div className="container">
-            <h2 id="lang-others" className="mb-3 text-lg font-bold">{l.langOthers}</h2>
+            <h2 id="lang-others" className="title-section mb-3">{l.langOthers}</h2>
             <ul className="flex list-none flex-wrap gap-3 p-0">
               {LANGUAGE_GROUPS.filter((o) => o !== g).map((o) => (
                 <li key={o}>

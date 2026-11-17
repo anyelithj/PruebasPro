@@ -50,8 +50,8 @@ export function WeaknessChart({ weakTopics, strongTopics = [], threshold = 0.6 }
 
   return (
     <section aria-label="Análisis de debilidades" className="space-y-3">
-      <h2 className="text-xl font-bold tracking-tight">Análisis de debilidades</h2>
-      <p className="text-sm text-muted-foreground">
+      <h2 className="title-section">Análisis de debilidades</h2>
+      <p className="text-muted-foreground">
         Temas con menos de {Math.round(threshold * 100)}% de aciertos identificados por el motor IA.
       </p>
 
@@ -86,7 +86,7 @@ export function WeaknessChart({ weakTopics, strongTopics = [], threshold = 0.6 }
             </ResponsiveContainer>
           </div>
 
-          <ul className="mt-4 space-y-2 text-sm">
+          <ul className="mt-4 space-y-2">
             {data.map((d) => (
               <li key={d.topic} className="flex items-start gap-2">
                 <span
@@ -99,7 +99,7 @@ export function WeaknessChart({ weakTopics, strongTopics = [], threshold = 0.6 }
                     {d.topic} <span className="text-muted-foreground">— {d.accuracy}%</span>
                   </p>
                   {d.recommendation && (
-                    <p className="text-xs text-muted-foreground">{d.recommendation}</p>
+                    <p className="type-meta text-muted-foreground">{d.recommendation}</p>
                   )}
                 </div>
               </li>
@@ -115,7 +115,7 @@ export function WeaknessChart({ weakTopics, strongTopics = [], threshold = 0.6 }
             {strongTopics.map((t) => (
               <li
                 key={t}
-                className="rounded-full bg-tone-brand-soft text-tone-brand px-2.5 py-0.5 text-xs font-semibold capitalize"
+                className="rounded-full bg-tone-brand-soft text-tone-brand px-2.5 py-0.5 type-meta font-semibold capitalize"
               >
                 {t}
               </li>

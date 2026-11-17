@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /$
+Allow: /login
+Allow: /registro
+Disallow: /app/
+Sitemap: https://tu-dominio.com/sitemap.xml

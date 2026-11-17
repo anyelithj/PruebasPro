@@ -7,8 +7,14 @@ import { Role } from "@/lib/constants";
 import { ApiError } from "@/lib/errors";
 import { getServerDictionary } from "@/lib/i18n-server";
 import { CourseLesson } from "@/components/courses/CourseLesson";
+import Link from "next/link";
+import { CourseProgressProvider } from "@/components/courses/CourseProgressProvider"; // [2026-10-28]: avance compartido temario ⇄ recursos (SSOT)
+import { getCourseOutline } from "@/lib/curriculum-api";
+import { parseSyllabus } from "@/lib/syllabus";
 import { isLessonLocked, lessonHref, nextPendingIndex } from "@/types/courses";
+import { youtubeEmbed, youtubeEmbeddable } from "@/lib/youtube";
 // [Página /courses/:id/lessons/:materialId]: pantalla propia de la lección (como openLesson del demo) — el detalle del curso solo muestra el temario
+// [2026-10-27 · Temario primero]: antes la página mezclaba el temario con los recursos (visor + lista lateral titulada como temario) → ahora 1) TEMARIO (subtemas del curso) como contenido principal y 2) RECURSOS debajo, en su propia sección rotulada
 // [Patrón]: Container (RSC carga datos) + Guard (acceso y desbloqueo en el servidor) | [Principio]: SRP + Seguridad en profundidad | [Paradigma]: Declarativo + Asíncrono
 
 interface PageProps {
@@ -29,7 +35,13 @@ export default async function LessonPage(props: PageProps) {
   }
 
   // [Carga en paralelo]: `Promise.all` (ES2015) → materiales, usuario y textos a la vez
-  const [materials, user, t] = await Promise.all([listCourseMaterials(course.id).catch(() => []), getCurrentUserPayload(), getServerDictionary()]);
+  // [2026-10-28]: + resumen de la ruta (outline) → el % de esta página = el del detalle del curso | `.catch(() => null)`: curso sin ruta
+  const [materials, user, t, outline] = await Promise.all([
+    listCourseMaterials(course.id).catch(() => []),
+    getCurrentUserPayload(),
+    getServerDictionary(),
+    getCourseOutline(course.id).catch(() => null),
+  ]);
   const isAdmin = user?.role === Role.ADMIN;
   // [Guard de acceso]: sin compra/inscripción ni rol ADMIN → vuelve al detalle (el backend igualmente responde 403 al servir el archivo)
   if (!course.hasAccess && !isAdmin) redirect(`/courses/${encodeURIComponent(course.id)}`);
@@ -44,8 +56,24 @@ export default async function LessonPage(props: PageProps) {
   if (isLessonLocked(index, nextPending, canTrack)) redirect(lessonHref(course.id, materials[nextPending].id));
 
   const m = t.courses.materials;
+  const current = materials[index];
+  const embeddable = current.kind === "link" && youtubeEmbed(current.url) ? await youtubeEmbeddable(current.url!) : true; // [2026-11-05]: video con inserción desactivada → tarjeta «Ver en YouTube»
+  const topicTitles = parseSyllabus(course.content).map((x) => x.title); // SSOT con NestJS (topicsOf) → mismos títulos que cuentan en el progreso
+  const hasTopics = topicTitles.length > 0; // Sin subtemas, <LessonSyllabus> no pinta nada → se omite su texto de ayuda
+  const lessons = outline?.summary.lessons ? { done: outline.summary.completed, total: outline.summary.lessons } : undefined;
   return (
-    <div className="fade-in w-full space-y-5 py-4">
+    // [Provider]: temario y recursos leen/escriben el MISMO avance → barras y línea de tiempo se mueven juntas hasta el 100 %
+    <CourseProgressProvider
+      courseId={course.id}
+      materialIds={materials.map((x) => x.id)}
+      topicTitles={topicTitles}
+      initialMaterials={course.completedMaterialIds ?? []}
+      initialTopics={course.completedTopics ?? []}
+      lessons={lessons}
+      canTrack={canTrack}
+      preview={isAdmin && !canTrack} // [2026-10-30]: el ADMIN sin inscripción avanza en este navegador
+    >
+    <div className="fade-in w-full space-y-6 py-4">
       {/* [Breadcrumb]: <nav> + <ol> + aria-current="page" (patrón WAI-ARIA) → Curso / Lección */}
       <nav aria-label={m.breadcrumb}>
         <ol className="flex flex-wrap items-center gap-2 text-[13px]" style={{ color: "var(--nl-txt2)" }}>
@@ -59,16 +87,36 @@ export default async function LessonPage(props: PageProps) {
         </ol>
       </nav>
 
-      <CourseLesson
-        key={materialId} // Nueva lección → estado limpio (errores, optimismo)
-        courseId={course.id}
-        items={materials}
-        index={index}
-        initialCompleted={course.completedMaterialIds ?? []}
-        canTrack={canTrack}
-        color={course.color}
-        lang={course.icon.toLowerCase()} // `icon` = código ISO 639-1 del idioma del curso ("FR" → "fr")
-      />
+      {/* [Cabecera]: el <h1> es el curso; el recurso abierto se titula dentro de «Materiales adicionales» */}
+      <header className="space-y-1 border-l-4 pl-3" style={{ borderColor: course.color }}>
+        <p className="type-meta font-semibold uppercase tracking-wide text-muted-foreground">
+          <span aria-hidden className="font-mono">{course.icon}</span> · {course.level}
+        </p>
+        <h1 className="title-page">{course.title}</h1>
+        {/* [2026-11-03 · Rutas separadas]: el temario vive en /courses/:id/temario; esta página es solo «Materiales adicionales» */}
+        {hasTopics && (
+          <Link href={`/courses/${encodeURIComponent(course.id)}/temario`} className="btn btn-outline btn-sm mt-2 w-fit">
+            ← Ir al temario
+          </Link>
+        )}
+      </header>
+
+      {/* [Materiales adicionales]: visor del recurso abierto + navegación + lista de recursos */}
+      <section aria-labelledby="lesson-resources-title" className="scroll-mt-4 space-y-3">
+        <h2 id="lesson-resources-title" className="title-section">
+          {m.title}
+        </h2>
+        <CourseLesson
+          key={materialId} // Nueva lección → estado limpio (errores, optimismo)
+          courseId={course.id}
+          items={materials}
+          index={index}
+          color={course.color}
+          embeddable={embeddable}
+          lang={course.icon.toLowerCase()} // `icon` = código ISO 639-1 del idioma del curso ("FR" → "fr")
+        />
+      </section>
     </div>
+    </CourseProgressProvider>
   );
 }

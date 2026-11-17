@@ -112,7 +112,7 @@ describe('CourseMaterialsUseCase.completeTopic', () => {
   it('el texto antes del primer «##» es el subtema «Introducción» (como en Next) y cuenta en el progreso', async () => {
     const enrollment = { id: 'e', purchasedAt: new Date(), completedMaterialIds: [] as string[], completedTopics: [] as string[], progress: 0, completedAt: null };
     const courses = { exists: jest.fn().mockResolvedValue(true), createQueryBuilder: qb('Bienvenida al curso\n\n## El verbo to be\n\nam / is / are') } as never;
-    const materials = { count: jest.fn().mockResolvedValue(0) } as never;
+    const materials = { find: jest.fn().mockResolvedValue([]) } as never; // [Fix 2026-10-30]: recompute usa `find` (solo recursos que siguen existiendo) desde el 2026-10-28; antes `count`
     const enrollments = { findOne: jest.fn().mockResolvedValue(enrollment), save: jest.fn() } as never;
     const useCase = new CourseMaterialsUseCase(materials, courses, enrollments, {} as never);
     await expect(useCase.completeTopic('c1', 'Introducción', true, { id: 'u', role: Role.USER })).resolves.toEqual({ completedTopics: ['Introducción'], progress: 50 });

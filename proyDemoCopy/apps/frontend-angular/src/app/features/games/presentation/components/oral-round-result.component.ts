@@ -14,7 +14,7 @@ import { MetricCardComponent } from './metric-card.component';
     @let tx = i18n.t().games;
     <section role="status" class="space-y-3">
       @if (text()) {
-        <p class="rounded-xl bg-muted px-3 py-2 text-sm">
+        <p class="rounded-xl bg-muted px-3 py-2">
           <b>{{ tx.youSaid }}:</b> «<span [attr.lang]="language()">{{ text() }}</span
           >»
         </p>

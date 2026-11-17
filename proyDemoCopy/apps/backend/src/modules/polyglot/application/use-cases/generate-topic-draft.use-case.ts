@@ -52,10 +52,11 @@ export class GenerateTopicDraftUseCase {
     let added = 0;
     for (const d of concepts) {
       const terms = Object.entries(d.terms)
-        .filter(([lang, text]) => isLanguage(lang) && text.trim())
+        .filter(([lang, text]) => isLanguage(lang) && text.trim() && (!body.languages || body.languages.includes(lang as Language)))
         .map(([language, text]) => ({
           language: language as Language,
           text: text.trim().slice(0, 200),
+          grammar: d.grammar?.[language] ?? '', // [2026-11-16]: nota de la IA (plural, género…)
         }));
       if (terms.length < 2) continue; // [Filtro]: un concepto con un solo idioma no sirve para comparar
       const c = await this.addConcept.execute(actor, topic.id, {

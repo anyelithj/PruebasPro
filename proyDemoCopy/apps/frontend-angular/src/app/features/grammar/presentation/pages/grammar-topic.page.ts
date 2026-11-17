@@ -31,7 +31,7 @@ import { TranslationToggleComponent } from '../components/translation-toggle.com
           <aula-spinner [label]="i18n.t().common.loading" />
         }
         @case ('error') {
-          <p role="alert" class="rounded-xl border border-tone-danger-line bg-tone-danger-soft p-4 text-sm text-tone-danger">{{ g.topic.error() }}</p>
+          <p role="alert" class="rounded-xl border border-tone-danger-line bg-tone-danger-soft p-4 text-tone-danger">{{ g.topic.error() }}</p>
         }
         @case ('success') {
           @if (g.topic.data(); as t) {

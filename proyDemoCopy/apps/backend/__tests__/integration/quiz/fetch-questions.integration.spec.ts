@@ -1,3 +1,4 @@
+import { ExamsService } from '../../../src/modules/quiz/application/use-cases/exams.service';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -39,6 +40,10 @@ describe('QuizController GET /quiz, GET /quiz/:id (integration)', () => {
         { provide: SubmitAnswerUseCase, useValue: { execute: jest.fn() } },
         { provide: EndSessionUseCase, useValue: { execute: jest.fn() } },
         { provide: ListMyHistoryUseCase, useValue: { execute: jest.fn() } },
+        {
+          provide: ExamsService, // [2026-11-06]: exámenes de curso/nivel (no se prueban aquí)
+          useValue: {},
+        },
         {
           provide: QUIZ_REPOSITORY,
           useValue: {

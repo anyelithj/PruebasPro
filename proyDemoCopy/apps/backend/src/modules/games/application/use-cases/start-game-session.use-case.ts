@@ -23,9 +23,14 @@ export interface StartGameInput {
   difficulty?: number;
   scenarioId?: string;
   deckId?: string; // [2026-10-25]: juego con material propio (Gestión → Actividades → Juegos) → sus palabras en vez del banco
+  theme?: string; // [2026-11-11]: tema elegido del banco (categoría de tarjetas o tema de conversación) · vacío = al azar
 }
 
 const SIZE_BY_DIFFICULTY = [6, 8, 12]; // Palabras por partida según dificultad
+
+// [gapOf · 2026-11-11]: palabra que se oculta en el dictado de una frase del docente → la más larga (más informativa) | Función pura
+export const gapOf = (text: string): string =>
+  text.split(/\s+/).map((w) => w.replace(/[^\p{L}\p{N}'-]/gu, '')).reduce((a, b) => (b.length > a.length ? b : a), '');
 
 // [shuffle]: Fisher-Yates sobre una copia (no muta la entrada) | [Paradigma]: Funcional
 const shuffle = <T>(items: T[]): T[] => {
@@ -53,7 +58,10 @@ export class StartGameSessionUseCase {
   async execute(userId: string, input: StartGameInput): Promise<GameSession> {
     const difficulty = Math.min(Math.max(input.difficulty ?? 1, 1), 3);
     const bank = bankFor(input.language);
-    const card = pick(bank.taboo);
+    // [2026-11-11 · Elegir tema]: categoría de tarjetas o tema concreto del banco; desconocido o vacío → al azar
+    const themed = bank.taboo.filter((c) => c.category === input.theme);
+    const cards = themed.length ? themed : bank.taboo;
+    const card = pick(cards);
     const family = GAME_META[input.gameType].family;
 
     // [Vocabulario]: banco propio del usuario; si tiene menos de 4 palabras, tarjetas propias del proyecto (palabra + emoji)
@@ -62,15 +70,16 @@ export class StartGameSessionUseCase {
       take: 200,
     });
     const vocabulary =
-      mine.length >= 4 && input.gameType !== 'quick_sort' // [quick_sort]: necesita categorías → siempre el banco propio (CC BY)
+      mine.length >= 4 && input.gameType !== 'quick_sort' && !themed.length // [quick_sort]: necesita categorías → siempre el banco propio (CC BY) · con tema elegido → tarjetas del tema
         ? shuffle(mine)
             .slice(0, SIZE_BY_DIFFICULTY[difficulty - 1])
             .map((e) => ({
               entryId: e.id,
-              term: e.term,
+              // [2026-11-03 · Regla obligatoria]: el juego evalúa el sustantivo CON su artículo/clasificador (singular: «der Tisch»)
+              term: e.grammar?.headword.split(' – ')[0] || e.term,
               translation: e.translation,
             }))
-        : shuffle(bank.taboo)
+        : shuffle(themed.length >= 2 || input.gameType !== 'quick_sort' ? cards : bank.taboo)
             .slice(0, SIZE_BY_DIFFICULTY[difficulty - 1])
             .map((c) => ({
               term: c.target,
@@ -84,37 +93,54 @@ export class StartGameSessionUseCase {
       : null;
     if (input.deckId && !deck)
       throw new NotFoundException('Juego no encontrado');
+    const items = deck ? shuffle(deck.items) : [];
     const content: GameSessionContent = {
-      vocabulary: deck
-        ? shuffle(deck.items).map((i) => ({
+      vocabulary: deck && family === 'vocab'
+        ? items.map((i) => ({
             term: i.term,
             translation: i.translation,
             emoji: i.emoji,
+            image: i.image,
             category: i.category,
           }))
-        : vocabulary,
+        : deck
+          ? []
+          : vocabulary,
       fallback: deck ? false : bank.fallback,
     };
+    const one = items[0]; // [2026-11-11]: juegos que no son de vocabulario → tarjeta, tema o frases del mazo del docente
+    const csv = (s?: string) => (s ?? '').split(',').map((w) => w.trim()).filter(Boolean);
     let scenarioId: string | null = null;
     switch (input.gameType) {
       case 'taboo':
       case 'forbidden_word':
         Object.assign(content, {
-          target: card.target,
-          forbidden: card.forbidden,
+          target: one ? one.term : card.target,
+          forbidden: one ? csv(one.words) : card.forbidden,
         });
         break;
       case 'twenty_questions':
       case 'describe_guess':
-        content.target = card.target; // Secreto: no se envía al cliente (ver toView)
+        content.target = one ? one.term : card.target; // Secreto: no se envía al cliente (ver toView)
         break;
       case 'chained_story':
       case 'debate':
       case 'random_topic':
       case 'speed_speaking':
-        content.topic = pick(bank.topics);
+        content.topic = one ? one.term : bank.topics.includes(input.theme ?? '') ? input.theme! : pick(bank.topics);
         break;
       case 'role_play': {
+        if (deck) {
+          // [2026-11-11]: role-play del docente → cada ítem es un objetivo (texto) con sus palabras clave; el rol es el título del juego
+          Object.assign(content, {
+            role: deck.title,
+            objectives: deck.items.map((i, k) => ({ id: `g${k + 1}`, text: i.term, keywords: csv(i.words).map((w) => w.toLowerCase()) })),
+            met: [],
+            topic: deck.title,
+          });
+          content.vocabulary = [...new Set(deck.items.flatMap((i) => csv(i.words)))].map((term) => ({ term }));
+          break;
+        }
         const scenario = input.scenarioId
           ? await this.scenarios.findOneBy({
               id: input.scenarioId,
@@ -135,7 +161,9 @@ export class StartGameSessionUseCase {
       }
       default:
         if (family === 'listening')
-          content.lines = shuffle(bank.listening).slice(0, 5);
+          content.lines = deck
+            ? items.slice(0, 5).map((i) => ({ text: i.term, ...(i.answer ? { answer: i.answer } : {}), ...(i.question ? { question: i.question } : {}), gap: gapOf(i.term) }))
+            : shuffle(bank.listening).slice(0, 5);
     }
     if (family === 'vocab' && content.vocabulary.length < 2)
       throw new BadRequestException(

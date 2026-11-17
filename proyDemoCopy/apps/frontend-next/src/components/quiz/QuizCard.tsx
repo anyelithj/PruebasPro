@@ -4,6 +4,7 @@ import { DifficultyBadge } from "./DifficultyBadge";
 import { CategoryIcon } from "./CategoryIcon";
 import { categoryLabel, difficultyLabel, totalMinutes } from "@/components/portal/quiz-format";
 import type { QuizListItem } from "@/types/quiz";
+import { languageLabel } from "@/lib/languages"; // [2026-10-27]: idioma visible en la tarjeta (como en Cursos)
 // [QuizCard]: tarjeta de examen estilo exam-card (demo examenes.html) | [Patron]: Presentational + Atomic (molecule) | [Principio]: SRP
 
 export interface QuizCardProps {
@@ -12,14 +13,16 @@ export interface QuizCardProps {
   completed?: boolean;
   // [scorePct]: precisión obtenida (0-100) cuando completed | [Principio]: ISP
   scorePct?: number;
+  // [tag · 2026-11-09]: etiqueta de tipo (p. ej. «Práctica · sin certificado») en lugar de la categoría repetida del pie
+  tag?: string;
 }
 
-export function QuizCard({ quiz, completed = false, scorePct }: QuizCardProps) {
+export function QuizCard({ quiz, completed = false, scorePct, tag }: QuizCardProps) {
   const questions = quiz.questionsCount ?? 0;
   const minutes = totalMinutes(quiz.timePerQuestionSeconds, questions || 1);
 
   return (
-    <article className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-5 transition-all hover:-translate-y-1 hover:shadow-lg hover:border-primary/40">
+    <article className="flex flex-col gap-3 surface-interactive p-5">
       {/* [ec-top]: icono + título + materia + estado */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3 min-w-0">
@@ -27,8 +30,10 @@ export function QuizCard({ quiz, completed = false, scorePct }: QuizCardProps) {
             <CategoryIcon category={quiz.category} />
           </span>
           <div className="min-w-0">
-            <h3 className="font-bold leading-tight truncate">{quiz.title}</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <h3 className="title-card truncate">{quiz.title}</h3>
+            <p className="type-meta text-muted-foreground mt-0.5">
+              {/* [2026-10-27]: el idioma va primero (como en las tarjetas de Cursos) | `&&` (JS): solo si el backend lo envía */}
+              {quiz.language && <><span className="font-mono font-bold">{quiz.language.toUpperCase()}</span> {languageLabel(quiz.language)} · </>}
               {categoryLabel(quiz.category)} · {difficultyLabel(quiz.difficulty)}
             </p>
           </div>
@@ -61,7 +66,7 @@ export function QuizCard({ quiz, completed = false, scorePct }: QuizCardProps) {
       {/* [ec-foot]: categoría + acción */}
       <div className="mt-auto flex items-center justify-between gap-2 border-t border-border pt-3">
         <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-          {categoryLabel(quiz.category)}
+          {tag ?? categoryLabel(quiz.category)}
         </span>
         {completed ? (
           <Link
@@ -72,7 +77,7 @@ export function QuizCard({ quiz, completed = false, scorePct }: QuizCardProps) {
           </Link>
         ) : (
           <Link
-            href={`/quiz/${quiz.id}`}
+            href={`/quiz/${quiz.id}/play`} // «Iniciar examen» = presentarlo (no la vista de Gestión)
             className="btn btn-primary btn-sm"
           >
             Iniciar examen →

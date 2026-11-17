@@ -9,9 +9,10 @@ export interface QuizGridProps {
   showActions?: boolean;
   // [completedMap]: quizId → precisión (0-100) si el estudiante ya lo resolvió | [Principio]: ISP
   completedMap?: Record<string, number>;
+  tag?: string; // [2026-11-09]: etiqueta común a todas las tarjetas (p. ej. «Práctica»)
 }
 
-export function QuizGrid({ quizzes, showActions = false, completedMap }: QuizGridProps) {
+export function QuizGrid({ quizzes, showActions = false, completedMap, tag }: QuizGridProps) {
   if (quizzes.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-border bg-card p-12 text-center">
@@ -26,10 +27,10 @@ export function QuizGrid({ quizzes, showActions = false, completedMap }: QuizGri
         const completed = scorePct !== undefined;
         return (
           <div key={q.id} className="flex flex-col gap-2">
-            <QuizCard quiz={q} completed={completed} scorePct={scorePct} />
+            <QuizCard quiz={q} completed={completed} scorePct={scorePct} tag={tag} />
             {showActions && (
               <div className="rounded-xl border border-border bg-card px-4 py-2">
-                <QuizActions quizId={q.id} title={q.title} isPublished={q.isPublished} />
+                <QuizActions quizId={q.id} title={q.title} isPublished={q.isPublished} viewHref={`/quiz/${q.id}`} />
               </div>
             )}
           </div>

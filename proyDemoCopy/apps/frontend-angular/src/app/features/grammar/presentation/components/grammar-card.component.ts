@@ -11,10 +11,10 @@ import { GrammarSectionComponent } from './grammar-section.component';
   template: `
     <article class="space-y-4">
       <header class="rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 p-5 text-white shadow-lg shadow-primary/20">
-        <p class="text-xs font-bold uppercase tracking-widest opacity-90">{{ languageName() }} · {{ topic().levels.join(', ') }}</p>
-        <h2 class="mt-1 text-2xl font-extrabold sm:text-3xl" [attr.lang]="topic().language">{{ topic().title }}</h2>
+        <p class="type-meta font-bold uppercase tracking-widest opacity-90">{{ languageName() }} · {{ topic().levels.join(', ') }}</p>
+        <h2 class="title-page mt-1" [attr.lang]="topic().language">{{ topic().title }}</h2>
         @if (topic().summary) {
-          <p class="mt-1 text-sm opacity-95">{{ topic().summary }}</p>
+          <p class="mt-1 opacity-95">{{ topic().summary }}</p>
         }
       </header>
       <div class="grid gap-4 lg:grid-cols-2">

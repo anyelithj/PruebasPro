@@ -37,12 +37,15 @@ import { TurnRecordingUseCase } from './application/use-cases/turn-recording.use
 import { UpdateTurnUseCase } from './application/use-cases/update-turn.use-case';
 import { UploadDialogueUseCase } from './application/use-cases/upload-dialogue.use-case';
 import { WithdrawDialogueUseCase } from './application/use-cases/withdraw-dialogue.use-case';
+import { UpdateDialogueUseCase } from './application/use-cases/update-dialogue.use-case'; // [2026-10-27]: «Editar» de Gestión (Next.js)
 import { DraftDialogueUseCase } from './application/use-cases/draft-dialogue.use-case';
 import { Dialogue } from './domain/entities/dialogue.entity';
 import { DialogueSession } from './domain/entities/dialogue-session.entity';
 import { DialogueTopic } from './domain/entities/dialogue-topic.entity';
 import { DialogueTurn } from './domain/entities/dialogue-turn.entity';
 import { DIALOGUE_AGENT } from './domain/interfaces/dialogue-agent.interface';
+import { SENTENCE_CORRECTOR } from './domain/interfaces/sentence-corrector.interface';
+import { SentenceCorrectorAdapter } from './infrastructure/ai/sentence-corrector.adapter';
 import { LEVEL_CLASSIFIER } from './domain/interfaces/level-classifier.interface';
 import { DialogueAgentClient } from './infrastructure/ai/dialogue-agent-client.adapter';
 import { LevelClassifierClient } from './infrastructure/ai/level-classifier-client.adapter';
@@ -85,6 +88,7 @@ import { DialoguesController } from './presentation/dialogues.controller';
     },
     { provide: LEVEL_CLASSIFIER, useClass: LevelClassifierClient },
     { provide: DIALOGUE_AGENT, useClass: DialogueAgentClient },
+    { provide: SENTENCE_CORRECTOR, useClass: SentenceCorrectorAdapter }, // [2026-11-13 · Anexo A]: corrector pedagógico único
     DialogueAccess,
     TurnEnricher,
     ClassifyDialogueLevelUseCase,
@@ -94,6 +98,7 @@ import { DialoguesController } from './presentation/dialogues.controller';
     GetDialogueUseCase,
     ConfirmDialogueLevelUseCase,
     WithdrawDialogueUseCase,
+    UpdateDialogueUseCase,
     AddTurnUseCase,
     ListTurnsUseCase,
     GetTurnUseCase,

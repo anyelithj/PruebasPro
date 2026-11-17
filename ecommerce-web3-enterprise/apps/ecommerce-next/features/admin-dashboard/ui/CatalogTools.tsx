@@ -24,6 +24,7 @@ import { Button } from "@/shared/ui/Button";
 import { Badge } from "@/shared/ui/Badge";
 import { Skeleton } from "@/shared/ui/Skeleton";
 import { toast } from "@/shared/ui/Toast";
+import { TablePager, useLocalPage } from "./DataTable";
 
 // ---------- RF-04.3 Exportar / importar ----------
 
@@ -171,8 +172,9 @@ function BrandStatsView({ brand }: { brand: Brand }) {
   const t = useTranslations("admin.brands");
   const { money } = useFormat();
   const stats = useAdminGet<BrandStats>("brand-stats", `/brand/${brand.id}/stats`);
+  const months = useLocalPage(stats.data?.monthly);
   if (!stats.data) return <Skeleton className="h-40 w-full" />;
-  const { orders, units, revenueCents, topProducts, monthly } = stats.data;
+  const { orders, units, revenueCents, topProducts } = stats.data;
   if (orders === 0) return <p className="text-sm text-slate-600">{t("noSales")}</p>;
   return (
     <div className="flex flex-col gap-4 text-sm">
@@ -196,11 +198,12 @@ function BrandStatsView({ brand }: { brand: Brand }) {
         <caption className="mb-2 text-left font-medium">{t("monthly")}</caption>
         <thead><tr><th scope="col">{t("month")}</th><th scope="col" className="text-right">{t("units")}</th><th scope="col" className="text-right">{t("revenue")}</th></tr></thead>
         <tbody>
-          {monthly.map((row) => (
+          {months.visible.map((row) => (
             <tr key={row.month} className="border-t"><td>{row.month}</td><td className="text-right tabular-nums">{row.units}</td><td className="text-right tabular-nums">{money(row.revenueCents)}</td></tr>
           ))}
         </tbody>
       </table>
+      <TablePager meta={months.meta} onPage={months.setPage} />
     </div>
   );
 }

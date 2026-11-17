@@ -41,7 +41,7 @@ describe('Correcciones 2026-10-19', () => {
       ipa: jest.fn(async () => ({ ipa: 'ðə ˈfæmɪli', ipa_us: 'ðə ˈfæməli', engine: 'espeak-ng' })),
     } as unknown as LanguageToolsPort;
     const uc = new TopicTitleUseCase(tools);
-    await expect(uc.execute('La familia', 'en', 't')).resolves.toEqual({ text: 'The family', ipa: 'ðə ˈfæmɪli', ipaUs: 'ðə ˈfæməli', translationEs: 'La familia' });
+    await expect(uc.execute('La familia', 'en', 't')).resolves.toEqual({ text: 'The family', ipa: 'ðə ˈfæmɪli', ipaUs: 'ðə ˈfæməli', translationEs: 'La familia', translated: true });
     await uc.execute('la familia', 'en', 't'); // Misma clave (sin mayúsculas) → caché
     expect(tools.translate).toHaveBeenCalledTimes(1);
   });

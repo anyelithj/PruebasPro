@@ -81,12 +81,13 @@ export class CourseMaterialsController {
   }
 
   // `@UseInterceptors(FileInterceptor('file', …))` (NestJS): campo "file" del formulario | `fileFilter`: rechaza MIME no permitidos sin escribir el archivo | el tope de tamaño (MAX_UPLOAD_MB) y la clave UUID los fija CoursesModule (MulterModule)
+  // [2026-10-27]: @Roles(TEACHER) → docente y admin; la PROPIEDAD del curso la valida el caso de uso (403 + se borra el binario)
   @Post()
-  @Roles(Role.ADMIN)
+  @Roles(Role.TEACHER)
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary:
-      'Adjuntar video (MP4/WebM/OGG), PDF o imagen al curso (ADMIN, máx. MAX_UPLOAD_MB, 500 MB por defecto)',
+      'Adjuntar video (MP4/WebM/OGG), PDF o imagen al curso (ADMIN o docente dueño, máx. MAX_UPLOAD_MB, 500 MB por defecto)',
   })
   @UseInterceptors(
     FileInterceptor('file', {
@@ -104,20 +105,30 @@ export class CourseMaterialsController {
   upload(
     @Param('courseId', ParseUUIDPipe) courseId: string,
     @UploadedFile() file: StoredUpload | undefined,
+    @CurrentUser() user: JwtPayload,
     @Body('title') title?: string,
   ) {
-    return this.materials.upload(courseId, file, title);
+    return this.materials.upload(courseId, file, title, {
+      id: user.sub,
+      role: user.role,
+    });
   }
 
   // [POST /courses/:courseId/materials/link · 2026-10-23]: adjunta un enlace externo (YouTube, artículo, podcast…) | [Patrón]: Command
   @Post('link')
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Adjuntar un enlace externo como material (ADMIN)' })
+  @Roles(Role.TEACHER)
+  @ApiOperation({
+    summary: 'Adjuntar un enlace externo como material (ADMIN o docente dueño)',
+  })
   addLink(
     @Param('courseId', ParseUUIDPipe) courseId: string,
     @Body() dto: AddLinkMaterialDto,
+    @CurrentUser() user: JwtPayload,
   ) {
-    return this.materials.addLink(courseId, dto.url, dto.title);
+    return this.materials.addLink(courseId, dto.url, dto.title, {
+      id: user.sub,
+      role: user.role,
+    });
   }
 
   // [Descarga/streaming]: `@Res()` (NestJS) entrega el control a Express | `inline`: el navegador reproduce el video / abre el PDF
@@ -187,12 +198,18 @@ export class CourseMaterialsController {
   }
 
   @Delete(':id')
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Quitar un material del curso (ADMIN)' })
+  @Roles(Role.TEACHER)
+  @ApiOperation({
+    summary: 'Quitar un material del curso (ADMIN o docente dueño)',
+  })
   remove(
     @Param('courseId', ParseUUIDPipe) courseId: string,
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtPayload,
   ) {
-    return this.materials.remove(courseId, id);
+    return this.materials.remove(courseId, id, {
+      id: user.sub,
+      role: user.role,
+    });
   }
 }

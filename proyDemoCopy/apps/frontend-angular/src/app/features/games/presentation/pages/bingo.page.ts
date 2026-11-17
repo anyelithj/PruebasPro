@@ -27,7 +27,7 @@ import { GameShellComponent } from '../components/game-shell.component';
         <div
           class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-gradient-soft p-4"
         >
-          <p class="text-sm font-semibold">{{ tx.findWord }}</p>
+          <p class="font-semibold">{{ tx.findWord }}</p>
           <aula-audio-player
             [text]="items()[current()!].term"
             [language]="gl"
@@ -39,7 +39,7 @@ import { GameShellComponent } from '../components/game-shell.component';
       @if (feedback(); as f) {
         <p
           role="status"
-          class="mb-3 rounded-lg px-3 py-2 text-sm font-semibold"
+          class="mb-3 rounded-lg px-3 py-2 font-semibold"
           [class]="
             f.ok ? 'bg-tone-brand-soft text-tone-brand' : 'bg-tone-danger-soft text-tone-danger'
           "

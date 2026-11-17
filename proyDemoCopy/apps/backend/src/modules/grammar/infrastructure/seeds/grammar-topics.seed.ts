@@ -74,6 +74,9 @@ export class GrammarTopicSeeder implements OnModuleInit {
           })
         ).map((t) => t.slug),
       );
+      // [Fix 2026-11-05 · borrados que reaparecían]: solo se siembra en una instalación vacía → lo que el administrador borra no vuelve al reiniciar
+      // ponytail: entradas nuevas del seed no llegan a BD ya sembradas; añadir una tabla de «seeds aplicados» si hace falta
+      if (existing.size) return;
       const missing = GRAMMAR_SEED.filter((t) => !existing.has(slugify(t.title)));
       for (const t of missing) {
         // `transaction` (TypeORM): una ficha entra completa o no entra

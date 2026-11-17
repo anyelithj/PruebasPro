@@ -20,7 +20,7 @@ export interface ActivityRow {
   language: string | null;
   level: string | null;
   status?: "draft" | "published" | "review" | "rejected" | string;
-  blockers?: string[]; // [2026-10-24]: lo que falta para publicar (Música: license | audio | lyrics) → la tabla deshabilita «Publicar» y lo explica
+  blockers?: string[]; // [2026-10-24]: lo que falta para publicar (Música: license | lyrics) → la tabla deshabilita «Publicar» y lo explica
   viewHref: string;
   editHref: string;
 }
@@ -35,7 +35,9 @@ interface TabDef {
   remove?: string | ((id: string) => string); // Ruta de NestJS para borrar (con :id) · función si depende del tipo de fila (juegos: catálogo o creado)
   removeNote?: string;
   // [publish · 2026-10-23]: publicar / despublicar como en Recursos → lista de pasos PATCH (ruta + cuerpo) según el destino | sin `publish` = la sección no tiene estado
-  publish?: (id: string, publish: boolean) => ReadonlyArray<{ path: string; body: Record<string, string> }>;
+  // `denied` (2026-10-27): mensaje si el ÚLTIMO paso responde 403 (el rol no puede llegar al destino, p. ej. un docente publicando una canción) → se explica en vez del «No se puede pasar de…» del backend
+  publish?: (id: string, publish: boolean) => ReadonlyArray<{ path: string; body: Record<string, string>; denied?: string }>;
+  teacherPublishLabel?: string; // [2026-10-27]: el docente no publica esta sección (solo el ADMIN) → el botón dice lo que de verdad hace
 }
 
 // [statusPatch]: un solo PATCH { status } (práctica, gramática y poliglota) | Función pura
@@ -115,12 +117,12 @@ export const ACTIVITY_TABS: Readonly<Record<ActivityTab, TabDef>> = {
         return {
           id: d.id,
           title: d.title,
-          description: `${g?.label ?? d.gameType} · ${d.items.length} palabras`,
+          description: `${g?.label ?? d.gameType} · ${d.items.length} elementos`,
           language: d.language,
           level: d.level,
           status: d.status,
           viewHref: `/juegos/${g?.route ?? ""}?mazo=${enc(d.id)}&lang=${enc(d.language)}`,
-          editHref: "",
+          editHref: R.games.edit(d.id), // [2026-10-27]: antes "" → la fila no tenía «Editar» (título, juego, nivel y palabras)
         };
       }),
       ...(await apiFetch<{ games: CatalogGame[] }>("/games/catalog", { bearer: b })).games
@@ -141,7 +143,7 @@ export const ACTIVITY_TABS: Readonly<Record<ActivityTab, TabDef>> = {
     publish: (id, publish) => [{ path: `/games/${isDeckId(id) ? "decks" : "catalog"}/${enc(id)}`, body: { status: publish ? "published" : "draft" } }],
   },
   music: {
-    label: "Música",
+    label: "Canciones",
     icon: Music,
     description: "Canciones con letra, IPA, traducción y karaoke sincronizado.",
     create: { href: "/musica/subir", label: "Subir canción" }, // Asistente Angular: la letra se importa de archivo/URL/audio en el mismo formulario
@@ -149,9 +151,14 @@ export const ACTIVITY_TABS: Readonly<Record<ActivityTab, TabDef>> = {
     remove: "/music/songs/:id",
     removeNote: "La canción y su audio se retiran.",
     // [Máquina de estados de Music]: borrador → revisión → publicada (publicar lo decide el ADMIN) · despublicar = volver a borrador
+    // [2026-10-27]: el docente queda «En revisión» (solo el ADMIN publica: verifica la licencia) → `denied` lo explica · despublicar lo puede hacer también el autor
+    teacherPublishLabel: "Enviar a revisión",
     publish: (id, publish) =>
       publish
-        ? [{ path: `/music/songs/${enc(id)}/status`, body: { status: "review" } }, { path: `/music/songs/${enc(id)}/status`, body: { status: "published" } }]
+        ? [
+            { path: `/music/songs/${enc(id)}/status`, body: { status: "review" } },
+            { path: `/music/songs/${enc(id)}/status`, body: { status: "published" }, denied: "Enviada a revisión: un administrador comprobará la licencia y la publicará. Mientras tanto los estudiantes no la ven." },
+          ]
         : [{ path: `/music/songs/${enc(id)}/status`, body: { status: "draft" } }],
   },
   dialogues: {
@@ -170,8 +177,8 @@ export const ACTIVITY_TABS: Readonly<Record<ActivityTab, TabDef>> = {
     label: "Poliglota",
     icon: Globe,
     description: "Un tema en los siete idiomas lado a lado, con IPA.",
-    create: { href: "/poliglota/administrar", label: "Crear tema" },
-    list: async (scope, b) => rows(await get("/polyglot/topics", b), scope, () => R.polyglot.view(""), (x) => R.polyglot.edit(x.id)),
+    create: { href: "/admin/activities/new?tab=polyglot", label: "Crear tema" }, // [2026-11-11]: misma página que el resto
+    list: async (scope, b) => rows(await get("/polyglot/topics", b), scope, (x) => R.polyglot.view(x.id), (x) => R.polyglot.edit(x.id)),
     remove: "/polyglot/topics/:id",
     removeNote: "El tema se archiva.",
     publish: statusPatch("/polyglot/topics"),
@@ -206,7 +213,7 @@ export const withReturn = (href: string, tab: ActivityTab): string => withReturn
 export const ACTIVITY_TAB_KEYS: ActivityTab[] = (Object.keys(ACTIVITY_TABS) as ActivityTab[]).filter((k) => k !== "grammar");
 export const STATUS_LABEL: Readonly<Record<string, string>> = { draft: "Borrador", published: "Publicada", review: "En revisión", rejected: "Rechazada" };
 // [BLOCKER_LABEL · 2026-10-24]: requisitos de publicación de NestJS (music/domain/song-readiness) → texto corto de la tabla | [Patrón]: Lookup Table
-export const BLOCKER_LABEL: Readonly<Record<string, string>> = { license: "licencia", audio: "audio", lyrics: "letra" };
+export const BLOCKER_LABEL: Readonly<Record<string, string>> = { license: "licencia", lyrics: "letra", level: "nivel (edítala para elegirlo)" };
 
 // [parseTab]: valor de la URL → pestaña válida (o la primera) | [Fail Fast]: nunca se usa un valor arbitrario
 export const parseTab = (v: string | undefined, fallback: ActivityTab = "practice"): ActivityTab => (ACTIVITY_TAB_KEYS.includes(v as ActivityTab) ? (v as ActivityTab) : fallback);
@@ -218,7 +225,8 @@ export async function listActivities(tab: ActivityTab, scope: ActivityScope): Pr
 }
 
 // [setActivityPublished · 2026-10-23]: recorre los pasos de la sección; si un paso ya está hecho (p. ej. la canción ya estaba en revisión) el backend lo rechaza y se sigue con el siguiente
-export async function setActivityPublished(tab: ActivityTab, id: string, publish: boolean): Promise<void> {
+// [2026-10-27]: devuelve un aviso cuando el rol no llega al destino pero el paso anterior sí se hizo (docente → «Enviada a revisión») → la UI lo muestra como información, no como error
+export async function setActivityPublished(tab: ActivityTab, id: string, publish: boolean): Promise<string | undefined> {
   const steps = ACTIVITY_TABS[tab].publish?.(id, publish);
   if (!steps) throw new Error("Esta sección no se publica.");
   const bearer = (await getCurrentAccessToken()) ?? undefined;
@@ -228,6 +236,7 @@ export async function setActivityPublished(tab: ActivityTab, id: string, publish
     } catch (err) {
       // Pasos intermedios ya hechos (403 «No se puede pasar de…») se ignoran; el último (el destino) sí debe cumplirse
       // [2026-10-24]: un 400 intermedio es un requisito que falta («Falta subir el audio») → se muestra ESE motivo, no el 403 confuso del paso siguiente
+      if (i === steps.length - 1 && step.denied && err instanceof ApiError && err.status === 403) return step.denied;
       if (i === steps.length - 1 || (err instanceof ApiError && err.status === 400)) throw err;
     }
   }

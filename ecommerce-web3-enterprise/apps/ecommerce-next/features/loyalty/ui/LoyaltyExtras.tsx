@@ -15,6 +15,7 @@ import { toast } from "@/shared/ui/Toast";
 import { useErrorMessage } from "@/shared/hook/useErrorMessage";
 import { config } from "@/shared/constants/config";
 import { cn } from "@/shared/lib/cn";
+import { TablePager, useLocalPage } from "@/features/admin-dashboard/ui/DataTable";
 
 const SECTION = "flex flex-col gap-3 rounded-lg border border-slate-200 p-4";
 
@@ -99,6 +100,7 @@ export function Ranking() {
   const tTier = useTranslations("loyalty.tiers");
   const format = useFormatter();
   const { data } = useRanking();
+  const top = useLocalPage(data?.top);
   if (!data) return null;
   return (
     <section aria-labelledby="ranking-title" className={SECTION}>
@@ -110,7 +112,7 @@ export function Ranking() {
           <tr><th scope="col" className="py-1 pr-2">#</th><th scope="col" className="py-1 pr-2">{t("member")}</th><th scope="col" className="py-1 pr-2">{t("tier")}</th><th scope="col" className="py-1 text-right">{t("points")}</th></tr>
         </thead>
         <tbody>
-          {data.top.map((row) => (
+          {top.visible.map((row) => (
             <tr key={row.position} className="border-b last:border-0">
               <td className="py-1 pr-2 tabular-nums">{row.position}</td>
               <td className="py-1 pr-2">{row.name}</td>
@@ -120,6 +122,7 @@ export function Ranking() {
           ))}
         </tbody>
       </table>
+      <TablePager meta={top.meta} onPage={top.setPage} />
     </section>
   );
 }

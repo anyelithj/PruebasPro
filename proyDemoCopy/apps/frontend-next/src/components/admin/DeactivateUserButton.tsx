@@ -84,7 +84,7 @@ export function DeactivateUserButton({ userId, userName, isActive }: DeactivateU
               ¿Seguro que quieres {action} a <b>{userName}</b>?
             </DialogDescription>
           </DialogHeader>
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {error && <p className="type-meta text-destructive">{error}</p>}
           <DialogFooter className="gap-2">
             <button
               type="button"

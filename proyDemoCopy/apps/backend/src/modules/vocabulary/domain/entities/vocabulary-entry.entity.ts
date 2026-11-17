@@ -1,4 +1,5 @@
 import {
+  AfterLoad,
   Column,
   CreateDateColumn,
   Entity,
@@ -6,6 +7,8 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import type { GrammarSnapshot } from '../noun-grammar';
+import { withArticleIpa } from '../../../../shared/domain/article-ipa';
 // [Entity VocabularyEntry · Sprint 8.2 · RF-106/RF-109]: término o frase del banco de vocabulario del usuario con traducción e IPA UK/US | [Patrón]: Entity (DDD) + Snapshot (traducción e IPA copiados al guardar) | [Principio]: SRP | [Tecnología]: TypeORM + PostgreSQL
 // [Regla]: el IPA nace «automático» (espeak-ng); una corrección manual prevalece y marca la entrada como revisada
 
@@ -48,6 +51,10 @@ export class VocabularyEntry {
   @Column({ type: 'text', nullable: true })
   example!: string | null;
 
+  // [2026-11-03 · Regla obligatoria]: artículo, género, plural, clasificador… + `headword` («der Tisch – die Tische») + `missing` | null = aún sin revisar
+  @Column({ type: 'jsonb', nullable: true })
+  grammar!: GrammarSnapshot | null;
+
   // [Origen]: recurso curricular del que salió la palabra (null = alta manual)
   @Column({ type: 'uuid', name: 'source_item_id', nullable: true })
   sourceItemId!: string | null;
@@ -65,8 +72,17 @@ export class VocabularyEntry {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt!: Date;
-}
 
+  // [2026-11-06 · «der Hund /ˈhʊnt/»]: al leer, la pronunciación incluye el artículo con el que se muestra la palabra (también en lo ya guardado y en juegos/práctica)
+  @AfterLoad()
+  protected articleInIpa(): void {
+    const shown = this.grammar?.headword?.split(' – ')[0] || this.term;
+    const fix = (ipa: string | null) => (withArticleIpa(this.language, shown, ipa) ?? null);
+    this.ipa = fix(this.ipa);
+    this.ipaUk = fix(this.ipaUk);
+    this.ipaUs = fix(this.ipaUs);
+  }
+}
 // [WordStatus · Sprint 10.2]: estados de las palabras marcadas desde el diccionario
 export const WORD_STATUSES = ['learning', 'learned'] as const;
 export type WordStatus = (typeof WORD_STATUSES)[number];

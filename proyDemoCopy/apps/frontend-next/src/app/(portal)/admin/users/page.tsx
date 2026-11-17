@@ -5,7 +5,10 @@ import { listUsers, listQuizzes, type AdminUser } from "@/lib/quiz-api";
 import type { PaginatedQuizzes } from "@/types/quiz";
 import { DeactivateUserButton } from "@/components/admin/DeactivateUserButton";
 import { QuizAdminTable } from "@/components/quiz/QuizAdminTable";
+import { QuizFilters } from "@/components/quiz/QuizFilters"; // [2026-10-31]: mismo panel que Cursos, Recursos y Actividades
+import { isLanguage } from "@/lib/languages";
 import { ManagementHeader } from "@/components/portal/ManagementHeader";
+import { CourseExamBanner } from "../certificados/CourseExamBanner";
 
 export const metadata: Metadata = {
   title: "Gestión",
@@ -24,6 +27,9 @@ interface SearchParams {
   search?: string;
   category?: string;
   difficulty?: string;
+  language?: string; // [2026-10-31]: filtros de Exámenes
+  status?: string;
+  curso?: string; // [2026-11-09]: curso recién creado/editado → banner para generar su examen final
 }
 
 const ROLE_LABEL: Record<string, string> = {
@@ -80,7 +86,7 @@ async function UsersTab({ sp }: { sp: SearchParams }) {
     <section className="space-y-6">
       <RememberReturn memo="users" />
       <div className="flex items-start justify-between flex-wrap gap-4">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground">
           {data.total} usuario{data.total === 1 ? "" : "s"} registrado
           {data.total === 1 ? "" : "s"}.
         </p>
@@ -236,6 +242,7 @@ async function UsersTab({ sp }: { sp: SearchParams }) {
 }
 
 async function ExamsTab({ sp }: { sp: SearchParams }) {
+  const activeLanguage = isLanguage(sp.language) ? sp.language : undefined; // Validado contra el SSOT (un código raro = «Todos»)
   let data: PaginatedQuizzes;
   let error: string | null = null;
   try {
@@ -244,6 +251,10 @@ async function ExamsTab({ sp }: { sp: SearchParams }) {
       limit: 10,
       category: sp.category,
       difficulty: sp.difficulty,
+      language: activeLanguage,
+      search: sp.search,
+      status: sp.status,
+      kind: "all", // [2026-11-09]: también los exámenes finales de curso y de nivel (antes solo práctica)
       publishedOnly: false, // [2026-10-25]: Gestión lista también los borradores (antes un examen recién creado no aparecía en la tabla)
     });
   } catch (err) {
@@ -255,7 +266,7 @@ async function ExamsTab({ sp }: { sp: SearchParams }) {
     <section className="space-y-6">
       <RememberReturn memo="exams" />
       <div className="flex items-start justify-between flex-wrap gap-4">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground">
           {data.total} {data.total === 1 ? "examen" : "exámenes"} en la plataforma.
         </p>
         <div className="flex flex-wrap items-center gap-3">
@@ -267,6 +278,9 @@ async function ExamsTab({ sp }: { sp: SearchParams }) {
           </Link>
         </div>
       </div>
+
+      {sp.curso && <CourseExamBanner courseId={sp.curso} />}
+      <QuizFilters sp={{ ...sp, tab: "examenes" }} pathname="/admin/users" activeLanguage={activeLanguage} />
 
       {error && (
         <div

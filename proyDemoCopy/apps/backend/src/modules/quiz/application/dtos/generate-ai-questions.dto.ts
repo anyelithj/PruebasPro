@@ -27,11 +27,11 @@ export class GenerateAIQuestionsDto {
     description: 'Tema libre de la práctica',
     example: 'Presente simple',
     minLength: 2,
-    maxLength: 200,
+    maxLength: 2000, // [2026-11-10]: todos los subtemas del curso
   })
   @IsString()
   @MinLength(2)
-  @MaxLength(200)
+  @MaxLength(2000)
   topic!: string;
 
   @ApiProperty({ default: 10, minimum: 1, maximum: 20 })
@@ -74,4 +74,11 @@ export class GenerateAIQuestionsDto {
   @IsOptional()
   @IsEnum(AIProvider)
   provider?: AIProvider;
+
+  // [sourceText · 2026-11-03]: texto extraído de un archivo o enlace (Word, PDF, imagen, página…) → las preguntas salen SOLO de este material | máx. 6000 = juegos
+  @ApiProperty({ required: false, maxLength: 6000, description: 'Material importado del que salen las preguntas' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(6000)
+  sourceText?: string;
 }

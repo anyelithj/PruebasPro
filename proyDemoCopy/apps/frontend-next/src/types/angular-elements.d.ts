@@ -17,7 +17,7 @@ declare module "react" {
       // <aula-ipa-text text="umbrella" language="en">: texto con IPA UK/US, traducción y sonido (features/vocabulary · Sprints 8.3/8.4)
       "aula-ipa-text": ElementProps<{ text: string; language: string; "with-translation"?: "true" | "false"; "with-switch"?: "true" | "false"; "ipa-only"?: "true" | "false" }>; // [2026-10-23]: ipa-only bajo ejemplos
       // <aula-word-lookup text="I run every day" language="en">: cada palabra se pulsa y abre el diccionario (shared/ui/organisms/word-lookup · Sprints 10.3/10.4)
-      "aula-word-lookup": ElementProps<{ text: string; language: string }>;
+      "aula-word-lookup": ElementProps<{ text: string; language: string; "rule-words"?: string }>; // [2026-11-14] rule-words: modo «regla» (ver WordLookupComponent)
     }
   }
 }

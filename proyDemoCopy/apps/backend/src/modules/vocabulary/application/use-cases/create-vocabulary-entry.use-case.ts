@@ -7,6 +7,7 @@ import {
 } from '../../domain/entities/vocabulary-entry.entity';
 import type { TermLookupResult } from '../../../../shared/domain/interfaces/language-tools.interface';
 import type { CreateVocabularyEntryDto } from '../dtos/vocabulary-entry.dto';
+import { CompleteGrammarUseCase } from './complete-grammar.use-case';
 import { LookupTermUseCase } from './lookup-term.use-case';
 // [UseCase CreateVocabularyEntry · Sprint 8.2 · RF-106/RF-109]: alta de un término en el banco del usuario y completado automático de traducción e IPA UK/US (vía la caché) | [Patrón]: Use Case (Command) + Idempotencia (mismo término = misma entrada) | [Principio]: SRP + DRY (reutiliza LookupTerm y su caché) | [Paradigma]: POO + async/await
 
@@ -16,6 +17,7 @@ export class CreateVocabularyEntryUseCase {
     @InjectRepository(VocabularyEntry)
     private readonly entries: Repository<VocabularyEntry>,
     private readonly lookup: LookupTermUseCase,
+    private readonly grammar: CompleteGrammarUseCase,
   ) {}
 
   async execute(
@@ -31,12 +33,12 @@ export class CreateVocabularyEntryUseCase {
     });
     if (existing) return existing; // [Idempotente]: guardar dos veces no duplica
 
-    const found = (
-      await this.lookup.execute(
-        { text: dto.term, language: dto.language },
-        token,
-      )
-    ).result as unknown as TermLookupResult;
+    // [2026-11-03 · Regla obligatoria]: traducción + gramática del sustantivo en paralelo (la gramática nunca lanza: null = pendiente, se repara al listar)
+    const [lookup, grammar] = await Promise.all([
+      this.lookup.execute({ text: dto.term, language: dto.language }, token),
+      this.grammar.snapshot(dto.term, dto.language, token),
+    ]);
+    const found = lookup.result as unknown as TermLookupResult;
     return this.entries.save(
       this.entries.create({
         userId,
@@ -50,6 +52,7 @@ export class CreateVocabularyEntryUseCase {
         ipaUs: found.ipa_us,
         ipa: found.ipa,
         example: dto.example ?? null,
+        grammar,
         sourceItemId: dto.sourceItemId ?? null,
         reviewed: false, // IPA automático hasta que alguien lo revise
       }),

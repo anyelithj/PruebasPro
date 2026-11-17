@@ -14,9 +14,22 @@ const PaymentsSchema = z.object({
   // `{ORDER_ID}` y `{PAYMENT_ID}` los sustituye el backend (la pantalla consulta el estado del pago por id)
   PAYMENTS_RETURN_URL: z.string().includes('{PAYMENT_ID}').optional(),
   FRONTEND_URL: z.url().default('http://localhost:9000'),
+  // [2026-11-16 · Mercado Pago Colombia]: credenciales de PRUEBA gratuitas (Tus integraciones → Credenciales de prueba) · sin empresa registrada
+  PAYMENT_PROVIDER: z.enum(['stripe', 'mercadopago']).optional(), // Sin definir: Mercado Pago si hay token; si no, Stripe
+  MERCADOPAGO_ACCESS_TOKEN: z.string().min(10).optional(), // TEST-… (o APP_USR-… de un usuario de prueba) · SOLO en el servidor
+  MERCADOPAGO_WEBHOOK_SECRET: z.string().min(8).optional(), // «Clave secreta» de Webhooks → firma x-signature
+  MERCADOPAGO_NOTIFICATION_URL: z.url().optional(), // URL PÚBLICA de POST /api/v1/payments/webhook (ngrok/cloudflared en local)
+  MERCADOPAGO_USD_COP_RATE: z.coerce.number().positive().default(4000), // Cursos en USD → COP (Mercado Pago Colombia cobra en pesos)
 });
 
 export interface PaymentsConfig {
+  provider: 'stripe' | 'mercadopago'; // [2026-11-16]: pasarela activa (PAYMENT_GATEWAY)
+  mercadoPago: {
+    accessToken?: string;
+    webhookSecret?: string;
+    notificationUrl?: string;
+    usdCopRate: number;
+  };
   enabled: boolean; // true solo con STRIPE_SECRET_KEY
   secretKey?: string;
   webhookSecret?: string;
@@ -40,6 +53,15 @@ export function loadPaymentsConfig(
   }
   const c = result.data;
   return {
+    provider:
+      c.PAYMENT_PROVIDER ??
+      (c.MERCADOPAGO_ACCESS_TOKEN ? 'mercadopago' : 'stripe'),
+    mercadoPago: {
+      accessToken: c.MERCADOPAGO_ACCESS_TOKEN,
+      webhookSecret: c.MERCADOPAGO_WEBHOOK_SECRET,
+      notificationUrl: c.MERCADOPAGO_NOTIFICATION_URL,
+      usdCopRate: c.MERCADOPAGO_USD_COP_RATE,
+    },
     enabled: !!c.STRIPE_SECRET_KEY && !!c.STRIPE_PUBLISHABLE_KEY, // Sin la pública el navegador no puede montar el formulario
     secretKey: c.STRIPE_SECRET_KEY,
     webhookSecret: c.STRIPE_WEBHOOK_SECRET,

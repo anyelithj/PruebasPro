@@ -1,0 +1,10 @@
+// Solo se usa si VITE_FILES_BACKEND=storage (Cloud Storage; puede requerir el plan Blaze).
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /files/{entityType}/{entityId}/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.resource.size < 10 * 1024 * 1024;
+    }
+  }
+}

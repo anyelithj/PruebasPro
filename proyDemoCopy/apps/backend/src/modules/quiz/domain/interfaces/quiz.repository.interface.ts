@@ -24,6 +24,8 @@ export interface CreateQuizInput {
   source?: string;
   timePerQuestionSeconds?: number;
   isPublished?: boolean;
+  // [2026-11-06 · Exámenes]: ver Quiz.kind (por defecto practice)
+  exam?: Pick<Quiz, 'kind' | 'courseId' | 'cefrLevel' | 'passScore' | 'timeLimitMinutes' | 'questionsPerAttempt'>;
   questions: Omit<Question, 'id' | 'quiz' | 'quizId'>[];
 }
 
@@ -35,6 +37,10 @@ export interface ListQuizzesOptions {
   difficulty?: Difficulty;
   authorId?: string;
   publishedOnly?: boolean;
+  language?: Language; // [2026-10-27]: filtro por idioma objetivo (pestañas de idioma, como en Cursos)
+  search?: string; // [2026-10-30]: «Buscar» de Gestión (título o descripción, sin distinguir mayúsculas)
+  status?: 'published' | 'draft'; // [2026-10-30]: filtro «Estado» (solo con publishedOnly=false)
+  kind?: 'practice' | 'final' | 'level' | 'all'; // [2026-11-06]: por defecto solo practice (los exámenes se abren desde su curso o nivel)
 }
 
 export interface PaginatedQuizzes {
@@ -58,7 +64,7 @@ export interface IQuizRepository {
   ): Promise<Quiz>;
 
   // ===== QuizSession =====
-  createSession(userId: string, quizId: string): Promise<QuizSession>;
+  createSession(userId: string, quizId: string, questionIds?: string[] | null): Promise<QuizSession>;
   findSessionById(id: string): Promise<QuizSession | null>;
   appendSessionAnswer(
     sessionId: string,
@@ -69,6 +75,10 @@ export interface IQuizRepository {
     status: SessionStatus,
     totalScore: number,
     correctCount: number,
+    exam?: { percent: number; passed: boolean | null },
   ): Promise<QuizSession>;
+  // [2026-11-06 · Exámenes]: intentos de un usuario en un quiz (más reciente primero) y examen por curso o nivel
+  listAttempts(userId: string, quizId: string): Promise<QuizSession[]>;
+  findExam(where: { kind: 'final'; courseId: string } | { kind: 'level'; language: Language; cefrLevel: string }): Promise<Quiz | null>;
   listSessionsByUser(userId: string, limit?: number): Promise<QuizSession[]>;
 }

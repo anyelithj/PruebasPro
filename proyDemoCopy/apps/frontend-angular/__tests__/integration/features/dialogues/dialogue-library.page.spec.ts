@@ -33,7 +33,7 @@ describe('DialogueLibraryPage', () => {
     const { el } = await render(DialogueLibraryPage, providers('ADMIN'));
     expect(el.textContent).toContain('Pendientes de confirmar');
     expect(el.textContent).toContain('A2 · estimado');
-    expect(el.querySelector('a[href="/dialogos/subir/d2"]')).not.toBeNull();
+    expect(el.querySelector('a[href="/dialogos/d2"]')).not.toBeNull(); // [2026-11-03]: abre el diálogo; editarlo es desde Gestión
   });
 
   it('error → alerta', async () => {

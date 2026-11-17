@@ -63,8 +63,8 @@ describe("forward (BFF comodín)", () => {
     expect(proxy).toHaveBeenCalledTimes(2);
   });
 
-  it("413 si la canción declara más de 20 MB", async () => {
-    const big = new Request("http://localhost/api/music/songs/s1/audio", { method: "POST", headers: { "content-length": String(21 * 1024 * 1024) } });
+  it("413 si la canción declara más de 100 MB (límite 2026-11-03)", async () => {
+    const big = new Request("http://localhost/api/music/songs/s1/audio", { method: "POST", headers: { "content-length": String(101 * 1024 * 1024) } });
     expect((await forward(big, ["music", "songs", "s1", "audio"])).status).toBe(413);
     expect(proxy).not.toHaveBeenCalled();
   });
@@ -77,5 +77,16 @@ describe("forward (BFF comodín)", () => {
     await forward(req("PATCH", "http://localhost/api/vocabulary/words/w1/status"), ["vocabulary", "words", "w1", "status"]);
     expect(proxy).toHaveBeenNthCalledWith(1, expect.any(Request), "/polyglot/table?topic=t1&languages=en,es");
     expect(proxy).toHaveBeenCalledTimes(3);
+  });
+
+  // [2026-11-16 · Libros]: antes faltaba «books» en la lista blanca → 404 y la página de libros quedaba vacía
+  it("reenvía books (catálogo, traducción y progreso); DELETE no", async () => {
+    proxy.mockResolvedValue(new Response("{}", { headers: { "content-type": "application/json" } }));
+    await forward(req("GET", "http://localhost/api/books?language=fr&page=1"), ["books"]);
+    await forward(req("POST", "http://localhost/api/books/1/chapters/0/paragraphs/2/translation"), ["books", "1", "chapters", "0", "paragraphs", "2", "translation"]);
+    await forward(req("PUT", "http://localhost/api/books/1/progress"), ["books", "1", "progress"]);
+    expect(proxy).toHaveBeenNthCalledWith(1, expect.any(Request), "/books?language=fr&page=1");
+    expect(proxy).toHaveBeenCalledTimes(3);
+    expect((await forward(req("DELETE"), ["books", "1"])).status).toBe(405);
   });
 });

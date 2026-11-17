@@ -41,10 +41,10 @@ import { PromptCardComponent } from '../components/prompt-card.component';
           (recorded)="spoken($event)"
         />
         @if (speech.transcribing()) {
-          <p role="status" class="text-sm text-muted-foreground">{{ tx.transcribing }}</p>
+          <p role="status" class="text-muted-foreground">{{ tx.transcribing }}</p>
         }
         @if (speech.error(); as err) {
-          <p role="alert" class="text-sm text-tone-danger">{{ err }}</p>
+          <p role="alert" class="text-tone-danger">{{ err }}</p>
         }
         @if (metric() || speech.transcript()) {
           <aula-oral-round-result

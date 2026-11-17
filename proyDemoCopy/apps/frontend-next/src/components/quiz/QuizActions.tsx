@@ -1,140 +1,49 @@
-"use client";
-import { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogFooter,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-// [QuizActions]: botones acciones quiz para docente/admin | [Patrón]: Presentational | [Principio]: SRP
+"use client"; // [Next.js]: Client Component → las acciones llaman a /api/quiz desde el navegador (cookies de sesión) y RowActions usa estado/diálogo
+import { RowActions, type ActionResult } from "@/components/admin/RowActions";
+// [QuizActions · 2026-10-28 → 2026-10-31]: en tablas Ver · Editar · Publicar · Eliminar; en el detalle Probar · Editar · Publicar · Eliminar — antes: Probar · Editar · Publicar/Despublicar · Eliminar de un examen con el MISMO comportamiento que Gestión → Recursos
+// Antes tenía su propia implementación silenciosa (sin toast al publicar/eliminar y textos fijos) → ahora delega en RowActions: toast de éxito/aviso, error en línea, Dialog de confirmación e i18n (t.management.row · t.common)
+// [Patrón]: Adapter (fetch REST → contrato ActionResult de RowActions) + Composition | [Principio]: DRY + DIP (RowActions recibe comandos ya enlazados) | [Paradigma]: Declarativo
 
 export interface QuizActionsProps {
   quizId: string;
   title: string;
   isPublished: boolean;
+  viewHref?: string; // [Fix 2026-10-31]: tablas → «Ver» abre el detalle | sin él (página de detalle) → «Probar»
+  afterDeleteHref?: string; // [Detalle]: tras eliminar se vuelve a la lista de Gestión (el examen ya no existe)
 }
 
-export function QuizActions({ quizId, title, isPublished }: QuizActionsProps) {
-  const router = useRouter();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  // [Modal de confirmación]: reemplaza window.confirm por Dialog accesible | [Patrón]: Controlled Dialog
-  const [confirmOpen, setConfirmOpen] = useState(false);
+// [request]: PATCH/DELETE a la ruta proxy de Next.js → ActionResult | `async` (ES2017) + try/catch: los fallos de red también llegan como mensaje (nunca una excepción sin capturar)
+async function request(quizId: string, init: RequestInit): Promise<ActionResult> {
+  try {
+    const res = await fetch(`/api/quiz/${encodeURIComponent(quizId)}`, init); // `encodeURIComponent` (Web API): el id nunca rompe la ruta
+    if (res.ok || res.status === 204) return { ok: true }; // 204 No Content = borrado correcto
+    const body = (await res.json().catch(() => ({}))) as { message?: string }; // `.catch(() => ({}))`: cuerpo vacío o no-JSON → objeto vacío
+    return { ok: false, message: body.message ?? `HTTP ${res.status}` };
+  } catch (err) {
+    return { ok: false, message: err instanceof Error ? err.message : String(err) }; // `instanceof` (JS): estrecha el tipo `unknown`
+  }
+}
 
-  const togglePublish = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/quiz/${quizId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isPublished: !isPublished }),
-      });
-      if (!res.ok) {
-        const body = (await res.json()) as { message?: string };
-        throw new Error(body.message ?? `HTTP ${res.status}`);
-      }
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  // [Eliminación confirmada]: ejecutada desde el Dialog, no desde window.confirm | [Patrón]: Command
-  const onDelete = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/quiz/${quizId}`, { method: "DELETE" });
-      if (!res.ok && res.status !== 204) {
-        const body = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(body.message ?? `HTTP ${res.status}`);
-      }
-      setConfirmOpen(false);
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error");
-    } finally {
-      setBusy(false);
-    }
-  };
-
+export function QuizActions({ quizId, title, isPublished, viewHref, afterDeleteHref }: QuizActionsProps) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Link
-        href={`/quiz/${quizId}`}
-        className="btn btn-outline btn-sm"
-      >
-        Ver detalle
-      </Link>
-      <Link
-        href={`/quiz/${quizId}/edit`}
-        className="btn btn-outline btn-sm"
-      >
-        Editar
-      </Link>
-      <button
-        type="button"
-        onClick={togglePublish}
-        disabled={busy}
-        className={
-          isPublished
-            ? "btn btn-sm border border-tone-warning-line bg-card text-tone-warning hover:bg-tone-warning-soft"
-            : "btn btn-sm border border-tone-brand-line bg-card text-tone-brand hover:bg-tone-brand-soft"
-        }
-      >
-        {busy ? "..." : isPublished ? "Despublicar" : "Publicar"}
-      </button>
-      <button
-        type="button"
-        onClick={() => {
-          setError(null);
-          setConfirmOpen(true);
-        }}
-        disabled={busy}
-        className="btn btn-sm border border-tone-danger-line bg-card text-tone-danger hover:bg-tone-danger-soft"
-      >
-        Eliminar
-      </button>
-      {error && <span className="text-[10px] text-destructive">{error}</span>}
-
-      {/* [Modal confirmación eliminar]: reemplaza la alerta nativa del navegador | [Patrón]: Confirm Dialog */}
-      <Dialog open={confirmOpen} onOpenChange={(o) => !busy && setConfirmOpen(o)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Eliminar examen</DialogTitle>
-            <DialogDescription>
-              ¿Seguro que quieres eliminar el examen <b>“{title}”</b>? Esta acción no se
-              puede deshacer.
-            </DialogDescription>
-          </DialogHeader>
-          {error && <p className="text-xs text-destructive">{error}</p>}
-          <DialogFooter className="gap-2">
-            <button
-              type="button"
-              onClick={() => setConfirmOpen(false)}
-              disabled={busy}
-              className="btn btn-outline"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={onDelete}
-              disabled={busy}
-              className="btn btn-danger"
-            >
-              {busy ? "Eliminando..." : "Eliminar"}
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+    <RowActions
+      title={title}
+      viewHref={viewHref}
+      tryHref={viewHref ? undefined : `/quiz/${quizId}/play`} // [Probar · 2026-10-30]: desde el detalle el docente lo juega antes de publicarlo | `?:` (ternario): en tablas solo «Ver»
+      editHref={`/quiz/${quizId}/edit`}
+      // [Publicar / Despublicar]: un PATCH parcial { isPublished } | `() => …` (closure): RowActions solo sabe ejecutar el comando
+      publish={{
+        isPublished,
+        toggle: () =>
+          request(quizId, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ isPublished: !isPublished }),
+          }),
+      }}
+      onDelete={() => request(quizId, { method: "DELETE" })}
+      deleteTitle="Eliminar examen"
+      afterDeleteHref={afterDeleteHref}
+    />
   );
 }

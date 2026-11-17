@@ -4,6 +4,7 @@ import { isLocale } from "@aula/shared-i18n"; // [Type guard]: ¿el idioma prefe
 import { PHONE_MAX_LENGTH, PHONE_PLACEHOLDER } from "@aula/shared-schemas"; // [2026-10-24]: límites/ejemplo del teléfono compartidos con registro y Gestión | [Principio]: SSOT
 import { usePreferences } from "@/components/layout/PreferencesProvider";
 import { updateProfileAction, type ProfileFormState } from "./actions"; // [Server Action]: mutación en el servidor
+import { SOCIAL_META, SOCIAL_NETWORKS, SOCIAL_URL_MAX_LENGTH, socialUrlField, type SocialUrlField } from "@/types/profile"; // [2026-10-28]: redes sociales del docente (SSOT)
 // [ProfileEditForm]: tarjeta "Datos personales" de NeuroLearning (cabecera con avatar + estadísticas + campos + Guardar datos) | [Patrón]: Presentational + Uncontrolled inputs (defaultValue del servidor) | [Principio]: SRP + KISS | [Paradigma]: Declarativo
 
 // `interface` (TS): contrato de props; el servidor pasa los valores iniciales | [Principio]: ISP (solo lo necesario)
@@ -18,6 +19,7 @@ interface ProfileEditFormProps {
   bio: string | null; // [2026-10-23]: preferencias en BD (antes localStorage → el <select> se reseteaba al enviar el form)
   timezone: string | null;
   preferredLanguage: string | null;
+  social: Partial<Record<SocialUrlField, string | null>>; // [2026-10-28]: enlaces actuales (LinkedIn, X, Spotify, YouTube) | `Partial`: backend anterior sin los campos
   enrolledCourses: number;
   level: string | null;
 }
@@ -39,7 +41,7 @@ const textareaClass = `${controlBase} resize-none`;
 // [initials]: "Ana Pérez" → "AP" | [Paradigma]: Funcional (pura) | `?.` + `??` (ES2020): tolera nombres vacíos
 const initials = (a: string, b: string) => `${a.trim()[0] ?? ""}${b.trim()[0] ?? ""}`.toUpperCase() || "?";
 
-export function ProfileEditForm({ firstName, lastName, email, roleLabel, section, isStudent, phone, bio, timezone, preferredLanguage, enrolledCourses, level }: ProfileEditFormProps) {
+export function ProfileEditForm({ firstName, lastName, email, roleLabel, section, isStudent, phone, bio, timezone, preferredLanguage, social, enrolledCourses, level }: ProfileEditFormProps) {
   const { t, locale, setLocale } = usePreferences();
   const p = t.profile; // Alias de textos del perfil
   // [useActionState]: [estadoDevuelto, actionParaElForm, pending] | reemplaza varios useState + useCallback
@@ -56,7 +58,7 @@ export function ProfileEditForm({ firstName, lastName, email, roleLabel, section
   }, [state, locale, setLocale]);
 
   return (
-    <section aria-labelledby="personal-title" className="rounded-[14px] border border-border bg-card p-[18px] shadow-[var(--nl-shd)]">
+    <section aria-labelledby="personal-title" className="surface p-[18px]">
       <h2 id="personal-title" className="sr-only">
         {p.title}
       </h2>
@@ -154,6 +156,27 @@ export function ProfileEditForm({ firstName, lastName, email, roleLabel, section
             </Field>
           </div>
 
+          {/* [Redes sociales · 2026-10-28]: solo docente/admin (se publican en «Autoría del contenido» de sus cursos) | <fieldset>/<legend> (HTML): agrupa los 4 campos para el lector de pantalla
+              `type="url"` + `inputMode="url"`: teclado con «/» y «.com» en móvil | `noValidate` del form → la regla real (https + dominio) la aplica la Server Action con el mensaje traducido */}
+          {!isStudent && (
+            <fieldset className="space-y-[9px] rounded-xl border border-border p-3">
+              <legend className="px-1 text-[11px] font-semibold text-muted-foreground">{p.social}</legend>
+              <p id="social-hint" className="type-meta text-muted-foreground">
+                {p.socialHint}
+              </p>
+              <div className="grid gap-[9px] sm:grid-cols-2">
+                {SOCIAL_NETWORKS.map((n) => {
+                  const field = socialUrlField(n); // "linkedin" → "linkedinUrl" (nombre del FormData y del PATCH)
+                  return (
+                    <Field key={n} id={field} label={SOCIAL_META[n].label} error={errors[field]}>
+                      <input id={field} name={field} type="url" inputMode="url" autoComplete="url" defaultValue={social[field] ?? ""} maxLength={SOCIAL_URL_MAX_LENGTH} placeholder={SOCIAL_META[n].placeholder} className={controlClass} {...ariaFor(field, errors[field])} />
+                    </Field>
+                  );
+                })}
+              </div>
+            </fieldset>
+          )}
+
           {/* [Renderizado condicional]: `&&` (JS) → solo estudiantes ven el campo sección */}
           {isStudent && (
             <Field id="section" label={p.section} hint={p.sectionHint} error={errors.section}>
@@ -191,12 +214,12 @@ export function Field({ id, label, hint, error, required, children }: { id: stri
       </label>
       {children}
       {hint && (
-        <p id={`${id}-hint`} className="mt-1 text-[10px] text-muted-foreground">
+        <p id={`${id}-hint`} className="mt-1 type-meta text-muted-foreground">
           {hint}
         </p>
       )}
       {error && (
-        <p id={`${id}-error`} className="mt-1 text-[11px] text-destructive">
+        <p id={`${id}-error`} className="mt-1 type-meta text-destructive">
           {error}
         </p>
       )}

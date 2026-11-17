@@ -14,8 +14,19 @@ from typing import Annotated
 from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
-from src.modules.assistant.application.schemas.chat_request import ChatRequest
-from src.modules.assistant.application.schemas.chat_response import ChatResponse
+from src.modules.assistant.application.schemas.chat_request import ChatRequest, LanguageUsageRequest
+from src.modules.assistant.application.schemas.chat_response import ChatResponse, LanguageUsageOut
+from src.modules.assistant.application.schemas.knowledge_response import (  # [OpenAPI]: DTOs de salida → Swagger con esquema real
+    ConversationOut,
+    FaqEmbedOut,
+    KnowledgeStatusOut,
+    UserWordsIn,
+    UserWordsOut,
+    KnowledgeSyncIn,
+    KnowledgeSyncOut,
+    ManualReindexOut,
+    ReindexKnowledgeOut,
+)
 from src.modules.assistant.application.use_cases.chat_with_agent import (
     ChatWithAgentUseCase,
 )
@@ -24,6 +35,7 @@ from src.modules.assistant.application.use_cases.get_conversation import (
 )
 from src.modules.assistant.application.use_cases.reindex_knowledge import (
     ReindexKnowledgeUseCase,
+    SyncKnowledgeUseCase,
 )
 from src.modules.assistant.application.use_cases.reindex_manual import (
     ManualArticleIn,
@@ -34,7 +46,8 @@ from src.modules.assistant.application.use_cases.upsert_faq_embeddings import (
     FaqIn,
     UpsertFaqEmbeddingsUseCase,
 )
-from src.modules.assistant.domain.interfaces.vector_store import VectorStore
+from src.modules.assistant.domain.interfaces.vector_store import KnowledgeDoc, VectorStore
+from src.modules.assistant.domain.value_objects.language_usage import measure_conversation
 from src.modules.assistant.infrastructure.agents.agent_factory import AgentFactory
 from src.modules.assistant.infrastructure.agents.guide_agent import GuideAgent
 from src.modules.assistant.infrastructure.agents.game_agent import GameAgent
@@ -42,14 +55,14 @@ from src.modules.assistant.infrastructure.agents.dialogue_agent import DialogueA
 from src.modules.assistant.infrastructure.agents.tutor_agent import TutorAgent
 from src.modules.assistant.infrastructure.clients.faq_retriever import get_faq_retriever
 from src.modules.assistant.infrastructure.clients.manual_retriever import get_manual_retriever
-from src.modules.assistant.infrastructure.repositories.conversation_repository import (
-    InMemoryConversationRepository,
-)
+from src.modules.assistant.domain.interfaces.conversation_repository import ConversationRepository
+from src.modules.assistant.infrastructure.repositories.conversation_repository import build_conversation_repository
 from src.modules.feedback.infrastructure.clients.ollama_client import OllamaClient
 from src.modules.assistant.infrastructure.repositories.knowledge_repository import (
     SqlKnowledgeRepository,
 )
 from src.modules.feedback.infrastructure.clients.rag_retriever import get_rag_retriever
+from src.modules.language_tools.infrastructure.clients.espeak_phonetizer import get_phonetizer  # [Tarea 9]: pronunciación por diccionario
 from src.shared.config.settings import get_settings
 from src.shared.dependencies.auth_deps import CurrentUserDep, require_role
 from src.shared.dependencies.db_deps import DbSessionDep
@@ -58,8 +71,10 @@ router = APIRouter(prefix="/assistant", tags=["assistant"])
 
 
 @lru_cache(maxsize=1)
-def _get_repo() -> InMemoryConversationRepository:
-    return InMemoryConversationRepository()
+def _get_repo() -> ConversationRepository:
+    # [Composition Root · Tarea 1]: Redis compartido entre workers (RNF-06); memoria solo si Redis no responde al arrancar
+    s = get_settings()
+    return build_conversation_repository(s.redis_url, s.conversation_ttl_seconds)
 
 
 @lru_cache(maxsize=1)
@@ -87,7 +102,7 @@ def _get_agents() -> AgentFactory:
         mode="support",
     )
     return AgentFactory(
-        {"tutor": TutorAgent(_get_ollama(), get_rag_retriever()), "guide": guide, "support": support, "game": GameAgent(_get_ollama()), "dialogue": DialogueAgent(_get_ollama())}  # [Sprints 8.7 y 9.6]
+        {"tutor": TutorAgent(_get_ollama(), get_rag_retriever(), get_phonetizer()), "guide": guide, "support": support, "game": GameAgent(_get_ollama()), "dialogue": DialogueAgent(_get_ollama())}  # [Sprints 8.7 y 9.6]
     )
 
 
@@ -106,12 +121,13 @@ def get_conversation_use_case() -> GetConversationUseCase:
     return GetConversationUseCase(_get_repo())
 
 
-@router.get("/health")
+# `summary` (FastAPI): título de la operación en /api/v1/docs · [2026-11-17]: toda ruta documentada en OpenAPI
+@router.get("/health", summary="Estado del módulo assistant (comprobación de vida)")
 async def health() -> dict[str, str]:
     return {"module": "assistant", "status": "ready"}
 
 
-@router.get("/knowledge", summary="Estado de la base de conocimiento del tutor (RAG)")
+@router.get("/knowledge", response_model=KnowledgeStatusOut, summary="Estado de la base de conocimiento del tutor (RAG)")
 async def knowledge(_user: CurrentUserDep) -> dict[str, object]:
     store, faq, manual = get_rag_retriever().store, get_faq_retriever().store, get_manual_retriever().store
     return {
@@ -124,6 +140,7 @@ async def knowledge(_user: CurrentUserDep) -> dict[str, object]:
 
 @router.post(
     "/knowledge/reindex",
+    response_model=ReindexKnowledgeOut,  # `response_model` (FastAPI): valida el dict y publica su esquema
     summary="Reconstruye el índice FAISS desde los recursos curriculares aprobados",
     dependencies=[Depends(require_role("ADMIN"))],
 )
@@ -135,7 +152,43 @@ async def reindex_knowledge(session: DbSessionDep) -> dict[str, object]:
 
 
 @router.post(
+    "/knowledge/sync",
+    response_model=KnowledgeSyncOut,
+    summary="Actualiza en el índice los fragmentos de los recursos que cambiaron (lo llama NestJS Curriculum)",
+    # [Tarea 9]: el autor que confirma el alta, la importación, la edición o la baja es TEACHER o ADMIN (NestJS firma un token de servicio)
+    dependencies=[Depends(require_role("TEACHER", "ADMIN"))],
+)
+async def sync_knowledge(payload: KnowledgeSyncIn, session: DbSessionDep) -> dict[str, object]:
+    return await SyncKnowledgeUseCase(SqlKnowledgeRepository(session), _required(get_rag_retriever().store)).execute(payload.ids)
+
+
+@router.post(
+    "/knowledge/user-words",
+    response_model=UserWordsOut,
+    summary="Indexa las palabras que el usuario marcó para aprender (fragmentos privados del tutor)",
+)
+async def index_user_words(payload: UserWordsIn, user: CurrentUserDep) -> dict[str, object]:
+    # [2026-11-14 · RF-137]: el dueño SALE DEL TOKEN (nunca del cuerpo) → nadie indexa palabras en nombre de otro
+    # Solo términos sueltos con su traducción: los libros y textos completos no entran al índice
+    docs = [
+        KnowledgeDoc(
+            id=f"user:{user.id}:{w.id}",
+            language=w.language,
+            level="",
+            kind="vocabulary",
+            topic="Mis palabras para aprender",
+            text=f"{w.term} = {w.translation}" if w.translation else w.term,
+            owner=user.id,
+        )
+        for w in payload.words
+    ]
+    store = _required(get_rag_retriever().store)
+    return {"indexed": await asyncio.to_thread(store.replace_resources, [], docs)}
+
+
+@router.post(
     "/knowledge/faq/embed",
+    response_model=FaqEmbedOut,
     summary="Reconstruye el índice de FAQ del Agente Guía con las publicadas (lo llama NestJS Help)",
     dependencies=[Depends(require_role("ADMIN"))],
 )
@@ -145,6 +198,7 @@ async def embed_faqs(faqs: Annotated[list[FaqIn], Body(max_length=2000)]) -> dic
 
 @router.post(
     "/knowledge/manual/reindex",
+    response_model=ManualReindexOut,
     summary="Divide el manual por secciones y reconstruye su índice (lo llama NestJS Help)",
     dependencies=[Depends(require_role("ADMIN"))],
 )
@@ -168,6 +222,9 @@ async def chat(
 @router.post(
     "/chat/stream",
     summary="Conversa con el tutor IA (SSE streaming)",
+    # [OpenAPI · Sprint 11.2]: `response_class` (FastAPI) + `responses` → documenta `text/event-stream` en vez de un JSON vacío | [Principio]: contrato explícito
+    response_class=StreamingResponse,
+    responses={200: {"description": "Flujo SSE: eventos `data:` con fragmentos de texto", "content": {"text/event-stream": {"schema": {"type": "string"}}}}},
 )
 async def chat_stream(
     payload: ChatRequest,
@@ -176,8 +233,11 @@ async def chat_stream(
 ) -> StreamingResponse:
     # [SSE]: por ahora envia respuesta completa palabra-a-palabra (pseudo-streaming).
     # Real streaming desde Ollama llega en Sprint 4.
+    # [Fix 2026-10-27]: la respuesta se calcula ANTES de abrir el flujo → un fallo sale como HTTP 5xx real (NestJS lo detecta y responde desde la FAQ/manual)
+    # en vez de un 200 con el flujo cortado a medias (antes el error ocurría dentro del generador, con las cabeceras ya enviadas)
+    response = await use_case.execute(payload, user.id, user.role)
+
     async def event_generator():
-        response = await use_case.execute(payload, user.id, user.role)
         # [Header sesion]: el cliente lo necesita en el primer evento
         yield f"event: session\ndata: {json.dumps({'session_id': response.session_id})}\n\n"
         # `\S+\s*` (re): palabra + su espacio original → los saltos de línea de los pasos numerados del Agente Guía se conservan
@@ -185,14 +245,29 @@ async def chat_stream(
             yield f"event: token\ndata: {json.dumps({'text': token})}\n\n"
             await asyncio.sleep(0.02)
         # [Sprint 7.9]: citas y origen de la respuesta antes de cerrar (el Agente Guía las muestra bajo el mensaje)
-        meta = {"sources": [s.model_dump() for s in response.sources], "answered_by": response.answered_by, "game": response.game, "dialogue": response.dialogue}
+        meta = {
+            "sources": [s.model_dump() for s in response.sources],
+            "answered_by": response.answered_by,
+            "game": response.game,
+            "dialogue": response.dialogue,
+            # [2026-10-28]: uso del idioma meta (solo tutor) → indicador «Uso del idioma: 45 % / meta 60 %»
+            "language_usage": response.language_usage.model_dump() if response.language_usage else None,
+        }
         yield f"event: sources\ndata: {json.dumps(meta)}\n\n"
         yield "event: done\ndata: {}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
-@router.get("/conversation/{session_id}", summary="Lee la conversacion completa")
+# [POST /language-usage · 2026-10-28]: recalcula el % de palabras en el idioma meta de un historial (NestJS lo llama tras borrar o editar mensajes)
+# Sin LLM ni estado (< 1 ms por mensaje) | [Principio]: SSOT — la regla de medición y la meta por nivel viven solo en language_usage.py
+@router.post("/language-usage", response_model=LanguageUsageOut, summary="Uso del idioma meta en un historial (sin LLM)")
+async def language_usage(payload: LanguageUsageRequest, _user: CurrentUserDep) -> LanguageUsageOut:
+    usage = measure_conversation(payload.messages, payload.language, payload.level)
+    return LanguageUsageOut(**usage.to_dict())  # type: ignore[arg-type]
+
+
+@router.get("/conversation/{session_id}", response_model=ConversationOut, summary="Lee la conversacion completa")
 async def get_conversation(
     session_id: str,
     user: CurrentUserDep,

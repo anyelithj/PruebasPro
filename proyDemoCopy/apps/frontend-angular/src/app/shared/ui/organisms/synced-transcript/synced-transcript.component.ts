@@ -25,9 +25,9 @@ export interface TranscriptLabels {
   selector: 'aula-synced-transcript',
   imports: [TranscriptLineComponent, AccentSwitchComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'block' },
+  host: { '[class]': "fill() ? 'flex min-h-0 flex-col' : 'block'" }, // [2026-11-06]: fill → ocupa el alto que le dé el padre (la lista se desplaza dentro)
   template: `
-    <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+    <div class="mb-1 flex flex-wrap items-center justify-between gap-2">
       <div
         class="hidden flex-1 grid-cols-2 gap-6 px-3 text-xs font-bold uppercase tracking-wide text-muted-foreground md:grid"
       >
@@ -52,7 +52,8 @@ export interface TranscriptLabels {
       </div>
     </div>
     <ol
-      class="max-h-[28rem] space-y-1 overflow-y-auto rounded-xl border border-border bg-card p-2"
+      class="space-y-1 overflow-y-auto rounded-xl border border-border bg-card p-2"
+      [class]="fill() ? 'min-h-0 flex-1' : 'max-h-[28rem]'"
       [attr.aria-label]="labels().original"
     >
       @for (l of lines(); track l.id; let i = $index) {
@@ -78,6 +79,7 @@ export class SyncedTranscriptComponent {
   readonly lines = input.required<readonly TranscriptLine[]>();
   readonly language = input('en');
   readonly current = input(-1);
+  readonly fill = input(false); // [2026-11-06]: true = misma altura que el contenedor padre (canciones: igual que vídeo + avatar)
   readonly progress = input<number | null>(null); // [2026-10-23]: avance dentro de la línea actual → marcador de karaoke
   readonly follow = input(true);
   readonly seekable = input(false); // true si hay audio con tiempos (clic → saltar a la línea)

@@ -8,8 +8,17 @@ import {
 // [Tecnología]: Zod (librería de validación pura, sin E/S ni framework) → el dominio sigue independiente de NestJS/TypeORM
 
 // `const` + funciones auxiliares: bloques reutilizables entre esquemas | [Principio]: DRY
-const text = (max: number) => z.string().trim().min(1).max(max); // Texto obligatorio con límite (evita payloads enormes)
-const optionalText = (max: number) => z.string().trim().max(max).optional(); // `.optional()` (Zod): admite undefined
+// [sanitize · 2026-10-27]: quita lo que PostgreSQL rechaza en JSONB/text → antes un recurso importado de PDF/OCR con «\u0000» (o un emoji cortado
+// a la mitad por `.slice`, que deja un surrogate suelto) fallaba con 500 «Internal server error» al guardar | [Principio]: Fail Safe (se limpia, no se rechaza)
+// Regex: caracteres de control C0 salvo \t \n \r + surrogates UTF-16 sin pareja (lookbehind/lookahead, ES2018)
+const UNSAFE_CHARS =
+  // eslint-disable-next-line no-control-regex -- se buscan precisamente los caracteres de control
+  /[\u0000-\u0008\u000B\u000C\u000E-\u001F]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
+export const sanitizeText = (s: string): string => s.replace(UNSAFE_CHARS, '');
+const clean = () => z.string().transform(sanitizeText); // `.transform` (Zod): normaliza ANTES de las reglas de longitud (`.pipe`)
+const text = (max: number) => clean().pipe(z.string().trim().min(1).max(max)); // Texto obligatorio con límite (evita payloads enormes)
+const optionalText = (max: number) =>
+  clean().pipe(z.string().trim().max(max)).optional(); // `.optional()` (Zod): admite undefined
 
 // [IPA con referencia dialectal]: la variante es OBLIGATORIA (no se afirma una pronunciación universal) | [Regla del producto]
 const ipaSchema = z.object({
@@ -27,6 +36,12 @@ const imageSchema = z
     /^data:image\/(webp|png|jpeg);base64,[A-Za-z0-9+/=]+$/,
     'Imagen no válida (WebP, PNG o JPEG en base64)',
   );
+
+// [Apoyo visual · 2026-10-30]: emoji o imagen opcional en TODOS los tipos de recurso (antes solo vocabulario) | spread en cada `z.object` → sin migración: el contenido es JSONB | [Principio]: DRY
+const visual = {
+  emoji: optionalText(16), // Emoji que representa el elemento (p. ej. 🍎)
+  image: imageSchema.optional(), // Imagen pequeña adjunta por el docente
+};
 
 const exampleSchema = z.object({
   text: text(500), // Frase en el idioma objetivo
@@ -48,23 +63,27 @@ export const CURRICULUM_CONTENT_SCHEMAS = {
     explanationEs: text(4000), // Explicación en español
     structure: optionalText(300), // Fórmula (p. ej. "have/has + participio")
     examples: z.array(exampleSchema).max(20).default([]), // `.default([])` (Zod): array vacío si no llega
+    ...visual,
   }),
   [CurriculumItemKind.VOCABULARY]: z.object({
     lemma: text(160), // Forma canónica de la palabra
     partOfSpeech: optionalText(40), // Categoría gramatical
     gender: optionalText(20), // Género gramatical (de, fr, pt, es, ru)
+    article: optionalText(10), // [2026-11-02]: artículo del sustantivo (der/die/das, le/la/l'/les, o/a/os/as, el/la/los/las; en opcional; ru/zh no aplica) → regla en vocabulary-article.ts
+    plural: optionalText(160), // [2026-11-05]: plural con su artículo (die Tische, les livres, os livros, los libros) · ru: nominativo plural
+    classifier: optionalText(40), // [2026-11-05]: zh → clasificador con numeral (一本书 · yì běn shū)
     translationEs: text(300), // Traducción al español
     ipa: ipaSchema.optional(), // IPA opcional, pero si existe debe incluir variante
     romanization: optionalText(160), // Pinyin/transliteración
     examples: z.array(exampleSchema).max(10).default([]),
-    emoji: optionalText(16), // [Apoyo visual]: emoji que representa la palabra (p. ej. 🍎)
-    image: imageSchema.optional(), // [Apoyo visual]: imagen pequeña adjunta por el docente
+    ...visual,
   }),
-  [CurriculumItemKind.EXAMPLE]: exampleSchema,
+  [CurriculumItemKind.EXAMPLE]: exampleSchema.extend(visual), // `.extend` (Zod): los ejemplos anidados no llevan imagen, el recurso «ejemplo» sí
   [CurriculumItemKind.TRANSLATION]: z.object({
     source: text(1000), // Texto original
     targetEs: text(1000), // Traducción verificada al español
     notes: optionalText(1000), // Matices o alternativas válidas
+    ...visual,
   }),
   [CurriculumItemKind.PRONUNCIATION]: z.object({
     text: text(200), // Palabra o frase
@@ -76,13 +95,23 @@ export const CURRICULUM_CONTENT_SCHEMAS = {
     // [Ficha de fonema · 2026-10-24]: para un sonido como /ɒ/ → símbolo, cómo se articula y palabras de ejemplo (cada una con audio en la vista)
     phoneme: optionalText(20), // Símbolo IPA sin barras (p. ej. "ɒ")
     articulationEs: optionalText(1000), // CÓMO se pronuncia: labios, lengua y mandíbula comparados con el español
+    // [2026-11-14]: imagen o video de la boca (clave de /pronunciation-media, p. ej. «video-mp4-<uuid>») · '' = sin archivo
+    // [2026-11-14 · URL]: o un enlace https (imagen externa o video de YouTube) → la vista decide cómo pintarlo | solo https (sin http/javascript:)
+    mouthMedia: z
+      .string()
+      .trim()
+      .max(500)
+      .regex(/^(((image|video)-[a-z0-9]+-[0-9a-f-]{36})|https:\/\/[^\s"'<>]+)?$/)
+      .optional(),
     words: z.array(pronunciationWordSchema).max(20).default([]), // Palabras donde aparece el sonido
+    ...visual,
   }),
   [CurriculumItemKind.COMMON_ERROR]: z.object({
     incorrect: text(500), // Forma errónea típica
     correct: text(500), // Forma correcta
     explanationEs: text(2000), // Por qué es un error
     ruleKey: optionalText(120), // `key` de la regla gramatical relacionada (enlace por clave natural)
+    ...visual,
   }),
   [CurriculumItemKind.EXERCISE]: z
     .object({
@@ -97,6 +126,7 @@ export const CURRICULUM_CONTENT_SCHEMAS = {
       answerKey: z.array(text(500)).min(1).max(10), // Respuestas aceptadas → corrección determinista SIN LLM
       explanationEs: optionalText(2000),
       rubricKey: optionalText(120), // Rúbrica asociada (open_answer)
+      ...visual,
     })
     // `.superRefine` (Zod): validación cruzada entre campos | [Patrón]: Specification compuesta
     .superRefine((ex, ctx) => {
@@ -119,6 +149,7 @@ export const CURRICULUM_CONTENT_SCHEMAS = {
     }),
   [CurriculumItemKind.RUBRIC]: z.object({
     title: text(160),
+    ...visual,
     criteria: z
       .array(
         z

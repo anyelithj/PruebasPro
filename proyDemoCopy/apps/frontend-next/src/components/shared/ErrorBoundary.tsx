@@ -38,8 +38,8 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
     // [Fallback por defecto]: accesible y minimalista | [Buena práctica]: WCAG
     return (
       <div role="alert" className="p-4 rounded-md border border-destructive/30 bg-destructive/5">
-        <h2 className="font-semibold text-destructive">Algo salió mal</h2>
-        <p className="text-sm text-muted-foreground mt-1">{error.message}</p>
+        <h2 className="title-section text-destructive">Algo salió mal</h2>
+        <p className="text-muted-foreground mt-1">{error.message}</p>
         <button
           type="button"
           onClick={this.reset}

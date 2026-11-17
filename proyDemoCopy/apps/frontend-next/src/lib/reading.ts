@@ -19,13 +19,55 @@ export const READING_GENRE_LABEL: Readonly<Record<ReadingGenre, string>> = {
 export const READING_GENRE_OPTIONS = READING_GENRES.map((value) => ({ value, label: READING_GENRE_LABEL[value] }));
 export const isReadingGenre = (v: unknown): v is ReadingGenre => typeof v === "string" && (READING_GENRES as readonly string[]).includes(v);
 
-// [Longitud del texto de la IA]: palabras aproximadas (= @Min(60) @Max(600) de DraftReadingBody)
+// [Longitud del texto de la IA]: palabras aproximadas (= @Min(MIN_DRAFT_WORDS=60) @Max(MAX_DRAFT_WORDS=900) de DraftReadingBody)
 export const READING_LENGTH_OPTIONS = [
-  { value: "120", label: "Corto (~120 palabras)" },
-  { value: "200", label: "Medio (~200 palabras)" },
-  { value: "350", label: "Largo (~350 palabras)" },
-  { value: "500", label: "Muy largo (~500 palabras)" },
+  { value: "220", label: "Corto (~220 palabras)" },
+  { value: "350", label: "Medio (~350 palabras)" },
+  { value: "550", label: "Largo (~550 palabras)" },
+  { value: "800", label: "Muy largo (~800 palabras)" },
 ] as const;
+
+// [READING_WORDS_BY_LEVEL · 2026-10-28]: palabras que pide «Crear actividad» según el nivel MCER — espejo de READING_SHAPE de NestJS
+// (≥ 6 párrafos × ~5 frases en TODOS los niveles: A1 6×5 … C2 8×5–6) | `Readonly<Record<…>>` (TS): tabla inmutable | [Principio]: SSOT en el front (antes vivía suelta en activity-kinds)
+export const READING_WORDS_BY_LEVEL: Readonly<Record<string, number>> = { A1: 220, A2: 300, B1: 420, B2: 560, C1: 680, C2: 800 };
+// [readingWordsFor]: «B1+» → B1 · nivel desconocido → A2 | Función pura
+export const readingWordsFor = (level: string): number => READING_WORDS_BY_LEVEL[level.slice(0, 2).toUpperCase()] ?? READING_WORDS_BY_LEVEL.A2!;
+
+// [Dictado · 2026-11-16]: lectura o dictado (/lectura/dictado) · un dictado = ≥ 3 párrafos de ≥ 5 frases (= dictationProblem de NestJS)
+export const READING_KIND_OPTIONS = [
+  { value: "reading", label: "Lectura" },
+  { value: "dictation", label: "Dictado" },
+] as const;
+export const DICTATION_MIN_PARAGRAPHS = 3;
+export const DICTATION_MIN_SENTENCES = 5;
+// [sentencesIn · Fix 2026-11-17]: frases de un párrafo con la MISMA regla que splitSentences de NestJS (antes `Intl.Segmenter` → cuentas distintas a las del servidor)
+// Fin de frase = . ! ? … (+ comillas) + espacio + mayúscula/dígito/signo de apertura · «Mr.», «Sra.» o una inicial («J.») no cierran | Función pura
+const BOUNDARY = /[.!?…]+["'»”’)\]]*\s+(?=["'«“‘(\[¿¡—–-]?[\p{Lu}\p{N}])/gu;
+const ABBREVIATIONS: ReadonlySet<string> = new Set(["mr.", "mrs.", "ms.", "dr.", "prof.", "st.", "jr.", "sr.", "vs.", "etc.", "e.g.", "i.e.", "no.", "mt.", "inc.", "ltd.", "sra.", "srta.", "dra.", "ud.", "uds.", "pág.", "núm.", "av.", "aprox.", "m.", "mme.", "mlle.", "p.ex.", "cf.", "z.b.", "bzw.", "usw.", "hr.", "fr.", "nr.", "ca.", "d.h.", "u.a.", "sr.ª", "dr.ª", "v.", "pe."]);
+export function sentencesIn(paragraph: string): number {
+  const text = paragraph.replace(/\s+/g, " ").trim();
+  if (!text) return 0;
+  let n = 1;
+  let start = 0;
+  for (const m of text.matchAll(BOUNDARY)) {
+    const idx = m.index ?? 0;
+    const w = `${text.slice(start, idx).split(" ").pop() ?? ""}.`.toLowerCase().replace(/^[("'«“‘¿¡]+/, "");
+    if (m[0].startsWith(".") && !m[0].startsWith("..") && (/^\p{L}\.$/u.test(w) || ABBREVIATIONS.has(w))) continue;
+    n++;
+    start = idx + m[0].length;
+  }
+  return n;
+}
+// [dictationProblems]: mensajes que dicen QUÉ falta y CÓMO arreglarlo | Función pura
+export function dictationProblems(paragraphs: readonly string[]): string[] {
+  const rule = `un dictado necesita al menos ${DICTATION_MIN_PARAGRAPHS} párrafos de ${DICTATION_MIN_SENTENCES} frases o más`;
+  if (paragraphs.length < DICTATION_MIN_PARAGRAPHS)
+    return [`El texto tiene ${paragraphs.length} párrafo(s) y ${rule}: añade párrafos con «Añadir párrafo» o vuelve a generar el texto.`];
+  return paragraphs.flatMap((p, i) => {
+    const n = sentencesIn(p);
+    return n < DICTATION_MIN_SENTENCES ? [`El párrafo ${i + 1} tiene ${n} frase(s) y ${rule}: escribe ${DICTATION_MIN_SENTENCES - n} frase(s) más en él o únelo con otro párrafo.`] : [];
+  });
+}
 
 export const MAX_PARAGRAPHS = 100; // = ArrayMaxSize de CreateReadingBody
 export const MAX_PARAGRAPH = 4000; // = MaxLength por párrafo
@@ -95,6 +137,7 @@ export interface ReadingTextDetail extends ReadingTextSummary {
   sentences: ReadingSentence[];
   editable: boolean;
   pending: number; // Frases sin IPA o sin traducción
+  enriching?: boolean; // [2026-10-27]: `true` = NestJS las está generando en segundo plano (la vista sondea hasta que termine)
 }
 
 // [paragraphsFromSentences]: frases → párrafos de texto (editar el texto completo en Gestión) | Función pura

@@ -8,6 +8,7 @@ export const GAME_TYPES = [
   'bingo',
   'quick_sort',
   'forbidden_word',
+  'hangman', // [2026-11-06]: ahorcado (ortografía de la palabra a partir de su traducción)
   // Fluidez contra el agente (8.9)
   'taboo',
   'twenty_questions',
@@ -66,4 +67,5 @@ export const GAME_META: Readonly<
   listen_reformulate: { family: 'listening', skill: 'Reformulación' },
   quick_qa: { family: 'listening', skill: 'Respuesta rápida' },
   recovery_drills: { family: 'vocab', skill: 'Recuperación rápida' },
+  hangman: { family: 'vocab', skill: 'Ortografía' },
 });

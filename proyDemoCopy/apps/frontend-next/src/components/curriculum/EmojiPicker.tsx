@@ -97,11 +97,11 @@ export function EmojiPicker({ value, onSelect }: EmojiPickerProps) {
             </nav>
           )}
           <div className="min-h-40 flex-1 overflow-y-auto pr-1">
-            {error && <p role="alert" className="text-sm text-tone-danger">No se pudieron cargar los emojis.</p>}
-            {groups && visible.length === 0 && <p className="text-sm text-muted-foreground">Sin resultados para «{query}».</p>}
+            {error && <p role="alert" className="text-tone-danger">No se pudieron cargar los emojis.</p>}
+            {groups && visible.length === 0 && <p className="text-muted-foreground">Sin resultados para «{query}».</p>}
             {visible.map((g) => (
               <section key={g.key} id={`emoji-${g.key}`} aria-label={g.title} className="mb-3 scroll-mt-2" style={{ contentVisibility: "auto", containIntrinsicSize: "auto 400px" }}>
-                <h3 className="sticky top-0 z-10 bg-background py-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                <h3 className="title-overline sticky top-0 z-10 bg-background py-1 text-muted-foreground">
                   {g.title} <span className="font-normal">({g.emojis.length})</span>
                 </h3>
                 {/* [Grid de emojis]: cada uno es un botón con nombre accesible */}

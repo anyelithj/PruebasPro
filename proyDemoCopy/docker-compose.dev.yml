@@ -94,7 +94,8 @@ services:
 
   # [Sprint 6.7 · minio-init]: crea el bucket de desarrollo (privado, sin acceso anónimo) y termina | `--ignore-existing`: idempotente en cada `up`
   minio-init:
-    image: minio/mc:latest
+    # [2026-11-16]: minio/mc ya no se puede descargar (Docker Hub y quay.io responden «access denied») → se usa la misma imagen del servidor, que trae el cliente /usr/bin/mc | `entrypoint` abajo reemplaza al del servidor
+    image: minio/minio:latest
     container_name: languageProject_minio_init
     depends_on:
       minio:

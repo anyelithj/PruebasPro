@@ -1,6 +1,6 @@
 // [Test activity-kinds · 2026-10-24]: estrategias de «Crear actividad» — mapeo de lo importado, ida y vuelta de ítems, validación y guardado con un ApiPort falso
 // [Patrón]: Unit Test de funciones puras + Test Double (Fake del puerto de salida) | [Principio]: DIP → se prueba el guardado sin red ni tokens
-import { ACTIVITY_KINDS, emptyDraft, entryToItem, isCreatableKind, itemProblem, itemToEntry, mergeDraft, parseScript, rowsToConcepts, rowsToPracticeEntries, validateDraft, withReturnTo, type ApiPort } from "@/lib/activity-kinds";
+import { ACTIVITY_KINDS, diffRows, emptyDraft, entryToItem, isCreatableKind, itemProblem, itemToEntry, mergeDraft, parseScript, rowsToConcepts, rowsToPracticeEntries, validateDraft, withReturnTo, type ApiPort, type EditApiPort } from "@/lib/activity-kinds";
 
 const ctx = { language: "en", level: "A2" };
 const src = { label: "lista.xlsx" };
@@ -49,11 +49,25 @@ describe("diálogos", () => {
     expect(d.entries).toEqual([{ speaker: "A", text: "Hello" }, { speaker: "B", text: "Hi there" }]);
     expect(d.meta?.licenseSource).toBe("https://x.test/p");
   });
-  it("exige licencia confirmada y dos hablantes", () => {
-    const draft = { ...emptyDraft("dialogues"), title: "Café", entries: [{ speaker: "A", text: "Hi" }, { speaker: "A", text: "Bye" }] };
+  it("exige licencia confirmada y dos hablantes (texto importado)", () => {
+    const base = emptyDraft("dialogues");
+    const draft = { ...base, meta: { ...base.meta, origin: "import" }, title: "Café", entries: [{ speaker: "A", text: "Hi" }, { speaker: "A", text: "Bye" }] };
     const p = validateDraft("dialogues", draft, ctx).join(" ");
     expect(p).toMatch(/dos hablantes/);
     expect(p).toMatch(/licencia/);
+    expect(p).toMatch(/Titular de los derechos/);
+  });
+  // [2026-10-27]: con IA o escrito a mano NO se piden los datos de derechos (los pone NestJS como obra propia)
+  it.each(["ai", "own"])("origen «%s»: sin titular ni confirmación de licencia", async (origin) => {
+    const base = emptyDraft("dialogues");
+    const draft = { ...base, meta: { ...base.meta, origin }, title: "Café", entries: [{ speaker: "A", text: "Hi" }, { speaker: "B", text: "Hello" }] };
+    expect(validateDraft("dialogues", draft, ctx)).toEqual([]);
+    const { api, post } = fakeApi();
+    await ACTIVITY_KINDS.dialogues.persist(draft, ctx, api);
+    const body = (post.mock.calls[0] as unknown[])[1] as Record<string, unknown>;
+    expect(body.origin).toBe(origin);
+    expect(body.license).toBeUndefined();
+    expect(body.level).toBe(ctx.level);
   });
 });
 
@@ -65,11 +79,12 @@ describe("gramática", () => {
     expect(d.entries).toEqual([{ text: "I have eaten the apple." }]);
     expect(d.meta?.usage).toMatch(/^Se usa/);
   });
-  it("guarda tema → secciones → ejemplos → enriquecer", async () => {
+  // [2026-10-27]: los ejemplos van con `?defer=true` → NestJS completa IPA + traducción en segundo plano (ya no hay llamada síncrona a /enrich)
+  it("guarda tema → secciones → ejemplos diferidos (IPA/traducción en segundo plano)", async () => {
     const { api, post } = fakeApi();
     const res = await ACTIVITY_KINDS.grammar.persist({ title: "PP", meta: { usage: "Experiencias", formula: "S + have" }, entries: [{ text: "I have eaten." }] }, ctx, api);
     expect(res).toEqual({ id: "grammar-1", warnings: [] });
-    expect(post.mock.calls.map((c) => c[0])).toEqual(["/grammar/topics", "/grammar/topics/grammar-1/sections", "/grammar/topics/grammar-1/sections", "/grammar/sections/grammar-2/examples", "/grammar/topics/grammar-1/enrich"]);
+    expect(post.mock.calls.map((c) => c[0])).toEqual(["/grammar/topics", "/grammar/topics/grammar-1/sections", "/grammar/topics/grammar-1/sections", "/grammar/sections/grammar-2/examples?defer=true"]);
   });
 });
 
@@ -86,6 +101,26 @@ describe("poliglota", () => {
     const res = await ACTIVITY_KINDS.polyglot.persist({ title: "Frutas", meta: { category: "vocabulary" }, entries: [{ kind: "word", en: "apple" }] }, { language: "", level: "" }, { post } as unknown as ApiPort);
     expect(res.id).toBe("t1");
     expect(res.warnings[0]).toMatch(/IPA caída/);
+  });
+  // [2026-10-27]: conceptos en paralelo acotado (3) sin perder la posición ni el orden de los avisos
+  it("guarda varios conceptos a la vez (máx. 3) con su posición", async () => {
+    let running = 0;
+    let peak = 0;
+    const bodies: Array<{ position?: number }> = [];
+    const post = jest.fn(async (path: string, body?: unknown) => {
+      running++;
+      peak = Math.max(peak, running);
+      await new Promise((r) => setTimeout(r, 5));
+      running--;
+      if (path.endsWith("/concepts")) bodies.push(body as { position?: number });
+      return { id: path === "/polyglot/topics" ? "t1" : "c1" };
+    });
+    const entries = Array.from({ length: 7 }, (_, i) => ({ kind: "word", en: `w${i}` }));
+    const res = await ACTIVITY_KINDS.polyglot.persist({ title: "Frutas", meta: { category: "vocabulary" }, entries }, { language: "", level: "" }, { post } as unknown as ApiPort);
+    expect(res).toEqual({ id: "t1", warnings: [] });
+    expect(peak).toBeGreaterThan(1);
+    expect(peak).toBeLessThanOrEqual(3);
+    expect(bodies.map((b) => b.position).sort()).toEqual([0, 1, 2, 3, 4, 5, 6]);
   });
 });
 
@@ -114,5 +149,53 @@ describe("estrategia «Juego»", () => {
     const { api, post } = fakeApi();
     await games.persist({ ...d, meta: { gameType: "memory" } }, ctx, api);
     expect(post).toHaveBeenCalledWith("/games/decks", expect.objectContaining({ gameType: "memory", language: "en", items: [{ term: "apple", category: "food" }, { term: "car", category: "food" }] }));
+  });
+});
+
+// [2026-10-27]: «Editar» en Next.js → diff de filas (PATCH lo cambiado · POST lo nuevo · DELETE lo quitado)
+describe("diffRows (editar)", () => {
+  it("separa filas nuevas, cambiadas y quitadas", () => {
+    const current = [{ _id: "1", text: "Hi" }, { _id: "2", text: "Bye" }];
+    const next = [{ _id: "1", text: "Hello" }, { text: "New" }];
+    const d = diffRows(next, current, ["text"]);
+    expect(d.added).toEqual([{ text: "New" }]);
+    expect(d.changed.map((c) => c.entry._id)).toEqual(["1"]);
+    expect(d.removed).toEqual(["2"]);
+  });
+  it("diálogos: cambiar el texto sin tocar la IPA la vacía (se regenera)", async () => {
+    const patch = jest.fn(async () => ({}));
+    const api = { post: jest.fn(async () => ({})), get: jest.fn(), patch, del: jest.fn(async () => undefined) } as unknown as EditApiPort;
+    const current = { title: "Café", meta: { speakerA: "Ana", speakerB: "Tom" }, entries: [{ _id: "t1", speaker: "A", text: "Hi", ipa: "haɪ", translation: "Hola" }] };
+    const next = { ...current, entries: [{ ...current.entries[0]!, text: "Hello" }] };
+    await ACTIVITY_KINDS.dialogues.edit!.save("d1", next, current, ctx, api);
+    expect(patch).toHaveBeenCalledWith("/dialogue-turns/t1", { speaker: "A", text: "Hello", ipa: "", translation: "" });
+  });
+});
+
+// [2026-11-11 · Poliglota en Next.js]: carga de la tabla → borrador · guardar = PATCH tema (nivel + idiomas) + diff de conceptos y términos
+describe("polyglot.edit", () => {
+  const raw = {
+    topic: { title: "Familia", category: "vocabulary", levels: ["A1"], languages: ["en", "es"] },
+    rows: [{ concept: { id: "c1", kind: "word", emoji: "👪", imageUrl: null }, terms: { en: { id: "t-en", text: "family" }, es: { id: "t-es", text: "familia" }, fr: null } }],
+  };
+  it("carga emoji/imagen, idiomas, nivel e ids de términos", () => {
+    const { draft, ctx: c } = ACTIVITY_KINDS.polyglot.edit!.load(raw);
+    expect(c.level).toBe("A1");
+    expect(draft.meta.languages).toBe("en,es");
+    expect(draft.entries[0]).toMatchObject({ emoji: "👪", image: "", en: "family", _t_en: "t-en", _id: "c1" });
+  });
+  it("guardar: imagen adjunta, término cambiado, término vaciado y concepto nuevo", async () => {
+    const current = ACTIVITY_KINDS.polyglot.edit!.load(raw).draft;
+    const img = "data:image/webp;base64,AAAA";
+    const next = { ...current, entries: [{ ...current.entries[0]!, image: img, en: "the family", es: "" }, { kind: "word", emoji: "🐶", image: "", en: "dog", es: "perro" }] };
+    const patch = jest.fn(async () => ({}));
+    const post = jest.fn(async () => ({ id: "c2" }));
+    const del = jest.fn(async () => undefined);
+    await ACTIVITY_KINDS.polyglot.edit!.save("p1", next, current, { language: "", level: "A2" }, { post, patch, del, get: jest.fn() } as unknown as EditApiPort);
+    expect(patch).toHaveBeenCalledWith("/polyglot/topics/p1", expect.objectContaining({ levels: ["A2"], languages: ["en", "es"] }));
+    expect(patch).toHaveBeenCalledWith("/polyglot/concepts/c1", expect.objectContaining({ imageUrl: img, emoji: "👪" }));
+    expect(post).toHaveBeenCalledWith("/polyglot/concepts/c1/terms", { terms: [{ language: "en", text: "the family" }] });
+    expect(del).toHaveBeenCalledWith("/polyglot/terms/t-es");
+    expect(post).toHaveBeenCalledWith("/polyglot/topics/p1/concepts", expect.objectContaining({ emoji: "🐶", position: 1, gloss: "perro" }));
   });
 });

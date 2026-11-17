@@ -5,15 +5,18 @@ import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   Min,
   MinLength,
   ValidateNested,
 } from 'class-validator';
 import { Category } from '../../domain/value-objects/category.vo';
+import { CefrLevel } from '../../../../shared/domain/cefr-level.vo';
 import { Difficulty } from '../../domain/value-objects/difficulty.vo';
 import {
   DEFAULT_LANGUAGE,
@@ -113,6 +116,23 @@ export class CreateQuizDto {
   @IsOptional()
   @IsBoolean()
   isPublished?: boolean;
+
+  // [2026-11-09]: desde «Crear examen» del curso → examen FINAL de ese curso (da el certificado)
+  @ApiProperty({ required: false, format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  courseId?: string;
+
+  // [2026-11-10 · Tipo de examen]: practice (repaso, por defecto) | level (examen de nivel MCER → certificado de nivel) · el final se crea con courseId
+  @ApiProperty({ required: false, enum: ['practice', 'level'] })
+  @IsOptional()
+  @IsIn(['practice', 'level'])
+  kind?: 'practice' | 'level';
+
+  @ApiProperty({ required: false, enum: CefrLevel })
+  @IsOptional()
+  @IsEnum(CefrLevel)
+  cefrLevel?: CefrLevel; // Obligatorio si kind = level
 
   // [Preguntas]: 1+ requeridas, validadas anidadas con ValidateNested | [Patrón]: Composite
   @ApiProperty({ type: [QuestionDto] })

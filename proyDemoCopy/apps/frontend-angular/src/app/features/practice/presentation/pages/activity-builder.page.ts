@@ -57,7 +57,7 @@ import { TextImportComponent } from '@shared/ui/molecules/text-import/text-impor
     <aula-card-page [heading]="tx.builderTitle" [subtitle]="tx.builderSubtitle">
       <aula-return-link pageBack fallback="/practica" [label]="tx.backToList" />
       @if (b.error(); as err) {
-        <p role="alert" class="mb-3 text-sm text-tone-danger">{{ err }}</p>
+        <p role="alert" class="mb-3 text-tone-danger">{{ err }}</p>
       }
 
       @if (!id()) {
@@ -66,7 +66,7 @@ import { TextImportComponent } from '@shared/ui/molecules/text-import/text-impor
           class="mb-8 space-y-3 rounded-xl border border-border p-4"
           (submit)="$event.preventDefault(); create([], false)"
         >
-          <h2 class="text-base font-bold">{{ tx.newActivity }}</h2>
+          <h2 class="title-section">{{ tx.newActivity }}</h2>
           <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <label class="text-sm font-semibold sm:col-span-2"
               >{{ tx.activityTitle }}<input class="control mt-1 w-full" [formField]="f.title"
@@ -110,21 +110,21 @@ import { TextImportComponent } from '@shared/ui/molecules/text-import/text-impor
           </div>
         </form>
 
-        <h2 class="mb-2 text-base font-bold">{{ tx.myActivities }}</h2>
+        <h2 class="title-section mb-2">{{ tx.myActivities }}</h2>
         @switch (b.mine.status()) {
           @case ('loading') {
             <aula-spinner [label]="i18n.t().common.loading" />
           }
           @case ('empty') {
-            <p class="text-sm text-muted-foreground">{{ tx.noActivities }}</p>
+            <p class="text-muted-foreground">{{ tx.noActivities }}</p>
           }
           @case ('error') {
-            <p role="alert" class="text-sm text-tone-danger">{{ b.mine.error() }}</p>
+            <p role="alert" class="text-tone-danger">{{ b.mine.error() }}</p>
           }
           @case ('success') {
             <ul class="divide-y divide-border rounded-xl border border-border">
               @for (a of b.mine.data()!; track a.id) {
-                <li class="flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
+                <li class="flex flex-wrap items-center justify-between gap-2 p-3">
                   <span class="font-semibold"
                     >{{ a.title }}
                     <span class="font-normal text-muted-foreground"
@@ -158,7 +158,7 @@ import { TextImportComponent } from '@shared/ui/molecules/text-import/text-impor
             <aula-spinner [label]="i18n.t().common.loading" />
           }
           @case ('error') {
-            <p role="alert" class="text-sm text-tone-danger">{{ b.current.error() }}</p>
+            <p role="alert" class="text-tone-danger">{{ b.current.error() }}</p>
           }
           @case ('success') {
             @let a = b.current.data()!;
@@ -166,8 +166,8 @@ import { TextImportComponent } from '@shared/ui/molecules/text-import/text-impor
               class="mb-5 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-muted p-3"
             >
               <div>
-                <p class="text-lg font-bold">{{ a.title }}</p>
-                <p class="text-xs text-muted-foreground">
+                <p class="type-lead font-bold">{{ a.title }}</p>
+                <p class="type-meta text-muted-foreground">
                   {{ a.level }} · {{ tx.skills[a.skill] }} · {{ i18n.languageName(a.language) }}
                 </p>
               </div>
@@ -203,7 +203,7 @@ import { TextImportComponent } from '@shared/ui/molecules/text-import/text-impor
                 </button>
               </div>
             </div>
-            <h2 class="mb-2 text-base font-bold">{{ tx.itemsTitle }} ({{ a.items.length }})</h2>
+            <h2 class="title-section mb-2">{{ tx.itemsTitle }} ({{ a.items.length }})</h2>
             <ol class="mb-6 space-y-2">
               @for (it of fullItems(); track it.id) {
                 <li class="rounded-xl border border-border p-3">
@@ -223,7 +223,7 @@ import { TextImportComponent } from '@shared/ui/molecules/text-import/text-impor
                           >{{ it.position + 1 }} · {{ tx.types[it.itemType] }} ·
                           {{ tx.skills[it.skill] }}</span
                         >
-                        <p class="whitespace-pre-line text-sm" [attr.lang]="a.language">
+                        <p class="whitespace-pre-line" [attr.lang]="a.language">
                           {{ it.prompt }}
                         </p>
                       </div>
@@ -265,7 +265,7 @@ import { TextImportComponent } from '@shared/ui/molecules/text-import/text-impor
               (save)="b.update(a.id, { contents: $event })"
             />
             <section class="rounded-xl border border-dashed border-primary/50 p-4">
-              <h3 class="mb-3 text-sm font-bold">{{ tx.addItem }}</h3>
+              <h3 class="title-card mb-3">{{ tx.addItem }}</h3>
               <aula-practice-item-form
                 uid="new"
                 [busy]="b.busy()"
@@ -295,7 +295,7 @@ import { TextImportComponent } from '@shared/ui/molecules/text-import/text-impor
         (imported)="useSource($event.text, $event.title)"
       />
       @if (sourceText()) {
-        <p class="mb-3 flex items-center justify-between gap-2 rounded-lg bg-tone-brand-soft px-3 py-2 text-xs text-tone-brand" role="status">
+        <p class="mb-3 flex items-center justify-between gap-2 rounded-lg bg-tone-brand-soft px-3 py-2 type-meta text-tone-brand" role="status">
           ✓ {{ i18n.fmt(tx.source.loaded, { n: sourceText().length }) }}
           <button type="button" class="btn btn-ghost btn-sm" (click)="sourceText.set('')">✕</button>
         </p>
@@ -346,14 +346,14 @@ import { TextImportComponent } from '@shared/ui/molecules/text-import/text-impor
       </form>
       @switch (b.draft.status()) {
         @case ('loading') {
-          <p role="status" class="text-sm text-muted-foreground">{{ tx.generating }}</p>
+          <p role="status" class="text-muted-foreground">{{ tx.generating }}</p>
         }
         @case ('error') {
-          <p role="alert" class="text-sm text-tone-danger">{{ b.draft.error() }}</p>
+          <p role="alert" class="text-tone-danger">{{ b.draft.error() }}</p>
         }
         @case ('success') {
           @let d = b.draft.data()!;
-          <p class="text-xs text-muted-foreground">
+          <p class="type-meta text-muted-foreground">
             {{ i18n.t().common.aiReview }}
             @if (d.discarded) {
               · {{ i18n.fmt(tx.discarded, { n: d.discarded }) }}
@@ -361,7 +361,7 @@ import { TextImportComponent } from '@shared/ui/molecules/text-import/text-impor
           </p>
           <ol class="max-h-64 space-y-2 overflow-y-auto">
             @for (it of d.items; track $index) {
-              <li class="rounded-lg bg-muted p-2 text-sm">
+              <li class="rounded-lg bg-muted p-2">
                 <b>{{ tx.types[it.itemType] }}:</b> {{ it.prompt }}
               </li>
             }

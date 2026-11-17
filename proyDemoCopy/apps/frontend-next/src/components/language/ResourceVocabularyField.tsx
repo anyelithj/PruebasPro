@@ -3,7 +3,7 @@ import { Sparkles } from "lucide-react"; // [2026-10-23]: iconos SVG uniformes (
 import { useState } from "react";
 import type { IpaValue } from "@/types/curriculum";
 // [ResourceVocabularyField · Sprint 8.4]: en el editor de recursos, al escribir un término consulta traducción e IPA UK/US (NestJS Vocabulary → FastAPI LanguageTools, con caché) y deja USAR cada valor en el formulario, que sigue siendo editable | [Patrón]: Presentational + Command (botón «Consultar») | [Principio]: bajo acoplamiento (solo usa el BFF /api/vocabulary/lookup) + el docente decide (nada se sobrescribe solo) | [Paradigma]: Declarativo + async/await
-// [A11y]: resultado en región `aria-live`, IPA con `lang="xx-fonipa"`, botones con el valor en el nombre accesible · [Errores]: mensaje en role="alert" (la IA local puede no responder; el IPA sí)
+// [A11y]: resultado en región `aria-live`, IPA con `lang="xx-fonipa"`, botones con el valor en el nombre accesible · [Errores]: mensaje en role="alert" (la IA puede no responder; el IPA sí)
 
 interface LookupResult {
   ipa: string | null;
@@ -57,22 +57,22 @@ export function ResourceVocabularyField({
   return (
     <div className="rounded-xl border border-dashed border-primary/40 bg-gradient-soft p-3 sm:col-span-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-semibold text-muted-foreground">Traducción e IPA automáticos (puedes editarlos después)</p>
+        <p className="type-meta font-semibold text-muted-foreground">Traducción e IPA automáticos (puedes editarlos después)</p>
         <button type="button" className="btn btn-outline btn-sm" disabled={!term.trim() || busy} onClick={lookup}>
           {busy ? "Consultando…" : <><Sparkles aria-hidden className="inline size-4 align-[-0.125em]" /> Consultar</>}
         </button>
       </div>
       {error && (
-        <p role="alert" className="mt-2 text-xs text-tone-danger">
+        <p role="alert" className="mt-2 type-meta text-tone-danger">
           {error}
         </p>
       )}
       <div aria-live="polite">
         {result && (
-          <ul className="mt-2 space-y-1.5 text-sm">
+          <ul className="mt-2 space-y-1.5">
             <li className="flex flex-wrap items-center justify-between gap-2">
               <span>
-                <b>Traducción:</b> {aiDown ? <span className="text-tone-warning">la IA local no respondió</span> : <span lang="es">{result.translation.translation}</span>}
+                <b>Traducción:</b> {aiDown ? <span className="text-tone-warning">la IA no respondió</span> : <span lang="es">{result.translation.translation}</span>}
               </span>
               {!aiDown && (
                 <button type="button" className="btn btn-ghost btn-sm" aria-label={`Usar traducción: ${result.translation.translation}`} onClick={() => onTranslation(result.translation.translation)}>

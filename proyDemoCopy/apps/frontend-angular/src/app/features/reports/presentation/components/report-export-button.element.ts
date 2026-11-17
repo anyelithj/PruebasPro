@@ -29,12 +29,12 @@ import { REPORTS_PROVIDERS } from '../../reports.providers';
         {{ t.export }}
       </button>
       @if (facade.lastRequested()) {
-        <p role="status" class="w-full text-xs text-muted-foreground">
+        <p role="status" class="w-full type-meta text-muted-foreground">
           {{ t.requested }} <a class="font-semibold text-primary hover:underline" href="/reportes/exportaciones">{{ i18n.t().nav.exports }}</a>
         </p>
       }
       @if (facade.actionError(); as err) {
-        <p role="alert" class="w-full text-xs text-tone-danger">{{ err }}</p>
+        <p role="alert" class="w-full type-meta text-tone-danger">{{ err }}</p>
       }
     </div>
   `,

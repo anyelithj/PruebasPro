@@ -1,3 +1,4 @@
+import { Provenance } from './provenance.vo'; // [2026-11-13]: el origen decide si hace falta revisión previa
 // [Value Object ReviewStatus]: flujo editorial del contenido como máquina de estados finita (Etapa 2 de la especificación MCER) | [Patrón]: State Machine (tabla de transiciones) + Value Object | [Principio]: SRP + OCP | [Paradigma]: Declarativo + Funcional (funciones puras)
 
 // `export enum` (TS): estados editoriales posibles | el valor en minúsculas es el que guarda PostgreSQL (enum curriculum_items_review_status_enum)
@@ -86,13 +87,30 @@ const PUBLISH_PATH: Readonly<
   [ReviewStatus.APPROVED]: [], // Ya publicado: nada que hacer
 });
 
+// [REVIEW_GATE · 2026-11-13 · Caso D · RNF-37]: el contenido generado por IA solo se publica si un docente ya lo dejó «revisado»
+// (antes «Publicar» recorría generated → review_required → reviewed → approved en UN clic y salió «a antes de consonantes sonoras»)
+export const PUBLISHABLE_GENERATED: ReadonlyArray<ReviewStatus> = Object.freeze(
+  [ReviewStatus.REVIEWED, ReviewStatus.APPROVED],
+);
+
+// [mustBeReviewed]: ¿publicar este recurso exige la revisión docente previa? | función pura
+export const mustBeReviewed = (
+  from: ReviewStatus,
+  provenance?: Provenance,
+): boolean =>
+  provenance === Provenance.GENERATED && !PUBLISHABLE_GENERATED.includes(from);
+
 // `publish ? … : …` (operador ternario): despublicar solo afecta a lo publicado (approved → draft); el resto queda igual
+// null = publicación bloqueada (contenido de IA sin revisar) → el llamador informa el motivo
 export const publishSteps = (
   from: ReviewStatus,
   publish: boolean,
-): ReadonlyArray<ReviewStatus> =>
+  provenance?: Provenance, // `?` (TS): opcional → los llamadores antiguos conservan su comportamiento
+): ReadonlyArray<ReviewStatus> | null =>
   publish
-    ? PUBLISH_PATH[from]
+    ? mustBeReviewed(from, provenance)
+      ? null
+      : PUBLISH_PATH[from]
     : from === ReviewStatus.APPROVED
       ? [ReviewStatus.DRAFT]
       : [];

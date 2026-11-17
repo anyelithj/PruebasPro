@@ -9,7 +9,7 @@ export const OWN_LLM_ROUTES: Routes = [
   {
     path: '',
     canActivate: [roleGuard()], // Cualquier usuario con sesión
-    title: 'Corrector de redacciones · Aula de Idiomas', // [SEO/A11y]: título de pestaña por ruta (TitleStrategy de Angular)
+    title: 'Corrector de ortografía · Aula de Idiomas', // [SEO/A11y]: título de pestaña por ruta (TitleStrategy de Angular)
     providers: [{ provide: OwnLlmRepository, useClass: OwnLlmHttpRepository }, OwnLlmFacade],
     loadComponent: () => import('./presentation/pages/writing-corrector.page'), // `export default` → sin `.then(m => m.X)`
   },

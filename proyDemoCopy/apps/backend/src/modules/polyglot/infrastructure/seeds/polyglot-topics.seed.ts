@@ -228,6 +228,9 @@ export class PolyglotTopicSeeder implements OnModuleInit {
           })
         ).map((t) => t.slug),
       );
+      // [Fix 2026-11-05 · borrados que reaparecían]: solo se siembra en una instalación vacía → lo que el administrador borra no vuelve al reiniciar
+      // ponytail: entradas nuevas del seed no llegan a BD ya sembradas; añadir una tabla de «seeds aplicados» si hace falta
+      if (existing.size) return;
       const missing = titles.filter((t) => !existing.has(slugify(t)));
       for (const title of missing) {
         // `transaction` (TypeORM): un tema entra completo o no entra

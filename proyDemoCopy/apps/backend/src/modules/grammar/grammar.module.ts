@@ -46,7 +46,7 @@ import { GrammarTopicsController } from './presentation/grammar-topics.controlle
       provide: GRAMMAR_TOPICS,
       inject: [getRepositoryToken(GrammarTopic)],
       useFactory: (repo: Repository<GrammarTopic>) =>
-        new TopicCrudService(repo, 'Ficha'),
+        new TopicCrudService(repo, 'Ficha', 'una'), // [2026-10-28]: «una ficha» en los mensajes de duplicado
     },
     { provide: GRAMMAR_DRAFT, useClass: GrammarDraftClient },
     GrammarAccess,

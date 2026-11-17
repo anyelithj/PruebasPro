@@ -2,7 +2,12 @@
   "common": {
     "notifications": "Notificaciones",
     "close": "Cerrar",
-    "toastTitle": {"success": "¡Listo!", "error": "No se pudo completar", "warning": "Atención", "info": "Aviso"},
+    "toastTitle": {
+      "success": "¡Listo!",
+      "error": "No se pudo completar",
+      "warning": "Atención",
+      "info": "Aviso"
+    },
     "saved": "Registro guardado con éxito.",
     "updated": "Registro editado con éxito.",
     "deleted": "Registro eliminado.",
@@ -34,10 +39,11 @@
   "nav": {
     "dashboard": "Dashboard",
     "courses": "Cursos",
+    "favorites": "Mis favoritos",
     "exams": "Exámenes",
     "feedback": "Feedback IA",
     "tutor": "Tutor IA",
-    "writing": "Corrector de redacciones",
+    "writing": "Corrector de ortografía",
     "studyPlan": "Plan de estudio",
     "progress": "Progreso",
     "profile": "Mi perfil",
@@ -45,7 +51,7 @@
     "students": "Estudiantes",
     "reports": "Reportes",
     "resources": "Recursos",
-    "help": "Ayuda",
+    "help": "Soporte y Guía",
     "jobs": "Tareas automáticas",
     "certificates": "Certificados",
     "activities": "Actividades",
@@ -166,7 +172,7 @@
   "landing": {
     "pill": "7 idiomas · Niveles MCER A1–C2",
     "titleA": "Aprende idiomas con ",
-    "titleB": "práctica guiada e IA local",
+    "titleB": "práctica guiada e IA",
     "lead": "Inglés, francés, alemán, español, portugués, chino mandarín y ruso. Gramática, vocabulario, comprensión, expresión escrita y oral con correcciones explicadas en español y seguimiento de tu progreso por nivel.",
     "start": "Comenzar gratis →",
     "stats": [
@@ -315,7 +321,7 @@
     "ctaTitle": "Empieza a aprender idiomas con {brand}",
     "ctaText": "Siete idiomas, seis niveles MCER y correcciones que se entienden.",
     "ctaButton": "Crear cuenta gratis →",
-    "footerAbout": "Plataforma para aprender idiomas por niveles MCER, con IA local usada solo cuando aporta valor.",
+    "footerAbout": "Plataforma para aprender idiomas por niveles MCER, con IA usada solo cuando aporta valor.",
     "footerProduct": "Producto",
     "footerAccount": "Cuenta",
     "footerContact": "Contacto",
@@ -331,7 +337,7 @@
       "C1": "Dominio operativo: textos complejos y uso profesional.",
       "C2": "Maestría: matices, ironía y precisión casi nativa."
     },
-    "aiEyebrow": "IA local y privacidad",
+    "aiEyebrow": "IA y privacidad",
     "aiTitle": "La IA corre en el servidor de la plataforma, no en la nube",
     "aiLead": "Usamos modelos abiertos con Ollama solo cuando aportan valor; primero el contenido aprobado por docentes.",
     "aiPoints": [
@@ -417,6 +423,7 @@
       "title": "Iniciar sesión",
       "subtitle": "Accede a tu cuenta de {brand}.",
       "formLabel": "Formulario de inicio de sesión",
+      "sessionExpired": "Tu sesión terminó. Inicia sesión para continuar donde estabas.",
       "remember": "Recordarme",
       "forgot": "¿Olvidaste tu contraseña?",
       "submit": "Iniciar sesión",
@@ -478,6 +485,15 @@
       "error": "No se pudo enviar el enlace",
       "invalid": "El enlace de acceso no es válido o ya se usó. Pide uno nuevo."
     },
+    "twoFactor": {
+      "title": "Verificación en dos pasos",
+      "intro": "Te enviamos un código de 6 dígitos a tu correo. Escríbelo para terminar de entrar.",
+      "code": "Código de verificación",
+      "submit": "Verificar y entrar",
+      "submitting": "Verificando…",
+      "invalidFormat": "Escribe los 6 dígitos del código",
+      "back": "Volver al inicio de sesión"
+    },
     "oauth": {
       "connecting": "Conectando…",
       "withProvider": "Iniciar sesión con {provider}",
@@ -501,17 +517,19 @@
   "management": {
     "title": "Gestión",
     "subtitleAdmin": "Administra usuarios, exámenes, cursos y recursos de aprendizaje desde un único panel.",
-    "subtitleTeacher": "Administra tus exámenes y los recursos de aprendizaje.",
+    "subtitleTeacher": "Administra tus exámenes, tus cursos y los recursos de aprendizaje.",
     "tabsLabel": "Pestañas de gestión",
     "tabs": {
       "users": "Usuarios",
       "exams": "Exámenes",
       "courses": "Cursos",
       "content": "Recursos",
-      "activities": "Actividades"
+      "activities": "Actividades",
+      "certificates": "Certificados"
     },
     "row": {
       "view": "Ver",
+      "try": "Probar",
       "edit": "Editar",
       "publish": "Publicar",
       "unpublish": "Despublicar",
@@ -524,6 +542,15 @@
     }
   },
   "courses": {
+    "favorites": {
+      "title": "Mis favoritos",
+      "subtitle": "Lo que guardaste con ⭐ y los cursos que valoraste con 👍 o ❤️. Solo tú los ves.",
+      "empty": "Aún no has guardado cursos. Pulsa ⭐ Favorito en cualquier curso del catálogo.",
+      "browse": "Explorar cursos",
+      "emptyLike": "Aún no has marcado cursos con 👍 Me gusta.",
+      "emptyLove": "Aún no has marcado cursos con ❤️ Me encanta.",
+      "tabs": "Filtrar mis cursos"
+    },
     "title": "🌐 Cursos de idiomas",
     "subtitle": "{heading} · niveles MCER A1–C2 — {count}",
     "count": {
@@ -543,7 +570,7 @@
     "loadErrorHint": "Verifica que el backend esté disponible en /api/v1/courses.",
     "pagination": "Paginación de cursos",
     "materials": {
-      "title": "📚 Recursos del curso",
+      "title": "Materiales adicionales",
       "empty": "Este curso aún no tiene material.",
       "openPdf": "Abrir PDF en pestaña nueva",
       "upload": "Adjuntar material",
@@ -555,7 +582,7 @@
       "lesson": "Lección {n} de {total}",
       "prev": "← Anterior",
       "next": "Siguiente →",
-      "markDone": "Marcar completa",
+      "markDone": "Completado",
       "done": "Completado",
       "current": "En curso",
       "pending": "Pendiente",
@@ -565,17 +592,20 @@
       "lockedStep": "Bloqueado",
       "lockedHint": "Completa la lección anterior para desbloquear esta.",
       "back": "← Volver a los recursos",
-      "resources": "Recursos",
+      "resources": "Resumen",
+      "list": "Lista de materiales",
       "resVideos": "🎞️ Videos",
       "resPdfs": "📄 PDF",
       "resImages": "🖼️ Imágenes",
       "resDone": "✓ Lecciones completadas",
-      "start": "▶ Iniciar curso",
+      "start": "▶ Empezar",
       "resume": "▶ Continuar clase",
       "review": "↺ Repasar desde el inicio",
       "lessonNav": "Navegación de la lección",
       "breadcrumb": "Ruta de la lección",
       "reader": {
+        "bilingual": "El texto ya está en dos idiomas ({langs}): la traducción completa no hace falta y queda bloqueada.",
+        "textLoading": "Preparando el texto…",
         "title": "🔊 Lectura en voz alta",
         "hint": "Pulsa una frase para leer desde ahí (la palabra leída se resalta). Selecciona una palabra o un párrafo para traducirlo.",
         "loading": "Extrayendo el texto del PDF…",
@@ -583,13 +613,13 @@
         "noText": "Este PDF no tiene texto seleccionable (probablemente es un escaneo).",
         "loadError": "No se pudo leer el texto del PDF.",
         "noTts": "Tu navegador no admite lectura en voz alta.",
-        "play": "▶ Leer",
+        "play": "▶ Reproducir",
         "pause": "⏸ Pausa",
         "resume": "▶ Continuar",
         "stop": "⏹ Detener",
         "speed": "Velocidad",
         "noVoice": "No hay voz instalada para este idioma; se usa la predeterminada.",
-        "translateAll": "🌐 Traducir todo al {lang}",
+        "translateAll": "🌐 Traducir al {lang}",
         "listen": "🔊 Escuchar",
         "selection": "Traducción de la selección",
         "close": "Cerrar",
@@ -622,15 +652,23 @@
     },
     "actions": {
       "certificate": "◈ Certificado",
+      "finalExam": "◈ Examen final",
       "continue": "▶ Continuar",
       "enterFree": "Inscribirse gratis",
       "enrolling": "Inscribiendo…",
       "buy": "🛒 Comprar",
+      "owned": "✓ Ya tienes este curso",
+      "startLocked": "Compra o inscríbete para iniciar el curso.",
       "inCart": "✓ En el carrito",
-      "start": "▶ Empezar",
-      "favorite": "★ Favorito",
-      "like": "👍 Me gusta",
-      "love": "❤ Me encanta"
+      "start": "▶ Iniciar curso",
+      "favorite": "Favorito",
+      "like": "Me gusta",
+      "love": "Me encanta",
+      "favoriteHint": "Guardar en tus favoritos para encontrarlo rápido",
+      "likeHint": "Valoración positiva: te gustó",
+      "loveHint": "Valoración máxima: te encantó",
+      "reactionsLabel": "Guardar y valorar el curso",
+      "countsLive": "{likes} me gusta y {loves} me encanta"
     }
   },
   "adminCourses": {
@@ -667,6 +705,7 @@
       "accessFree": "Gratuito",
       "accessPaid": "De pago",
       "pricePaidRequired": "Un curso de pago necesita un precio mayor que 0.",
+      "originalPriceTooLow": "El precio original debe ser mayor o igual que el precio actual.",
       "description": "Descripción",
       "descriptionHint": "Qué aprenderá el estudiante. Las primeras frases se usan como resumen en la tarjeta del curso.",
       "content": "Contenido del curso",
@@ -712,11 +751,11 @@
     "saveError": "No se pudo guardar el curso.",
     "ai": {
       "title": "Generar con IA",
-      "hint": "La IA local crea el CONTENIDO del curso (presentación, objetivos, temario con lecciones y a quién va dirigido), una descripción corta y las etiquetas según idioma y nivel. Revísalo antes de guardar.",
+      "hint": "La IA crea el CONTENIDO del curso (presentación, objetivos, temario con lecciones y a quién va dirigido), una descripción corta y las etiquetas según idioma y nivel. Revísalo antes de guardar.",
       "topic": "Enfoque (opcional)",
       "topicPlaceholder": "Ej. Inglés para viajes, conversación de negocios",
       "run": "Generar contenido",
-      "running": "Generando… (puede tardar 1–2 min)",
+      "running": "Generando… (puede tardar 1–2 min; se cancela a los 3 min)",
       "useImported": "Usar el contenido importado como base",
       "done": "Contenido generado: revisa el título, la descripción corta, el contenido y las etiquetas."
     },
@@ -724,6 +763,19 @@
       "title": "Importar contenido del curso",
       "done": "Contenido importado en «Contenido del curso» (Markdown). La descripción no se ha modificado.",
       "doneSuggested": "Contenido importado en «Contenido del curso». Como la descripción estaba vacía, se propuso su primer párrafo: revísalo."
+    },
+    "source": {
+      "legend": "¿Cómo quieres crear el temario?",
+      "manual": "Manual",
+      "import": "Importar",
+      "ai": "Generar con IA",
+      "manualHint": "Escribe tú el temario: añade subtemas, ordénalos con las flechas y, dentro de cada uno, agrega subcontenidos (apartados) con su explicación.",
+      "manualStart": "Añadir el primer subtema",
+      "importHint": "Sube un PDF, Word, Excel, imagen (OCR) o pega una URL o un video de YouTube: los encabezados del documento se convierten en subtemas y subcontenidos.",
+      "importLabel": "Importar temario o contenido",
+      "importDone": "Importado: {n} subtema(s) añadidos al temario. Revísalos abajo.",
+      "importAi": "Completar la ficha con IA a partir de lo importado",
+      "importCleared": "Archivo quitado: se retiraron {n} subtema(s) importados (los que ya editaste se conservan)."
     }
   },
   "profile": {
@@ -739,6 +791,9 @@
     "phoneInvalid": "Teléfono no válido: solo números, espacios, guiones y + inicial.",
     "bio": "Biografía",
     "bioPlaceholder": "Cuéntanos qué idiomas aprendes y por qué…",
+    "social": "Redes sociales",
+    "socialHint": "Opcionales. Se muestran en «Autoría del contenido» de tus cursos. Pega el enlace completo (https://…); deja vacío para ocultarlo.",
+    "socialInvalid": "Enlace de {network} no válido: usa https:// y el dominio {hosts}.",
     "timezone": "Zona horaria",
     "preferredLanguage": "Idioma preferido",
     "section": "Sección / Grupo",
@@ -796,6 +851,15 @@
     "level": "Nivel MCER",
     "noLevel": "Sin nivel aún",
     "sectionHint": "Grupo o salón al que perteneces (ej. 11-1). Tu docente lo usa para filtrar estudiantes.",
+    "twoFactorTitle": "Verificación en dos pasos (2FA)",
+    "twoFactorIntro": "Al iniciar sesión con contraseña te pediremos un código de un solo uso enviado a tu correo.",
+    "twoFactorOn": "Activada",
+    "twoFactorOff": "Desactivada",
+    "twoFactorEnable": "Activar 2FA",
+    "twoFactorDisable": "Desactivar 2FA",
+    "twoFactorPassword": "Confirma con tu contraseña actual",
+    "twoFactorEnabled": "Verificación en dos pasos activada.",
+    "twoFactorDisabled": "Verificación en dos pasos desactivada.",
     "passwordTitle": "Cambiar contraseña",
     "currentPassword": "Contraseña actual",
     "newPassword": "Nueva contraseña",

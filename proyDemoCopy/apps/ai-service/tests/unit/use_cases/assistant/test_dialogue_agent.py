@@ -46,7 +46,7 @@ async def test_apertura_sin_llm_en_el_idioma_y_la_del_docente_prevalece():
 async def test_turno_libre_con_correccion_suave_y_vocabulario_usado():
     llm = FakeLlm({"reply": "Oh, you like spicy pasta! Why?", "correction": "Se dice «I like», no «I likes»."})
     r = await say(llm, "I likes spicy pasta")
-    assert r.answered_by == "llm" and r.game_state == {"vocabulary_used": ["pasta", "spicy"], "correction": "Se dice «I like», no «I likes».", "translation": None, "learner_translation": None}
+    assert r.answered_by == "llm" and r.game_state == {"vocabulary_used": ["pasta", "spicy"], "translation": None, "learner_translation": None}  # [2026-11-13]: sin «correction» (Anexo A)
     assert "Learner level: A2" in llm.prompt and "Topic: Food" in llm.prompt
 
 
@@ -58,7 +58,7 @@ async def test_llm_caido_pregunta_abierta_en_el_idioma():
 async def test_el_estado_va_al_campo_dialogue_de_la_respuesta():
     uc = ChatWithAgentUseCase(InMemoryConversationRepository(), AgentFactory({"dialogue": DialogueAgent(FakeLlm({"reply": "Nice!"}))}))
     res = await uc.execute(ChatRequest(message="pasta", persona="dialogue", language="en", dialogue=FOOD), "u1")
-    assert res.dialogue == {"vocabulary_used": ["pasta"], "correction": None, "translation": None, "learner_translation": None} and res.game is None
+    assert res.dialogue == {"vocabulary_used": ["pasta"], "translation": None, "learner_translation": None} and res.game is None
 
 
 async def test_si_el_avatar_responde_en_espanol_en_un_dialogo_en_ingles_reintenta_y_si_insiste_usa_la_pregunta_fija() -> None:

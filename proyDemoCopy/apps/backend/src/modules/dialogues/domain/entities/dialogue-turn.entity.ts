@@ -5,6 +5,7 @@ import {
   Index,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import type { TurnFeedback } from '../interfaces/sentence-corrector.interface';
 // [Entity DialogueTurn · Sprint 9.3 · RF-123/RF-124]: un turno de un diálogo guionado (hablante A o B) o de una conversación con el avatar (user o avatar) con texto, IPA, traducción y tiempos | [Patrón]: Entity (DDD) + Snapshot (IPA y traducción guardados) | [Principio]: SRP + DRY (una tabla para ambos usos) + verificación humana (la corrección manual prevalece) | [Tecnología]: TypeORM + PostgreSQL
 
 export type Speaker = 'A' | 'B' | 'user' | 'avatar';
@@ -47,7 +48,12 @@ export class DialogueTurn {
   endS!: number | null;
 
   @Column({ type: 'text', nullable: true })
-  correction!: string | null; // Corrección suave del avatar al turno del usuario (en español)
+  correction!: string | null; // [Histórico]: corrección en texto de turnos anteriores al 2026-11-13 (los nuevos usan `feedback`)
+
+  // [2026-11-13 · Anexo A]: corrección pedagógica ÚNICA del turno del usuario (frase corregida, veredicto, errores, traducción,
+  // puntuación y trazabilidad: modelo + versión del prompt) | `jsonb` (PostgreSQL): un documento sin tablas extra · null = sin corrección
+  @Column({ type: 'jsonb', nullable: true })
+  feedback!: TurnFeedback | null;
 
   @Column({ type: 'boolean', default: false })
   reviewed!: boolean;

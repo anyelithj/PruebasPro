@@ -1,0 +1,56 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Guía/Introducción" />
+
+# Aula de Idiomas — guía de componentes (Angular 22)
+
+Catálogo vivo de `src/app/shared/ui`, los componentes reutilizables del **remoto Angular**. Cada página muestra el componente,
+sus variantes (historias), la tabla de `input()` / `output()` y la pestaña **Accessibility** (axe-core, WCAG 2.1 AA).
+Usa el menú **Tema** de la barra superior para revisar cada historia con los temas de la plataforma.
+
+## Arquitectura: microfrontend por funcionalidades + Clean Architecture + Atomic Design
+
+- **Microfrontend**: Next.js es el *host* (login, layout, navegación y BFF). Angular entra por *rewrites* (pantallas completas como `/juegos`, `/musica`, `/poliglota`) y como **Angular Elements** (`<aula-word-lookup>`, `<aula-campana>`…). Sin Module Federation.
+- **Por funcionalidades**: una carpeta por funcionalidad en `features/<nombre>/`, cargada bajo demanda; ninguna importa a otra.
+- **Clean Architecture**: cuatro capas dentro de cada funcionalidad; las dependencias van hacia adentro.
+- **Estado**: signals + RxJS, componentes standalone, sin NgModules ni NgRx.
+
+| Capa              | Archivos                                                | Puede importar                         |
+| ----------------- | ------------------------------------------------------- | -------------------------------------- |
+| `domain/`         | `models/` (tipos + Zod), reglas puras, `*.repository.port.ts` | Solo `domain`                    |
+| `application/`    | `*.facade.ts` (casos de uso + signals), `*.resource.ts` | `domain`, `core`                       |
+| `infrastructure/` | `*.http-repository.ts` (único con `HttpClient`), `*.stream.ts` (SSE) | `domain`, `core`          |
+| `presentation/`   | `pages/` (contenedores) + `components/` (presentacionales) | `application`, `domain/models`, `shared`, `core` |
+| `shared/ui/`      | Esta guía: átomos, moléculas, organismos y plantillas   | Hacia abajo en la escala atómica, `core` |
+| `core/`           | Servicios únicos: HTTP, sesión, eventos, idioma, tema, audio | Solo `core`                       |
+
+Las reglas se verifican con ESLint (`no-restricted-imports`): una importación que rompe la capa no compila el lint.
+
+## Atomic Design en `shared/ui`
+
+| Nivel         | Regla                                        | Ejemplos                                                    |
+| ------------- | -------------------------------------------- | ----------------------------------------------------------- |
+| **Átomo**     | No se divide; no recibe datos del dominio    | `button` · `icon` · `badge` · `spinner` · `text-input`      |
+| **Molécula**  | Junta átomos con una sola función            | `form-field` · `accent-switch` · `dropdown` · `word-token`  |
+| **Organismo** | Sección autónoma con datos y comportamiento  | `word-lookup` · `data-table` · `portal-topbar` · `toaster`  |
+| **Plantilla** | Ordena organismos en una página              | `two-column` · `card-page`                                  |
+| **Página**    | Vive en cada funcionalidad                   | `features/*/presentation/pages/*.page.ts`                   |
+
+Un nivel solo importa niveles inferiores. Las páginas no tienen historia: dependen de la fachada y la API y se prueban con **Playwright**.
+
+## Formularios: uno por entidad
+
+Cada entidad con CRUD tiene un único `<entidad>-form.component.ts` con `mode`:
+
+- `create`: campos vacíos y botón «Crear».
+- `edit`: datos cargados y botón «Guardar».
+- `view`: los mismos campos en solo lectura (detalle).
+
+La lista y el formulario son dos páginas (`<entidad>-list.page.ts`, `<entidad>-form.page.ts`); el modo llega por `data` de la ruta.
+
+## Accesibilidad
+
+- Etiqueta asociada a cada campo (`form-field`); errores con `role="alert"`, avisos con `role="status"`.
+- El estado nunca se comunica solo con color (WCAG 1.4.1): texto o icono con nombre.
+- Foco visible y uso completo con teclado; los diálogos usan `<dialog>` nativo.
+- Storybook marca como fallida cualquier historia con violaciones de axe (`a11y.test: "error"`).

@@ -19,13 +19,13 @@ export function ScoreDisplay({ points, correctCount, totalQuestions }: ScoreDisp
           : { label: "Sigue practicando", Icon: BicepsFlexed, color: "text-muted-foreground" };
 
   return (
-    <section className="rounded-2xl border border-border bg-card p-8 text-center space-y-4">
+    <section className="surface p-8 text-center space-y-4">
       <tier.Icon aria-hidden className={`mx-auto size-14 ${tier.color}`} />
       <h2 className={`text-2xl font-extrabold ${tier.color}`}>{tier.label}</h2>
       <div className="text-5xl font-extrabold text-gradient-brand tabular-nums">
         {Math.round(points)}
       </div>
-      <p className="text-sm text-muted-foreground">
+      <p className="text-muted-foreground">
         Aciertos: <b className="text-foreground">{correctCount}/{totalQuestions}</b>
         {" · "}
         Precision: <b className="text-foreground">{Math.round(accuracy)}%</b>

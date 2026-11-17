@@ -35,6 +35,9 @@ export class CourseRepository implements ICourseRepository, OnModuleInit {
         where: { slug: In(seed.map((c) => c.slug!)) },
       });
       const known = new Set(existing.map((c) => c.slug)); // `Set` (ES2015): búsqueda O(1)
+      // [Fix 2026-11-05 · borrados que reaparecían]: solo se siembra en una instalación vacía → lo que el administrador borra no vuelve al reiniciar
+      // ponytail: entradas nuevas del seed no llegan a BD ya sembradas; añadir una tabla de «seeds aplicados» si hace falta
+      if (known.size) return;
       const missing = seed.filter((c) => !known.has(c.slug!));
       if (missing.length === 0) return; // Nada que insertar: arranque sin escrituras
       await this.courseRepo.save(missing);
@@ -69,6 +72,9 @@ export class CourseRepository implements ICourseRepository, OnModuleInit {
       qb.andWhere('c.isProBono = :pb', { pb: criteria.isProBono });
     if (criteria.isPublished !== undefined)
       qb.andWhere('c.isPublished = :pub', { pub: criteria.isPublished });
+    // [2026-10-27]: solo los cursos de un dueño (gestión del docente) | parámetro con nombre → sin inyección SQL
+    if (criteria.createdBy)
+      qb.andWhere('c.createdBy = :owner', { owner: criteria.createdBy });
     if (criteria.search) {
       qb.andWhere('(c.title ILIKE :q OR c.instructor ILIKE :q)', {
         q: `%${criteria.search}%`,
@@ -98,6 +104,20 @@ export class CourseRepository implements ICourseRepository, OnModuleInit {
   async findBySlug(slug: string): Promise<Course | null> {
     // `ILIKE` (PostgreSQL): mismo criterio sin mayúsculas que antes (ILike de TypeORM) | parámetro enlazado → sin inyección SQL
     return this.withContent().where('c.slug ILIKE :slug', { slug }).getOne();
+  }
+
+  // [findTitlesInScope · 2026-10-28]: parámetros enlazados de TypeORM (sin SQL concatenado) · solo id + título | [Principio]: ISP (el caso de uso no carga contenido)
+  async findTitlesInScope(
+    group: string,
+    category: string,
+  ): Promise<Array<Pick<Course, 'id' | 'title'>>> {
+    return this.courseRepo.find({
+      where: {
+        group: group as Course['group'],
+        category: category as Course['category'],
+      },
+      select: { id: true, title: true },
+    });
   }
 
   async getEnrollment(

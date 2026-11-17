@@ -30,10 +30,10 @@ describe("DraftEditor", () => {
   it("pinta los campos de la estrategia, edita y quita filas", () => {
     const onChange = jest.fn();
     render(<DraftEditor strategy={ACTIVITY_KINDS.dialogues} entries={[{ _uid: "a", speaker: "A", text: "Hi" }, { _uid: "b", speaker: "B", text: "Hello" }]} onChange={onChange} />);
-    expect(screen.getByRole("list", { name: "Guion del diálogo" })).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "Guion u objetivos" })).toBeInTheDocument();
     fireEvent.change(screen.getAllByLabelText(/Frase/)[0]!, { target: { value: "Hey" } });
     expect(onChange).toHaveBeenLastCalledWith([{ _uid: "a", speaker: "A", text: "Hey" }, { _uid: "b", speaker: "B", text: "Hello" }]);
-    fireEvent.click(screen.getByRole("button", { name: "Quitar turno 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Quitar turno u objetivo 2" }));
     expect(onChange).toHaveBeenLastCalledWith([{ _uid: "a", speaker: "A", text: "Hi" }]);
   });
 });

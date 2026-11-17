@@ -51,6 +51,39 @@ describe('MusicFacade', () => {
     expect(repo.getSong).toHaveBeenCalledWith('s1');
   });
 
+  // [2026-10-27 · Bug «No se pudo contactar con el servidor»]: NestJS responde por tandas (`more`) → la fachada encadena /lines/enrich hasta terminar
+  it('letra larga: encadena tandas mientras NestJS diga `more` y termina enriquecida', async () => {
+    const lines = songDetail().lines;
+    const reEnrich = jest
+      .fn()
+      .mockReturnValueOnce(of({ lines, enriched: false, missing: 1, more: true, unavailable: false }))
+      .mockReturnValueOnce(of({ lines, enriched: true, missing: 0, more: false, unavailable: false }));
+    const { music } = setup({
+      loadLyrics: () => of({ lines, enriched: false, missing: 2, more: true, unavailable: false }),
+      reEnrich,
+    } as never);
+    expect(await music.loadLyrics('s1', 'a\nb')).toEqual({ enriched: true, missing: 0, unavailable: false });
+    expect(reEnrich).toHaveBeenCalledTimes(2);
+    expect(music.enrichProgress()).toBeNull(); // El aviso de progreso desaparece al terminar
+  });
+
+  it('IA sin respuesta (`unavailable`) → no insiste y lo informa', async () => {
+    const reEnrich = jest.fn();
+    const { music } = setup({
+      loadLyrics: () => of({ lines: [], enriched: false, missing: 3, more: true, unavailable: true }),
+      reEnrich,
+    } as never);
+    expect(await music.loadLyrics('s1', 'a')).toEqual({ enriched: false, missing: 3, unavailable: true });
+    expect(reEnrich).not.toHaveBeenCalled();
+  });
+
+  it('despublicar vuelve a borrador y recarga la canción', async () => {
+    const { music, repo } = setup();
+    expect(await music.setPublished('s1', false)).toBe(true);
+    expect(repo.changeStatus).toHaveBeenCalledWith('s1', 'draft');
+    expect(repo.getSong).toHaveBeenCalledWith('s1');
+  });
+
   it('el ADMIN publica y la canción sale de la cola', async () => {
     const { music } = setup();
     await music.loadReviewQueue();

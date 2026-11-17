@@ -24,7 +24,7 @@ import { GuideChatComponent } from '../components/guide-chat.component';
         <button pageActions aulaButton size="sm" type="button" [loading]="facade.reindexing()" (click)="facade.reindex()">{{ t.reindex }}</button>
       }
       @if (facade.reindexResult(); as r) {
-        <p role="status" class="mb-3 text-sm">
+        <p role="status" class="mb-3">
           {{ i18n.fmt(t.reindexDone, { articles: r.articles, updated: r.updated, faqs: r.faqsSeeded }) }}
           @if (r.sections === null || !r.faqIndexed) {
             <span class="block text-tone-warning">{{ t.reindexNoIndex }}</span>
@@ -32,7 +32,7 @@ import { GuideChatComponent } from '../components/guide-chat.component';
         </p>
       }
       @if (facade.actionError(); as err) {
-        <p role="alert" class="mb-3 text-sm text-tone-danger">{{ err }}</p>
+        <p role="alert" class="mb-3 text-tone-danger">{{ err }}</p>
       }
       <div class="grid gap-6 lg:grid-cols-[1fr_22rem]">
         <section aria-label="{{ t.manualTitle }}">
@@ -47,7 +47,7 @@ import { GuideChatComponent } from '../components/guide-chat.component';
               </div>
             }
             @case ('empty') {
-              <p class="text-sm text-muted-foreground">{{ t.manualEmpty }}</p>
+              <p class="text-muted-foreground">{{ t.manualEmpty }}</p>
             }
             @default {
               <ul class="space-y-3">
@@ -58,8 +58,8 @@ import { GuideChatComponent } from '../components/guide-chat.component';
                       <aula-badge>{{ t.roles[a.role] }}</aula-badge>
                     </div>
                     @if (a.sections.length) {
-                      <p class="mt-2 text-xs font-semibold text-muted-foreground">{{ t.sections }}</p>
-                      <ul class="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                      <p class="mt-2 type-meta font-semibold text-muted-foreground">{{ t.sections }}</p>
+                      <ul class="mt-1 flex flex-wrap gap-x-4 gap-y-1">
                         @for (s of a.sections; track s) {
                           <li><a class="hover:underline" [routerLink]="['/ayuda/manual', a.slug]" [fragment]="anchor(s)">{{ s }}</a></li>
                         }
@@ -72,7 +72,7 @@ import { GuideChatComponent } from '../components/guide-chat.component';
           }
         </section>
         <aside aria-labelledby="manual-guide-title" class="rounded-xl border border-border p-4">
-          <h2 id="manual-guide-title" class="mb-2 text-base font-bold">{{ t.guideTitle }}</h2>
+          <h2 id="manual-guide-title" class="title-section mb-2">{{ t.guideTitle }}</h2>
           <aula-guide-chat />
         </aside>
       </div>

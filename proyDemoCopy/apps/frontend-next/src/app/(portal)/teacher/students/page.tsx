@@ -158,8 +158,8 @@ export default async function TeacherStudentsPage(props: {
       <RememberReturn memo="students" />
       {/* [2026-10-23 · 4.º pase]: periodo + Filtrar DEBAJO del título (antes a su misma altura) → misma jerarquía que Recursos */}
       <header>
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Resultados y seguimiento</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h1 className="title-page">Resultados y seguimiento</h1>
+        <p className="mt-1 text-muted-foreground">
           Visualiza el desempeño y progreso de tus estudiantes por idioma y nivel.
         </p>
       </header>
@@ -177,25 +177,25 @@ export default async function TeacherStudentsPage(props: {
       {/* [Stats agregadas reales] */}
       <section className="grid gap-4 sm:grid-cols-4" aria-label="Resumen del grupo">
         <article className="rounded-xl border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Precisión promedio</p>
+          <p className="type-meta text-muted-foreground">Precisión promedio</p>
           <p className="mt-1 text-2xl font-extrabold">
             {avgScore}
             <span className="text-base text-muted-foreground">/100</span>
           </p>
         </article>
         <article className="rounded-xl border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Mejor precisión</p>
+          <p className="type-meta text-muted-foreground">Mejor precisión</p>
           <p className="mt-1 text-2xl font-extrabold">{bestScore}</p>
         </article>
         <article className="rounded-xl border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Con actividad</p>
+          <p className="type-meta text-muted-foreground">Con actividad</p>
           <p className="mt-1 text-2xl font-extrabold">
             {withActivity.length}
             <span className="text-base text-muted-foreground">/{rows.length}</span>
           </p>
         </article>
         <article className="rounded-xl border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Aprobación (≥60%)</p>
+          <p className="type-meta text-muted-foreground">Aprobación (≥60%)</p>
           <p className="mt-1 text-2xl font-extrabold">{approvalRate}%</p>
         </article>
       </section>
@@ -203,9 +203,9 @@ export default async function TeacherStudentsPage(props: {
       {/* [Distribución de puntajes + resumen de actividad] */}
       <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="rounded-xl border bg-card p-5">
-          <h2 className="text-lg font-bold mb-3">Distribución de puntajes</h2>
+          <h2 className="title-section mb-3">Distribución de puntajes</h2>
           {withActivity.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">
+            <p className="py-6 text-center text-muted-foreground">
               Aún no hay estudiantes con actividad.
             </p>
           ) : (
@@ -235,15 +235,15 @@ export default async function TeacherStudentsPage(props: {
                 </div>
               </div>
               {/* [Eje X]: título centrado bajo las barras | [Patrón]: Axis Label */}
-              <p className="mt-1 text-center text-[11px] font-medium text-muted-foreground">
+              <p className="mt-1 text-center type-meta font-medium text-muted-foreground">
                 Rango de precisión (%)
               </p>
             </div>
           )}
         </div>
         <div className="rounded-xl border bg-card p-5">
-          <h2 className="text-lg font-bold mb-3">Resumen de actividad</h2>
-          <ul className="space-y-2.5 text-sm">
+          <h2 className="title-section mb-3">Resumen de actividad</h2>
+          <ul className="space-y-2.5">
             <li className="flex justify-between">
               <span className="text-muted-foreground">Total estudiantes</span>
               <b>{rows.length}</b>
@@ -273,14 +273,14 @@ export default async function TeacherStudentsPage(props: {
       {/* [Leaderboard embebido]: ranking de estudiantes (info personal) — vive aquí, no en vista de alumnos | [Patrón]: Scoped Composition | [Principio]: Least Privilege */}
       <section className="rounded-xl border bg-card p-5 space-y-3" aria-label="Tabla de clasificación">
         <div>
-          <h2 className="text-lg font-bold"><Trophy aria-hidden className="inline size-4 align-[-0.125em]" /> Leaderboard</h2>
-          <p className="text-xs text-muted-foreground">
+          <h2 className="title-section"><Trophy aria-hidden className="inline size-4 align-[-0.125em]" /> Leaderboard</h2>
+          <p className="type-meta text-muted-foreground">
             Ranking de estudiantes por puntos acumulados{" "}
             {months ? `(últimos ${months} meses)` : "(histórico)"}.
           </p>
         </div>
         {leaderboard.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
+          <p className="py-6 text-center text-muted-foreground">
             Sin actividad registrada en este periodo.
           </p>
         ) : (
@@ -346,8 +346,8 @@ export default async function TeacherStudentsPage(props: {
       {/* [Tabla por estudiante] */}
       <section className="rounded-xl border bg-card p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-bold">Resultados por estudiante</h2>
-          <form method="get" action="/teacher/students" role="search">
+          <h2 className="title-section">Resultados por estudiante</h2>
+          <form key={sp.search ?? ""} method="get" action="/teacher/students" role="search">
             {/* [Preserva periodo al buscar]: el filtro de periodo no se pierde | [Patrón]: Hidden State */}
             {sp.period && <input type="hidden" name="period" value={sp.period} />}
             <input
@@ -460,7 +460,7 @@ export default async function TeacherStudentsPage(props: {
           </nav>
         )}
 
-        <p className="text-xs text-muted-foreground">
+        <p className="type-meta text-muted-foreground">
           La precisión y los exámenes mostrados son acumulados sobre todos los exámenes
           resueltos por cada estudiante. Usa &ldquo;Ver&rdquo; para el detalle por examen y pregunta.
         </p>

@@ -1,0 +1,58 @@
+// SMACSS · MODULE — paneles y bloques de contenido reutilizables.
+.form-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--pad-card);
+  max-width: 56rem;
+  box-shadow: var(--shadow-card);
+}
+.detail-block {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--pad-card);
+  margin-bottom: var(--space);
+  box-shadow: var(--shadow-card);
+  > :last-child {
+    margin-bottom: 0;
+  }
+}
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space);
+  margin: 0;
+  dt {
+    font-weight: 400;
+    color: var(--muted);
+    font-size: var(--fs-sm);
+  }
+  dd {
+    margin: 0;
+  }
+}
+.empty-state {
+  padding: var(--space-lg);
+  text-align: center;
+  color: var(--muted);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.filter-form {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--pad-card);
+  margin-bottom: var(--space);
+}
+.task-form {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--pad-card);
+}
+.print-title {
+  margin-bottom: 0.75rem;
+}

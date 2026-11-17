@@ -18,8 +18,6 @@ import subprocess  # stdlib: ejecuta llama.cpp y ollama
 import sys
 from pathlib import Path
 
-from src.shared.config.settings import get_settings
-
 ADAPTER = Path("data/own_llm/adapter")
 MERGED = Path("data/own_llm/merged")
 HERE = Path(__file__).parent  # El GGUF queda junto al Modelfile (FROM ./aula-corrector.gguf)
@@ -35,6 +33,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Exporta el corrector a GGUF y lo registra en Ollama")
     parser.add_argument("--llama-cpp", type=Path, default=os.environ.get("LLAMA_CPP_DIR"))
     parser.add_argument("--version", default="1", help="Versión que se guarda en la ficha del modelo")
+    parser.add_argument("--no-ollama", action="store_true", help="Solo genera el .gguf (sin `ollama create`; p. ej. en Google Colab)")
     args = parser.parse_args()
     if not args.llama_cpp:
         sys.exit("Indica --llama-cpp o LLAMA_CPP_DIR")
@@ -53,8 +52,13 @@ def main() -> None:
     run(sys.executable, args.llama_cpp / "convert_hf_to_gguf.py", MERGED, "--outfile", f16, "--outtype", "f16")
     quantize = shutil.which("llama-quantize", path=str(args.llama_cpp / "build" / "bin")) or "llama-quantize"
     run(quantize, f16, target, QUANT)
-    run("ollama", "create", get_settings().ollama_corrector_model, "-f", HERE / "Modelfile")
     (MERGED.parent / "export.txt").write_text(f"version={args.version}\nquantization={QUANT}\nbase={base}\n", encoding="utf-8")  # La lee run_eval.py
+    if args.no_ollama:  # [2026-11-14 · Colab]: sin Ollama aquí → el .gguf se descarga y se registra en el equipo del servicio
+        print(f"GGUF listo en {target.resolve()} → cópialo junto al Modelfile y ejecuta: ollama create aula-corrector -f Modelfile")
+        return
+    from src.shared.config.settings import get_settings  # Import perezoso: en Colab no hacen falta las dependencias del servicio
+
+    run("ollama", "create", get_settings().ollama_corrector_model, "-f", HERE / "Modelfile")
     print("Publicado. Evalúa antes de usarlo:  python -m tests.evaluation.run_eval")
 
 

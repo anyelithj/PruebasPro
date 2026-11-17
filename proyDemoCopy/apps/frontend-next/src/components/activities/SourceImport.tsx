@@ -112,7 +112,6 @@ export function SourceImport({ language, disabled = false, hint, onExtracted }: 
   const off = disabled || busy !== null;
   return (
     <div className="space-y-2">
-      <p className="text-xs text-muted-foreground">{hint}</p>
       {/* [Archivo]: <label> del input oculto (sr-only) → foco visible con has-[:focus-visible] */}
       <label htmlFor={inputId} className={`btn btn-outline w-fit cursor-pointer has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring ${off ? "pointer-events-none opacity-50" : ""}`}>
         {busy ?? (
@@ -132,7 +131,12 @@ export function SourceImport({ language, disabled = false, hint, onExtracted }: 
           }}
         />
       </label>
-      <p className="text-[11px] text-muted-foreground">Excel, CSV, Word, PDF, PowerPoint, texto, imagen (OCR) o audio/video (se transcribe, máx. {MAX_MEDIA_MB} MB).</p>
+      {/* [2026-11-09]: el formato esperado va plegado → la caja «Importar» ya no es un muro de texto (como en Gestión → Recursos) */}
+      <details className="type-meta text-muted-foreground">
+        <summary className="cursor-pointer w-fit hover:text-foreground">¿Qué formato acepta?</summary>
+        <p className="mt-1">{hint}</p>
+        <p className="mt-1">Excel, CSV, Word, PDF, PowerPoint, texto, imagen (OCR) o audio/video (máx. {MAX_MEDIA_MB} MB).</p>
+      </details>
       {/* [Enlace]: sin <form> anidado → Enter se intercepta */}
       <div className="flex flex-wrap items-center gap-2">
         <label htmlFor={`${inputId}-url`} className="sr-only">

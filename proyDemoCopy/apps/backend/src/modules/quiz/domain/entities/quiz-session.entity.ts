@@ -57,6 +57,26 @@ export class QuizSession {
   @Column({ type: 'int', default: 0, name: 'correct_count' })
   correctCount!: number;
 
+  // [2026-11-06 · Exámenes]: preguntas sorteadas para ESTE intento (null = todas las del quiz)
+  @Column({ type: 'jsonb', name: 'question_ids', nullable: true })
+  questionIds!: string[] | null;
+
+  @Column({ type: 'smallint', nullable: true })
+  percent!: number | null; // % de aciertos sobre las preguntas del intento (al terminar)
+
+  @Column({ type: 'boolean', nullable: true })
+  passed!: boolean | null; // Solo exámenes: percent ≥ passScore
+
+  // [2026-11-09 · RF-32]: intento anulado por el ADMIN (incidencia técnica) → no cuenta para el límite de intentos
+  @Column({ type: 'timestamptz', nullable: true, name: 'voided_at' })
+  voidedAt!: Date | null;
+
+  @Column({ type: 'text', nullable: true, name: 'void_reason' })
+  voidReason!: string | null;
+
+  @Column({ type: 'uuid', nullable: true, name: 'voided_by' })
+  voidedBy!: string | null;
+
   @CreateDateColumn({ name: 'started_at' })
   startedAt!: Date;
 

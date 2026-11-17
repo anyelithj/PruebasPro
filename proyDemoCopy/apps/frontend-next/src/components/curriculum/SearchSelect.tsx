@@ -153,14 +153,14 @@ export function SearchSelect<T extends SearchOption>({
         )}
       </div>
       {disabled && disabledHint && (
-        <p id={`${id}-hint`} className="text-xs text-muted-foreground">
+        <p id={`${id}-hint`} className="type-meta text-muted-foreground">
           {disabledHint}
         </p>
       )}
 
       {open && !disabled && (
         <div className="absolute z-20 mt-1 w-full rounded-md border bg-popover shadow-lg">
-          <ul id={listId} role="listbox" aria-label={label} className="max-h-60 overflow-auto py-1 text-sm">
+          <ul id={listId} role="listbox" aria-label={label} className="max-h-60 overflow-auto py-1">
             {loading && <li className="px-3 py-2 text-muted-foreground">Buscando…</li>}
             {error && <li className="px-3 py-2 text-destructive">{error}</li>}
             {!loading && !error && options.length === 0 && (

@@ -6,7 +6,6 @@ import {
   type PaginatedCoursesResponse,
   type CourseFilterInput,
   type LanguageGroup,
-  type ReactionKind,
 } from "@/types/courses";
 // [Wrapper API Courses]: facade server-side hacia NestJS /courses | [Patrón]: Facade + Adapter | [Principio]: SRP + DRY | [Paradigma]: Funcional
 
@@ -54,31 +53,13 @@ export async function getCourse(idOrSlug: string): Promise<CourseResponse> {
   });
 }
 
-// [POST /courses/:id/favorite]: alterna favorito (requiere sesión) | [Patrón]: Command
-export async function toggleFavorite(courseId: string): Promise<{ isFavorite: boolean }> {
-  return apiFetch<{ isFavorite: boolean }>(`/courses/${courseId}/favorite`, {
-    method: "POST",
-    body: {},
-    bearer: await withBearer(),
-  });
+// [GET /me/favorites · Caso F · 2026-11-13]: «Mis favoritos» del usuario (paginado en el servidor) | [Patrón]: Facade | lectura SSR con el token de la cookie
+// [2026-11-16]: `kind` = ⭐ guardados (por defecto) · 👍 like · ❤️ love → el usuario ve dónde quedó cada valoración
+export async function getMyFavorites(page = 1, limit = 12, kind: "favorite" | "like" | "love" = "favorite"): Promise<PaginatedCoursesResponse> {
+  return apiFetch<PaginatedCoursesResponse>(`/me/favorites?page=${page}&limit=${limit}&kind=${kind}`, { bearer: await withBearer() });
 }
 
-// [POST /courses/:id/reaction]: alterna like/love/favorite | [Patrón]: Command + Strategy
-export async function toggleReaction(
-  courseId: string,
-  kind: ReactionKind,
-): Promise<{ like: boolean; love: boolean; favorite: boolean }> {
-  return apiFetch<{ like: boolean; love: boolean; favorite: boolean }>(
-    `/courses/${courseId}/reaction`,
-    {
-      method: "POST",
-      body: { kind },
-      bearer: await withBearer(),
-    },
-  );
-}
-
-// ───────────────────────── ADMIN ─────────────────────────
+// ───────────────────────── GESTIÓN (ADMIN · docente dueño, 2026-10-27) ─────────────────────────
 
 // [Input alta admin]: alinea con backend CreateCourseDto | [Principio]: SSOT
 export interface CreateCourseInput {
@@ -122,13 +103,14 @@ export async function listCoursesAdmin(
   if (filter.isProBono !== undefined) qs.set("isProBono", String(filter.isProBono));
   if (filter.page) qs.set("page", String(filter.page));
   if (filter.limit) qs.set("limit", String(filter.limit));
+  if (filter.isPublished) qs.set("isPublished", filter.isPublished); // [2026-10-30]: filtro «Estado» de Gestión → Cursos
   const q = qs.toString();
   return apiFetch<PaginatedCoursesResponse>(`/courses/admin${q ? `?${q}` : ""}`, {
     bearer: await withBearer(),
   });
 }
 
-// [POST /courses]: crear curso (ADMIN) | [Patrón]: Command
+// [POST /courses]: crear curso (TEACHER+; queda como dueño) | [Patrón]: Command
 export async function createCourse(input: CreateCourseInput): Promise<CourseResponse> {
   return apiFetch<CourseResponse>(`/courses`, {
     method: "POST",
@@ -137,7 +119,7 @@ export async function createCourse(input: CreateCourseInput): Promise<CourseResp
   });
 }
 
-// [PATCH /courses/:id]: editar curso (ADMIN) | [Patrón]: Command
+// [PATCH /courses/:id]: editar curso (ADMIN o docente dueño) | [Patrón]: Command
 export async function updateCourse(
   id: string,
   patch: UpdateCourseInput,
@@ -149,7 +131,7 @@ export async function updateCourse(
   });
 }
 
-// [DELETE /courses/:id]: baja dura (ADMIN) | [Patrón]: Command
+// [DELETE /courses/:id]: baja dura (ADMIN o docente dueño) | [Patrón]: Command
 export async function deleteCourse(id: string): Promise<{ deleted: true; id: string }> {
   return apiFetch<{ deleted: true; id: string }>(`/courses/${id}`, {
     method: "DELETE",
@@ -157,7 +139,7 @@ export async function deleteCourse(id: string): Promise<{ deleted: true; id: str
   });
 }
 
-// [PATCH /courses/:id/publish]: activar/desactivar (ADMIN — baja blanda) | [Patrón]: Command
+// [PATCH /courses/:id/publish]: activar/desactivar (ADMIN o docente dueño — baja blanda) | [Patrón]: Command
 export async function setCoursePublished(
   id: string,
   isPublished: boolean,

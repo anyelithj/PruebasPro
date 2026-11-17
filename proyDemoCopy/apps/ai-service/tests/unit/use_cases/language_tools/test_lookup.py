@@ -5,6 +5,7 @@
 """
 
 import json
+import re
 
 import pytest
 
@@ -58,7 +59,9 @@ async def test_ipa_ingles_trae_uk_y_us_por_palabra():
     assert set(res.results) == {"uk", "us"}
     assert [w.word for w in res.results["uk"].words] == ["water", "bottle"]
     assert res.results["uk"].full != res.results["us"].full  # wˈɔːtə ≠ wˈɑːɾɚ
-    assert res.engine.startswith("espeak-ng 1.52")
+    # [2026-10-28]: se valida el FORMATO «espeak-ng X.Y[.Z]» y no una versión fija → la imagen Docker trae 1.52 y Fedora/Ubuntu locales 1.51.x (antes fallaba fuera de Docker)
+    # `re.fullmatch` (Python stdlib): toda la cadena debe cumplir el patrón | [Principio]: la prueba verifica el contrato, no el entorno
+    assert re.fullmatch(r"espeak-ng \d+\.\d+(\.\d+)?", res.engine), res.engine
 
 
 @needs_espeak

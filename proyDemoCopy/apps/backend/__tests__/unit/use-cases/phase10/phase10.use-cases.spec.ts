@@ -30,9 +30,11 @@ import type { ConfigService } from '@nestjs/config';
 
 const tools = (over: Partial<LanguageToolsPort> = {}): LanguageToolsPort => ({
   lookup: jest.fn(),
+  detect: jest.fn(),
   word: jest.fn(),
   lines: jest.fn(),
   translate: jest.fn(),
+  nounGrammar: jest.fn(),
   ipa: jest.fn(async (text: string, language: string) => ({
     ipa: `/${text}/`,
     ipa_us: language === 'en' ? `/${text}-us/` : null,

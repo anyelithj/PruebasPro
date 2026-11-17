@@ -6,7 +6,7 @@ import { Step } from "@/components/curriculum/CurriculumItemForm"; // [DRY]: MIS
 import { cn } from "@/lib/utils";
 import { Suspense } from "react"; // `useSearchParams` del paso 1 exige un límite de Suspense
 import { ActivityLangLevel } from "@/components/admin/ActivityLangLevel"; // [2026-10-24]: paso «¿Para qué idioma y nivel?»
-import { isLanguage, LEVEL_OPTIONS } from "@/lib/languages";
+import { isLanguage, LANGUAGES, LEVEL_OPTIONS } from "@/lib/languages";
 import { ACTIVITY_TAB_KEYS, ACTIVITY_TABS, parseTab, withReturn } from "@/lib/activities-api";
 import { isCreatableKind } from "@/lib/activity-kinds";
 import { ActivityCreateForm } from "@/components/activities/ActivityCreateForm"; // [2026-10-24]: pasos «Datos» y «Contenido» en la página (sin modales ni saltos a Angular)
@@ -24,36 +24,32 @@ export const metadata: Metadata = {
 };
 
 // `export default async function` (RSC): lee la sección elegida de la URL en el servidor
-export default async function NewActivityPage(props: { searchParams: Promise<{ tab?: string; idioma?: string; nivel?: string }> }) {
+export default async function NewActivityPage(props: { searchParams: Promise<{ tab?: string; idioma?: string; nivel?: string; idiomas?: string }> }) {
   const sp = await props.searchParams;
   const tab = parseTab(sp.tab); // [Fail Fast]: valor desconocido → Práctica
   const listHref = `/admin/activities?tab=${tab}`; // Pestaña de Gestión a la que se vuelve
   // [Validación]: solo idiomas y niveles conocidos llegan a la URL de los editores | `some` (ES5)
   const language = isLanguage(sp.idioma) ? sp.idioma : "";
   const level = LEVEL_OPTIONS.some((l) => l.value === sp.nivel) ? sp.nivel! : "";
+  // [2026-11-11 · Poliglota]: idiomas elegidos (?idiomas=en,fr…) · menos de 2 válidos → los siete
+  const picked = (sp.idiomas ?? "").split(",").filter(isLanguage);
+  const languages = picked.length >= 2 ? picked : LANGUAGES.map((l) => l.value);
   const needsLang = tab !== "polyglot"; // Poliglota muestra el tema en los siete idiomas a la vez
-  const ready = !needsLang || Boolean(language && level);
-  const keep = { ...(language ? { idioma: language } : {}), ...(level ? { nivel: level } : {}) }; // Se conservan al cambiar de sección
-  const withLang = (href: string) => (language && level ? `${href}${href.includes("?") ? "&" : "?"}idioma=${language}&nivel=${level}` : href);
+  const ready = !needsLang || Boolean(language); // [2026-11-16 · RF-148]: el nivel lo asigna el tema o se estima del texto
+  const keep = { ...(language ? { idioma: language } : {}), ...(level ? { nivel: level } : {}), ...(sp.idiomas ? { idiomas: sp.idiomas } : {}) }; // Se conservan al cambiar de sección
+  const withLang = (href: string) => (language ? `${href}${href.includes("?") ? "&" : "?"}idioma=${language}${level ? `&nivel=${level}` : ""}` : href);
 
   return (
     <div className="w-full space-y-5 py-4">
       <BackLink href={listHref} memo="activities">Volver a actividades</BackLink>
       <header>
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Crear actividad</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Idioma y nivel, qué vas a crear, sus datos y el contenido (con IA, a mano o importando). Se guarda como borrador hasta que se publique.</p>
+        <h1 className="title-page">Crear actividad</h1>
+        <p className="mt-1 text-muted-foreground">Qué vas a crear, idioma y nivel, sus datos y el contenido (con IA, a mano o importando). Se guarda como borrador hasta que se publique.</p>
       </header>
 
-      {/* ── Paso 1: idioma y nivel (como «Crear recurso») ── */}
-      <Step n={1} title="¿Para qué idioma y nivel?" hint={needsLang ? "El editor se abre con este idioma y nivel ya elegidos." : "Poliglota muestra el tema en los siete idiomas; el idioma no hace falta."}>
-        <Suspense fallback={null}>
-          <ActivityLangLevel language={language} level={level} />
-        </Suspense>
-      </Step>
-
-      {/* ── Paso 2: tipo (mismas tarjetas que «¿Qué vas a crear?» de Recursos) ── */}
-      <Step n={2} title="¿Qué vas a crear?">
-        <nav aria-labelledby="step-2" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      {/* ── Paso 1: tipo (mismas tarjetas que «¿Qué vas a crear?» de Recursos) ── */}
+      <Step n={1} title="¿Qué vas a crear?">
+        <nav aria-labelledby="step-1" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {ACTIVITY_TAB_KEYS.filter((k) => ACTIVITY_TABS[k].create).map((k) => {
             const def = ACTIVITY_TABS[k];
             const Icon = def.icon;
@@ -83,16 +79,25 @@ export default async function NewActivityPage(props: { searchParams: Promise<{ t
         </nav>
       </Step>
 
+      {/* ── Paso 2: idioma y nivel (como «Crear recurso») ── */}
+      <Step n={2} title="¿Para qué idioma y nivel?" hint={needsLang ? "Elige el idioma. El nivel se asigna solo (por el tema o estimado del texto)." : "Elige los idiomas que se comparan (mínimo 2). El nivel se asigna solo al elegir el tema."}>
+        <Suspense fallback={null}>
+          <ActivityLangLevel language={language} level={level} languages={needsLang ? undefined : languages} />
+        </Suspense>
+      </Step>
+
       {/* ── Pasos 3 y 4: datos y contenido EN LA PÁGINA (IA · a mano · importar) — `key`: cambiar de tipo reinicia el borrador ── */}
       {isCreatableKind(tab) ? (
-        <ActivityCreateForm key={tab} kind={tab} language={language} level={level} listHref={listHref} firstStep={3} />
+        <Suspense fallback={null}>
+          <ActivityCreateForm key={tab} kind={tab} language={language} level={level} languages={needsLang ? undefined : languages} listHref={listHref} firstStep={3} />
+        </Suspense>
       ) : tab === "music" ? (
         // [Música]: NO se duplica el asistente de canciones (audio, licencia, letra sincronizada con IPA) → enlace al remoto Angular con idioma/nivel y «volver»
         <Step n={3} title="Subir la canción" hint="Las canciones tienen su propio asistente: audio, licencia, letra (importada de archivo, enlace o transcrita del audio) y karaoke sincronizado.">
           <a href={ready ? withReturn(withLang("/musica/subir"), tab) : undefined} aria-disabled={!ready || undefined} className={cn("btn btn-primary w-fit", !ready && "pointer-events-none opacity-50")}>
             <Music aria-hidden className="size-4" /> Abrir el asistente de canciones
           </a>
-          {!ready && <p className="text-xs text-muted-foreground">Primero elige idioma y nivel en el paso 1.</p>}
+          {!ready && <p className="type-meta text-muted-foreground">Primero elige el idioma en el paso 2.</p>}
         </Step>
       ) : null}
     </div>

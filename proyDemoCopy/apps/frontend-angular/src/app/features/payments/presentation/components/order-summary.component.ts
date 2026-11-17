@@ -14,7 +14,7 @@ export interface SummaryLine {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section [attr.aria-labelledby]="headingId" class="space-y-3">
-      <h2 [id]="headingId" class="text-lg font-bold">{{ heading() }}</h2>
+      <h2 [id]="headingId" class="title-section">{{ heading() }}</h2>
       <dl class="divide-y divide-border rounded-xl border border-border">
         @for (line of lines(); track line.id) {
           <div class="flex items-center justify-between gap-3 px-4 py-3 text-sm">

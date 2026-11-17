@@ -1,7 +1,9 @@
 "use server"; // [Next.js]: cada export es una Server Action → se ejecuta solo en el servidor (token y backend nunca llegan al cliente)
+import { updateMyProfile } from "@/lib/profile-api"; // [2026-11-03]: perfil del instructor desde el formulario del curso
+import { isSocialUrl, SOCIAL_META, SOCIAL_NETWORKS, socialUrlField, type SocialUrlField } from "@/types/profile";
 import { revalidatePath } from "next/cache"; // [Next.js]: invalida la caché del listado para que aparezcan los cambios
 import { z } from "zod"; // [Zod 4]: validación en runtime con inferencia de tipos TS
-import { createCourse, deleteCourse, setCoursePublished, updateCourse } from "@/lib/courses-api"; // [Facade]: /courses (el backend exige rol ADMIN)
+import { createCourse, deleteCourse, setCoursePublished, updateCourse } from "@/lib/courses-api"; // [Facade]: /courses (el backend exige TEACHER+ y, para editar/publicar/borrar, ser ADMIN o el docente dueño)
 import { fmt, type Dictionary } from "@aula/shared-i18n";
 import { getServerDictionary } from "@/lib/i18n-server";
 import { slugify } from "@/lib/slug"; // [Helper]: mismo algoritmo de slug que el backend
@@ -43,6 +45,8 @@ function buildSchema(t: Dictionary) {
     // `superRefine` (Zod): regla entre campos → un curso de pago necesita precio > 0 | [Principio]: Fail Fast
     .superRefine((v, ctx) => {
       if (v.access === "paid" && v.price <= 0) ctx.addIssue({ code: "custom", path: ["price"], message: t.adminCourses.fields.pricePaidRequired });
+      // [Fix 2026-10-28]: misma invariante que el VO `CoursePrice` del backend (originalAmount >= amount) → error en el campo, no un 500 | [Principio]: Fail Fast + SSOT de la regla
+      if (v.access === "paid" && v.originalPrice !== "" && v.originalPrice < v.price) ctx.addIssue({ code: "custom", path: ["originalPrice"], message: t.adminCourses.fields.originalPriceTooLow });
     });
 }
 
@@ -132,8 +136,24 @@ export async function saveCourseAction(_prev: CourseFormState, formData: FormDat
     isPublished: v.isPublished,
   };
 
+  // [Perfil del instructor · 2026-11-03]: solo llega si quien guarda es el autor (campo oculto) → misma validación que «Mi perfil» (https + dominio de la red)
+  let profile: Parameters<typeof updateMyProfile>[0] | null = null;
+  if (formData.get("instructorProfile") === "1") {
+    const bio = text("instructorBio").trim();
+    const social = Object.fromEntries(SOCIAL_NETWORKS.map((net) => [socialUrlField(net), text(socialUrlField(net)).trim()])) as Record<SocialUrlField, string>;
+    const bad = SOCIAL_NETWORKS.filter((net) => social[socialUrlField(net)] && !isSocialUrl(net, social[socialUrlField(net)]));
+    if (bio.length > 300 || bad.length) {
+      const fieldErrors = Object.fromEntries(bad.map((net) => [socialUrlField(net), fmt(t.profile.socialInvalid, { network: SOCIAL_META[net].label, hosts: SOCIAL_META[net].hosts.join(" / ") })])) as CourseFormState["fieldErrors"];
+      return { status: "error", id, message: bio.length > 300 ? "La presentación del instructor admite 300 caracteres." : t.adminCourses.fixFields, fieldErrors };
+    }
+    profile = { bio, ...social };
+    // [2026-11-09]: alta de curso → el formulario llega vacío; solo se guardan los campos escritos (los vacíos no borran el perfil)
+    if (!id) profile = Object.fromEntries(Object.entries(profile).filter(([, v]) => v)) as typeof profile;
+  }
+
   let savedId: string;
   try {
+    if (profile && Object.keys(profile).length) await updateMyProfile(profile);
     savedId = id ? (await updateCourse(id, payload)).id : (await createCourse(payload)).id;
   } catch (err) {
     // `instanceof` (JS): estrecha unknown → Error | el mensaje del backend (p. ej. slug duplicado) se muestra tal cual

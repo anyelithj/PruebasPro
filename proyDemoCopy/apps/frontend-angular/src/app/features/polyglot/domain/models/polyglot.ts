@@ -14,6 +14,7 @@ export const TopicSchema = z.object({
   description: z.string().default(''),
   status: z.enum(['draft', 'published']),
   category: z.enum(TOPIC_CATEGORIES).catch('vocabulary'), // `.catch`: valor desconocido o ausente → vocabulario (no rompe la pantalla)
+  levels: z.array(z.string()).default([]), // [2026-11-16]: niveles MCER del tema (vacío = todos) → select «Nivel» de /poliglota
   createdBy: z.string().nullable().default(null),
   concepts: z.number().int().optional(), // Solo en el detalle
 });
@@ -38,6 +39,7 @@ export const TermSchema = z.object({
   text: z.string(),
   ipa: z.string().default(''),
   ipaUs: z.string().nullable().default(null),
+  grammar: z.string().default(''), // [2026-11-16 · Regla obligatoria de vocabulario]: «pl. die Tische · masculino», «一张 (yì zhāng)»
   reviewed: z.boolean(),
   needsNativeReview: z.boolean().default(false),
 });

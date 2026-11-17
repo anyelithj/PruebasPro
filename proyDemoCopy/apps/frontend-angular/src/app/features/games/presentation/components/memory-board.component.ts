@@ -10,13 +10,17 @@ import {
 } from '@angular/core';
 import { shuffle, type VocabItem } from '../../domain/models/games';
 // [MemoryBoardComponent · Presentacional · Sprint 8.8]: tablero de parejas palabra ↔ imagen (emoji) o traducción | [Patrón]: State Machine (0, 1 o 2 cartas volteadas → pareja / sin pareja) + Presentational Component | [Principio]: SRP (la página envía la ronda) | [Paradigma]: Reactivo (signals)
+// [2026-11-14 · como el memo de 50languages]: las DOS cartas de la pareja llevan la MISMA imagen + su texto (una en el idioma meta, otra en español)
+// → el estudiante empareja por sentido y no adivina a qué palabra corresponde una imagen ambigua
 // [A11y]: cada carta es un <button> con nombre («Carta 3, boca abajo» / su contenido), `aria-pressed` cuando está volteada, emparejadas deshabilitadas con ✓ en texto · teclado: Tab + Enter/Espacio
 
 interface MemoryCard {
   readonly id: number; // Posición en el tablero (estable para `track`)
   readonly pair: number; // Índice de la palabra en el vocabulario de la partida
-  readonly face: string; // Lo que se ve al voltearla
-  readonly isTerm: boolean; // true = palabra · false = imagen o traducción
+  readonly face: string; // Texto de la carta: palabra en el idioma que se aprende o su traducción al español
+  readonly isTerm: boolean; // true = palabra (idioma meta) · false = traducción (español)
+  readonly image?: string; // [2026-11-03]: imagen del mazo
+  readonly emoji?: string; // [2026-11-14]: emoji si no hay imagen
 }
 
 @Component({
@@ -24,13 +28,14 @@ interface MemoryCard {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' }, // Elemento anfitrión en bloque → respeta márgenes y space-y del contenedor
   template: `
-    <p class="mb-3 text-sm font-semibold" aria-live="polite">{{ leftLabel() }}</p>
-    <div class="mx-auto grid max-w-2xl grid-cols-3 gap-2 sm:grid-cols-4">
+    <p class="mb-3 font-semibold" aria-live="polite">{{ leftLabel() }}</p>
+    <!-- [Rejilla responsive · 2026-10-27]: 3 columnas en móvil · 4 en tableta (md) · 6 en escritorio (lg+) → antes 4 cartas cuadradas enormes por fila | Tailwind breakpoints md/lg (mobile-first) -->
+    <div class="mx-auto grid max-w-5xl grid-cols-3 gap-2 md:grid-cols-4 lg:grid-cols-6 lg:gap-3">
       @for (c of cards(); track c.id) {
         @let open = flipped().includes(c.id) || matched().has(c.pair);
         <button
           type="button"
-          class="grid aspect-square place-items-center rounded-xl border-2 p-2 text-center text-sm font-bold transition-all sm:text-base"
+          class="grid aspect-[4/3] min-h-16 place-items-center overflow-hidden rounded-xl border-2 p-1.5 text-center text-xs font-bold leading-tight break-words transition-all hyphens-auto sm:text-sm"
           [class]="
             matched().has(c.pair)
               ? 'border-transparent bg-tone-brand-soft text-tone-brand'
@@ -46,16 +51,20 @@ interface MemoryCard {
           (click)="flip(c)"
         >
           @if (open) {
-            <span
-              [class.text-4xl]="!c.isTerm && isEmoji(c.face)"
-              [attr.lang]="c.isTerm ? language() : null"
-              >{{ c.face }}</span
-            >
+            <!-- [Cara]: imagen (o emoji) arriba + texto abajo · \`lang\` (HTML): pronunciación correcta en lectores de pantalla -->
+            <span class="flex h-full w-full flex-col items-center justify-center gap-1">
+              @if (c.image) {
+                <img [src]="c.image" alt="" class="min-h-0 w-full flex-1 object-contain" referrerpolicy="no-referrer" />
+              } @else if (c.emoji) {
+                <span aria-hidden="true" class="text-2xl leading-none sm:text-3xl">{{ c.emoji }}</span>
+              }
+              <span [attr.lang]="c.isTerm ? language() : 'es'" [class]="c.isTerm ? '' : 'font-semibold text-muted-foreground'">{{ c.face }}</span>
+            </span>
             @if (matched().has(c.pair)) {
               <span class="sr-only">✓</span>
             }
           } @else {
-            <span aria-hidden="true" class="text-2xl">?</span>
+            <span aria-hidden="true" class="text-xl">?</span>
           }
         </button>
       }
@@ -79,13 +88,14 @@ export class MemoryBoardComponent {
   );
 
   constructor() {
-    // [Reparto]: cada palabra genera dos cartas (palabra + emoji/traducción) y se barajan
+    // [Reparto]: cada palabra genera dos cartas con la MISMA imagen: palabra (idioma meta) + traducción (español); se barajan
+    // Sin traducción, la segunda carta usa el emoji como texto (comportamiento anterior) para que la pareja siga siendo distinguible
     effect(() => {
       const items = this.items();
       untracked(() => {
         const deck = items.flatMap((it, i) => [
-          { pair: i, face: it.term, isTerm: true },
-          { pair: i, face: it.emoji || it.translation || it.term, isTerm: false },
+          { pair: i, face: it.term, isTerm: true, image: it.image, emoji: it.emoji },
+          { pair: i, face: it.translation || it.emoji || it.term, isTerm: false, image: it.image, emoji: it.translation ? it.emoji : undefined },
         ]);
         this.cards.set(shuffle(deck).map((c, id) => ({ ...c, id })));
         this.flipped.set([]);
@@ -96,11 +106,6 @@ export class MemoryBoardComponent {
 
   protected faceDownLabel(n: number): string {
     return this.faceDownText().replace('{n}', String(n));
-  }
-
-  // `\p{Extended_Pictographic}` (Unicode property escape, ES2018): ¿la cara es un emoji? → se pinta grande
-  protected isEmoji(s: string): boolean {
-    return /\p{Extended_Pictographic}/u.test(s);
   }
 
   protected flip(card: MemoryCard): void {

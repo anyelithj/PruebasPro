@@ -39,19 +39,33 @@ const bullets = (v: unknown): string =>
     .map((x) => `- ${x}`)
     .join('\n');
 
+// [Presupuesto de generación · Fix 2026-10-28]: antes 1800/1400 tokens de salida y 12–20 subtemas → con qwen3:8b en CPU (~5 tok/s) superaba los 5 min
+// y el BFF (undici) cortaba con 503. La ficha solo lleva TÍTULOS de subtemas (la explicación de cada uno se pide aparte, bajo demanda) → basta ~900 tokens
+const COURSE_TOKENS = 900;
+const TOPIC_TOKENS = 1000;
+const SOURCE_CHARS = 3500; // Texto importado que entra en el prompt (antes 5000) → menos tokens de entrada = respuesta antes
+const DEFAULT_TIMEOUT_MS = 150_000; // < AI_DRAFT_TIMEOUT_MS del BFF (170 s) < headersTimeout de undici (300 s) | [Patrón]: Timeout escalonado
+
 @Injectable()
 export class DraftCourseUseCase {
   private readonly model: string;
+  private readonly timeoutMs: number; // Espera máxima por inferencia (COURSE_DRAFT_TIMEOUT_MS)
 
   constructor(
     private readonly ollama: OllamaClient,
     config: ConfigService, // `ConfigService` (@nestjs/config): variables de entorno
   ) {
     // [Mismo modelo compacto que los demás borradores] | `??` (ES2020): primer valor definido
+    // [Fix 2026-10-28]: OLLAMA_COURSE_MODEL (opcional) permite un modelo más ligero SOLO para los borradores de Cursos sin tocar Curriculum
     this.model =
+      config.get<string>('OLLAMA_COURSE_MODEL') ??
       config.get<string>('OLLAMA_CURRICULUM_MODEL') ??
       config.get<string>('OLLAMA_QWEN_MODEL') ??
       'qwen2.5:3b';
+    // `Number(...) ||` → valor seguro si la variable falta o no es numérica
+    this.timeoutMs =
+      Number(config.get<string>('COURSE_DRAFT_TIMEOUT_MS')) ||
+      DEFAULT_TIMEOUT_MS;
   }
 
   async execute(req: CourseDraftRequest): Promise<CourseDraft> {
@@ -63,14 +77,14 @@ export class DraftCourseUseCase {
       [
         `Eres diseñador curricular. Crea la ficha de un curso de ${lang} nivel MCER ${req.level}${focus} para hispanohablantes.`,
         req.text
-          ? `Basa el curso en este contenido (resúmelo, no lo copies):\n${req.text.slice(0, 5000)}`
+          ? `Basa el curso en este contenido (resúmelo, no lo copies):\n${req.text.slice(0, SOURCE_CHARS)}`
           : '',
-        `"topics" es el TEMARIO: 12 a 20 subtemas CONCRETOS del idioma propios del nivel ${req.level}, en orden de aprendizaje, cada uno con su forma en ${lang} entre paréntesis cuando aplique (ejemplo para inglés A1: "El verbo «to be» (am / is / are)", "Pronombres de sujeto (I, you, he…)", "Presente simple: preguntas y negación"). NO pongas "Introducción", "Glosario", "Ejercicios" ni "Práctica".`,
+        `"topics" es el TEMARIO: 10 a 14 subtemas CONCRETOS del idioma propios del nivel ${req.level}, en orden de aprendizaje, cada uno con su forma en ${lang} entre paréntesis cuando aplique (ejemplo para inglés A1: "El verbo «to be» (am / is / are)", "Pronombres de sujeto (I, you, he…)", "Presente simple: preguntas y negación"). NO pongas "Introducción", "Glosario", "Ejercicios" ni "Práctica".`,
         'Devuelve SOLO JSON: {"title":"título corto en español","description":"UN párrafo de presentación (máx. 400 caracteres)","objectives":["4 objetivos cortos"],"audience":"UN párrafo: a quién va dirigido","topics":["..."],"tags":["2 a 4 de: Conversación, Gramática, Vocabulario, Pronunciación, Lectura, Escritura, Comprensión auditiva, Certificación, Negocios, Viajes"]}',
       ]
         .filter(Boolean)
         .join('\n'),
-      1800,
+      COURSE_TOKENS, // [Fix 2026-10-28]: antes 1800
     );
     const title = str(raw.title, 200);
     const topics = (Array.isArray(raw.topics) ? raw.topics : [])
@@ -118,13 +132,15 @@ export class DraftCourseUseCase {
     const raw = await this.json(
       [
         `Eres profesor de ${lang} para hispanohablantes de nivel MCER ${req.level}. Explica el tema "${req.topic}".`,
-        req.text ? `Básate en este material:\n${req.text.slice(0, 5000)}` : '',
+        req.text
+          ? `Básate en este material:\n${req.text.slice(0, SOURCE_CHARS)}`
+          : '',
         `Escribe en español, con los ejemplos en ${lang} y su traducción entre paréntesis. Claro y breve, del nivel ${req.level}.`,
         'Devuelve SOLO JSON: {"definition":"1-2 frases","usage":["cuándo se usa (2-4 viñetas)"],"rules":["fórmula o reglas: afirmativa, negativa, interrogativa si aplica (2-5 viñetas)"],"examples":["5 ejemplos: frase (traducción)"],"mistakes":["2 errores comunes y su corrección"]}',
       ]
         .filter(Boolean)
         .join('\n'),
-      1400,
+      TOPIC_TOKENS, // [Fix 2026-10-28]: antes 1400
     );
     const section = (h: string, v: unknown) => {
       const b = Array.isArray(v) ? bullets(v) : str(v, 2000);
@@ -155,6 +171,7 @@ export class DraftCourseUseCase {
       model: this.model,
       prompt,
       options: { temperature: 0.4, num_predict: numPredict, num_ctx: 8192 },
+      timeoutMs: this.timeoutMs, // [Fix 2026-10-28]: corta antes que el BFF → 504 «La IA tardó demasiado…» en vez de colgarse 10 min
     });
     try {
       return JSON.parse(res.response ?? '{}') as Record<string, unknown>;

@@ -11,8 +11,8 @@ export default function NotFound() {
   return (
     <main className="min-h-screen grid place-items-center p-6">
       <div className="max-w-md text-center space-y-4">
-        <h1 className="text-6xl font-extrabold text-gradient-brand">404</h1>
-        <h2 className="text-2xl font-bold">Página no encontrada</h2>
+        <h1 className="title-display text-gradient-brand">404</h1>
+        <h2 className="title-section">Página no encontrada</h2>
         <p className="text-muted-foreground">
           La ruta que buscas no existe o fue movida.
         </p>

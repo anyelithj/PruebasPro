@@ -24,6 +24,12 @@ export interface AvatarTurn {
   finished?: boolean; // [2026-10-23]: el usuario se despidió → el caso de uso cierra la sesión
 }
 
+// [DialogueHistoryTurn · Tarea 1]: turno previo persistido en dialogue_turns (estado en BD, no en la memoria de FastAPI)
+export interface DialogueHistoryTurn {
+  role: 'user' | 'assistant'; // Unión literal (TS): mismo contrato que `history` de FastAPI
+  content: string;
+}
+
 export interface DialogueAgentPort {
   turn(
     input: {
@@ -32,6 +38,7 @@ export interface DialogueAgentPort {
       language: string;
       level: string;
       dialogue: DialogueContextDto;
+      history?: ReadonlyArray<DialogueHistoryTurn>; // `?` → la apertura (START) no tiene historial
     },
     token: string,
   ): Promise<AvatarTurn>;

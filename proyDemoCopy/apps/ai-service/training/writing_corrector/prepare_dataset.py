@@ -5,6 +5,8 @@ Fuentes (solo material revisado por docentes; nunca salidas de IA sin revisar):
   2. Redacciones corregidas y revisadas (JSONL opcional, --extra) con la forma CorrectionDraft + text/level.
 
 Salida: data/own_llm/train.jsonl y data/own_llm/heldout.jsonl en formato prompt/completion (TRL SFTTrainer).
+[2026-11-13 · Tarea 6]: train.jsonl también lleva los ejemplos del corrector del Anexo A ({entrada} -> {salida JSON}, con y sin «referencias»,
+annex_a.py); el conjunto reservado del Anexo A es tests/evaluation/corrector_eval.jsonl (run_eval.py).
 El conjunto reservado (≈10 %) se elige por hash del texto → estable entre ejecuciones y nunca entra al entrenamiento.
 
 Uso (desde apps/ai-service):  python -m training.writing_corrector.prepare_dataset [--extra reviewed.jsonl]
@@ -26,6 +28,7 @@ from sqlalchemy import text as sql
 from src.modules.own_llm.application.schemas.writing_request import OWN_MODEL_LANGUAGES, SUPPORTED_LEVELS
 from src.modules.own_llm.application.schemas.writing_response import CorrectionDraft
 from src.modules.own_llm.infrastructure.models.writing_corrector_model import SYSTEM_PROMPT, build_prompt
+from training.writing_corrector.annex_a import annex_records  # [Tarea 6]: ejemplos del Anexo A
 
 OUT_DIR = Path("data/own_llm")
 HELDOUT_PERCENT = 10
@@ -107,7 +110,10 @@ async def main() -> None:
     if args.extra:
         examples.extend(load_extra(args.extra))
     train, held = write_split(examples, OUT_DIR)
-    print(f"train={train} heldout={held} -> {OUT_DIR.resolve()}")
+    annex = annex_records()  # [Tarea 6]: Anexo A (Casos A, B, C y errores de voz), con y sin referencias
+    with (OUT_DIR / "train.jsonl").open("a", encoding="utf-8") as f:
+        f.writelines(json.dumps(r, ensure_ascii=False) + "\n" for r in annex)  # JSONL: un registro por línea
+    print(f"train={train + len(annex)} (Anexo A: {len(annex)}) heldout={held} -> {OUT_DIR.resolve()}")
 
 
 if __name__ == "__main__":

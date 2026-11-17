@@ -30,6 +30,31 @@ describe('LanguageLookupPage', () => {
     expect(el.querySelector('h1')?.textContent).toContain('Traductor');
     expect(el.textContent).toContain('La traducción aparecerá aquí');
     expect(el.querySelector('input[type="file"]')?.getAttribute('accept') ?? '').toBe('');
+    // [2026-10-27]: el idioma de origen empieza en «Detectar idioma»
+    const from = el.querySelector('select') as HTMLSelectElement;
+    expect(from.value).toBe('auto');
+    expect(from.options[0]!.textContent).toContain('Detectar idioma');
+  });
+
+  it('Detectar idioma: envía source «auto» y muestra «Detectado: Inglés»', async () => {
+    let sent: unknown;
+    server.use(
+      http.post(`${API}/vocabulary/lookup/translate`, async ({ request }) => {
+        sent = await request.json();
+        return HttpResponse.json(envelope({ translation: 'Me gusta el café por la mañana.', detected_language: 'en' }));
+      }),
+    );
+    const { el, fixture } = await open();
+    const area = el.querySelector('textarea')!;
+    area.value = 'I like coffee in the morning, but my sister prefers tea with a lot of milk and sugar every single day.';
+    area.dispatchEvent(new Event('input'));
+    await settle(fixture); // El botón se habilita tras la detección de cambios (jsdom ignora clics en botones deshabilitados)
+    getByRole(el, 'button', 'Traducir').click();
+    await settle(fixture);
+    await settle(fixture);
+    expect(sent).toMatchObject({ source: 'auto', target: 'es' });
+    expect(el.textContent).toContain('Me gusta el café');
+    expect(getByRole(el, 'status').textContent).toContain('Detectado: Inglés');
   });
 
   it('deep link ?q=umbrella: IPA británico y estadounidense + traducción + guardar', async () => {
@@ -42,7 +67,7 @@ describe('LanguageLookupPage', () => {
     expect(getByRole(el, 'button', 'Guardar en mi vocabulario')).toBeTruthy();
   });
 
-  it('la IA local no respondió: aviso en texto, pero el IPA se muestra', async () => {
+  it('la IA no respondió: aviso en texto, pero el IPA se muestra', async () => {
     server.use(http.post(`${API}/vocabulary/lookup`, () => HttpResponse.json(envelope(lookup('unavailable', '')), { status: 201 })));
     const { el } = await open('umbrella');
     expect(el.textContent).toContain('no respondió');

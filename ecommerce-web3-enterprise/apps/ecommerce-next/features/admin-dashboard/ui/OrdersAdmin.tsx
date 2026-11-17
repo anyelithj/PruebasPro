@@ -20,6 +20,7 @@ import { useFormat } from "@/shared/hook/useFormat";
 import { useAuth } from "@/shared/hook/useAuth";
 import { Badge } from "@/shared/ui/Badge";
 import { toast } from "@/shared/ui/Toast";
+import { TablePager, useLocalPage } from "./DataTable";
 
 // TONE => Strategy de color por estado (el texto acompaña siempre al color: no depende solo de él, WCAG 1.4.1)
 const TONE: Record<string, "neutral" | "success" | "warning" | "danger" | "info"> = {
@@ -282,6 +283,7 @@ function TaxReport({ from: initialFrom, to: initialTo, token }: { from: string; 
   const [range, setRange] = useState({ from: initialFrom, to: initialTo });
   const query = { from: range.from, to: `${range.to}T23:59:59` };
   const report = useAdminGet<{ rows: Array<{ month: string; invoices: number; subtotalCents: number; taxCents: number; totalCents: number; creditNotesCents: number }>; totals: Record<string, number> }>("tax-report", "/invoice/report", query);
+  const months = useLocalPage(report.data?.rows);
   return (
     <section aria-labelledby="tax-report-title" className="flex flex-col gap-3 rounded-lg border p-4">
       <h3 id="tax-report-title" className="font-semibold">{t("taxReport")}</h3>
@@ -295,7 +297,7 @@ function TaxReport({ from: initialFrom, to: initialTo, token }: { from: string; 
           <caption className="sr-only">{t("taxReport")}</caption>
           <thead className="border-b text-left text-slate-600"><tr>{["month", "invoices", "taxBase", "iva", "total", "creditNotes"].map((key) => <th key={key} scope="col" className="py-2 pr-3">{t(`taxCols.${key}`)}</th>)}</tr></thead>
           <tbody>
-            {(report.data?.rows ?? []).map((row) => (
+            {months.visible.map((row) => (
               <tr key={row.month} className="border-b last:border-0">
                 <th scope="row" className="py-2 pr-3 text-left font-medium">{row.month}</th>
                 <td className="py-2 pr-3 tabular-nums">{row.invoices}</td>
@@ -308,6 +310,7 @@ function TaxReport({ from: initialFrom, to: initialTo, token }: { from: string; 
           </tbody>
         </table>
       </div>
+      <TablePager meta={months.meta} onPage={months.setPage} />
       {report.data && <p className="text-sm font-medium">{t("netTotal", { value: format.money(report.data.totals["netCents"] ?? 0) })}</p>}
     </section>
   );

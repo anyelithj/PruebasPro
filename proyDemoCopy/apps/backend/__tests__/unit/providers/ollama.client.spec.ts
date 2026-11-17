@@ -29,6 +29,25 @@ describe('OllamaClient', () => {
     await expect(promise).rejects.toThrow('ollama pull m:1');
   });
 
+  // [Fix 2026-10-31]: «Verifica que Ollama esté activo» solo si de verdad no respondió
+  it('Ollama respondió con un error → muestra su motivo; sin respuesta → pide verificar que esté activo', async () => {
+    const generate = (err: unknown) => makeClient(jest.fn().mockReturnValue(throwError(() => err))).generate({ model: 'm:1', prompt: 'p', options: { temperature: 0, num_predict: 1, num_ctx: 1 } });
+    const answered = generate({ response: { status: 500, data: { error: 'llama-server process has terminated: exit status 2' } } });
+    await expect(answered).rejects.toThrow('exit status 2');
+    await expect(answered).rejects.not.toThrow('Verifica');
+    await expect(generate({ code: 'ECONNREFUSED', message: 'connect ECONNREFUSED' })).rejects.toThrow('Verifica que Ollama esté activo');
+  });
+
+  // [2026-11-05]: «prediction aborted, token repeat limit reached» → un reintento con más temperatura y repeat_penalty
+  it('bucle de tokens: reintenta una vez con más temperatura y penalización', async () => {
+    const loop = { response: { status: 500, data: { error: 'prediction aborted, token repeat limit reached' } } };
+    const post = jest.fn().mockReturnValueOnce(throwError(() => loop)).mockReturnValue(of({ data: { response: '{"ok":1}' } }));
+    const res = await makeClient(post).generate({ model: 'qwen2.5:3b', prompt: 'p', options: { temperature: 0.4, num_predict: 10 } });
+    expect(res.response).toBe('{"ok":1}');
+    expect(post.mock.calls[0][1].options).toMatchObject({ repeat_penalty: 1.15 });
+    expect(post.mock.calls[1][1].options).toMatchObject({ temperature: 0.7, repeat_penalty: 1.3 });
+  });
+
   it('memoiza /api/show por modelo y reintenta si falló', async () => {
     const post = jest
       .fn()

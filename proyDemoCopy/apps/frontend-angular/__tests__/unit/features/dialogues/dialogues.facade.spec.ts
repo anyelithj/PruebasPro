@@ -60,24 +60,28 @@ describe('DialogueAgentFacade', () => {
   });
 
   it('SSE: turno del usuario con corrección, respuesta del avatar y vocabulario usado', async () => {
-    const { agent } = setup();
+    const { agent, repo } = setup();
     await agent.start('tp1', 'en', 'A2');
     agent.send('I likes pasta');
+    expect(repo.streamTurn).toHaveBeenCalledWith(expect.any(String), 'I likes pasta', 'escrito'); // Origen por defecto
     expect(agent.turns().map((t) => t.speaker)).toEqual(['avatar', 'user', 'avatar']);
-    expect(agent.lastCorrection()).toBe('Se dice «I like».');
+    expect(agent.turns()[1].correction).toBe('Se dice «I like».'); // [2026-11-13]: la corrección viaja en el turno guardado (sin señal aparte)
     expect(agent.vocabularyUsed()).toEqual(['pasta']);
     expect(agent.session()?.userTurns).toBe(1);
     expect(speech.speak).toHaveBeenLastCalledWith('Pasta is great!', 'en', 0.9, expect.any(Object));
   });
 
-  it('voz → texto para revisar (no se envía solo); al enviar, el error del servidor es visible', async () => {
-    const { agent, repo } = setup({ streamTurn: () => of({ type: 'error', data: { message: 'El tutor no está disponible' } }) } as never);
+  // [2026-11-09 → 2026-11-13]: la voz se dicta en el navegador (nada se sube); el texto se envía con origen «voz» → el corrector
+  // trata las palabras sin sentido como posible error de transcripción (Anexo A, regla 2)
+  it('voz → texto para revisar (no se envía solo); al enviar con origen «voz», el error del servidor es visible', async () => {
+    const { agent, repo } = setup({ streamTurn: jest.fn(() => of({ type: 'error', data: { message: 'El tutor no está disponible' } })) } as never);
     await agent.start('tp1', 'en', 'A2');
-    const text = await agent.transcribe({ blob: new Blob(['x']), durationMs: 900 });
-    expect(repo.transcribe).toHaveBeenCalled();
-    expect(text).toBeTruthy();
+    agent.heard({ blob: new Blob(['x']), durationMs: 900, liveText: 'my niece is Laura' });
+    expect(agent.state()).toBe('idle');
     expect(agent.turns().map((t) => t.speaker)).toEqual(['avatar']); // Nada enviado aún: el alumno revisa el texto
-    agent.send(text!);
+    expect(repo.transcribe).not.toHaveBeenCalled(); // El audio no sale del navegador
+    agent.send('my niece is Laura', 'voz');
+    expect(repo.streamTurn).toHaveBeenCalledWith(expect.any(String), 'my niece is Laura', 'voz');
     expect(agent.error()).toContain('no está disponible');
   });
 

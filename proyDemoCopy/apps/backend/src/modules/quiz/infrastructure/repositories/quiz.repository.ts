@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { Quiz } from '../../domain/entities/quiz.entity';
 import { Question } from '../../domain/entities/question.entity';
 import {
@@ -14,7 +14,7 @@ import type {
   ListQuizzesOptions,
   PaginatedQuizzes,
 } from '../../domain/interfaces/quiz.repository.interface';
-import { DEFAULT_LANGUAGE } from '../../domain/value-objects/language.vo';
+import { DEFAULT_LANGUAGE, type Language } from '../../domain/value-objects/language.vo';
 // [Adapter TypeORM]: implementa IQuizRepository | [Patron]: Repository + Adapter (Hexagonal) | [Principio]: DIP | [Paradigma]: POO
 
 @Injectable()
@@ -43,6 +43,7 @@ export class QuizRepository implements IQuizRepository {
       source: input.source ?? 'custom',
       timePerQuestionSeconds: input.timePerQuestionSeconds ?? 30,
       isPublished: input.isPublished ?? false,
+      ...input.exam,
     });
     const saved = await this.quizRepo.save(quiz);
 
@@ -83,6 +84,16 @@ export class QuizRepository implements IQuizRepository {
       qb.andWhere('q.difficulty = :diff', { diff: options.difficulty });
     if (options.authorId)
       qb.andWhere('q.authorId = :uid', { uid: options.authorId });
+    // [2026-10-27]: columna `language` indexada (@Index en Quiz) → filtro barato | parámetro enlazado (:lang) → sin inyección SQL
+    if (options.language)
+      qb.andWhere('q.language = :lang', { lang: options.language });
+    // [Filtros de Gestión · 2026-10-30]: `ILIKE` (PostgreSQL) sin distinguir mayúsculas | parámetros enlazados → sin inyección SQL
+    if (options.search)
+      qb.andWhere('(q.title ILIKE :q OR q.description ILIKE :q)', { q: `%${options.search}%` });
+    if (options.status)
+      qb.andWhere('q.isPublished = :st', { st: options.status === 'published' });
+    if (options.kind !== 'all')
+      qb.andWhere('q.kind = :kind', { kind: options.kind ?? 'practice' });
 
     qb.orderBy('q.createdAt', 'DESC');
     qb.skip((page - 1) * limit).take(limit);
@@ -123,10 +134,11 @@ export class QuizRepository implements IQuizRepository {
   }
 
   // ===== Session =====
-  async createSession(userId: string, quizId: string): Promise<QuizSession> {
+  async createSession(userId: string, quizId: string, questionIds: string[] | null = null): Promise<QuizSession> {
     const entity = this.sessionRepo.create({
       userId,
       quizId,
+      questionIds,
       status: SessionStatus.IN_PROGRESS,
       answers: [],
       totalScore: 0,
@@ -156,6 +168,7 @@ export class QuizRepository implements IQuizRepository {
     status: SessionStatus,
     totalScore: number,
     correctCount: number,
+    exam?: { percent: number; passed: boolean | null },
   ): Promise<QuizSession> {
     const session = await this.sessionRepo.findOne({
       where: { id: sessionId },
@@ -165,7 +178,18 @@ export class QuizRepository implements IQuizRepository {
     session.totalScore = totalScore;
     session.correctCount = correctCount;
     session.completedAt = new Date();
+    if (exam) Object.assign(session, exam);
     return this.sessionRepo.save(session);
+  }
+
+  async listAttempts(userId: string, quizId: string): Promise<QuizSession[]> {
+    return this.sessionRepo.find({ where: { userId, quizId, voidedAt: IsNull() }, order: { startedAt: 'DESC' } }); // Anulados por el ADMIN no cuentan
+  }
+
+  async findExam(
+    where: { kind: 'final'; courseId: string } | { kind: 'level'; language: Language; cefrLevel: string },
+  ): Promise<Quiz | null> {
+    return this.quizRepo.findOne({ where, order: { createdAt: 'DESC' } });
   }
 
   async listSessionsByUser(userId: string, limit = 20): Promise<QuizSession[]> {

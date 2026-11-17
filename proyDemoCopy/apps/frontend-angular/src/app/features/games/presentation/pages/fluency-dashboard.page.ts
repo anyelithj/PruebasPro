@@ -50,11 +50,11 @@ import { TrendChartComponent } from '../components/trend-chart.component';
           <aula-spinner [label]="i18n.t().common.loading" />
         }
         @case ('error') {
-          <p role="alert" class="text-sm text-tone-danger">{{ games.fluency.error() }}</p>
+          <p role="alert" class="text-tone-danger">{{ games.fluency.error() }}</p>
         }
         @case ('empty') {
           <div class="rounded-xl border border-dashed border-border p-6 text-center">
-            <p class="mb-3 text-sm text-muted-foreground">{{ tx.noFluency }}</p>
+            <p class="mb-3 text-muted-foreground">{{ tx.noFluency }}</p>
             <a aulaButton routerLink="/juegos/tema"><aula-icon name="dices" /> {{ tx.names.random_topic }}</a>
           </div>
         }

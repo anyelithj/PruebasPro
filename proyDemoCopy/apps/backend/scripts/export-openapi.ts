@@ -1,7 +1,7 @@
 import { existsSync, writeFileSync } from 'node:fs';
 import { NestFactory } from '@nestjs/core';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from '../src/app.module';
+import { buildOpenApiDocument } from '../src/shared/config/swagger.config'; // [Sprint 11.2]: mismo documento que /api/v1/docs-json | [Principio]: DRY + SSOT
 // [Script export-openapi · Sprints 7.1/10.13]: escribe el OpenAPI de NestJS a un archivo SIN base de datos ni Redis (`preview: true`: Nest arma el grafo de módulos y controladores sin instanciar proveedores) → `pnpm api:types` del frontend lo lee sin levantar el backend | [Patrón]: Contract-First | [Principio]: SSOT (el backend define la API) + KISS
 // [Uso]: pnpm openapi:export [ruta]      (por defecto ./openapi.json)
 
@@ -15,14 +15,7 @@ async function main(): Promise<void> {
     logger: ['error'],
   });
   app.setGlobalPrefix(process.env.API_PREFIX ?? 'api/v1'); // Mismo prefijo que main.ts
-  const config = new DocumentBuilder()
-    .setTitle('Plataforma Evaluación Cognitiva — API')
-    .addBearerAuth()
-    .build();
-  writeFileSync(
-    out,
-    JSON.stringify(SwaggerModule.createDocument(app, config), null, 2),
-  );
+  writeFileSync(out, JSON.stringify(buildOpenApiDocument(app), null, 2));
   console.log(`OpenAPI → ${out}`);
   await app.close();
 }

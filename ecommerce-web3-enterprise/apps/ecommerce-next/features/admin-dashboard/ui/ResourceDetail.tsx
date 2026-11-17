@@ -13,7 +13,18 @@ import { useTranslations } from "next-intl";
 import { useAdminGet } from "../api/dashboard.api";
 import { findResource, get, type ColumnDef, type Row } from "../lib/resources";
 import { CellValue, fieldOf } from "./Cells";
-import type { Column } from "./DataTable";
+import { TablePager, useLocalPage, type Column } from "./DataTable";
+
+// SectionTable => sub-tabla con máximo 10 filas por vista: el hook vive aquí porque las secciones salen de un .map
+function SectionTable({ rows, children }: { rows: Row[]; children: (visible: Row[]) => ReactNode }) {
+  const page = useLocalPage(rows);
+  return (
+    <div className="flex flex-col gap-2">
+      {children(page.visible)}
+      <TablePager meta={page.meta} onPage={page.setPage} />
+    </div>
+  );
+}
 
 // Props: "resource" = clave del registro; "row" = fila del listado; "columns" = respaldo si el módulo no está registrado
 interface ResourceDetailProps<T> {
@@ -65,8 +76,8 @@ export function ResourceDetail<T>({ resource, row, columns, exclude = [] }: Reso
       {def?.sections?.map((section) => {
         const rows = get(full, section.key);
         if (!Array.isArray(rows) || rows.length === 0) return null;
-        return (
-          <div key={section.key} className="overflow-x-auto rounded-lg border">
+        return <SectionTable key={section.key} rows={rows as Row[]}>{(visible) => (
+          <div className="overflow-x-auto rounded-lg border">
             <table className="w-full min-w-[480px] text-left text-sm">
               <caption className="border-b bg-slate-50 px-3 py-2 text-left text-sm font-semibold text-slate-900">{tSections.has(section.key) ? tSections(section.key) : humanize(section.key)}</caption>
               <thead className="text-xs uppercase text-slate-600">
@@ -79,7 +90,7 @@ export function ResourceDetail<T>({ resource, row, columns, exclude = [] }: Reso
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {(rows as Row[]).map((item, index) => (
+                {visible.map((item, index) => (
                   <tr key={String(item["id"] ?? index)}>
                     {section.columns.map((column) => (
                       <td key={column.key} className="px-3 py-2 align-middle">
@@ -91,7 +102,7 @@ export function ResourceDetail<T>({ resource, row, columns, exclude = [] }: Reso
               </tbody>
             </table>
           </div>
-        );
+        )}</SectionTable>;
       })}
     </div>
   );

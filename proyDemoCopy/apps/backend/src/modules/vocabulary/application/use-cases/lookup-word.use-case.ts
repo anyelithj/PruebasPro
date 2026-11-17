@@ -34,6 +34,18 @@ export class LookupWordUseCase {
       await this.lookups.increment({ id: cached.id }, 'hits', 1);
       return cached;
     }
+    // [2026-11-06 · Diccionario lento]: la huella incluye la frase → la misma palabra en otra frase volvía a llamar al LLM (5–50 s en CPU)
+    // Misma palabra ya traducida en cualquier frase → respuesta al instante | ponytail: pierde el matiz de contexto; si importa, devolver esto y refinar en segundo plano
+    const sameWord = await this.lookups
+      .createQueryBuilder('l')
+      .where('l.kind = :kind AND l.language = :language AND lower(l.text) = :text', {
+        kind: 'word',
+        language: input.language,
+        text: input.word.trim().toLowerCase(),
+      })
+      .orderBy('l.hits', 'DESC')
+      .getOne();
+    if (sameWord) return sameWord;
     const result = await this.tools.word(
       input.word.trim(),
       sentence,

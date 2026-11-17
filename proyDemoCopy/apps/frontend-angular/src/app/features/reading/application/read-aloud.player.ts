@@ -5,11 +5,12 @@ import { estimateMs, tokenize, wordAtChar, wordAtProgress, type Token } from '..
 // [Audio]: ServerAudioService (voz natural del sistema → WAV del servidor con caché → voz del sistema) — el mismo que diálogos y vocabulario (DRY)
 // [Sincronía palabra a palabra · Chain of Responsibility]: 1) eventos `boundary` de la voz del navegador (exactos) → 2) avance real del <audio> del servidor (currentTime/duration repartido por letras)
 // → 3) estimación por caracteres con reloj propio (sin audio ni eventos). La primera fuente disponible reemplaza a la anterior
+// [Fix 2026-10-31 · resaltado desfasado de la voz]: (a) la estimación arranca cuando la voz SUENA (`start`), no al pedirla; (b) un solo `boundary` (voces que solo avisan al empezar) ya no congela el resaltado; (c) la estimación aprende la velocidad real de la voz frase a frase (`cps`)
 // [Patrón]: State Machine (idle → playing ⇄ paused) + Strategy (fuente de sincronía) + Generation Token (`run`: eventos tardíos de una frase anterior se ignoran) | [Principio]: SRP (la página solo pinta) | [Paradigma]: Reactivo (signals) + requestAnimationFrame
 
 export type PlayerState = 'idle' | 'playing' | 'paused';
 export type SyncSource = 'boundary' | 'audio' | 'estimate';
-export type ReadingRate = 0.75 | 1;
+export type ReadingRate = 0.75 | 1 | 1.25 | 1.5; // [2026-11-05]: mismas velocidades que Lecciones (Next.js)
 
 @Injectable() // Proveedor por pantalla (no root): cada lector tiene su propio estado
 export class ReadAloudPlayer {
@@ -28,6 +29,7 @@ export class ReadAloudPlayer {
   private tokens = new Map<number, Token[]>(); // `Map` (ES2015): caché de palabras por frase
   private run = 0; // Generation Token
   private raf = 0;
+  private cps = 14; // Caracteres por segundo de la voz a 1x (se ajusta al terminar cada frase estimada)
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.stop()); // Al salir de la pantalla no sigue sonando
@@ -95,17 +97,24 @@ export class ReadAloudPlayer {
     this.onSentence(index);
     const tokens = this.tokensOf(index);
     const rate = this.rate();
-    // 3) Estimación por caracteres hasta que llegue algo mejor
-    const t0 = performance.now();
-    const ms = estimateMs(text, rate);
+    // 3) Estimación por caracteres hasta que llegue algo mejor | `t0 = 0`: la voz aún no suena → el resaltado espera en la primera palabra
+    let t0 = 0;
+    let boundaries = 0;
+    const ms = estimateMs(text, rate, this.cps);
     this.sync.set('estimate');
-    this.ticker(gen, () => wordAtProgress(tokens, (performance.now() - t0) / ms));
+    this.ticker(gen, () => (t0 ? wordAtProgress(tokens, (performance.now() - t0) / ms) : -1));
     void this.audio.play(text, this.language, rate, {
-      // 1) Voz del navegador con eventos de palabra: exactos
+      preferBrowserVoice: true, // [Fix 2026-11-05 · resaltado desfasado]: el WAV del servidor no da tiempos por palabra → voz del navegador con `boundary`
+      start: () => {
+        if (gen === this.run) t0 = performance.now();
+      },
+      // 1) Voz del navegador con eventos de palabra: exactos | desde el 2.º evento se confía en ellos (algunas voces solo emiten uno)
       boundary: (charIndex) => {
         if (gen !== this.run) return;
-        this.stopTicker();
-        this.sync.set('boundary');
+        if (++boundaries > 1) {
+          this.stopTicker();
+          this.sync.set('boundary');
+        }
         this.word.set(wordAtChar(tokens, charIndex));
       },
       // 2) Audio del servidor: avance real del <audio>
@@ -117,6 +126,8 @@ export class ReadAloudPlayer {
       end: () => {
         if (gen !== this.run || this.state() !== 'playing') return;
         this.stopTicker();
+        // [Aprende la velocidad]: duración real de esta frase → la estimación de las siguientes se acerca a la voz | `> 500`: descarta frases cortísimas y cortes
+        if (this.sync() === 'estimate' && t0 && performance.now() - t0 > 500) this.cps = (text.length / ((performance.now() - t0) / 1000)) * rate;
         if (this.repeat()) return this.speak(index);
         if (index + 1 < this.texts.length) return this.speak(index + 1);
         this.finish();

@@ -1,0 +1,490 @@
+{
+  "version": 1,
+  "database": "Cloud Firestore (modo nativo)",
+  "notes": [
+    "Firestore no obliga a definir columnas: este archivo es el contrato de datos que la aplicación espera.",
+    "Las fechas con hora son números (milisegundos desde 1970, Date.now()). Las fechas de calendario son texto AAAA-MM-DD o cadena vacía.",
+    "Los campos opcionales vacíos se guardan como cadena vacía o 0, no como null, para facilitar los filtros."
+  ],
+  "collections": {
+    "_meta": {
+      "description": "Datos internos: «schema» (versión del esquema, escrito por db:setup) y «admin» (marca de que el primer usuario ya reclamó el rol de administrador).",
+      "documentId": "«schema» o «admin»",
+      "fields": {
+        "version": {
+          "type": "number",
+          "required": false,
+          "description": "Solo en _meta/schema"
+        },
+        "uid": {
+          "type": "string",
+          "required": false,
+          "references": "users",
+          "description": "Solo en _meta/admin"
+        },
+        "createdAt": {
+          "type": "number",
+          "required": false,
+          "description": "Solo en _meta/admin"
+        }
+      }
+    },
+    "users": {
+      "description": "Perfil de cada persona. El id del documento es el uid de Firebase Authentication.",
+      "documentId": "uid de Firebase Authentication",
+      "fields": {
+        "uid": {
+          "type": "string",
+          "required": true
+        },
+        "email": {
+          "type": "string",
+          "required": true
+        },
+        "displayName": {
+          "type": "string",
+          "required": true
+        },
+        "photoURL": {
+          "type": "string|null",
+          "required": false
+        },
+        "role": {
+          "type": "string",
+          "required": true,
+          "enum": ["admin", "manager", "member", "viewer"]
+        },
+        "active": {
+          "type": "boolean",
+          "required": true,
+          "description": "false = cuenta desactivada: no puede leer ni escribir"
+        },
+        "position": {
+          "type": "string",
+          "required": false,
+          "description": "Cargo"
+        },
+        "createdAt": {
+          "type": "number",
+          "required": true
+        },
+        "settings": {
+          "type": "map",
+          "required": false,
+          "fields": {
+            "chatLang": {
+              "type": "string",
+              "enum": ["es", "en"]
+            },
+            "notifyAssignments": {
+              "type": "boolean"
+            },
+            "notifyStatus": {
+              "type": "boolean"
+            },
+            "dueSoonDays": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    "processes": {
+      "description": "Procesos y solicitudes.",
+      "documentId": "generado por Firestore",
+      "fields": {
+        "title": {
+          "type": "string",
+          "required": true
+        },
+        "description": {
+          "type": "string",
+          "required": true
+        },
+        "kind": {
+          "type": "string",
+          "required": true,
+          "enum": ["proceso", "solicitud"]
+        },
+        "priority": {
+          "type": "string",
+          "required": true,
+          "enum": ["low", "medium", "high", "urgent"]
+        },
+        "category": {
+          "type": "string",
+          "required": true
+        },
+        "status": {
+          "type": "string",
+          "required": true,
+          "description": "Uno de los estados del workflow"
+        },
+        "workflowId": {
+          "type": "string",
+          "required": true,
+          "references": "workflows (o «default»)"
+        },
+        "ownerId": {
+          "type": "string",
+          "required": true,
+          "references": "users"
+        },
+        "assigneeIds": {
+          "type": "array<string>",
+          "required": true,
+          "references": "users"
+        },
+        "startDate": {
+          "type": "string",
+          "required": true,
+          "description": "AAAA-MM-DD o vacío"
+        },
+        "dueDate": {
+          "type": "string",
+          "required": true,
+          "description": "AAAA-MM-DD o vacío"
+        },
+        "finishedAt": {
+          "type": "number",
+          "required": true,
+          "description": "0 mientras siga abierto"
+        },
+        "aiSummary": {
+          "type": "string",
+          "required": true
+        },
+        "createdAt": {
+          "type": "number",
+          "required": true
+        },
+        "updatedAt": {
+          "type": "number",
+          "required": true
+        }
+      }
+    },
+    "tasks": {
+      "description": "Tareas, con o sin proceso asociado.",
+      "documentId": "generado por Firestore",
+      "fields": {
+        "processId": {
+          "type": "string",
+          "required": true,
+          "references": "processes (vacío si no tiene)"
+        },
+        "title": {
+          "type": "string",
+          "required": true
+        },
+        "description": {
+          "type": "string",
+          "required": true
+        },
+        "priority": {
+          "type": "string",
+          "required": true,
+          "enum": ["low", "medium", "high", "urgent"]
+        },
+        "status": {
+          "type": "string",
+          "required": true,
+          "enum": ["todo", "doing", "review", "done"]
+        },
+        "assigneeId": {
+          "type": "string",
+          "required": true,
+          "references": "users (vacío si no tiene)"
+        },
+        "dueDate": {
+          "type": "string",
+          "required": true,
+          "description": "AAAA-MM-DD o vacío"
+        },
+        "completedAt": {
+          "type": "number",
+          "required": true,
+          "description": "0 mientras siga abierta"
+        },
+        "createdBy": {
+          "type": "string",
+          "required": true,
+          "references": "users (o «system»)"
+        },
+        "createdAt": {
+          "type": "number",
+          "required": true
+        },
+        "updatedAt": {
+          "type": "number",
+          "required": true
+        }
+      }
+    },
+    "workflows": {
+      "description": "Flujos de trabajo personalizados. El flujo «default» vive en el código y no se guarda aquí.",
+      "documentId": "generado por Firestore",
+      "fields": {
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "states": {
+          "type": "array<string>",
+          "required": true,
+          "minItems": 2,
+          "description": "Ordenados; el último es el estado final"
+        },
+        "description": {
+          "type": "string",
+          "required": false
+        },
+        "stuckDays": {
+          "type": "number",
+          "required": false,
+          "description": "Días en un estado para considerarlo estancado"
+        },
+        "createdBy": {
+          "type": "string",
+          "required": false,
+          "references": "users"
+        }
+      }
+    },
+    "automations": {
+      "description": "Reglas «cuando pase X, haz Y».",
+      "documentId": "generado por Firestore",
+      "fields": {
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "enabled": {
+          "type": "boolean",
+          "required": true
+        },
+        "trigger": {
+          "type": "map",
+          "required": true,
+          "fields": {
+            "type": {
+              "type": "string",
+              "enum": ["task_created", "task_status", "process_created", "process_status"]
+            },
+            "value": {
+              "type": "string"
+            }
+          }
+        },
+        "action": {
+          "type": "map",
+          "required": true,
+          "fields": {
+            "type": {
+              "type": "string",
+              "enum": ["notify", "assign", "set_priority", "create_task"]
+            },
+            "value": {
+              "type": "string"
+            }
+          }
+        },
+        "createdBy": {
+          "type": "string",
+          "required": true,
+          "references": "users"
+        }
+      }
+    },
+    "notifications": {
+      "description": "Avisos guardados para una persona. Las alertas de vencimiento no se guardan: se calculan al abrir la app.",
+      "documentId": "generado por Firestore",
+      "fields": {
+        "userId": {
+          "type": "string",
+          "required": true,
+          "references": "users"
+        },
+        "message": {
+          "type": "string",
+          "required": true
+        },
+        "link": {
+          "type": "string",
+          "required": true,
+          "description": "Ruta interna de la app o vacío"
+        },
+        "read": {
+          "type": "boolean",
+          "required": true
+        },
+        "createdAt": {
+          "type": "number",
+          "required": true
+        }
+      }
+    },
+    "history": {
+      "description": "Historial de cambios. Solo se agregan documentos: no se editan ni se borran.",
+      "documentId": "generado por Firestore",
+      "fields": {
+        "entityType": {
+          "type": "string",
+          "required": true,
+          "enum": ["process", "task", "user", "workflow", "file"]
+        },
+        "entityId": {
+          "type": "string",
+          "required": true
+        },
+        "entityTitle": {
+          "type": "string",
+          "required": true
+        },
+        "action": {
+          "type": "string",
+          "required": true,
+          "enum": ["create", "update", "status", "assign", "delete", "ai", "automation", "file"]
+        },
+        "summary": {
+          "type": "string",
+          "required": true
+        },
+        "userId": {
+          "type": "string",
+          "required": true,
+          "references": "users (o «system»)"
+        },
+        "userName": {
+          "type": "string",
+          "required": true
+        },
+        "createdAt": {
+          "type": "number",
+          "required": true
+        }
+      }
+    },
+    "files": {
+      "description": "Metadatos de los archivos adjuntos a procesos y tareas.",
+      "documentId": "generado por la aplicación",
+      "fields": {
+        "entityType": {
+          "type": "string",
+          "required": true,
+          "enum": ["process", "task"]
+        },
+        "entityId": {
+          "type": "string",
+          "required": true
+        },
+        "entityTitle": {
+          "type": "string",
+          "required": true
+        },
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "size": {
+          "type": "number",
+          "required": true,
+          "description": "Bytes"
+        },
+        "mime": {
+          "type": "string",
+          "required": true
+        },
+        "backend": {
+          "type": "string",
+          "required": true,
+          "enum": ["firestore", "storage"]
+        },
+        "path": {
+          "type": "string",
+          "required": true,
+          "description": "Ruta en Cloud Storage (vacío si backend = firestore)"
+        },
+        "uploadedBy": {
+          "type": "string",
+          "required": true,
+          "references": "users"
+        },
+        "uploaderName": {
+          "type": "string",
+          "required": true
+        },
+        "createdAt": {
+          "type": "number",
+          "required": true
+        }
+      }
+    },
+    "fileBlobs": {
+      "description": "Contenido (base64) de los archivos cuando el backend es Firestore. Mismo id que el documento de «files».",
+      "documentId": "igual al id del documento en files",
+      "fields": {
+        "data": {
+          "type": "string",
+          "required": true,
+          "description": "Archivo en base64 (máx. ~600 KB)"
+        },
+        "uploadedBy": {
+          "type": "string",
+          "required": true,
+          "references": "users"
+        }
+      }
+    },
+    "channels": {
+      "description": "Canales de chat. Si tienen processId, son la conversación de atención de ese proceso.",
+      "documentId": "generado por Firestore",
+      "fields": {
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "processId": {
+          "type": "string",
+          "required": false,
+          "references": "processes"
+        },
+        "createdBy": {
+          "type": "string",
+          "required": true,
+          "references": "users"
+        },
+        "createdAt": {
+          "type": "number",
+          "required": true
+        }
+      },
+      "subcollections": {
+        "messages": {
+          "path": "channels/{channelId}/messages",
+          "description": "Mensajes del canal.",
+          "fields": {
+            "text": {
+              "type": "string",
+              "required": true
+            },
+            "uid": {
+              "type": "string",
+              "required": true,
+              "references": "users"
+            },
+            "displayName": {
+              "type": "string",
+              "required": true
+            },
+            "createdAt": {
+              "type": "number",
+              "required": true
+            }
+          }
+        }
+      }
+    }
+  },
+  "indexes": "La aplicación solo usa consultas de un campo (orden o igualdad), por lo que no necesita índices compuestos. Ver firestore.indexes.json."
+}

@@ -4,7 +4,7 @@
 [Principio]: determinístico primero (apertura y vocabulario usado sin LLM) + DIP (LLM inyectado) + SRP.
 [Paradigma]: POO + asíncrono.
 [Pedagogía]: correcciones suaves (recast): el avatar responde con la forma correcta sin interrumpir; la corrección va aparte para la UI.
-[2026-10-25]: JSON corto (solo «reply» + «correction»), lector tolerante de claves, reparación del artículo español inicial,
+[2026-10-25 → 2026-11-13]: JSON corto (solo «reply»; la corrección la hace el corrector único del Anexo A), lector tolerante de claves, reparación del artículo español inicial,
 un reintento en texto plano dentro de un presupuesto de tiempo y respaldo contextual rotado por turno (ver _follow_up).
 """
 
@@ -27,7 +27,7 @@ logger = logging.getLogger("ai-service.dialogue-agent")  # `logging.getLogger`: 
 _LANG = {"en": "English", "fr": "French", "de": "German", "es": "Spanish", "pt": "Portuguese", "zh": "Mandarin Chinese", "ru": "Russian"}
 # [2026-10-25 · Causa raíz del respaldo fijo]: antes el JSON pedía además «translation» y «learner_translation» (dos textos en
 # español) con max_tokens=220 → en CPU tardaba más (timeout de Ollama → texto «Revisa el concepto…» → JSON inválido) o se cortaba
-# (JSON truncado = inválido) y mezclaba español en la respuesta («El rooster's beak…»). Ahora solo «reply» y «correction»;
+# (JSON truncado = inválido) y mezclaba español en la respuesta («El rooster's beak…»). Ahora solo «reply» (2026-11-13: sin «correction»);
 # la traducción la hace LanguageTools /lines (una sola fuente, validada) | [Principio]: SRP + DRY.
 _SYSTEM = (
     "You are Aula, a friendly avatar who chats with a language learner. Write the reply ONLY in the target language: "
@@ -35,8 +35,9 @@ _SYSTEM = (
     "Use the usual target-language name of dishes and things (a learner's literal «rooster's beak» is «pico de gallo»). "
     "Use vocabulary and grammar of the learner's CEFR level, stay on the topic, reply in 1–2 short sentences and end with a question. "
     "React to what the learner JUST said (details, names, reasons) and ask a NEW question; never repeat a question you already asked. "
-    "If the learner made a clear mistake, reuse the correct form naturally in your reply and put a short explanation in Spanish in "
-    '"correction"; otherwise "correction" is null. Return ONLY JSON: {"reply": "...", "correction": "..." | null}.'
+    # [2026-11-13 · Anexo A]: el avatar YA NO corrige: NestJS le envía la frase corregida por el corrector pedagógico único
+    # (antes este prompt también corregía → dos criterios distintos y «Nice to meet you from Columbia!» sobre la transcripción cruda)
+    'Return ONLY JSON: {"reply": "..."}.'
 )
 START = "__start__"  # Marca que envía NestJS al iniciar la sesión: el avatar abre la conversación
 _REPLY_KEYS = ("reply", "response", "answer", "message", "text", "aula")  # Claves donde un modelo pequeño deja la respuesta
@@ -63,14 +64,14 @@ class DialogueAgent:
             return AgentReply("Elige un tema de conversación para empezar.", answered_by="none")
         if user_input.strip() == START:  # [Determinístico]: apertura por tema e idioma, sin LLM
             # [2026-10-23]: la apertura semilla ya trae su traducción española (antes el primer turno quedaba con «—»)
-            return AgentReply(opening(ctx, lang), answered_by="engine", game_state={"vocabulary_used": [], "correction": None, "translation": opening_es(ctx, lang)})
+            return AgentReply(opening(ctx, lang), answered_by="engine", game_state={"vocabulary_used": [], "translation": opening_es(ctx, lang)})
 
         used = [w for w in ctx.vocabulary if says(user_input, w)]  # Vocabulario clave del tema que el usuario usó (sin LLM)
         if says_goodbye(user_input, lang):  # [2026-10-23]: despedida → cierre determinista y `finished` (NestJS termina la sesión)
             return AgentReply(
                 CLOSINGS.get(lang, CLOSINGS["en"]),
                 answered_by="engine",
-                game_state={"vocabulary_used": used, "correction": None, "translation": None if lang == "es" else CLOSINGS["es"], "finished": True},
+                game_state={"vocabulary_used": used, "translation": None if lang == "es" else CLOSINGS["es"], "finished": True},
             )
         level = context.level if context and context.level else "A2"
         # [Historial sin el turno actual]: el caso de uso ya añadió el mensaje del usuario → va aparte como «Learner:» (antes salía duplicado)
@@ -83,7 +84,7 @@ class DialogueAgent:
             f"Conversation so far:\n{history}\nLearner: {user_input}"
         )
         began = time.monotonic()  # `time.monotonic` (stdlib): reloj que no salta con cambios de hora → mide la latencia del LLM
-        data = await generate_json(self._llm, prompt, system=_SYSTEM, max_tokens=160, temperature=0.6)
+        data = await generate_json(self._llm, prompt, system=_SYSTEM, max_tokens=180, temperature=0.4)  # [2026-11-06]: 0.6 → 0.4 (menos correcciones inventadas) · 200 → 180 tokens (respuesta de 1–2 frases)
         first = text = _fix_spanish_lead(reply_text(data), lang)  # [Reparación barata]: «El rooster's beak…» → «The rooster's beak…» sin otra llamada
         problem = _problem(text, lang, asked)
         if problem and time.monotonic() - began < self._retry_budget_s:
@@ -93,7 +94,6 @@ class DialogueAgent:
             problem = _problem(text, lang, asked)
         if problem:
             text = ""
-        correction = (data or {}).get("correction")
         # Si el modelo tradujo igual (sin pedírselo) y es la misma respuesta del primer intento, se limpia y se usa de respaldo
         translation = parse_translation((data or {}).get("translation"), text) if text and text == first else None
         by = "llm" if text else "engine"
@@ -105,7 +105,6 @@ class DialogueAgent:
             answered_by=by,
             game_state={
                 "vocabulary_used": used,
-                "correction": str(correction).strip() if correction else None,
                 "translation": translation or None,  # [2026-10-20]: respaldo de NestJS si LanguageTools no traduce (fijo en los respaldos)
                 # [2026-10-25]: ya no se pide al LLM (lo traduce LanguageTools); se conserva la clave por compatibilidad con NestJS
                 "learner_translation": parse_translation((data or {}).get("learner_translation"), user_input),
@@ -183,8 +182,9 @@ def says_goodbye(text: str, lang: str) -> bool:
     options = FAREWELLS.get(lang, ()) + FAREWELLS["es"]
     if lang == "zh":  # Sin espacios entre palabras → basta con que la despedida esté en el final del texto
         return any(f in text.strip()[-8:] for f in options)
-    tail = " ".join(words(text)[-4:])
-    return any(says(tail, f) for f in options)
+    w = words(text)
+    # [2026-11-05]: también al EMPEZAR el mensaje («Goodbye, it was nice talking to you») — antes seguía la charla
+    return any(says(" ".join(w[-4:]), f) or says(" ".join(w[:3]), f) for f in options)
 
 
 def _repeats(text: str, asked: set[str]) -> bool:

@@ -14,7 +14,7 @@ import { useTranslations } from "next-intl";
 import { z } from "zod";
 import { useAdminGet, useAdminList, useAdminMutation, type Supplier } from "../api/dashboard.api";
 import { AdminResource, DialogButton, FormAction, IconAction, toOptions, useAdminCommand } from "./AdminResource";
-import { DataTable } from "./DataTable";
+import { DataTable, TablePager, useLocalPage } from "./DataTable";
 import { KPICard } from "./KPICard";
 import { SectionHeader } from "./AdminFields";
 import { StatusBadge } from "./OrdersAdmin";
@@ -114,6 +114,7 @@ function ReceiveForm({ order, onDone }: { order: PurchaseOrder; onDone: () => vo
   const pending = order.items.map((item) => ({ ...item, open: item.quantity - item.receivedQuantity - item.rejectedQuantity })).filter((item) => item.open > 0);
   const [lines, setLines] = useState(() => Object.fromEntries(pending.map((item) => [item.id, { accepted: item.open, rejected: 0, qcNotes: "" }])));
   const { run, isPending } = useAdminCommand(["purchase-orders", "inventory", "valuation"]);
+  const page = useLocalPage(pending); // Solo cambia lo visible: "lines" conserva las cantidades de todas las páginas
   const submit = async () => {
     const items = Object.entries(lines).filter(([, l]) => l.accepted + l.rejected > 0).map(([itemId, l]) => ({ itemId, accepted: l.accepted, rejected: l.rejected, ...(l.qcNotes ? { qcNotes: l.qcNotes } : {}) }));
     if (items.length && (await run({ path: `/supplier/purchase-order/${order.id}/receive`, method: "POST", body: { items } }, t("received")))) onDone();
@@ -124,7 +125,7 @@ function ReceiveForm({ order, onDone }: { order: PurchaseOrder; onDone: () => vo
         <caption className="sr-only">{t("receive")}</caption>
         <thead className="text-left text-slate-600"><tr><th scope="col">SKU</th><th scope="col">{t("pending")}</th><th scope="col">{t("accepted")}</th><th scope="col">{t("rejected")}</th><th scope="col">{t("qcNotes")}</th></tr></thead>
         <tbody>
-          {pending.map((item) => (
+          {page.visible.map((item) => (
             <tr key={item.id} className="border-t">
               <td className="py-1">{item.variant.sku}</td>
               <td className="tabular-nums">{item.open}</td>
@@ -136,6 +137,7 @@ function ReceiveForm({ order, onDone }: { order: PurchaseOrder; onDone: () => vo
           ))}
         </tbody>
       </table>
+      <TablePager meta={page.meta} onPage={page.setPage} />
       <Button onClick={() => void submit()} loading={isPending} className="self-start">{t("confirmReceive")}</Button>
     </div>
   );

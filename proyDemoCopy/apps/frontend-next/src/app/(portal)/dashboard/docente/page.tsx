@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { CheckCircle2, Circle, FileText, Medal, Users } from "lucide-react";
+import { CheckCircle2, Circle, FileText, Library, Medal, Users } from "lucide-react";
 import { Topbar } from "@/components/portal/Topbar";
 import { StatCard } from "@/components/portal/StatCard";
 import { Panel, PanelHead } from "@/components/portal/Panel";
@@ -98,12 +98,18 @@ export default async function DocenteDashboardPage(props: {
         }
         searchPlaceholder="Buscar estudiante…"
         actions={
-          <Link
-            href="/quiz/create"
-            className="btn btn-primary"
-          >
-            + Crear examen
-          </Link>
+          // [2026-10-27]: acceso directo a la gestión de cursos del docente (crea y administra los suyos) | fragmento `<>` (React): dos acciones sin envoltorio extra
+          <>
+            <Link href="/admin/courses" className="btn btn-outline">
+              <Library aria-hidden className="size-4" /> Mis cursos
+            </Link>
+            <Link
+              href="/quiz/create"
+              className="btn btn-primary"
+            >
+              + Crear examen
+            </Link>
+          </>
         }
       />
 

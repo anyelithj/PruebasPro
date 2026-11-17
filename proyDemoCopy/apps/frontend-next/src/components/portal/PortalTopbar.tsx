@@ -1,14 +1,14 @@
 "use client"; // [Next.js]: Client Component → menús interactivos, carrito y notificaciones
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Bell, ChevronDown, CreditCard, GraduationCap, Search, ShoppingCart, TrendingUp, UserRound, Wallet } from "lucide-react";
+import { Bell, ChevronDown, CreditCard, GraduationCap, ShoppingCart, TrendingUp, UserRound, Wallet } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import { NOTIFICATIONS_STREAM, useSSE } from "@/hooks/useSSE"; // [Sprint 6.2]: avisos en tiempo real por Server-Sent Events
 import { fmt, INTL_LOCALE } from "@aula/shared-i18n";
 import { usePreferences } from "@/components/layout/PreferencesProvider";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { Dropdown } from "./Dropdown";
-import { LanguageMenu, ThemeMenu } from "./PortalToolbar";
+import { LanguageMenu, ThemeMenu, TopbarSearch } from "./PortalToolbar";
 import { MobileNavButton } from "./MobileNav"; // [Hamburguesa]: abre el sidebar en < lg (el botón de contraer vive en la cabecera del sidebar)
 // [PortalTopbar]: barra superior del portal como NeuroLearning — buscador · notificaciones · carrito · tema · idioma · menú de perfil | [Patrón]: Composite (compone menús independientes) | [Principio]: SRP (cada menú en su componente) + DRY (todos sobre Dropdown) | [Paradigma]: Declarativo + Reactivo
 
@@ -19,20 +19,6 @@ export interface TopbarUser {
   roleLabel: string;
   initials: string;
   gradient: string; // Degradado del avatar según el rol
-}
-
-// ── Buscador ── `<form method="get" action="/courses">` nativo: funciona sin JS y deja la búsqueda en la URL
-function TopbarSearch() {
-  const { t } = usePreferences();
-  return (
-    <form action="/courses" method="get" role="search" className="relative order-last min-w-0 basis-full sm:order-none sm:basis-auto sm:flex-1 md:max-w-sm">
-      <label htmlFor="topbar-search" className="sr-only">
-        {t.topbar.searchLabel}
-      </label>
-      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-      <input id="topbar-search" name="search" type="search" placeholder={t.topbar.search} className="control w-full rounded-full pl-9" />
-    </form>
-  );
 }
 
 // `interface` (TS): forma de GET /api/notifications
@@ -120,9 +106,9 @@ function NotificationsMenu() {
             )}
           </div>
           {error ? (
-            <p className="px-4 py-6 text-center text-xs text-tone-danger">{t.topbar.notificationsError}</p>
+            <p className="px-4 py-6 text-center type-meta text-tone-danger">{t.topbar.notificationsError}</p>
           ) : !data?.items.length ? (
-            <p className="px-4 py-6 text-center text-xs text-muted-foreground">{t.topbar.noNotifications}</p>
+            <p className="px-4 py-6 text-center type-meta text-muted-foreground">{t.topbar.noNotifications}</p>
           ) : (
             <ul className="max-h-80 overflow-y-auto">
               {data.items.map((n) => {
@@ -184,7 +170,7 @@ function CartMenu() {
             <b className="text-sm"><ShoppingCart aria-hidden className="inline size-4 align-[-0.125em]" /> {t.topbar.cart}</b>
           </div>
           {!items.length ? (
-            <p className="px-4 py-6 text-center text-xs text-muted-foreground">{t.topbar.cartEmpty}</p>
+            <p className="px-4 py-6 text-center type-meta text-muted-foreground">{t.topbar.cartEmpty}</p>
           ) : (
             <>
               <ul className="max-h-72 overflow-y-auto">
@@ -210,7 +196,7 @@ function CartMenu() {
                 <a href="/checkout" onClick={close} aria-describedby="checkout-soon" className="btn btn-primary btn-sm w-full">
                   {t.topbar.checkout}
                 </a>
-                <p id="checkout-soon" className="text-center text-[10px] text-muted-foreground">
+                <p id="checkout-soon" className="text-center type-meta text-muted-foreground">
                   {t.topbar.checkoutSoon}
                 </p>
               </div>
@@ -229,7 +215,7 @@ function ProfileMenu({ user }: { user: TopbarUser }) {
   return (
     <Dropdown
       label={t.topbar.profileMenu}
-      triggerClassName="py-1 pl-1 pr-2.5"
+      triggerClassName="h-9 pl-1 pr-2.5"
       trigger={
         <>
           <span className="grid size-7 place-items-center rounded-full text-[11px] font-bold text-white" style={{ background: user.gradient }} aria-hidden>
@@ -279,7 +265,7 @@ export function PortalTopbar({ user }: { user: TopbarUser }) {
   return (
     <header className="sticky top-0 z-30 -mx-4 mb-2 flex flex-wrap items-center gap-2 border-b border-border bg-background/90 px-4 py-3 backdrop-blur md:-mx-8 md:px-8">
       <MobileNavButton />
-      <TopbarSearch />
+      <TopbarSearch className="order-last basis-full sm:order-none sm:basis-auto sm:flex-1 md:max-w-sm" />
       <div className="ml-auto flex items-center gap-1.5">
         <NotificationsMenu />
         <CartMenu />

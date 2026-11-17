@@ -32,6 +32,29 @@ export class CoursePrice {
     return new CoursePrice(amount, originalAmount, currency.toUpperCase());
   }
 
+  // [Fix 2026-10-28]: variante para la capa de aplicación → el error de dominio sale como HTTP 400 (no 500) con el mensaje legible
+  // [Patrón]: Adapter (Error de dominio → excepción HTTP vía callback) | [Principio]: DIP — el dominio NO importa NestJS; el caso de uso inyecta `toHttp`
+  static validate(
+    amount: number,
+    originalAmount: number | null,
+    currency: string,
+    toHttp: (message: string) => Error,
+  ): CoursePrice {
+    try {
+      return CoursePrice.create(amount, originalAmount, currency);
+    } catch (err) {
+      // `throw` (JS) re-lanza ya traducido; `instanceof` (JS) estrecha el tipo `unknown` del catch
+      throw toHttp(
+        err instanceof Error
+          ? err.message.replace(
+              'CoursePrice: originalAmount inválido (debe ser >= amount)',
+              'El precio original debe ser mayor o igual que el precio actual.',
+            )
+          : 'Precio inválido',
+      );
+    }
+  }
+
   static free(): CoursePrice {
     return new CoursePrice(0, null, 'USD');
   }

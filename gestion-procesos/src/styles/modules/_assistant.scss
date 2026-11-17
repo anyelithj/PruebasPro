@@ -1,0 +1,21 @@
+// SMACSS · MODULE — assistant: conversación con el asistente de IA.
+.assistant {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--pad-card);
+  min-height: 12rem;
+  max-height: 28rem;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+  &__question {
+    font-weight: 700;
+    color: var(--petrol);
+  }
+  &__answer {
+    white-space: pre-line;
+    background: #eef3f6;
+    border-radius: 0.5rem;
+    padding: 0.6rem 0.8rem;
+  }
+}

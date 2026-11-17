@@ -15,6 +15,8 @@ class LinesRequest(BaseModel):
 
     lines: list[str] = Field(..., min_length=1, max_length=80)
     language: LanguageCode
+    # [2026-11-13]: conversación previa (pregunta del avatar + lo que el estudiante quiso decir) → traducción con sentido; no se traduce
+    context: str = Field(default="", max_length=1200)
 
 
 class EnrichedLine(BaseModel):

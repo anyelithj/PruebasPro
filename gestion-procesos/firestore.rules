@@ -1,0 +1,102 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function profile() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    // Usuario con perfil y cuenta activa (una cuenta desactivada no puede leer ni escribir).
+    function isActive() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && profile().get('active', true) != false;
+    }
+    function role() { return profile().get('role', 'member'); }
+    function isAdmin() { return isActive() && role() == 'admin'; }
+    function isStaff() { return isActive() && role() in ['admin', 'manager']; }
+    function canWrite() { return isActive() && role() in ['admin', 'manager', 'member']; }
+
+    match /users/{uid} {
+      // Lectura abierta a cualquier sesión: se necesita para cargar el propio perfil en el primer ingreso.
+      allow read: if signedIn();
+      // Autorregistro: siempre como "member" y activo. Excepción: el PRIMER usuario de la aplicación puede quedar como
+      // "admin" si en el mismo batch crea `_meta/admin` (que solo se puede crear una vez; ver más abajo).
+      // En los demás casos solo un administrador crea usuarios con otro rol.
+      allow create: if signedIn() && (
+        (request.auth.uid == uid && request.resource.data.role == 'member' && request.resource.data.get('active', true) == true)
+        || (request.auth.uid == uid && request.resource.data.role == 'admin'
+            && !exists(/databases/$(database)/documents/_meta/admin)
+            && getAfter(/databases/$(database)/documents/_meta/admin).data.uid == request.auth.uid)
+        || isAdmin());
+      // Cada persona edita su perfil, pero no puede cambiar su propio rol ni reactivarse.
+      allow update: if signedIn() && (
+        isAdmin()
+        || (request.auth.uid == uid
+            && request.resource.data.role == resource.data.role
+            && request.resource.data.get('active', true) == resource.data.get('active', true)));
+      allow delete: if isAdmin() && request.auth.uid != uid;
+    }
+
+    // Datos internos. `admin` marca que el primer usuario ya reclamó el rol de administrador: `create` falla si el
+    // documento ya existe, por eso solo una persona puede lograrlo. `schema` lo escribe el script db:setup (sin pasar por estas reglas).
+    match /_meta/{doc} {
+      allow read: if signedIn();
+      allow create: if signedIn() && doc == 'admin' && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /processes/{id} {
+      allow read: if isActive();
+      allow create: if canWrite() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isStaff() || (canWrite() &&
+        (resource.data.ownerId == request.auth.uid || request.auth.uid in resource.data.assigneeIds));
+      allow delete: if isStaff();
+    }
+
+    match /tasks/{id} {
+      allow read: if isActive();
+      allow create, update: if canWrite();
+      allow delete: if isStaff();
+    }
+
+    match /workflows/{id}   { allow read: if isActive(); allow write: if isStaff(); }
+    match /automations/{id} { allow read: if isActive(); allow write: if isStaff(); }
+
+    match /notifications/{id} {
+      allow read, update, delete: if isActive() && resource.data.userId == request.auth.uid;
+      allow create: if canWrite();
+    }
+
+    // Historial: solo se agrega (no se edita ni se borra). «system» identifica a las automatizaciones.
+    match /history/{id} {
+      allow read: if isActive();
+      allow create: if canWrite() && request.resource.data.userId in [request.auth.uid, 'system'];
+      allow update, delete: if false;
+    }
+
+    // Archivos adjuntos: metadatos en "files" y contenido (base64) en "fileBlobs".
+    match /files/{id} {
+      allow read: if isActive();
+      allow create: if canWrite() && request.resource.data.uploadedBy == request.auth.uid;
+      allow delete: if isStaff() || (canWrite() && resource.data.uploadedBy == request.auth.uid);
+      allow update: if false;
+    }
+    match /fileBlobs/{id} {
+      allow read: if isActive();
+      allow create: if canWrite() && request.resource.data.uploadedBy == request.auth.uid;
+      allow delete: if isStaff() || (canWrite() && resource.data.uploadedBy == request.auth.uid);
+      allow update: if false;
+    }
+
+    match /channels/{id} {
+      allow read: if isActive();
+      allow create: if canWrite();
+      allow update, delete: if isStaff();
+      match /messages/{messageId} {
+        allow read: if isActive();
+        allow create: if canWrite() && request.resource.data.uid == request.auth.uid;
+        allow delete: if isStaff();
+        allow update: if false;
+      }
+    }
+  }
+}

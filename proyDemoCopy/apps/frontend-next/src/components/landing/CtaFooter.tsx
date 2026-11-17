@@ -1,3 +1,4 @@
+import { VERIFY_PREFIX } from "@/config/angular"; // [Caso E]: ruta única de verificación pública
 import Link from "next/link";
 import { BRAND } from "@/config/brand";
 import { fmt, type Dictionary } from "@aula/shared-i18n";
@@ -30,7 +31,7 @@ export function CtaFooter({ l, n }: { l: Dictionary["landing"]; n: Dictionary["p
                 </span>
                 <span className="text-white">{BRAND.name}</span>
               </div>
-              <p className="max-w-[300px] text-sm text-slate-400">{l.footerAbout}</p>
+              <p className="max-w-[300px] text-slate-400">{l.footerAbout}</p>
             </div>
             <div>
               <h3>{l.footerProduct}</h3>
@@ -43,7 +44,7 @@ export function CtaFooter({ l, n }: { l: Dictionary["landing"]; n: Dictionary["p
               <h3>{l.footerAccount}</h3>
               <Link href="/login">{n.login}</Link>
               <Link href="/register">{n.register}</Link>
-              <a href="/verificar">{l.verifyCertificate}</a>
+              <a href={VERIFY_PREFIX}>{l.verifyCertificate}</a>
             </div>
             <div>
               <h3>{l.footerContact}</h3>

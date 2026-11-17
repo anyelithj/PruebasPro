@@ -57,7 +57,7 @@ class EnrichLinesUseCase:
         lines = [ln.strip() for ln in req.lines]
         # `gather` (asyncio): IPA (determinista, rápido) y traducción (LLM, lento) en paralelo → la traducción no retrasa el IPA
         (ipas, ipas_us, engine), translations = await asyncio.gather(
-            self._ipa(lines, req.language), self._translations(lines, req.language)
+            self._ipa(lines, req.language), self._translations(lines, req.language, req.context)
         )
         return LinesResponse(
             lines=[
@@ -81,19 +81,19 @@ class EnrichLinesUseCase:
         ipas_us: list[str | None] = list(per_voice.get("us") or [None] * len(lines))
         return ipas, ipas_us, self._ph.engine
 
-    async def _translations(self, lines: list[str], language: str) -> list[str | None]:
+    async def _translations(self, lines: list[str], language: str, context: str = "") -> list[str | None]:
         """Lotes primero; las líneas que falten van una a una — todo dentro del presupuesto | [Patrón]: Batch + Fallback + Deadline."""
         out: list[str | None] = [None] * len(lines)  # Se rellena EN SITIO → si vence el plazo, lo ya traducido se conserva
         if language == "es" or not any(lines):
             return out  # [Determinístico]: el contenido ya está en español
         try:
             # `asyncio.wait_for` (asyncio): cancela la traducción al vencer el presupuesto y devuelve lo que haya
-            await asyncio.wait_for(self._fill(out, lines, language), timeout=self._budget_s)
+            await asyncio.wait_for(self._fill(out, lines, language, context), timeout=self._budget_s)
         except TimeoutError:  # Python 3.11+: asyncio.TimeoutError es el TimeoutError nativo
             logger.warning("Traducción cortada a los %.0f s: %d de %d líneas", self._budget_s, sum(t is not None for t in out), len(lines))
         return out
 
-    async def _fill(self, out: list[str | None], lines: list[str], language: str) -> None:
+    async def _fill(self, out: list[str | None], lines: list[str], language: str, context: str = "") -> None:
         # [Determinístico primero · 2026-10-25]: respuestas cortas («yes»), glosario y caché → sin LLM
         for i, line in enumerate(lines):
             out[i] = self._translate.known(line, language) if line else None
@@ -101,23 +101,24 @@ class EnrichLinesUseCase:
         # [Lote]: trozos de _BATCH_MAX líneas en secuencia (Ollama en CPU atiende una inferencia larga a la vez)
         for start in range(0, len(pending), _BATCH_MAX):
             chunk = pending[start : start + _BATCH_MAX]  # Slicing (Python): sublista de índices
-            for i, tr in zip(chunk, await self._batch([lines[i] for i in chunk], language), strict=True):
+            for i, tr in zip(chunk, await self._batch([lines[i] for i in chunk], language, context), strict=True):
                 out[i] = tr
         # [Respaldo]: las líneas que el lote no tradujo (o tradujo mal) van una a una — con su reintento — de _PARALLEL en _PARALLEL
         gate = asyncio.Semaphore(_PARALLEL)  # `Semaphore` (asyncio): máximo _PARALLEL traducciones a la vez
 
         async def one(i: int) -> None:
             async with gate:  # `async with` (Python): adquiere y libera el semáforo aunque haya excepción
-                out[i] = await self._translate.translate_line(lines[i], language)
+                out[i] = await self._translate.translate_line(lines[i], language, context)
 
         await asyncio.gather(*(one(i) for i, tr in enumerate(out) if tr is None and lines[i]))
 
-    async def _batch(self, lines: list[str], language: str) -> list[str | None]:
+    async def _batch(self, lines: list[str], language: str, context: str = "") -> list[str | None]:
         """Traduce un trozo en una sola petición; cada elemento se limpia y valida (JSON anidado, inglés, glosario) → None si no sirve."""
         out: list[str | None] = [None] * len(lines)
         if not any(lines):
             return out
-        prompt = f"Traduce del {LANGUAGE_NAMES.get(language, language)} al español:\n{json.dumps(lines, ensure_ascii=False)}"
+        about = f"Contexto de la conversación (NO lo traduzcas):\n{context.strip()}\n\n" if context.strip() else ""  # [2026-11-13]: sentido, no palabra por palabra
+        prompt = f"{about}Traduce del {LANGUAGE_NAMES.get(language, language)} al español:\n{json.dumps(lines, ensure_ascii=False)}"
         system = system_with_glossary(_BATCH_SYSTEM, lines, language)
         data = await generate_json(self._translate.llm, prompt, system=system, max_tokens=60 + 40 * len(lines), temperature=0.1)
         items = _batch_items(data, lines)

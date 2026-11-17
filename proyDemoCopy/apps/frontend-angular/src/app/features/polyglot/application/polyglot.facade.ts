@@ -2,7 +2,7 @@ import { inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom, type Observable } from 'rxjs';
 import type { Language } from '@aula/shared-schemas';
 import { AsyncState } from '@shared/utils/async-state';
-import { DEFAULT_ORDER, move, normalize, reorder, toggle } from '../domain/language-order';
+import { DEFAULT_ORDER, move, reorder, toggle } from '../domain/language-order';
 import { PolyglotRepository } from '../domain/polyglot.repository.port';
 import type {
   ComparisonTable,
@@ -10,9 +10,8 @@ import type {
   TermInput,
   Topic,
   TopicInput,
-  View,
 } from '../domain/models/polyglot';
-// [PolyglotFacade · Aplicación · Sprints 10.7/10.8 · RF-129 a RF-132]: casos de uso — tema e idiomas elegidos (orden de columnas en el navegador), tabla, comparaciones guardadas y administración (temas, conceptos, términos, borrador con IA e IPA) | [Patrón]: Facade + State Machine (AsyncState) + Command (`act`) | [Principio]: SRP + DIP + DRY (language-order puro) | [Paradigma]: Reactivo (signals) + async/await
+// [PolyglotFacade · Aplicación · Sprints 10.7/10.8 · RF-129 a RF-132]: casos de uso — tema e idiomas elegidos (orden de columnas en el navegador), tabla y administración (2026-11-14: sin comparaciones guardadas en la vista del estudiante) (temas, conceptos, términos, borrador con IA e IPA) | [Patrón]: Facade + State Machine (AsyncState) + Command (`act`) | [Principio]: SRP + DIP + DRY (language-order puro) | [Paradigma]: Reactivo (signals) + async/await
 
 @Injectable()
 export class PolyglotFacade {
@@ -20,7 +19,6 @@ export class PolyglotFacade {
 
   readonly topics = new AsyncState<Topic[]>((l) => !l.length);
   readonly table = new AsyncState<ComparisonTable>((t) => !t.rows.length);
-  readonly views = new AsyncState<View[]>((l) => !l.length);
   readonly topicId = signal<string | null>(null);
   readonly languages = signal<Language[]>([...DEFAULT_ORDER]);
   readonly busy = signal(false);
@@ -42,9 +40,10 @@ export class PolyglotFacade {
   }
 
   // ── Tabla del estudiante ──
-  async loadTopics(): Promise<void> {
+  // `preferred` (2026-10-31): tema del enlace (?tema=) → «Probar» abre ESE tema | si no existe o el usuario no puede verlo, el primero
+  async loadTopics(preferred?: string | null): Promise<void> {
     const list = await this.topics.run(this.repo.listTopics());
-    if (list?.length && !this.topicId()) this.selectTopic(list[0].id); // Primer tema por defecto
+    if (list?.length && !this.topicId()) this.selectTopic(list.some((t) => t.id === preferred) ? preferred! : list[0].id); // Primer tema por defecto
   }
   selectTopic(id: string): void {
     this.topicId.set(id);
@@ -71,27 +70,6 @@ export class PolyglotFacade {
     const had = new Set(this.languages());
     this.languages.set([...DEFAULT_ORDER]);
     if (DEFAULT_ORDER.some((l) => !had.has(l))) void this.loadTable();
-  }
-
-  // ── Comparaciones guardadas ──
-  loadViews() {
-    return this.views.run(this.repo.listViews());
-  }
-  async saveView(name: string): Promise<boolean> {
-    const topicId = this.topicId();
-    if (!topicId) return false;
-    const v = await this.act(this.repo.saveView({ topicId, name, languages: this.languages() }));
-    if (v) this.views.set([v, ...(this.views.data() ?? [])]);
-    return !!v;
-  }
-  openView(v: View): void {
-    this.languages.set(normalize(v.languages));
-    this.selectTopic(v.topicId);
-  }
-  async deleteView(id: string): Promise<boolean> {
-    const ok = (await this.act(this.repo.deleteView(id))) !== null;
-    if (ok) this.views.set((this.views.data() ?? []).filter((v) => v.id !== id));
-    return ok;
   }
 
   // ── Administración (DOCENTE / ADMIN) ──
@@ -129,6 +107,13 @@ export class PolyglotFacade {
     if (!id) return false;
     const c = await this.act(this.repo.addConcept(id, input));
     if (c && terms.length) await this.act(this.repo.upsertTerms(c.id, terms));
+    if (c) await this.loadTable();
+    return !!c;
+  }
+  // [updateConcept · 2026-11-03]: «Editar» de una fila → emoji y significado (PATCH /polyglot/concepts/:id) + términos cambiados en una sola recarga de la tabla
+  async updateConcept(id: string, patch: Partial<ConceptInput>, terms: TermInput[]): Promise<boolean> {
+    const c = await this.act(this.repo.updateConcept(id, patch));
+    if (c && terms.length) await this.act(this.repo.upsertTerms(id, terms));
     if (c) await this.loadTable();
     return !!c;
   }

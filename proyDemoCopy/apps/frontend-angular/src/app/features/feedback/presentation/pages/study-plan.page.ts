@@ -30,7 +30,7 @@ import { FeedbackFacade } from '../../application/feedback.facade';
         }
         @default {
           @if (facade.noData()) {
-            <p class="py-6 text-center text-sm text-muted-foreground">{{ t.noData }}</p>
+            <p class="py-6 text-center text-muted-foreground">{{ t.noData }}</p>
           } @else if (facade.plan.data()?.plan; as plan) {
             <ol class="space-y-3">
               @for (step of plan.plan; track step.order) {
@@ -38,16 +38,16 @@ import { FeedbackFacade } from '../../application/feedback.facade';
                   <span class="grid size-8 shrink-0 place-items-center rounded-full bg-tone-brand-soft text-sm font-bold text-tone-brand" aria-hidden="true">{{ step.order }}</span>
                   <div class="min-w-0 flex-1">
                     <p class="font-semibold">{{ step.topic }}</p>
-                    <p class="text-sm text-muted-foreground">{{ step.activity }}</p>
+                    <p class="text-muted-foreground">{{ step.activity }}</p>
                   </div>
                   <aula-badge tone="info">{{ i18n.fmt(t.minutes, { n: step.estimated_minutes }) }}</aula-badge>
                 </li>
               }
             </ol>
-            <p class="mt-4 text-sm font-semibold">{{ i18n.fmt(t.total, { n: plan.total_minutes }) }}</p>
-            <p class="mt-2 text-xs text-muted-foreground">{{ i18n.t().common.aiReview }}</p>
+            <p class="mt-4 font-semibold">{{ i18n.fmt(t.total, { n: plan.total_minutes }) }}</p>
+            <p class="mt-2 type-meta text-muted-foreground">{{ i18n.t().common.aiReview }}</p>
           } @else {
-            <p role="status" class="py-6 text-center text-sm text-muted-foreground">{{ t.aiUnavailable }}</p>
+            <p role="status" class="py-6 text-center text-muted-foreground">{{ t.aiUnavailable }}</p>
           }
         }
       }

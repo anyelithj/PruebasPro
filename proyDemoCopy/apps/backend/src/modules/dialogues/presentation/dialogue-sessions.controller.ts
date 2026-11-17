@@ -20,7 +20,12 @@ import {
   MAX_RECORDING_BYTES,
   TurnRecordingUseCase,
 } from '../application/use-cases/turn-recording.use-case';
-import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import type { Response } from 'express';
 import {
   CurrentUser,
@@ -59,8 +64,12 @@ export class DialogueSessionsController {
   // [2026-10-20]: la grabación de voz del turno del usuario se guarda (antes solo se transcribía) → puede volver a escucharse
   @Post(':id/turns/:turnId/recording')
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Guardar la grabación de voz de un turno propio (máx. 10 MB)' })
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_RECORDING_BYTES } }))
+  @ApiOperation({
+    summary: 'Guardar la grabación de voz de un turno propio (máx. 10 MB)',
+  })
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: MAX_RECORDING_BYTES } }),
+  )
   saveRecording(
     @CurrentUser() u: JwtPayload,
     @Param('id', ParseUUIDPipe) id: string,
@@ -71,7 +80,9 @@ export class DialogueSessionsController {
   }
 
   @Get(':id/turns/:turnId/recording')
-  @ApiOperation({ summary: 'Escuchar la grabación de un turno propio (Range/206)' })
+  @ApiOperation({
+    summary: 'Escuchar la grabación de un turno propio (Range/206)',
+  })
   async playRecording(
     @CurrentUser() u: JwtPayload,
     @Param('id', ParseUUIDPipe) id: string,
@@ -120,7 +131,7 @@ export class DialogueSessionsController {
     @Body() body: UserTurnBody,
     @Headers('authorization') auth: string,
   ) {
-    return this.submit.execute(u.sub, id, body.text, bearer(auth));
+    return this.submit.execute(u.sub, id, body.text, bearer(auth), body.origin);
   }
 
   // [SSE]: el turno del usuario llega primero; luego la respuesta del avatar palabra a palabra y al final el turno completo con IPA y traducción
@@ -140,7 +151,13 @@ export class DialogueSessionsController {
     res.setHeader('X-Accel-Buffering', 'no'); // Sin buffer en proxies (nginx, BFF de Next.js)
     res.flushHeaders();
     try {
-      const out = await this.submit.execute(u.sub, id, body.text, bearer(auth));
+      const out = await this.submit.execute(
+        u.sub,
+        id,
+        body.text,
+        bearer(auth),
+        body.origin,
+      );
       sse(res, 'user', out.userTurn);
       for (const token of out.avatarTurn.text.match(/\S+\s*/g) ?? [])
         sse(res, 'token', { text: token });

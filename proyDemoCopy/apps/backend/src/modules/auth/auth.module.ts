@@ -20,11 +20,16 @@ import { EmailVerificationTokenRepository } from './infrastructure/repositories/
 import { PasswordResetTokenRepository } from './infrastructure/repositories/password-reset-token.repository';
 import { GoogleOAuthVerifier } from './infrastructure/services/google-oauth.verifier';
 import { JwtTokenService } from './infrastructure/services/jwt-token.service';
-import { MicrosoftOAuthVerifier } from './infrastructure/services/microsoft-oauth.verifier';
 import { OAuthVerifierRegistry } from './infrastructure/services/oauth-verifier.registry';
 import { EnqueueEmailUseCase } from '../notifications/application/use-cases/enqueue-email.use-case';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { MagicLinkToken } from './domain/entities/magic-link-token.entity';
+import { LoginOtp } from './domain/entities/login-otp.entity';
+import { IssueLoginOtpUseCase } from './application/use-cases/issue-login-otp.use-case';
+import {
+  SetTwoFactorUseCase,
+  VerifyLoginOtpUseCase,
+} from './application/use-cases/two-factor.use-cases';
 import { MagicLinkController } from './presentation/magic-link.controller';
 import { RequestMagicLinkUseCase } from './application/use-cases/request-magic-link.use-case';
 import { VerifyMagicLinkUseCase } from './application/use-cases/verify-magic-link.use-case';
@@ -84,6 +89,7 @@ const mailServiceProvider = {
       EmailVerificationToken,
       PasswordResetToken,
       MagicLinkToken, // [Sprint 7.18]: acceso sin contraseña
+      LoginOtp, // [2026-11-16]: códigos OTP del segundo factor (2FA)
     ]),
     // [Passport bootstrap]: requerido por strategies | [Patrón]: Strategy
     PassportModule.register({ defaultStrategy: 'jwt' }),
@@ -104,9 +110,8 @@ const mailServiceProvider = {
     passwordResetRepoProvider,
     emailVerificationRepoProvider,
     mailServiceProvider,
-    // [Verifiers OAuth]: adapters Google/Microsoft + registry
+    // [Verifiers OAuth]: adapter Google + registry (Microsoft retirado 2026-11-16)
     GoogleOAuthVerifier,
-    MicrosoftOAuthVerifier,
     oauthRegistryProvider,
     // [Use cases]: orquestadores de dominio
     RegisterUseCase,
@@ -120,6 +125,10 @@ const mailServiceProvider = {
     ResetPasswordUseCase,
     RequestMagicLinkUseCase,
     VerifyMagicLinkUseCase,
+    // [2FA · 2026-11-16]: código OTP por correo
+    IssueLoginOtpUseCase,
+    VerifyLoginOtpUseCase,
+    SetTwoFactorUseCase,
   ],
   exports: [tokenServiceProvider, sessionRepoProvider],
 })

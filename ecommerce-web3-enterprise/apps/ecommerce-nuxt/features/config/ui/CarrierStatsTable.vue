@@ -6,6 +6,8 @@
 -->
 <script setup lang="ts">
 import { ref } from "vue";
+import { useLocalPage } from "~~/shared/composable/useLocalPage";
+import TablePager from "~~/shared/ui/TablePager.vue";
 import { useApi } from "~~/shared/lib/api-client";
 import { formatMoney } from "~~/shared/lib/format";
 import type { CarrierStats } from "~~/entities/pwa/model/pwa.types";
@@ -15,6 +17,7 @@ const { locale } = useI18n();
 const days = ref(90); // Período del reporte (selector: 30, 90 o 365 días)
 // useAsyncData + watch => vuelve a consultar al cambiar el período; "server: false" => dato privado del panel
 const { data, pending } = await useAsyncData(() => `carrier-stats:${days.value}`, async () => (await api.get<CarrierStats[]>("/shipping/stats", { days: days.value })).data, { watch: [days], server: false });
+const carriers = useLocalPage(data);
 const percent = (value: number) => `${Math.round(value * 100)} %`;
 </script>
 
@@ -45,7 +48,7 @@ const percent = (value: number) => `${Math.round(value * 100)} %`;
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in data" :key="row.carrier" class="border-b last:border-0">
+          <tr v-for="row in carriers.visible.value" :key="row.carrier" class="border-b last:border-0">
             <th scope="row" class="py-2 pr-3 text-left font-medium">{{ row.carrier }}</th>
             <td class="py-2 pr-3 text-right tabular-nums">{{ row.shipments }}</td>
             <td class="py-2 pr-3 text-right tabular-nums">{{ row.delivered ? percent(row.onTimeRate) : "—" }}</td>
@@ -56,6 +59,7 @@ const percent = (value: number) => `${Math.round(value * 100)} %`;
           </tr>
         </tbody>
       </table>
+      <TablePager class="mt-3" :meta="carriers.meta.value" @page="carriers.page.value = $event" />
     </div>
   </div>
 </template>

@@ -12,6 +12,7 @@ from src.modules.language_tools.application.schemas.lookup_response import Looku
 from src.modules.language_tools.application.schemas.translate_request import TranslateRequest
 from src.modules.language_tools.application.use_cases.transcribe_ipa import TranscribeIpaUseCase
 from src.modules.language_tools.application.use_cases.translate_text import TranslateTextUseCase
+from src.shared.domain.language_detect import resolve_language
 
 
 class LookupTermUseCase:
@@ -20,6 +21,9 @@ class LookupTermUseCase:
         self._ipa = ipa
 
     async def execute(self, req: TranslateRequest) -> LookupResponse:
+        # [Detectar idioma · 2026-10-27]: se resuelve ANTES del fan-out → el IPA necesita un idioma real (espeak-ng no admite «auto»)
+        source, detected = resolve_language(req.source, req.text)
+        req = req.model_copy(update={"source": source})
         translation, ipa = await asyncio.gather(
             self._translate.execute(req), self._ipa.execute(IpaRequest(text=req.text, language=req.source))
         )
@@ -32,4 +36,5 @@ class LookupTermUseCase:
             ipa_us=full.get("us"),
             ipa=full.get("default"),
             engine=ipa.engine,
+            detected_language=detected,
         )

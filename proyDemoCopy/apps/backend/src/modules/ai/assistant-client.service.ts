@@ -10,6 +10,7 @@ import { isAxiosError } from 'axios';
 import { firstValueFrom } from 'rxjs';
 import type { CefrLevel } from '../../shared/domain/cefr-level.vo';
 import type { Language } from '../../shared/domain/language.vo';
+import type { LanguageUsage } from './tutor/tutor-conversation.entity';
 // [AssistantClientService · Sprints 5.3/7.10]: cliente HTTP ÚNICO al Assistant de FastAPI (/api/v1/assistant/*) — tutor RAG, persona «guide» del Agente Guía (Help), persona «game» (Games, Sprint 8.7) y persona «dialogue» (Dialogues, Sprint 9.6) | [Patrón]: Adapter | [Principio]: SRP (separado de AIClientService: otro servicio remoto, otros tiempos) + DRY (Help no crea otro cliente) | [Paradigma]: POO
 
 export interface ChatTurn {
@@ -25,9 +26,29 @@ export interface ChatResult {
   answered_by?: 'faq' | 'manual' | 'llm' | 'engine' | 'none'; // [Sprint 8.7]: «engine» = motor determinista del juego
   game?: Record<string, unknown> | null; // [Sprint 8.7]: eventos de la partida (solved, violation, met, finished…)
   dialogue?: Record<string, unknown> | null; // [Sprint 9.6]: vocabulario del tema usado y corrección suave del avatar
+  language_usage?: LanguageUsage | null; // [2026-10-28]: % de palabras del alumno en el idioma meta vs meta del nivel (solo tutor)
+}
+// [HistoryTurn · 2026-10-28]: turno previo que NestJS envía a FastAPI (modo sin estado del Tutor IA)
+export interface HistoryTurn {
+  role: 'user' | 'assistant';
+  content: string;
+}
+// [lastTurns · Tarea 1 · 2026-11-13]: ventana de historial que viaja a FastAPI = últimos N turnos (AI_HISTORY_TURNS, por defecto 10)
+// Un solo punto para tutor y avatar | [Principio]: DRY + KISS | [Paradigma]: funcional (función pura sobre el arreglo)
+export function lastTurns(history: ReadonlyArray<HistoryTurn>): HistoryTurn[] {
+  const n = Math.max(1, Number(process.env.AI_HISTORY_TURNS) || 10); // `||` → 10 si la variable falta o no es numérica
+  return history.slice(-n); // `slice(-n)` (ES5): copia de los n últimos sin mutar el original
+}
+// [TutorChatInput]: mensaje al tutor + historial persistido en tutor_messages
+export interface TutorChatInput {
+  message: string;
+  sessionId?: string;
+  language?: Language | string;
+  level?: CefrLevel | string;
+  history?: HistoryTurn[];
 }
 export interface GuideSource {
-  kind: 'faq' | 'manual';
+  kind: 'faq' | 'manual' | 'curriculum'; // [Tarea 9]: «curriculum» = fragmento del temario que usó el tutor (RNF-35)
   id: string;
   title: string;
   ref: string | null;
@@ -38,10 +59,8 @@ export interface GuideInput {
   sessionId?: string;
   route?: string;
   locale: 'es' | 'en';
-  // [2026-10-19 · chatbot con modos]: guía (por defecto) · soporte · tutor (con el idioma y nivel que estudia)
-  mode?: 'guide' | 'support' | 'tutor';
-  language?: string;
-  level?: string;
+  // [2026-10-19 → 2026-10-28]: guía (por defecto) · soporte — el asistente «Soporte y Guía» YA NO es tutor (el Tutor IA vive en /tutor)
+  mode?: 'guide' | 'support';
 }
 export interface Conversation {
   id: string;
@@ -97,15 +116,8 @@ export class AssistantClientService {
   }
 
   // [chat]: 90 s → el LLM local en CPU puede tardar la primera vez (carga del modelo)
-  chat(
-    input: {
-      message: string;
-      sessionId?: string;
-      language?: Language;
-      level?: CefrLevel;
-    },
-    token: string,
-  ): Promise<ChatResult> {
+  // [2026-10-28]: `history` → FastAPI reconstruye la conversación con lo que guarda NestJS (no usa su memoria)
+  chat(input: TutorChatInput, token: string): Promise<ChatResult> {
     return this.call(
       'post',
       '/chat',
@@ -115,49 +127,18 @@ export class AssistantClientService {
         session_id: input.sessionId ?? null,
         language: input.language ?? null,
         level: input.level ?? null,
+        ...(input.history ? { history: lastTurns(input.history) } : {}),
       },
       90_000,
     );
   }
 
-  // [chatStream · Sprint 5.3]: SSE de FastAPI (eventos session/token/done) como flujo de bytes → el controlador lo canaliza sin buffer | `responseType: 'stream'` (axios)
-  async chatStream(
-    input: {
-      message: string;
-      sessionId?: string;
-      language?: Language;
-      level?: CefrLevel;
-    },
+  // [languageUsage · 2026-10-28]: recalcula el % en el idioma meta tras borrar mensajes (sin LLM; la regla vive en FastAPI · SSOT)
+  languageUsage(
+    input: { messages: HistoryTurn[]; language: string; level: string },
     token: string,
-    signal: AbortSignal,
-  ): Promise<Readable> {
-    try {
-      const res = await firstValueFrom(
-        this.http.post<Readable>(
-          `${this.baseUrl}/chat/stream`,
-          {
-            message: input.message,
-            session_id: input.sessionId ?? null,
-            language: input.language ?? null,
-            level: input.level ?? null,
-          },
-          {
-            responseType: 'stream',
-            timeout: 90_000,
-            signal, // [Cancelación]: si el navegador cierra la conexión, se corta también la petición a FastAPI
-            headers: { Authorization: `Bearer ${token}` },
-          },
-        ),
-      );
-      return res.data;
-    } catch (err) {
-      this.logger.warn(
-        `Assistant /chat/stream failed: ${err instanceof Error ? err.message : String(err)}`,
-      );
-      throw new ServiceUnavailableException(
-        'El tutor no está disponible en este momento',
-      );
-    }
+  ): Promise<LanguageUsage> {
+    return this.call('post', '/language-usage', token, input);
   }
 
   knowledge(token: string): Promise<KnowledgeStatus> {
@@ -169,6 +150,27 @@ export class AssistantClientService {
     token: string,
   ): Promise<{ indexed: number; by_language: Record<string, number> }> {
     return this.call('post', '/knowledge/reindex', token, undefined, 120_000);
+  }
+
+  // [syncKnowledge · Tarea 9 · RF-57]: solo ids → FastAPI relee la BD (SSOT) y reemplaza/quita sus fragmentos del índice
+  syncKnowledge(
+    ids: ReadonlyArray<string>,
+    token: string,
+  ): Promise<{ indexed: number; removed: string[]; size: number }> {
+    return this.call('post', '/knowledge/sync', token, { ids }, 60_000);
+  }
+
+  // [indexUserWords · 2026-11-14 · RF-137]: palabras «aprender» del usuario del token → fragmentos PRIVADOS del tutor (nunca textos ni libros)
+  indexUserWords(
+    words: ReadonlyArray<{
+      id: string;
+      language: string;
+      term: string;
+      translation: string;
+    }>,
+    token: string,
+  ): Promise<{ indexed: number }> {
+    return this.call('post', '/knowledge/user-words', token, { words }, 30_000);
   }
 
   // ───── [Sprint 8.7] Agente de juegos (persona «game»): motor determinista primero, LLM solo para la jugada libre ─────
@@ -206,6 +208,7 @@ export class AssistantClientService {
       language: string;
       level: string;
       dialogue: unknown; // DialogueContext de FastAPI (lo arma NestJS Dialogues en cada turno)
+      history?: ReadonlyArray<HistoryTurn>; // [Tarea 1]: turnos guardados en dialogue_turns → FastAPI sin estado (RNF-06)
     },
     token: string,
   ): Promise<ChatResult> {
@@ -220,6 +223,7 @@ export class AssistantClientService {
         language: input.language,
         level: input.level,
         dialogue: input.dialogue,
+        ...(input.history ? { history: lastTurns(input.history) } : {}), // Spread condicional: sin historial → modo apertura
       },
       90_000,
     );
@@ -233,7 +237,6 @@ export class AssistantClientService {
       persona: input.mode ?? 'guide',
       route: input.route ?? null,
       locale: input.locale,
-      ...(input.mode === 'tutor' ? { language: input.language ?? 'en', level: input.level ?? 'A2' } : {}),
     };
   }
 

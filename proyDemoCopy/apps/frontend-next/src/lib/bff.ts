@@ -44,3 +44,9 @@ export async function bffQuery(action: () => Promise<unknown>, successStatus = 2
 function respond(data: unknown, status: number): NextResponse {
   return status === 204 ? new NextResponse(null, { status }) : NextResponse.json(data, { status });
 }
+
+// [AI_DRAFT_TIMEOUT · Fix 2026-10-28]: espera máxima del BFF por un borrador de IA (curso o subtema) | NestJS corta a Ollama a los 150 s (COURSE_DRAFT_TIMEOUT_MS)
+// → el BFF espera un poco MÁS (170 s) para recibir el 504 explicado del backend, y siempre MENOS que el `headersTimeout` de 300 s de undici (antes: 503 opaco a los 5,2 min)
+// [Patrón]: Timeout escalonado por saltos (navegador > BFF > NestJS > Ollama) | `Number(...) ||` → valor por defecto si la variable no es numérica
+export const AI_DRAFT_TIMEOUT_MS = Number(process.env.AI_DRAFT_TIMEOUT_MS) || 170_000;
+export const AI_TIMEOUT_MESSAGE = "La IA tardó demasiado en responder. Prueba con un enfoque más concreto o inténtalo de nuevo en unos minutos (el modelo puede estar cargándose).";

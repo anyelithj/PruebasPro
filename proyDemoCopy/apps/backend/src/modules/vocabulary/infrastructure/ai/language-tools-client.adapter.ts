@@ -11,8 +11,11 @@ import type {
   IpaOnlyResult,
   LanguageToolsPort,
   LinesResult,
+  NounGrammarResult,
   TermLookupResult,
   WordLookupResult,
+  TranslateOptions,
+  TranslationResult,
 } from '../../../../shared/domain/interfaces/language-tools.interface';
 // [Adapter LanguageToolsClient · Sprint 8.2]: HTTP hacia FastAPI /api/v1/language-tools/{lookup,word} con el JWT del usuario | [Patrón]: Adapter (implementa LanguageToolsPort) | [Principio]: DIP + SRP (única puerta HTTP del módulo) | [Tecnología]: @nestjs/axios + RxJS
 
@@ -62,6 +65,14 @@ export class LanguageToolsClient implements LanguageToolsPort {
     );
   }
 
+  nounGrammar(
+    term: string,
+    language: string,
+    token: string,
+  ): Promise<NounGrammarResult> {
+    return this.post('/noun-grammar', { term, language }, token);
+  }
+
   word(
     word: string,
     sentence: string,
@@ -81,8 +92,25 @@ export class LanguageToolsClient implements LanguageToolsPort {
     source: string,
     target: string,
     token: string,
-  ): Promise<{ translation: string }> {
-    return this.post('/translate', { text, source, target }, token);
+    opts: TranslateOptions = {},
+  ): Promise<TranslationResult> {
+    // `...(cond && {...})` (ES2018): solo se envían los campos presentes → FastAPI aplica sus valores por defecto
+    return this.post(
+      '/translate',
+      {
+        text,
+        source,
+        target,
+        ...(opts.kind && { tipo_de_texto: opts.kind }),
+        ...(opts.context && { context: opts.context.slice(0, 600) }),
+      },
+      token,
+    );
+  }
+
+  // [detect · 2026-10-30]: POST /language-tools/detect (determinista, sin LLM) | el `post` privado centraliza los errores (400/503)
+  detect(text: string, token: string): Promise<{ language: string }> {
+    return this.post('/detect', { text }, token);
   }
 
   // [Sprint 10.5]: /ipa devuelve { results: { uk, us } } en inglés y { results: { default } } en el resto → se aplana
@@ -108,6 +136,7 @@ export class LanguageToolsClient implements LanguageToolsPort {
     lines: string[],
     language: string,
     token: string,
+    context = '', // [2026-11-13]: conversación previa → la traducción respeta el sentido (no se traduce)
   ): Promise<LinesResult> {
     const out: LinesResult = {
       lines: [],
@@ -117,7 +146,11 @@ export class LanguageToolsClient implements LanguageToolsPort {
     for (let i = 0; i < lines.length; i += 80) {
       const part = await this.post<LinesResult>(
         '/lines',
-        { lines: lines.slice(i, i + 80), language },
+        {
+          lines: lines.slice(i, i + 80),
+          language,
+          ...(context && { context: context.slice(0, 1200) }),
+        },
         token,
       );
       out.lines.push(...part.lines.map((l) => ({ ...l, index: l.index + i })));

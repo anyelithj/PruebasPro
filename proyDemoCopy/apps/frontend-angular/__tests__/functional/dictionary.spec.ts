@@ -14,9 +14,9 @@ test('palabra pulsable: ventana con traducción, Aprender y Aprendido', async ({
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
   await expect(dialog.getByText('Traducción')).toBeVisible({ timeout: 90_000 });
-  const learn = dialog.getByRole('button', { name: /Aprender/ });
+  const learn = dialog.getByRole('button', { name: /Repasar/ });
   if (await learn.isVisible()) await learn.click();
-  await expect(dialog.getByRole('button', { name: /Aprendido/ })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /En repaso/ })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
   await expect(word).toBeFocused();

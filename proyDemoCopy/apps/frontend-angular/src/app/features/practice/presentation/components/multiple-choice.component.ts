@@ -16,7 +16,12 @@ import {
   host: { class: 'block' }, // Elemento anfitrión en bloque → respeta márgenes y space-y del contenedor
   template: `
     <fieldset class="space-y-2" [disabled]="disabled()">
-      <legend class="mb-2 text-lg font-semibold" [attr.lang]="language()">{{ prompt() }}</legend>
+      <legend class="sr-only" [attr.lang]="language()">{{ prompt() }}</legend>
+      <!-- [2026-11-06]: pregunta + IPA + traducción en UN contenedor gris (la <legend> queda para el lector de pantalla; un <legend> no admite caja propia fiable) -->
+      <div class="mb-3 space-y-1 rounded-xl border border-border bg-muted/40 px-4 py-3">
+        <p class="text-lg font-semibold" aria-hidden="true" [attr.lang]="language()">{{ prompt() }}</p>
+        <ng-content /><!-- [2026-11-02]: IPA + traducción DEBAJO de la pregunta (las proyecta el reproductor) -->
+      </div>
       @for (o of options(); track o) {
         <label
           class="flex cursor-pointer items-center gap-3 rounded-xl border-2 p-3 transition-colors has-[:checked]:border-primary has-[:checked]:bg-tone-brand-soft"

@@ -1,0 +1,48 @@
+// Punto de entrada de estilos. Metodología: SMACSS (capas) + BEM (nombres de clases).
+//
+//  1. base/    elementos HTML y variables de Bootstrap       (sin clases)
+//  2. layout/  estructura de página                          (prefijo `l-`)
+//  3. modules/ componentes reutilizables                     (bloque__elemento--modificador)
+//  4. state/   estados                                       (prefijo `is-`)
+//  5. theme/   paleta y medidas (variables CSS)
+//
+// Los módulos propios de cada pantalla viven en su archivo (Style*.scss, NavBar.scss…) y cada componente lo importa.
+
+@import 'base/variables';
+@import 'bootstrap/scss/bootstrap';
+
+@import 'theme/theme';
+@import 'base/base';
+@import 'layout/layout';
+
+@import 'modules/page-header';
+@import 'modules/panels';
+@import 'modules/entity-form';
+@import 'modules/row-list';
+@import 'modules/process-item';
+@import 'modules/summary';
+@import 'modules/stepper';
+@import 'modules/auth-card';
+@import 'modules/timeline';
+@import 'modules/assistant';
+
+.skip-link {
+  position: absolute;
+  left: 0.5rem;
+  top: -4rem;
+  z-index: 3000;
+  background: var(--ink);
+  color: #fff;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  &:focus {
+    top: 0.5rem;
+    color: #fff;
+  }
+}
+.shell-drawer {
+  background: var(--ink);
+  color: #fff;
+}
+
+@import 'state/state';

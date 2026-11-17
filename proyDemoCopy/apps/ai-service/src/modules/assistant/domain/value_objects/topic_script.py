@@ -130,7 +130,7 @@ FOCUS_FOLLOW_UPS = MappingProxyType(
 # [Despedidas · 2026-10-23]: si el alumno se despide, el avatar cierra la conversación (antes seguía preguntando casi lo mismo) | [Patrón]: Constant Object (MappingProxyType = solo lectura)
 FAREWELLS = MappingProxyType(
     {
-        "en": ("goodbye", "good bye", "bye", "bye bye", "see you", "see you later", "see you soon", "good night", "take care", "i have to go", "i must go", "gotta go"),
+        "en": ("goodbye", "good bye", "bye", "bye bye", "see you", "see you later", "see you soon", "good night", "take care", "i have to go", "i must go", "gotta go", "see you tomorrow", "talk to you later", "have a nice day", "have a good day", "farewell", "so long", "bye for now", "i need to go", "i'm leaving", "i am leaving"),
         "es": ("adiós", "adios", "chao", "chau", "hasta luego", "hasta pronto", "hasta mañana", "nos vemos", "me tengo que ir", "buenas noches"),
         "fr": ("au revoir", "salut", "à bientôt", "a bientot", "à plus", "bonne nuit", "je dois partir"),
         "de": ("tschüss", "tschuss", "auf wiedersehen", "bis bald", "bis später", "gute nacht", "ich muss gehen"),

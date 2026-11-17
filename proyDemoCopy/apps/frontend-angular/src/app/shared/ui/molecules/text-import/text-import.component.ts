@@ -46,10 +46,10 @@ export interface TextImportLabels {
       </form>
       }
       @if (busy()) {
-        <p class="text-xs text-muted-foreground sm:col-span-2" aria-live="polite"><aula-icon name="hourglass" /> {{ lb.reading }}</p>
+        <p class="type-meta text-muted-foreground sm:col-span-2" aria-live="polite"><aula-icon name="hourglass" /> {{ lb.reading }}</p>
       }
       @if (error()) {
-        <p role="alert" class="text-xs font-semibold text-tone-danger sm:col-span-2">{{ error() }}</p>
+        <p role="alert" class="type-meta font-semibold text-tone-danger sm:col-span-2">{{ error() }}</p>
       }
     </div>
   `,

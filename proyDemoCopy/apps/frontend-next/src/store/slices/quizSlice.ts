@@ -56,6 +56,15 @@ const quizSlice = createSlice({
     sessionStarted(state, action: PayloadAction<QuizSession>) {
       state.session = action.payload;
       state.phase = "playing";
+      // [2026-11-06 · Examen]: solo las preguntas sorteadas para este intento · al continuar un intento, salta a la primera sin contestar
+      const ids = action.payload.questionIds;
+      if (ids && state.quiz?.questions) {
+        const byId = new Map(state.quiz.questions.map((q) => [q.id, q]));
+        state.quiz.questions = ids.flatMap((id) => byId.get(id) ?? []);
+        const done = new Set(action.payload.answers.map((a) => a.questionId));
+        const next = state.quiz.questions.findIndex((q) => !done.has(q.id));
+        state.currentIndex = next < 0 ? Math.max(0, state.quiz.questions.length - 1) : next;
+      }
     },
     // [selectAnswer]: seleccion local antes de submit
     selectAnswer(state, action: PayloadAction<string>) {

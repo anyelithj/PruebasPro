@@ -30,11 +30,18 @@ export class Song {
   @Column({ type: 'varchar', length: 160, default: '' })
   artist!: string;
 
+  // [2026-11-10 · «el título tarda en cargar»]: IPA y traducción del título guardados al enriquecer la letra → la página los muestra al instante
+  @Column({ type: 'varchar', length: 300, name: 'title_ipa', default: '' })
+  titleIpa!: string;
+
+  @Column({ type: 'varchar', length: 300, name: 'title_translation', default: '' })
+  titleTranslation!: string;
+
   @Column({ type: 'varchar', length: 2 })
   language!: string;
 
-  @Column({ type: 'varchar', length: 2 })
-  level!: string; // A1–C2
+  @Column({ type: 'varchar', length: 2, nullable: true })
+  level!: string | null; // A1–C2 · [2026-11-16 · RF-148]: null = aún sin letra → se estima al cargarla (LevelClassifier)
 
   @Column({ type: 'varchar', length: 10, default: 'draft' })
   status!: SongStatus;
@@ -53,6 +60,10 @@ export class Song {
 
   @Column({ type: 'int', name: 'audio_size', nullable: true })
   audioSize!: number | null;
+
+  // [2026-11-03]: reproductor oficial embebido (YouTube, Spotify…) cuando el docente pega un enlace de streaming · el audio NO se descarga
+  @Column({ type: 'varchar', length: 400, name: 'embed_url', nullable: true })
+  embedUrl!: string | null;
 
   // [Prácticas generadas]: tipo → id de PracticeActivity (una por tipo; se reutiliza en vez de duplicar)
   @Column({ type: 'jsonb', name: 'practice_ids', default: () => "'{}'" })

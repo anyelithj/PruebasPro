@@ -56,10 +56,10 @@ export default async function CurriculumItemPage(props: { params: Promise<{ id: 
       <ResourceBackLink kind={item.kind} href={`/admin/curriculum?kind=${item.kind}`} memo="content" />
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs text-muted-foreground">
+          <p className="type-meta text-muted-foreground">
             <span aria-hidden>{meta.icon}</span> {meta.label} · {languageLabel(item.language)} · {item.level} · {SKILL_LABEL[item.skill]}
           </p>
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{item.topic}</h1>
+          <h1 className="title-page">{item.topic}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <StatusBadge status={item.reviewStatus} />
             <ProvenanceBadge provenance={item.provenance} />
@@ -73,12 +73,12 @@ export default async function CurriculumItemPage(props: { params: Promise<{ id: 
       {/* [Vista previa + estado]: lo primero que se ve es CÓMO queda el recurso y en qué punto del flujo está */}
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="surface p-5" aria-labelledby="preview-title">
-          <h2 id="preview-title" className="mb-3 text-sm font-bold uppercase tracking-wide text-muted-foreground">
+          <h2 id="preview-title" className="title-overline mb-3 text-muted-foreground">
             Así lo verá el estudiante
           </h2>
           {/* [Aviso de mezcla de idiomas]: datos creados antes de la regla de coherencia (p. ej. "Francés" con IPA en-GB) → se señalan para corregirlos */}
           {ipaVariant && !ipaVariant.toLowerCase().startsWith(item.language) && (
-            <p role="alert" className="mb-3 rounded-lg border border-tone-danger-line bg-tone-danger-soft px-3 py-2 text-xs text-tone-danger">
+            <p role="alert" className="mb-3 rounded-lg border border-tone-danger-line bg-tone-danger-soft px-3 py-2 type-meta text-tone-danger">
               <TriangleAlert aria-hidden className="inline size-4 align-[-0.125em]" /> Este recurso es de {languageLabel(item.language)} pero su pronunciación es «{ipaVariant}». Corrige el contenido abajo o usa «<Sparkles aria-hidden className="inline size-4 align-[-0.125em]" /> Generar con IA».
             </p>
           )}
@@ -86,27 +86,27 @@ export default async function CurriculumItemPage(props: { params: Promise<{ id: 
         </section>
 
         <section className="surface space-y-3 p-5" aria-labelledby="review-title">
-          <h2 id="review-title" className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
+          <h2 id="review-title" className="title-overline text-muted-foreground">
             Estado de publicación
           </h2>
           {/* [Comentario del revisor]: visible y destacado cuando existe (antes era "Nota: …" suelta) */}
           {/* [Etapa 4]: otra fuente dice algo incompatible → el revisor lo ve antes de aprobar | `role="alert"`: se anuncia al cargar */}
           {item.flags?.includes(CONTRADICTION_FLAG) && (
-            <p role="alert" className="rounded-lg border border-tone-danger-line bg-tone-danger-soft px-3 py-2 text-sm text-tone-danger">
+            <p role="alert" className="rounded-lg border border-tone-danger-line bg-tone-danger-soft px-3 py-2 text-tone-danger">
               <b>Contradicción entre fuentes:</b> otra fuente registra un valor incompatible para este elemento. Contrástalo antes de publicarlo.
             </p>
           )}
           {item.reviewNote && (
-            <p className="rounded-lg border border-tone-warning-line bg-tone-warning-soft px-3 py-2 text-sm text-tone-warning">
+            <p className="rounded-lg border border-tone-warning-line bg-tone-warning-soft px-3 py-2 text-tone-warning">
               <b>Comentario del revisor:</b> {item.reviewNote}
             </p>
           )}
-          <ReviewStatusActions id={item.id} status={item.reviewStatus} version={item.version} />
+          <ReviewStatusActions id={item.id} status={item.reviewStatus} version={item.version} canApprove={user?.role === Role.ADMIN} />
         </section>
       </div>
 
       <section aria-labelledby="edit-title" className="space-y-3">
-        <h2 id="edit-title" className="text-lg font-bold">
+        <h2 id="edit-title" className="title-section">
           Editar recurso
         </h2>
         {/* `key={item.version}` (React): reinicia el estado del formulario cuando llega una versión nueva */}
@@ -115,16 +115,16 @@ export default async function CurriculumItemPage(props: { params: Promise<{ id: 
 
       {/* [Trazabilidad]: procedencia + traza de la IA (modelo, tokens, latencia, memoria, banderas) — nada se presenta como verificado sin revisión */}
       <section className="surface space-y-3 p-5" aria-labelledby="trace-title">
-        <h2 id="trace-title" className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
+        <h2 id="trace-title" className="title-overline text-muted-foreground">
           Trazabilidad
         </h2>
-        <p className="text-xs">
+        <p className="type-meta">
           Procedencia: <b>{PROVENANCE_LABEL[item.provenance]}</b> · Fuente: <b>{item.source ?? "Contenido propio"}</b> · Versión {item.version} · Creado {new Date(item.createdAt).toLocaleDateString("es")}
         </p>
         {generation ? (
           <GenerationTrace trace={generation} humanEdited={humanEdited} />
         ) : (
-          <p className="text-xs text-muted-foreground">
+          <p className="type-meta text-muted-foreground">
             {item.provenance === "generated" ? "Generado por IA antes de que existiera el registro de trazas (sin métricas disponibles)." : "Contenido sin intervención de IA (LLM_REQUIRED = false)."}
           </p>
         )}
@@ -133,9 +133,9 @@ export default async function CurriculumItemPage(props: { params: Promise<{ id: 
       <details className="surface p-5">
         <summary className="cursor-pointer text-base font-bold">Historial de cambios ({revisions.length})</summary>
         {revisions.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">Sin historial disponible.</p>
+          <p className="mt-3 text-muted-foreground">Sin historial disponible.</p>
         ) : (
-          <ol className="mt-3 space-y-2 text-sm">
+          <ol className="mt-3 space-y-2">
             {revisions.map((r) => (
               <li key={r.id} className="flex flex-wrap gap-x-3 border-b border-border pb-2 last:border-0">
                 <span className="font-semibold">v{r.version}</span>

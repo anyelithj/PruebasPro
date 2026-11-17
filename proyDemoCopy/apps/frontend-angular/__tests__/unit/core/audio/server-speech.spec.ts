@@ -58,15 +58,19 @@ describe('Diálogos sin voz a texto en el servidor', () => {
     expect(dialogues.actionError()).toBeNull();
   });
 
-  it('Conversación: sin error, vuelve a reposo y la grabación se guarda al enviar el texto escrito', async () => {
+  // [2026-11-09]: la conversación ya no depende de la voz a texto del servidor → sin error y la grabación queda LOCAL en el turno
+  it('Conversación: no llama al servidor, vuelve a reposo y la grabación queda en el navegador al enviar', async () => {
     const { agent, repo } = setup();
+    const createObjectURL = jest.fn(() => 'blob:local'); // jsdom no implementa URL.createObjectURL
+    Object.defineProperty(URL, 'createObjectURL', { value: createObjectURL, configurable: true });
     await agent.start('tp1', 'en', 'A2');
-    expect(await agent.transcribe(rec())).toBeNull();
-    expect(agent.serverSpeechDown()).toBe(true);
+    agent.heard(rec('I like pasta'));
     expect(agent.error()).toBeNull();
     expect(agent.state()).toBe('idle');
-    agent.send('I like pasta'); // El alumno lo escribió
-    expect(repo.saveRecording).toHaveBeenCalled(); // «Mis grabaciones» conserva la voz
+    agent.send('I like pasta', 'voz');
+    expect(repo.transcribe).not.toHaveBeenCalled();
+    expect(repo.saveRecording).not.toHaveBeenCalled(); // Nada se sube ni se guarda en el servidor
+    expect(agent.recordingUrl('t1')).toBe('blob:local'); // «Mis grabaciones» conserva la voz en memoria
   });
 });
 

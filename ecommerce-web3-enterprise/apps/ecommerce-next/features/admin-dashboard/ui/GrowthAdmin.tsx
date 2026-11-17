@@ -10,7 +10,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useAdminGet, useAdminMutation } from "../api/dashboard.api";
 import { useAdminCommand } from "./AdminResource";
-import { DataTable } from "./DataTable";
+import { DataTable, TablePager, useLocalPage } from "./DataTable";
 import { SectionHeader } from "./AdminFields";
 import { StatusBadge } from "./OrdersAdmin";
 import { LLM_ADMIN } from "@/features/ai-chat/api/llm-admin.api";
@@ -171,6 +171,7 @@ export function MarkdownPlanner({ productId }: { productId: string }) {
     body: { weeks, revenue_weight: weight, ...(cost ? { unit_cost_cents: Math.round(Number(cost) * 100) } : {}) },
   }));
   const result = plan.data;
+  const schedule = useLocalPage(result?.schedule);
   return (
     <div className="flex flex-col gap-4">
       <form
@@ -199,16 +200,21 @@ export function MarkdownPlanner({ productId }: { productId: string }) {
             <caption className="sr-only">{t("schedule")}</caption>
             <thead className="border-b text-left text-slate-600"><tr><th scope="col" className="py-1">{t("week")}</th><th scope="col">{t("discount")}</th><th scope="col">{t("price")}</th><th scope="col" className="text-right">{t("units")}</th></tr></thead>
             <tbody>
-              {result.schedule.map((discount, index) => (
+              {schedule.visible.map((discount, position) => {
+                // Índice real de la semana: las filas visibles son solo una página del plan
+                const index = (schedule.meta.page - 1) * schedule.meta.limit + position;
+                return (
                 <tr key={index} className="border-b last:border-0">
                   <td className="py-1">{index + 1}</td>
                   <td>{Math.round(discount * 100)} %</td>
                   <td>{format.money(result.weekly_prices_cents[index] ?? 0)}</td>
                   <td className="text-right tabular-nums">{result.units[index]}</td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
+          <TablePager meta={schedule.meta} onPage={schedule.setPage} />
           <p className="text-xs text-slate-500">{t("elasticityNote", { elasticity: result.elasticity, leftover: result.leftover_units })}</p>
         </div>
       )}

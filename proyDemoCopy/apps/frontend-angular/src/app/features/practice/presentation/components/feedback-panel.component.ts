@@ -25,7 +25,7 @@ import { TipCardComponent } from './tip-card.component';
     >
       <header class="flex flex-wrap items-center justify-between gap-2">
         <p
-          class="text-base font-extrabold"
+          class="font-extrabold"
           [class]="f.correct ? 'text-tone-brand' : 'text-tone-danger'"
         >
           {{
@@ -41,7 +41,7 @@ import { TipCardComponent } from './tip-card.component';
 
       @if (f.findings.length) {
         <div>
-          <h3 class="mb-1 text-sm font-bold">{{ tx.corrections }}</h3>
+          <h3 class="title-card mb-1">{{ tx.corrections }}</h3>
           <ul class="space-y-2">
             @for (e of f.findings; track $index) {
               <li
@@ -63,13 +63,13 @@ import { TipCardComponent } from './tip-card.component';
       }
 
       @if (!f.correct && f.correct_answer) {
-        <p class="text-sm">
+        <p>
           <b>{{ tx.correctAnswer }}: </b>
           <span [attr.lang]="language()" class="font-semibold">{{ f.correct_answer }}</span>
         </p>
       }
       @if (f.explanation) {
-        <p class="text-sm">
+        <p>
           <b>{{ tx.why }}: </b><span lang="es">{{ f.explanation }}</span>
         </p>
       }

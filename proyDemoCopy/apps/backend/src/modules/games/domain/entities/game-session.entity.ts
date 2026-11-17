@@ -20,12 +20,13 @@ export interface GameSessionContent {
     term: string;
     translation?: string;
     emoji?: string;
+    image?: string; // [2026-11-03]: imagen del mazo del docente
     category?: string; // quick_sort: grupo al que pertenece la palabra
   }[];
   role?: string | null;
   objectives?: { id: string; text: string; keywords: string[] }[];
   met?: string[]; // Objetivos de role-play cumplidos
-  lines?: { text: string; answer?: string; gap?: string }[]; // Comprensión: frases de la partida
+  lines?: { text: string; answer?: string; gap?: string; question?: string }[]; // Comprensión: frases de la partida
   conversationId?: string | null; // Memoria del agente en FastAPI
   fallback?: boolean; // Contenido en inglés porque el idioma aún no tiene banco propio
 }

@@ -17,7 +17,7 @@ export default async function AdminJobsPage(props: { searchParams: Promise<Recor
   const [overview, detail] = await Promise.allSettled([listJobs(), jobId ? getJob(jobId) : Promise.resolve(null)]);
   if (overview.status === "rejected")
     return (
-      <p role="alert" className="mt-6 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+      <p role="alert" className="mt-6 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-destructive">
         No se pudo cargar el panel de trabajos: {overview.reason instanceof Error ? overview.reason.message : "error"}
       </p>
     );
@@ -29,8 +29,8 @@ export default async function AdminJobsPage(props: { searchParams: Promise<Recor
   return (
     <section className="w-full space-y-5 py-4" aria-labelledby="jobs-title">
       <header>
-        <h1 id="jobs-title" className="text-2xl font-extrabold tracking-tight sm:text-3xl">Tareas automáticas</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Lo que la plataforma hace sola, sin que nadie pulse un botón: envío de correos, anclaje de certificados en Sepolia, verificación de pagos cripto, exportación de reportes y limpieza nocturna (3:00) de sesiones y enlaces vencidos. Aquí ves si alguna falló.</p>
+        <h1 id="jobs-title" className="title-page">Tareas automáticas</h1>
+        <p className="mt-1 text-muted-foreground">Lo que la plataforma hace sola, sin que nadie pulse un botón: envío de correos, anclaje de certificados en Sepolia, verificación de pagos cripto, exportación de reportes y limpieza nocturna (3:00) de sesiones y enlaces vencidos. Aquí ves si alguna falló.</p>
       </header>
 
       <div className="overflow-x-auto rounded-xl border border-border">
@@ -42,7 +42,7 @@ export default async function AdminJobsPage(props: { searchParams: Promise<Recor
           <tbody>
             {data.scheduled.map((s) => (
               <tr key={s.name} className="border-t border-border">
-                <td className={td}><span className="font-semibold">{s.name}</span><p className="text-xs text-muted-foreground">{s.description}</p></td>
+                <td className={td}><span className="font-semibold">{s.name}</span><p className="type-meta text-muted-foreground">{s.description}</p></td>
                 <td className={`${td} font-mono text-xs`}>{s.cron}</td>
                 <td className={td}>{date(s.next)}</td>
                 <td className={`${td} text-right`}><RunJobButton name={s.name} /></td>
@@ -95,7 +95,7 @@ export default async function AdminJobsPage(props: { searchParams: Promise<Recor
 
       {selected && (
         <section aria-labelledby="job-detail" className="rounded-xl border border-border bg-muted/40 p-4 text-sm">
-          <h2 id="job-detail" className="font-bold">Trabajo #{selected.id} · {selected.name} · {STATUS[selected.status]}</h2>
+          <h2 id="job-detail" className="title-section">Trabajo #{selected.id} · {selected.name} · {STATUS[selected.status]}</h2>
           {selected.failedReason && <p className="mt-2 text-destructive">{selected.failedReason}</p>}
           <pre className="mt-2 overflow-x-auto rounded bg-background p-3 text-xs">{JSON.stringify(selected.result, null, 2)}</pre>
         </section>

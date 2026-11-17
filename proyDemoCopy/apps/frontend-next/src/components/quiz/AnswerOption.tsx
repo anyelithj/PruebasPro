@@ -1,4 +1,5 @@
 "use client";
+import { stripMarkup } from "@/lib/strip-markup";
 import { cn } from "@/lib/utils";
 // [AnswerOption]: boton de opcion accesible | [Patron]: Atomic Design | [Principio]: SRP
 
@@ -46,7 +47,7 @@ export function AnswerOption({
       <span className="grid place-items-center size-8 rounded-lg border border-border bg-background text-sm font-bold shrink-0">
         {LETTERS[index] ?? index + 1}
       </span>
-      <span className="text-sm">{label}</span>
+      <span className="text-sm">{stripMarkup(label)}</span> {/* se muestra limpio; onSelect envía el valor original */}
     </button>
   );
 }

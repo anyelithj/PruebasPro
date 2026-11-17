@@ -6,12 +6,18 @@ import { API_URL } from '@core/http/api-url.token';
 import { VocabularyRepository } from '../domain/vocabulary.repository.port';
 import {
   LookupSchema,
+  DetectResultSchema,
+  TranslateResultSchema,
   VocabularyEntrySchema,
   type EntryFilter,
   type EntryInput,
   type EntryPatch,
   type Lookup,
   type LookupInput,
+  type SourceLanguage,
+  type DetectResult,
+  type TextKind,
+  type TranslateResult,
   type VocabularyEntry,
 } from '../domain/models/vocabulary';
 // [VocabularyHttpRepository · Infraestructura · Sprint 8.3]: HttpClient hacia /api/vocabulary/* (BFF de Next.js → NestJS Vocabulary) | [Patrón]: Adapter + Repository | [Principio]: SRP (único lugar con HTTP) + DIP | [Paradigma]: Reactivo (RxJS)
@@ -29,11 +35,19 @@ export class VocabularyHttpRepository extends VocabularyRepository {
       .pipe(map((r) => LookupSchema.parse(r)));
   }
 
-  // [translate · 2026-10-23]: POST /vocabulary/lookup/translate → { translation } | Zod valida el contrato
-  translate(text: string, source: string, target: string): Observable<string> {
+  // [translate · 2026-10-23]: POST /vocabulary/lookup/translate → { translation, detected_language? } | Zod valida el contrato
+  // [2026-10-27]: source «auto» → NestJS lo deja pasar y FastAPI detecta el idioma
+  translate(text: string, source: SourceLanguage, target: string, kind: TextKind = 'frase'): Observable<TranslateResult> {
     return this.http
-      .post<unknown>(`${this.base}/lookup/translate`, { text, source, target })
-      .pipe(map((r) => z.object({ translation: z.string() }).parse(r).translation));
+      .post<unknown>(`${this.base}/lookup/translate`, { text, source, target, tipo_de_texto: kind })
+      .pipe(map((r) => TranslateResultSchema.parse(r)));
+  }
+
+  // [detect · 2026-10-30]: POST /vocabulary/lookup/detect → { language } (determinista, sin LLM)
+  detect(text: string): Observable<DetectResult> {
+    return this.http
+      .post<unknown>(`${this.base}/lookup/detect`, { text })
+      .pipe(map((r) => DetectResultSchema.parse(r)));
   }
 
   getLookup(id: string): Observable<Lookup> {

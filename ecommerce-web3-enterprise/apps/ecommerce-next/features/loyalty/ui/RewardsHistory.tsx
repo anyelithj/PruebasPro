@@ -4,6 +4,7 @@
 import { useLoyaltyAccount } from "../api/loyalty.api";
 import { useFormatter, useTranslations } from "next-intl";
 import { useFormat } from "@/shared/hook/useFormat";
+import { TablePager, useLocalPage } from "@/features/admin-dashboard/ui/DataTable";
 
 export function RewardsHistory() {
   const t = useTranslations("loyalty.history");
@@ -11,6 +12,7 @@ export function RewardsHistory() {
   const { date } = useFormat();
   const { data: account } = useLoyaltyAccount();
   const rows = account?.recentTransactions ?? [];
+  const page = useLocalPage(rows);
   if (rows.length === 0) return <p className="text-sm text-slate-600">{t("empty")}</p>;
 
   return (
@@ -25,7 +27,7 @@ export function RewardsHistory() {
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
-          {rows.map((row) => (
+          {page.visible.map((row) => (
             <tr key={row.id}>
               <td className="py-2">{date(row.createdAt)}</td>
               <td>{row.reason}</td>
@@ -38,6 +40,7 @@ export function RewardsHistory() {
           ))}
         </tbody>
       </table>
+      <TablePager meta={page.meta} onPage={page.setPage} />
     </div>
   );
 }

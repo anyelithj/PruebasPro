@@ -13,9 +13,10 @@ export interface CategoryLabels {
   selector: 'aula-polyglot-topic-picker',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div role="group" [attr.aria-label]="label()" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <!-- [2026-11-16 · 3.er pase]: \`inline\` → sin rejilla propia (display: contents): los selects entran en la rejilla del panel junto a «Nivel» → mismas columnas, sin huecos -->
+    <div role="group" [attr.aria-label]="label()" [class]="inline() ? 'contents' : 'grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(12rem,1fr))]'">
       @for (g of groups(); track g.category) {
-        <label class="text-xs font-semibold text-muted-foreground">
+        <label [class]="inline() ? 'filter-field' : 'text-xs font-semibold text-muted-foreground'">
           {{ labels().categories[g.category] }}
           <select
             class="control mt-1 w-full text-sm font-semibold text-foreground"
@@ -42,14 +43,16 @@ export class PolyglotTopicPickerComponent {
   readonly selected = input<string | null>(null);
   readonly label = input('Tema');
   readonly labels = input.required<CategoryLabels>();
+  readonly inline = input(false); // [2026-11-16]: dentro del panel de filtros → etiquetas con el estilo de «Nivel» y sin rejilla propia
   readonly showStatus = input(false); // El personal ve qué temas siguen en borrador
   readonly draftLabel = input('Borrador');
   readonly picked = output<string>();
 
   // [groups]: categorías con al menos un tema, en el orden de TOPIC_CATEGORIES | `filter` + `map` (ES5) | [Paradigma]: Funcional (derivado, sin estado)
+  // [2026-11-14]: los números son vocabulario → sus temas aparecen en «📚 Vocabulario» (sin un select «🔢 Números» aparte)
   protected readonly groups = computed(() =>
-    TOPIC_CATEGORIES.map((category) => {
-      const topics = this.topics().filter((t) => t.category === category);
+    TOPIC_CATEGORIES.filter((c) => c !== 'numbers').map((category) => {
+      const topics = this.topics().filter((t) => (t.category === 'numbers' ? 'vocabulary' : t.category) === category);
       return { category, topics, selected: topics.some((t) => t.id === this.selected()) };
     }).filter((g) => g.topics.length > 0),
   );

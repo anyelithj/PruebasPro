@@ -1,0 +1,72 @@
+// MODULE — top-bar
+.top-bar {
+  grid-area: top;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 1rem;
+  background: var(--petrol);
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 1020;
+  &__brand {
+    color: #fff;
+    font-weight: 700;
+    text-decoration: none;
+    &:hover {
+      color: #fff;
+    }
+  }
+  &__menu,
+  &__icon-btn {
+    background: transparent;
+    border: 0;
+    color: #fff;
+    font-size: 1.4rem;
+    padding: 0.25rem 0.5rem;
+    position: relative;
+    &:hover,
+    &:focus {
+      color: #fff;
+    }
+  }
+  &__actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  &__badge {
+    position: absolute;
+    top: -0.1rem;
+    right: -0.1rem;
+    font-size: 0.65rem;
+  }
+  &__user {
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    &:hover,
+    &:focus {
+      color: #fff;
+    }
+  }
+  &__avatar {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background: var(--amber);
+    color: var(--ink);
+    display: inline-grid;
+    place-items: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+  &__notifications {
+    min-width: 18rem;
+    max-width: 90vw;
+  }
+}

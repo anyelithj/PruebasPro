@@ -2,7 +2,7 @@
  * @jest-environment node
  */
 // [Test streamToBackend · Sprint 6.7]: la 302 del backend hacia la URL firmada de S3/R2 llega al navegador (Next no la sigue ni transporta los bytes) | [Patrón]: Unit Test con Mock (fetch y sesión) | [Principio]: KISS
-import { isRetryableNetworkError, streamToBackend } from "@/lib/stream-proxy";
+import { isRetryableNetworkError, isUpstreamTimeout, streamToBackend } from "@/lib/stream-proxy";
 
 jest.mock("@/lib/auth", () => ({ getFreshAccessToken: jest.fn().mockResolvedValue("jwt") }));
 
@@ -55,6 +55,17 @@ describe("streamToBackend", () => {
     expect(res.status).toBe(502);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect((fetchMock.mock.calls[0][1] as RequestInit & { duplex?: string }).duplex).toBe("half");
+  });
+
+  // [2026-10-27]: NestJS no respondió en 300 s (undici headersTimeout) → 504 con su propio mensaje, sin reintento (repetiría un trabajo largo)
+  it("devuelve 504 con mensaje de espera si el backend tarda demasiado", async () => {
+    fetchMock.mockReset();
+    fetchMock.mockRejectedValue(Object.assign(new TypeError("fetch failed"), { cause: Object.assign(new Error("Headers Timeout Error"), { code: "UND_ERR_HEADERS_TIMEOUT" }) }));
+    const res = await streamToBackend(jsonPost(), "/music/songs/s1/lines");
+    expect(res.status).toBe(504);
+    expect((await res.json()).message).toMatch(/tardó demasiado/);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(isUpstreamTimeout(new Error("boom"))).toBe(false);
   });
 
   it("isRetryableNetworkError: solo errores de transporte", () => {

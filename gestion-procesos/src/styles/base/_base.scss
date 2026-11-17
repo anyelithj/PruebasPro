@@ -1,0 +1,27 @@
+// SMACSS · BASE — reglas para elementos HTML, sin clases.
+body {
+  line-height: 1.55;
+}
+:focus-visible {
+  outline: 3px solid var(--amber);
+  outline-offset: 2px;
+}
+main:focus {
+  outline: none;
+}
+dl {
+  margin-bottom: 0;
+}
+table caption {
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -31,6 +31,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       email: parsed.data.email,
       password: parsed.data.password,
     });
+    // [2FA · 2026-11-16]: el reto viaja al cliente (solo challengeId, sin secretos) para pedir el código
+    if ("twoFactorRequired" in data) return NextResponse.json(data);
     // [Respuesta]: solo perfil al cliente. Tokens viven en cookies httpOnly (no JS)
     return NextResponse.json({ user: data.user });
   } catch (err) {

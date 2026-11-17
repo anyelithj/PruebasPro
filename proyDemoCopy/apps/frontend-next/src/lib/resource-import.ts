@@ -1,4 +1,6 @@
 import type { CurriculumItemKind } from "@/types/curriculum";
+import { detectLanguage, UNDETERMINED } from "@/lib/lang-detect";
+import { LANGUAGE_VALUES } from "@/lib/languages";
 // [Importación de recursos]: convierte filas de texto (de Excel, Word, PDF, OCR o .txt) en contenidos por tipo de recurso, listos para revisar en el formulario
 // [Patrón]: Adapter (formato libre → contenido tipado) + Lookup Table (alias de columnas) + Strategy (armado por tipo) | [Principio]: SRP + OCP (nuevo tipo = nueva entrada) | [Paradigma]: Funcional (funciones puras, sin DOM)
 // [Deterministic-first]: reglas explícitas, sin IA; lo que falte lo completa el autor antes de guardar (el backend vuelve a validar)
@@ -7,7 +9,8 @@ export type Row = string[];
 type Field = "term" | "translation" | "example" | "exampleTranslation" | "emoji" | "ipa" | "incorrect" | "correct" | "explanation" | "gender" | "pos" | "title" | "structure";
 
 // [Tipos importables]: los de estructura simple (una fila = un elemento) + [2026-10-24] reglas gramaticales (documento → una regla; Excel → una regla por fila)
-export const IMPORTABLE_KINDS: ReadonlySet<CurriculumItemKind> = new Set(["vocabulary", "grammar_rule", "example", "translation", "pronunciation", "common_error"]);
+// [2026-10-27]: + ejercicios (hoja de ejercicios en PDF/Word/imagen/web → preguntas numeradas con opciones y respuesta)
+export const IMPORTABLE_KINDS: ReadonlySet<CurriculumItemKind> = new Set(["vocabulary", "grammar_rule", "example", "translation", "pronunciation", "common_error", "exercise"]);
 export const MAX_IMPORT_ROWS = 500; // Tope por archivo (formularios manejables)
 
 // [Columnas por posición]: si el archivo no trae encabezados | `Readonly<Record<…>>` (TS)
@@ -18,6 +21,7 @@ const POSITIONAL: Readonly<Partial<Record<CurriculumItemKind, Field[]>>> = {
   pronunciation: ["term", "ipa"],
   common_error: ["incorrect", "correct", "explanation"],
   grammar_rule: ["title", "explanation", "structure", "example", "exampleTranslation"], // [2026-10-24]: Excel/CSV sin encabezados
+  exercise: [], // [2026-10-27]: tiene su propio lector (rowsToExercises / textToExercises); la entrada solo lo marca como importable
 };
 
 // [Alias de encabezados]: español e inglés, sin tildes ni mayúsculas | [Patrón]: Lookup Table
@@ -57,9 +61,21 @@ export function splitLine(line: string): Row {
 }
 
 // [textToRows]: texto (Word, PDF, OCR, .txt) → filas | una línea = un elemento; líneas vacías se ignoran
+// [joinOpenParens · Fix 2026-10-30]: el PDF parte una entrada a mitad de paréntesis («el sauce (árbol, / en España)») y cada línea salía como elemento → «en España)» aparecía como palabra
+// Mientras queden paréntesis abiertos, la línea siguiente se une a la actual | [Paradigma]: Funcional (pura)
+export function joinOpenParens(lines: readonly string[]): string[] {
+  const depth = (s: string) => (s.match(/\(/g)?.length ?? 0) - (s.match(/\)/g)?.length ?? 0);
+  const out: string[] = [];
+  for (const line of lines) {
+    const prev = out.at(-1);
+    if (prev !== undefined && depth(prev) > 0 && line.trim()) out[out.length - 1] = `${prev} ${line.trim()}`;
+    else out.push(line);
+  }
+  return out;
+}
+
 export const textToRows = (text: string): Row[] =>
-  text
-    .split(/\r?\n/)
+  joinOpenParens(text.split(/\r?\n/))
     .map(splitLine)
     .filter((r) => r.some(Boolean));
 
@@ -185,6 +201,8 @@ const TEMPLATES: Readonly<Partial<Record<CurriculumItemKind, string[][]>>> = {
   pronunciation: [["palabra", "ipa"], ["water", "/ˈwɔːtə/"]],
   common_error: [["incorrecto", "correcto", "explicacion"], ["I have 20 years.", "I am 20 years old.", "La edad se expresa con el verbo to be."]],
   // [2026-10-24]: una fila por regla; filas extra con el nombre vacío añaden más ejemplos a la regla anterior
+  // [2026-10-27]: opciones separadas por «|» (vacío = respuesta abierta o verdadero/falso); la respuesta es el texto de la opción o su letra
+  exercise: [["pregunta", "opciones", "respuesta", "explicacion"], ["She ___ to school every day.", "go | goes | going", "goes", "Tercera persona del singular: -s."], ["The sun rises in the east. (True/False)", "", "true", ""]],
   grammar_rule: [["regla", "explicacion", "formula", "ejemplo", "traduccion del ejemplo"], ["Present perfect", "Acciones pasadas con relevancia en el presente.", "have/has + participio", "I have lost my keys.", "He perdido mis llaves."], ["", "", "", "She has visited Paris twice.", "Ella ha visitado París dos veces."]],
 };
 // [templateRows · 2026-10-23]: filas de la plantilla (las usa la plantilla Excel .xlsx) | `undefined` si el tipo no se importa
@@ -302,6 +320,12 @@ export interface Extracted {
 
 // [extractedToContents]: punto de entrada único del importador → contenidos del tipo elegido | `fallbackTitle`: tema del formulario (si el documento no trae título)
 export function extractedToContents(kind: CurriculumItemKind, ex: Extracted, language: string, fallbackTitle = ""): ImportResult {
+  if (kind === "exercise") {
+    // [2026-10-27]: tabla con encabezados de ejercicio (Excel/CSV/tabla de Word o web) → un ejercicio por fila; si no, el texto con preguntas numeradas
+    const table = ex.rows.length ? rowsToExercises(ex.rows) : null;
+    if (table?.contents.length) return table;
+    return textToExercises(ex.text || ex.rows.map((r) => r.join(" ")).join("\n"));
+  }
   if (kind === "grammar_rule") {
     // Tabla con encabezados de regla (o una hoja sin texto) → una regla por fila; si no, el documento entero es UNA regla
     if (ex.rows.length && (findHeader(ex.rows) || !ex.text.trim())) return rowsToGrammar(ex.rows);
@@ -309,4 +333,214 @@ export function extractedToContents(kind: CurriculumItemKind, ex: Extracted, lan
     return rule ? { contents: [rule], skipped: 0, incomplete: rule.explanationEs ? 0 : 1 } : { contents: [], skipped: 0, incomplete: 0 };
   }
   return rowsToContents(kind, ex.rows.length ? ex.rows : textToRows(ex.text), language);
+}
+
+// ───── [2026-10-27] Ejercicios: hoja de ejercicios (PDF, Word, imagen con OCR, web, Excel) → ejercicios editables ─────
+// [Patrón]: Adapter + State Machine (pregunta → opciones → respuesta/explicación) | [Principio]: Deterministic-first (sin IA: el docente revisa antes de guardar)
+// + SSOT (mismas formas y límites que el esquema Zod de EXERCISE en NestJS) | [Paradigma]: Funcional (funciones puras, sin DOM)
+// [Formatos que entiende]: «1. Pregunta» / «1) …» / «Pregunta 1: …» · opciones «a) …», «B. …», «(c) …», «- …» · correcta marcada con «*», «✓», «[x]» o «(correcta)»
+// · «Respuesta: b» / «Answer: goes» / «Explicación: …» bajo cada pregunta · o un solucionario al final («Respuestas: 1-b, 2-a» o una línea por número)
+
+type ExerciseType = "multiple_choice" | "true_false" | "fill_blank" | "open_answer";
+interface ExerciseDraft { prompt: string; options: string[]; marked: string[]; answers: string[]; explanation: string[] }
+const EX_MAX = { prompt: 2000, option: 300, answer: 500, options: 8, answers: 10, explanation: 2000 } as const; // = esquema EXERCISE (NestJS)
+
+const QUESTION = /^\s*(?:(?:pregunta|question|ejercicio|exercise|q)\s*)?(\d{1,3})\s*[.):\-–]\s*(.*)$/i; // «12. …» · «Pregunta 3: …» · «Q4) …»
+const OPTION = /^\s*(?:\(?([a-h])\s*[).:]|\(([a-h])\)|[-•*·▪●◦☐□○]|\[\s*[xX✓✔ ]?\s*\])\s*(.+)$/i; // «a) …» «(b) …» «C. …» «- …» «[x] …»
+const ANSWER_LINE = /^\s*(?:respuestas?(?:\s+correctas?)?|answers?|correct\s+answers?|soluci[oó]n(?:es)?|solution|clave|key)\s*[:=\-–]\s*(.+)$/i;
+const ANSWER_HEADING = /^\s*(?:respuestas|answers|answer\s+key|soluciones|solucionario|clave\s+de\s+respuestas)\s*:?\s*$/i;
+const EXPLANATION_LINE = /^\s*(?:explicaci[oó]n|explanation|porque|because|why|nota|note)\s*[:\-–]\s*(.+)$/i;
+const MARK = /\s*(?:\*+|✓|✔|\((?:x|correcta?|correct)\)|\[(?:x|✓|✔)\])\s*/gi; // Marcas de «opción correcta» (se quitan del texto)
+const MARKED = /^\s*\[\s*[xX✓✔]\s*\]|\*|✓|✔|\((?:x|correcta?|correct)\)|\[(?:x|✓|✔)\]/i;
+const TRUE_WORDS = new Set(["true", "verdadero", "v", "t", "vrai", "wahr", "verdadeiro", "yes", "si"]);
+const FALSE_WORDS = new Set(["false", "falso", "f", "faux", "falsch", "no"]);
+const BLANK = /_{2,}|\.{4,}|…{2,}|\(\s*\)/; // Hueco para completar: «___», «....», «( )»
+const TF_HINT = /\b(?:true\s*(?:\/|or|o)\s*false|verdadero\s*(?:\/|o)\s*falso|t\s*\/\s*f|v\s*\/\s*f)\b/i;
+
+const clip = (t: string, max: number) => t.replace(/\s+/g, " ").trim().slice(0, max); // Un espacio entre palabras + límite del esquema
+const letterIndex = (l: string) => "abcdefgh".indexOf(l.toLowerCase()); // «b» → 1 · -1 si no es letra de opción
+const tfValue = (t: string): "true" | "false" | null => {
+  const n = norm(t);
+  return TRUE_WORDS.has(n) ? "true" : FALSE_WORDS.has(n) ? "false" : null;
+};
+
+// [toContent]: borrador acumulado → contenido EXERCISE (tipo deducido + respuestas coherentes con las opciones)
+function toContent(d: ExerciseDraft): Record<string, unknown> | null {
+  const prompt = clip(d.prompt, EX_MAX.prompt);
+  if (!prompt) return null;
+  const options = [...new Set(d.options.map((o) => clip(o, EX_MAX.option)).filter(Boolean))].slice(0, EX_MAX.options);
+  const explanationEs = clip(d.explanation.join(" "), EX_MAX.explanation);
+  const extra = explanationEs ? { explanationEs } : {};
+  const raw = [...d.marked, ...d.answers].map((a) => a.trim()).filter(Boolean);
+  // [Verdadero/falso]: dos opciones «Verdadero/Falso», pista «(True/False)» o respuesta «true/falso» sin opciones
+  const tfOptions = options.length === 2 && options.every((o) => tfValue(o) !== null);
+  const tfAnswer = raw.map(tfValue).find((v) => v !== null) ?? null;
+  if (tfOptions || TF_HINT.test(prompt) || (!options.length && tfAnswer)) {
+    return { prompt, type: "true_false", answerKey: tfAnswer ? [tfAnswer] : [], ...extra }; // Sin respuesta → [] (el editor obliga a elegir V/F)
+  }
+  if (options.length >= 2) {
+    // [Opción múltiple]: cada respuesta se resuelve a una opción (por letra «b» o por texto) → answerKey ⊆ options (regla del backend)
+    const resolved = raw
+      .flatMap((a) => a.split(/\s*[,;/]\s*|\s+(?:y|and)\s+/i))
+      .map((a) => {
+        const byLetter = /^\(?([a-h])\)?[.)]?$/i.exec(a);
+        if (byLetter) return options[letterIndex(byLetter[1])];
+        return options.find((o) => norm(o) === norm(a.replace(MARK, "")));
+      })
+      .filter((o): o is string => Boolean(o));
+    return { prompt, type: "multiple_choice", options, answerKey: [...new Set(resolved)].slice(0, EX_MAX.answers), ...extra };
+  }
+  const answers = [...new Set(raw.map((a) => clip(a, EX_MAX.answer)))].slice(0, EX_MAX.answers);
+  const type: ExerciseType = BLANK.test(prompt) ? "fill_blank" : "open_answer";
+  return { prompt, type, answerKey: answers.length ? answers : [""], ...extra }; // [""] = editor con un campo vacío para escribir la respuesta
+}
+
+// [textToExercises]: texto libre → ejercicios | una pregunta empieza con su número; sin números, cada línea con «?» o hueco es una pregunta
+export function textToExercises(text: string): ImportResult {
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const numbered = lines.some((l) => QUESTION.test(l) && !ANSWER_HEADING.test(l));
+  const drafts = new Map<number, ExerciseDraft>(); // número → borrador (el solucionario final responde por número)
+  let current = null as ExerciseDraft | null; // `as`: evita que TS estreche a `null` (se asigna dentro de `start`)
+  let auto = 0; // Numeración propia cuando el documento no numera
+  let inKey = false; // Dentro del solucionario final
+  const start = (n: number, prompt: string) => {
+    current = { prompt, options: [], marked: [], answers: [], explanation: [] };
+    drafts.set(n, current);
+  };
+  for (const line of lines) {
+    if (ANSWER_HEADING.test(line)) {
+      inKey = true;
+      continue;
+    }
+    if (inKey) {
+      // «1-b, 2-a, 3-goes» o «1. b» → respuesta del ejercicio con ese número | `matchAll` (ES2020)
+      for (const m of line.matchAll(/(\d{1,3})\s*[.):=\-–]\s*([^,;]+)/g)) drafts.get(Number(m[1]))?.answers.push(m[2]!.trim());
+      continue;
+    }
+    const answer = ANSWER_LINE.exec(line);
+    if (answer && /^\s*\d{1,3}\s*[.):=\-–]/.test(answer[1]!)) {
+      // «Respuestas: 1-b, 2-a» en una sola línea → solucionario por número
+      for (const m of answer[1]!.matchAll(/(\d{1,3})\s*[.):=\-–]\s*([^,;]+)/g)) drafts.get(Number(m[1]))?.answers.push(m[2]!.trim());
+      continue;
+    }
+    if (answer && current) {
+      current.answers.push(...answer[1]!.split(/\s*[,;]\s*/));
+      continue;
+    }
+    const explanation = EXPLANATION_LINE.exec(line);
+    if (explanation && current) {
+      current.explanation.push(explanation[1]!);
+      continue;
+    }
+    const q = numbered ? QUESTION.exec(line) : null;
+    if (q) {
+      start(Number(q[1]), q[2] ?? "");
+      continue;
+    }
+    if (!numbered && (/[?¿]/.test(line) || BLANK.test(line)) && !OPTION.test(line)) {
+      start(++auto + 1000, line); // `+ 1000`: no choca con números de un solucionario
+      continue;
+    }
+    const opt = OPTION.exec(line);
+    if (opt && current) {
+      const value = opt[3]!.replace(MARK, " ").trim();
+      current.options.push(value);
+      if (MARKED.test(line)) current.marked.push(value);
+      // [Opciones en una línea]: «a) go  b) goes  c) going» → se separan por la letra siguiente
+      const inline = value.split(/\s+(?=\(?[b-h]\s*[).]\s)/i);
+      if (inline.length > 1) {
+        const all = [inline[0]!, ...inline.slice(1).map((o) => o.replace(/^\(?[b-h]\s*[).]\s*/i, ""))];
+        current.options.splice(-1, 1, ...all.map((o) => o.replace(MARK, " ").trim()));
+      }
+      continue;
+    }
+    // [Continuación]: línea suelta antes de las opciones → sigue el enunciado (PDF que corta frases largas)
+    if (current && !current.options.length) current.prompt += ` ${line}`;
+  }
+  const contents: Record<string, unknown>[] = [];
+  let skipped = 0;
+  for (const d of drafts.values()) {
+    const c = toContent(d);
+    if (c && contents.length < MAX_IMPORT_ROWS) contents.push(c);
+    else skipped += 1;
+  }
+  return finishExercises(contents, skipped);
+}
+
+// [Encabezados de una tabla de ejercicios]: español e inglés, sin tildes | [Patrón]: Lookup Table
+const EX_HEADERS: Readonly<Record<"prompt" | "options" | "answer" | "explanation" | "type", string[]>> = {
+  prompt: ["pregunta", "question", "enunciado", "prompt", "ejercicio", "exercise", "item", "frase", "sentence"],
+  options: ["opciones", "options", "alternativas", "choices"],
+  answer: ["respuesta", "respuestas", "answer", "answers", "respuesta correcta", "correct answer", "clave", "key", "solucion", "solution"],
+  explanation: ["explicacion", "explanation", "nota", "notas", "notes", "feedback"],
+  type: ["tipo", "type", "tipo de ejercicio", "exercise type"],
+};
+const OPTION_COLUMN = /^(?:opcion|option|alternativa)?\s*([a-h])$/; // Columnas «A | B | C | D» u «Opción A»
+const TYPE_ALIASES: Readonly<Record<string, ExerciseType>> = { "multiple choice": "multiple_choice", "opcion multiple": "multiple_choice", "multiple_choice": "multiple_choice", test: "multiple_choice", "true false": "true_false", "verdadero falso": "true_false", "true_false": "true_false", "fill blank": "fill_blank", completar: "fill_blank", "fill_blank": "fill_blank", abierta: "open_answer", "open answer": "open_answer", "open_answer": "open_answer" };
+
+// [rowsToExercises]: tabla con encabezados de ejercicio → un ejercicio por fila | null si la tabla no es de ejercicios (sin columna de pregunta)
+export function rowsToExercises(rows: Row[]): ImportResult | null {
+  for (let h = 0; h < Math.min(rows.length, HEADER_SCAN); h++) {
+    const cols = new Map<number, keyof typeof EX_HEADERS | "option">();
+    rows[h]!.forEach((cell, i) => {
+      const n = norm(cell);
+      const field = (Object.keys(EX_HEADERS) as Array<keyof typeof EX_HEADERS>).find((f) => EX_HEADERS[f].includes(n));
+      if (field) cols.set(i, field);
+      else if (OPTION_COLUMN.test(n)) cols.set(i, "option");
+    });
+    if (![...cols.values()].includes("prompt")) continue;
+    const contents: Record<string, unknown>[] = [];
+    let skipped = 0;
+    for (const row of rows.slice(h + 1, h + 1 + MAX_IMPORT_ROWS)) {
+      const d: ExerciseDraft = { prompt: "", options: [], marked: [], answers: [], explanation: [] };
+      let type: ExerciseType | undefined;
+      row.forEach((cell, i) => {
+        const v = cell.trim();
+        if (!v) return;
+        switch (cols.get(i)) {
+          case "prompt": d.prompt = v; break;
+          case "options": d.options.push(...v.split(/\s*(?:\||;|\n)\s*/)); break; // Opciones en una celda: «go | goes | going»
+          case "option": d.options.push(v); break;
+          case "answer": d.answers.push(...v.split(/\s*(?:\||;)\s*/)); break;
+          case "explanation": d.explanation.push(v); break;
+          case "type": type = TYPE_ALIASES[norm(v).replace(/_/g, " ")] ?? TYPE_ALIASES[v]; break;
+        }
+      });
+      const c = toContent(d);
+      if (!c) {
+        skipped += 1;
+        continue;
+      }
+      // [Tipo declarado en la tabla]: manda sobre el deducido si es coherente (p. ej. «completar» sin «___» en el enunciado)
+      if (type && type !== c.type && (type === "fill_blank" || type === "open_answer") && !(c.options as string[] | undefined)?.length) c.type = type;
+      contents.push(c);
+    }
+    return finishExercises(contents, skipped);
+  }
+  return null;
+}
+
+// [finishExercises]: cuenta los incompletos (sin respuesta correcta) → el panel avisa cuántos hay que completar | [Principio]: DRY (texto y tabla)
+function finishExercises(contents: Record<string, unknown>[], skipped: number): ImportResult {
+  const incomplete = contents.filter((c) => !(c.answerKey as string[]).some((a) => a.trim())).length;
+  return { contents, skipped, incomplete };
+}
+
+// [onlyLanguage · 2026-11-03]: deja SOLO el contenido del idioma elegido (un PDF/web con secciones en inglés, francés y alemán → solo el del recurso/actividad)
+// Se conserva: el español (explicaciones/traducciones), lo indeciso y las líneas cortas (< 3 palabras: palabras sueltas, nombres) · la 1.ª fila de una tabla (encabezados)
+// [Patrón]: Filter (función pura) sobre lib/lang-detect | [Principio]: DRY → lo usan «Crear recurso» (ImportPanel) y «Crear actividad» (ActivityCreateForm)
+// ponytail: heurística por línea (stopwords), no un detector real → si deja fuera líneas válidas, subir el umbral de palabras
+export function onlyLanguage(ex: Extracted, language: string): { ex: Extracted; dropped: number } {
+  const lang = language.toLowerCase().split("-")[0] ?? "";
+  if (!lang) return { ex, dropped: 0 };
+  const candidates = [...new Set([lang, "es", ...LANGUAGE_VALUES])];
+  const foreign = (s: string) => {
+    if ((s.match(/\p{L}+/gu) ?? []).length < 3) return false;
+    const d = detectLanguage(s, candidates);
+    return !!d && d !== lang && d !== "es" && d !== UNDETERMINED;
+  };
+  const lines = ex.text.split("\n");
+  const text = lines.filter((l) => !foreign(l)).join("\n");
+  const rows = ex.rows.filter((r, i) => i === 0 || !foreign(r.join(" ")));
+  return { ex: { rows, text }, dropped: lines.length - text.split("\n").length + ex.rows.length - rows.length };
 }

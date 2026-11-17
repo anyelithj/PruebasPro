@@ -16,6 +16,7 @@ import { SubmitAnswerUseCase } from './application/use-cases/submit-answer.use-c
 import { EndSessionUseCase } from './application/use-cases/end-session.use-case';
 import { ListMyHistoryUseCase } from './application/use-cases/list-my-history.use-case';
 import { QuizController } from './presentation/quiz.controller';
+import { ExamsService } from './application/use-cases/exams.service';
 import { AyaProvider } from './infrastructure/clients/aya.provider';
 import { QwenProvider } from './infrastructure/clients/qwen.provider';
 import { MistralProvider } from './infrastructure/clients/mistral.provider';
@@ -47,6 +48,7 @@ const quizRepoProvider = { provide: QUIZ_REPOSITORY, useClass: QuizRepository };
     SubmitAnswerUseCase,
     EndSessionUseCase,
     ListMyHistoryUseCase,
+    ExamsService, // [2026-11-06]: examen final de curso y de nivel
   ],
   exports: [quizRepoProvider],
 })

@@ -10,6 +10,16 @@ export interface CertificateDocument {
   cefrLevel: string | null; // A1–C2 → color del diploma (null = morado de marca)
   issuedAt: Date;
   verifyUrl: string;
+  kind?: 'course' | 'level'; // [2026-11-06]: level → «aprobó el examen de nivel» (sin curso)
+  examScore?: number | null; // % del examen final o de nivel
+  template?: CertificateTemplate; // [2026-11-09 · RF-32]: textos configurables por el ADMIN
+}
+
+export interface CertificateTemplate {
+  institution: string;
+  signerName: string | null;
+  signerTitle: string | null;
+  legalText: string | null;
 }
 
 export interface RenderedDocument {

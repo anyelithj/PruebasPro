@@ -10,6 +10,7 @@ import { WordLookupElement } from '@shared/ui/organisms/word-lookup/word-lookup.
 import { ThemeService } from '@core/theme/theme.service';
 import { VocabularyRepository } from '@features/vocabulary/domain/vocabulary.repository.port';
 import { VocabularyHttpRepository } from '@features/vocabulary/infrastructure/vocabulary.http-repository';
+import { IpaLookupCache } from '@features/vocabulary/application/ipa-lookup.cache';
 import { AulaEventsService } from '@core/events/aula-events.service';
 import { SessionService } from '@core/auth/session.service';
 // [registerElements · Angular Elements]: registra los Web Components que el shell de Next.js inserta en sus páginas (<aula-campana>, <aula-exportar>, <aula-guia-widget>) | [Patrón]: Adapter (componente Angular → Custom Element) + Registry | [Principio]: OCP (widget nuevo = una entrada en ELEMENTS) + DRY (mismos providers que la app)
@@ -31,6 +32,7 @@ export async function registerElements(): Promise<void> {
     providers: [
       ...coreProviders,
       { provide: VocabularyRepository, useClass: VocabularyHttpRepository },
+      IpaLookupCache, // [2026-10-27]: caché + circuito compartidos por todos los <aula-ipa-text> (sin tormenta de 503 con el servicio de idiomas caído)
     ],
   });
   app.injector.runInContext(() => {

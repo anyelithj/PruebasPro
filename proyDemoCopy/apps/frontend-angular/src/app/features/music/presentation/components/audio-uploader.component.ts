@@ -12,6 +12,7 @@ export interface AudioLinkLabels {
   importLyrics: string;
   importingLyrics: string;
   streamingPage: string;
+  embed: string; // [2026-11-03]: botón «Insertar reproductor»
 }
 
 let nextId = 0; // Contador del módulo → ids únicos para aria-describedby aunque haya varios cargadores en la página
@@ -23,16 +24,17 @@ let nextId = 0; // Contador del módulo → ids únicos para aria-describedby au
   host: { class: 'block' },
   template: `
     <div class="space-y-2">
-      <label class="block text-xs font-semibold text-muted-foreground">
-        {{ label() }}
-        <input
-          type="file"
-          accept="audio/*,video/mp4,video/webm"
-          class="mt-1 block w-full text-sm file:mr-3 file:rounded-full file:border-0 file:bg-tone-brand-soft file:px-4 file:py-2 file:font-semibold file:text-tone-brand hover:file:bg-tone-brand-line"
-          (change)="pick($any($event.target).files?.[0] ?? null)"
-        />
-      </label>
-      <div class="flex flex-wrap items-center gap-3">
+      <!-- [2026-11-06]: archivo · «Subir» · «✓ Audio subido» en UNA fila (antes el selector ocupaba su propia línea) | flex-wrap: en móvil baja sin desbordar -->
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="block min-w-0 flex-1 basis-64 text-xs font-semibold text-muted-foreground">
+          {{ label() }}
+          <input
+            type="file"
+            accept="audio/*,video/mp4,video/webm"
+            class="mt-1 block w-full text-sm file:mr-3 file:rounded-full file:border-0 file:bg-tone-brand-soft file:px-4 file:py-2 file:font-semibold file:text-tone-brand hover:file:bg-tone-brand-line"
+            (change)="pick($any($event.target).files?.[0] ?? null)"
+          />
+        </label>
         <button
           type="button"
           class="btn btn-primary"
@@ -54,7 +56,7 @@ let nextId = 0; // Contador del módulo → ids únicos para aria-describedby au
             <input
               type="url"
               class="control mt-1 w-full"
-              placeholder="https://…/cancion.mp3"
+              placeholder="Ejemplo: https://www.youtube.com/watch?v=…"
               [value]="link()"
               [attr.aria-invalid]="linkHint() ? 'true' : null"
               [attr.aria-describedby]="linkHint() ? hintId : null"
@@ -64,11 +66,8 @@ let nextId = 0; // Contador del módulo → ids únicos para aria-describedby au
           </label>
           <!-- [2026-10-25]: UN solo botón → enlace directo = importar el audio · página de letras = importar la letra (antes aparecía un segundo botón) -->
           <button type="submit" class="btn btn-outline" [disabled]="busy() || importingLyrics() || !link().trim()">
-            @if (kind() === 'lyrics_page' && linkLabels(); as lb) {
-              <aula-icon name="file-text" /> {{ importingLyrics() ? lb.importingLyrics : lb.importLyrics }}
-            } @else {
-              <aula-icon name="download" /> {{ urlButton() }}
-            }
+            <!-- [2026-11-04]: SIEMPRE «Importar enlace» (como antes) → acepta cualquier URL: el servidor decide si guarda el archivo, el reproductor o el audio de la página -->
+            <aula-icon name="download" /> {{ importingLyrics() && linkLabels() ? linkLabels()!.importingLyrics : urlButton() }}
           </button>
         </form>
         <!-- [Aviso del enlace]: role="status" (informativo, no bloquea) · página de letras → botón que la importa al paso «Letra» -->
@@ -80,7 +79,7 @@ let nextId = 0; // Contador del módulo → ids únicos para aria-describedby au
         }
       }
       @if (error()) {
-        <p role="alert" class="text-xs font-semibold text-tone-danger">{{ error() }}</p>
+        <p role="alert" class="type-meta font-semibold text-tone-danger">{{ error() }}</p>
       }
     </div>
   `,
@@ -125,8 +124,12 @@ export class AudioUploaderComponent {
   // [submitLink]: solo un enlace directo llega al servidor; el resto deja el aviso visible (Fail Fast, sin 400 esperable)
   protected submitLink(): void {
     this.touched.set(true);
-    if (this.kind() === 'direct') this.uploadUrl.emit(this.link().trim());
-    else if (this.kind() === 'lyrics_page') this.importLyrics.emit(this.link().trim());
+    // [2026-11-04]: cualquier enlace → audio (archivo, reproductor de YouTube/Spotify… o el audio que tenga la página) + letra (de la página o transcrita del audio)
+    // Página de letras → solo la letra · YouTube → reproductor + letra de sus subtítulos o descripción · otro streaming → solo el reproductor
+    const url = this.link().trim();
+    const k = this.kind();
+    if (k === 'direct' || k === 'streaming_page') this.uploadUrl.emit(url);
+    if (k === 'direct' || k === 'lyrics_page' || (k === 'streaming_page' && /youtu.?be/i.test(url))) this.importLyrics.emit(url);
   }
   protected readonly file = signal<File | null>(null);
   protected readonly error = signal('');

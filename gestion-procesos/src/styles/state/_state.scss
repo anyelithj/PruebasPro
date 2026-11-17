@@ -1,0 +1,52 @@
+// SMACSS · STATE — clases `is-*` que describen cómo se ve algo ahora. Se combinan con cualquier módulo.
+// Llevan !important a propósito: un estado debe ganar siempre al estilo base del módulo.
+.is-current {
+  background: var(--petrol) !important;
+  color: #fff !important;
+  border-color: var(--petrol) !important;
+  font-weight: 700;
+}
+.is-done {
+  background: var(--tint) !important;
+  color: var(--petrol) !important;
+}
+.is-over {
+  border-color: var(--amber) !important;
+  background: #f6ecd0 !important;
+}
+.is-today {
+  background: #fdf5dc !important;
+  box-shadow: inset 0 0 0 2px var(--amber);
+}
+.is-selected {
+  box-shadow: inset 0 0 0 3px var(--petrol);
+}
+.is-outside {
+  background: #f3f6f8 !important;
+  color: #6b7a85 !important;
+}
+.is-overdue {
+  background: #f6dcd7 !important;
+  color: #8a2f20 !important;
+}
+.is-alert dd {
+  color: var(--danger) !important;
+}
+.is-unread {
+  font-weight: 700;
+}
+.is-read {
+  color: var(--muted);
+}
+
+@media print {
+  .is-print-hidden,
+  .top-bar,
+  .l-shell__aside,
+  .skip-link {
+    display: none !important;
+  }
+  .l-shell {
+    display: block;
+  }
+}

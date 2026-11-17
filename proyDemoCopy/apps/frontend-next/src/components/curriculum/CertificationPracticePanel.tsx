@@ -52,7 +52,7 @@ export function CertificationPracticePanel({ certifications }: { certifications:
   const field = "mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground";
   return (
     <section aria-labelledby="practice-title" className="surface space-y-4 p-5">
-      <h2 id="practice-title" className="text-lg font-bold">
+      <h2 id="practice-title" className="title-section">
         Generar práctica original
       </h2>
       <form
@@ -108,11 +108,11 @@ export function CertificationPracticePanel({ certifications }: { certifications:
       {practice && (
         <div className="space-y-3">
           {/* [Aviso obligatorio]: originalidad y que no es un examen oficial (regla de la especificación) */}
-          <p role="note" className="rounded-lg border border-tone-warning-line bg-tone-warning-soft px-3 py-2 text-sm text-tone-warning">
+          <p role="note" className="rounded-lg border border-tone-warning-line bg-tone-warning-soft px-3 py-2 text-tone-warning">
             {practice.notice}
           </p>
-          <p className="text-xs text-muted-foreground">
-            Tema: <b>{practice.topic}</b> · origen: {practice.strategy === "cache" ? "caché (sin volver a llamar a la IA)" : practice.strategy === "existing" ? "recurso existente" : "IA local"}
+          <p className="type-meta text-muted-foreground">
+            Tema: <b>{practice.topic}</b> · origen: {practice.strategy === "cache" ? "caché (sin volver a llamar a la IA)" : practice.strategy === "existing" ? "recurso existente" : "IA"}
           </p>
           <ul className="space-y-2">
             {practice.drafts.map((d, i) => (

@@ -73,13 +73,13 @@ export function TopicCreatePanel({
 
   return (
     <div role="group" aria-label="Crear nuevo tema" className="space-y-3 rounded-lg border border-primary/30 bg-background p-4">
-      <p className="text-xs text-muted-foreground">
+      <p className="type-meta text-muted-foreground">
         {languageLabel(language)} · {level} · {SKILL_LABEL[skill]}
       </p>
       <div className="space-y-1.5">
         <Label htmlFor="new-topic-name">Nombre *</Label>
         <Input id="new-topic-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Present Simple" autoFocus />
-        <p className="text-xs text-muted-foreground">
+        <p className="type-meta text-muted-foreground">
           Clave: <code>{slug || "—"}</code>
         </p>
       </div>
@@ -93,7 +93,7 @@ export function TopicCreatePanel({
         contextKey={`${language}|${level}|${skill}`}
       />
       {error && (
-        <p role="alert" className="text-xs text-destructive">
+        <p role="alert" className="type-meta text-destructive">
           {error}
         </p>
       )}
@@ -180,7 +180,7 @@ export function SourceCreatePanel({
         </div>
       </div>
       {error && (
-        <p role="alert" className="text-xs text-destructive">
+        <p role="alert" className="type-meta text-destructive">
           {error}
         </p>
       )}

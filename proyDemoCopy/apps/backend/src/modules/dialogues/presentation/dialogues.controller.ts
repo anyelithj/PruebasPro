@@ -40,6 +40,7 @@ import {
   CreateDialogueBody,
   DialogueStatusBody,
   DraftDialogueBody,
+  UpdateDialogueBody,
 } from '../application/dtos/dialogue.dto';
 import { DraftDialogueUseCase } from '../application/use-cases/draft-dialogue.use-case';
 import { ConfirmDialogueLevelUseCase } from '../application/use-cases/confirm-dialogue-level.use-case';
@@ -47,6 +48,7 @@ import { GetDialogueUseCase } from '../application/use-cases/get-dialogue.use-ca
 import { ListDialoguesUseCase } from '../application/use-cases/list-dialogues.use-case';
 import { UploadDialogueUseCase } from '../application/use-cases/upload-dialogue.use-case';
 import { WithdrawDialogueUseCase } from '../application/use-cases/withdraw-dialogue.use-case';
+import { UpdateDialogueUseCase } from '../application/use-cases/update-dialogue.use-case';
 // [Controller Dialogues · Sprint 9.3 · RF-125 a RF-128]: biblioteca de diálogos guionados — subir con licencia (TEACHER o ADMIN; nivel estimado por FastAPI), audio opcional sincronizado, listar y ver (todos), confirmar el nivel (docente) y retirar | [Patrón]: Thin Controller | [Principio]: SRP + mínimo privilegio + verificación humana | [Tecnología]: NestJS + Multer en memoria + Express streaming
 
 @ApiTags('dialogues')
@@ -60,6 +62,7 @@ export class DialoguesController {
     private readonly confirm: ConfirmDialogueLevelUseCase,
     private readonly withdraw: WithdrawDialogueUseCase,
     private readonly draft: DraftDialogueUseCase,
+    private readonly updater: UpdateDialogueUseCase,
   ) {}
 
   // [2026-10-19]: borrador desde el texto de una URL o generado por la IA (no guarda nada; el docente revisa y luego POST /dialogues)
@@ -78,7 +81,7 @@ export class DialoguesController {
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({
     summary:
-      'Subir diálogo (texto por hablante y licencia): traducción e IPA por turno y nivel estimado',
+      'Subir diálogo (texto por hablante; licencia solo si el texto es importado): se guarda al momento y la traducción, el IPA y el nivel estimado se completan en segundo plano',
   })
   createOne(
     @CurrentUser() u: JwtPayload,
@@ -154,6 +157,20 @@ export class DialoguesController {
     await sendRanged(res, range, src);
   }
 
+  // [2026-10-27]: «Editar» de Gestión → Actividades → Diálogos (página de Next.js) — título, hablantes y nivel
+  @Patch(':id')
+  @Roles(Role.TEACHER, Role.ADMIN)
+  @ApiOperation({
+    summary: 'Editar título, hablantes o nivel del diálogo (autor o ADMIN)',
+  })
+  updateOne(
+    @CurrentUser() u: JwtPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: UpdateDialogueBody,
+  ) {
+    return this.updater.execute(actorOf(u), id, body);
+  }
+
   @Patch(':id/level')
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiOperation({
@@ -170,7 +187,10 @@ export class DialoguesController {
 
   @Patch(':id/status')
   @Roles(Role.TEACHER, Role.ADMIN)
-  @ApiOperation({ summary: 'Publicar (nivel confirmado, visible) o despublicar (vuelve a borrador) un diálogo' })
+  @ApiOperation({
+    summary:
+      'Publicar (nivel confirmado, visible) o despublicar (vuelve a borrador) un diálogo',
+  })
   status(
     @CurrentUser() u: JwtPayload,
     @Param('id', ParseUUIDPipe) id: string,

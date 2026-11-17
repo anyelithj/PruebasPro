@@ -41,7 +41,7 @@ import { MetricCardComponent } from '../components/metric-card.component';
       }
       @case ('error') {
         <aula-card-page [heading]="tx.resultTitle">
-          <p role="alert" class="text-sm text-tone-danger">{{ games.result.error() }}</p>
+          <p role="alert" class="text-tone-danger">{{ games.result.error() }}</p>
         </aula-card-page>
       }
       @case ('success') {
@@ -77,7 +77,7 @@ import { MetricCardComponent } from '../components/metric-card.component';
             <aula-metric-card [label]="tx.colResult" [value]="tx.status[s.status]" />
           </div>
           @if (avg(); as m) {
-            <h2 class="mb-2 text-base font-bold">{{ tx.fluencyTitle }}</h2>
+            <h2 class="title-section mb-2">{{ tx.fluencyTitle }}</h2>
             <div class="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
               <aula-metric-card
                 [label]="tx.timeToRespond"
@@ -91,7 +91,7 @@ import { MetricCardComponent } from '../components/metric-card.component';
               <aula-metric-card [label]="tx.reuse" [value]="m.reuseRatio + ' %'" />
             </div>
           }
-          <h2 class="mb-2 text-base font-bold">{{ tx.rounds }}</h2>
+          <h2 class="title-section mb-2">{{ tx.rounds }}</h2>
           @if (r.rounds.length) {
             <div class="overflow-x-auto rounded-xl border border-border">
               <table class="w-full min-w-[32rem] text-left text-sm">
@@ -135,7 +135,7 @@ import { MetricCardComponent } from '../components/metric-card.component';
               </table>
             </div>
           } @else {
-            <p class="text-sm text-muted-foreground">{{ tx.noRounds }}</p>
+            <p class="text-muted-foreground">{{ tx.noRounds }}</p>
           }
         </aula-card-page>
       }

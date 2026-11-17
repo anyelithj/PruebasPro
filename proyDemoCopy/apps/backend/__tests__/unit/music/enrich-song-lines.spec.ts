@@ -53,8 +53,39 @@ describe('EnrichSongLinesUseCase', () => {
     expect(out.missing).toBe(2); // Falta la traducción → la UI ofrece reintentar
   });
 
+  // [2026-10-27 · Bug «No se pudo contactar con el servidor»]: presupuesto por petición → la respuesta llega antes del timeout del BFF y dice `more`
+  it('agotado el presupuesto: hace UN trozo, guarda y responde `more` para la siguiente tanda', async () => {
+    const lines = Array.from({ length: 45 }, (_, i) => line(i));
+    const tools = { lines: jest.fn(async (t: string[]) => ok(t)), ipa: jest.fn() } as unknown as LanguageToolsPort;
+    const out = await new EnrichSongLinesUseCase(access, repo(lines) as never, tools).run({ id: 'u', role: 'TEACHER' }, 's', 'tok', 0);
+    expect(tools.lines).toHaveBeenCalledTimes(1);
+    expect(out).toMatchObject({ missing: 25, more: true, unavailable: false });
+  });
+
+  it('IA caída (ni /lines ni /ipa responden) → `unavailable` y sin `more`', async () => {
+    const lines = [line(0), line(1)];
+    const down = jest.fn(async () => {
+      throw new Error('ECONNREFUSED');
+    });
+    const tools = { lines: down, ipa: down } as unknown as LanguageToolsPort;
+    const out = await new EnrichSongLinesUseCase(access, repo(lines) as never, tools).run({ id: 'u', role: 'TEACHER' }, 's', 'tok');
+    expect(out).toMatchObject({ missing: 2, more: false, unavailable: true });
+  });
+
   it('chunk reparte en grupos del tamaño pedido', () => {
     expect(chunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
     expect(ENRICH_CHUNK).toBeLessThanOrEqual(40); // FastAPI traduce cada trozo en UNA llamada al LLM
+  });
+});
+
+// [2026-11-06]: verso escrito a mano (revisado) con traducción y sin IPA → se completa el IPA y la traducción del docente se conserva
+describe('EnrichSongLinesUseCase · campos vacíos de versos manuales', () => {
+  it('rellena solo lo vacío', async () => {
+    const manual = { ...line(0), reviewed: true, translation: 'mi traducción' } as SongLine;
+    const tools = { lines: jest.fn(async (t: string[]) => ok(t)), ipa: jest.fn() } as unknown as LanguageToolsPort;
+    const out = await new EnrichSongLinesUseCase(access, repo([manual]) as never, tools).run({ id: 'u', role: 'TEACHER' }, 's', 'tok');
+    expect(manual.translation).toBe('mi traducción');
+    expect(manual.ipa).toBe('/line 0/');
+    expect(out.missing).toBe(0);
   });
 });

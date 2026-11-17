@@ -8,10 +8,13 @@ import { computed } from "vue";
 import type { InfluencerStats } from "~~/entities/social/model/social.types";
 import { formatMoney, formatNumber } from "~~/shared/lib/format";
 import { useSocialStore } from "../model/social.store";
+import { useLocalPage } from "~~/shared/composable/useLocalPage";
+import TablePager from "~~/shared/ui/TablePager.vue";
 
 const props = defineProps<{ influencers: InfluencerStats[] }>();
 const store = useSocialStore();
 const { locale } = useI18n();
+const rows = useLocalPage(() => props.influencers);
 const total = computed(() => props.influencers.reduce((sum, item) => sum + item.commissionCents, 0));
 </script>
 
@@ -37,7 +40,7 @@ const total = computed(() => props.influencers.reduce((sum, item) => sum + item.
           </tr>
         </thead>
         <tbody class="divide-y">
-          <tr v-for="item in influencers" :key="item.handle">
+          <tr v-for="item in rows.visible.value" :key="item.handle">
             <th scope="row" class="py-2 font-medium">@{{ item.handle }}</th>
             <td class="py-2 text-right tabular-nums">{{ formatNumber(item.clicks, locale) }}</td>
             <td class="py-2 text-right tabular-nums">{{ item.purchases }}</td>
@@ -52,6 +55,7 @@ const total = computed(() => props.influencers.reduce((sum, item) => sum + item.
         </tfoot>
       </table>
     </div>
+    <TablePager :meta="rows.meta.value" @page="rows.page.value = $event" />
     <p class="text-xs text-slate-500">{{ $t("social.influencer.estimateHint") }}</p>
   </section>
 </template>

@@ -1,0 +1,37 @@
+import { Meta } from '@storybook/addon-docs/blocks'
+
+<Meta title="Guía/Introducción" />
+
+# Gestión de Procesos — guía de componentes
+
+Esta documentación muestra los componentes reutilizables de la aplicación y las reglas con las que se construyen.
+Cada historia se puede probar con los controles y revisar con la pestaña de **Accesibilidad**.
+
+## Arquitectura en capas
+
+| Capa                  | Carpetas                                       | Responsabilidad                        |
+| --------------------- | ---------------------------------------------- | -------------------------------------- |
+| Presentación          | `components/`, `routers/`, `styles/`           | Pantallas, rutas y estilos             |
+| Estado y casos de uso | `hooks/`, `redux/`                             | Datos de la interfaz, slices, acciones |
+| Dominio               | `services/`, `models/`                         | Reglas de negocio puras                |
+| Infraestructura       | `firebase/`, servicios de Firestore y archivos | Acceso a Firebase                      |
+
+Cada capa solo depende de la que tiene debajo.
+
+## Un formulario para crear, editar y ver
+
+Los formularios de procesos, tareas, usuarios y workflows son **uno solo por entidad** y reciben un `mode`:
+
+- `create`: campos vacíos y botón «Crear».
+- `edit`: datos existentes y botón «Guardar cambios».
+- `view`: los mismos campos, bloqueados y sin botón. Es lo que se muestra en la pantalla de detalle.
+
+Todos se apoyan en `FormShell` (estructura, errores y modo de solo lectura) y en `useFormSubmit` (estado de guardado).
+Así, agregar un campo se hace una sola vez y aparece en los tres casos.
+
+## Accesibilidad
+
+- Cada campo tiene `label` asociado; los errores se anuncian con `role="alert"`.
+- Se puede usar todo con teclado; el foco siempre es visible.
+- El tablero Kanban ofrece un selector además del arrastre.
+- ESLint revisa reglas de accesibilidad (`jsx-a11y`) y Storybook añade la pestaña **Accesibilidad**.

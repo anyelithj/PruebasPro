@@ -137,8 +137,8 @@ export class DialoguesHttpRepository extends DialoguesRepository {
   }
 
   // [streamTurn]: SSE por POST (eventos user → token… → avatar → done); el parser vive en shared/utils (DRY con Tutor y Agente Guía)
-  streamTurn(id: string, text: string): Observable<SseMessage<SseData>> {
-    return postSse(this.http, `${this.base}/sessions/${this.id(id)}/turns/stream`, { text });
+  streamTurn(id: string, text: string, origin: 'voz' | 'escrito' = 'escrito'): Observable<SseMessage<SseData>> {
+    return postSse(this.http, `${this.base}/sessions/${this.id(id)}/turns/stream`, { text, origin });
   }
 
   endSession(id: string): Observable<Session> {

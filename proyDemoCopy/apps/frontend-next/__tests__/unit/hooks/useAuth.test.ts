@@ -37,7 +37,7 @@ describe("useAuth", () => {
       json: async () => ({ user: { id: "u1", email: "a@b.com" } }),
     });
     const { result } = setup();
-    let ok: boolean | undefined;
+    let ok: boolean | string | undefined;
     await act(async () => {
       ok = await result.current.login({ email: "a@b.com", password: "secret12" });
     });
@@ -46,13 +46,34 @@ describe("useAuth", () => {
     expect(pushMock).toHaveBeenCalledWith("/dashboard");
   });
 
+  // [2FA · 2026-11-16]: paso 1 devuelve el challengeId sin autenticar; paso 2 (código) autentica y navega
+  it("login con 2FA devuelve el reto y verifyTwoFactor completa la sesión", async () => {
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ twoFactorRequired: true, challengeId: "c1" }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ user: { id: "u1", email: "a@b.com" } }) });
+    const { result } = setup();
+    let res: boolean | string | undefined;
+    await act(async () => {
+      res = await result.current.login({ email: "a@b.com", password: "secret12" });
+    });
+    expect(res).toBe("c1");
+    expect(result.current.isAuthenticated).toBe(false);
+    expect(pushMock).not.toHaveBeenCalled();
+    await act(async () => {
+      res = await result.current.verifyTwoFactor("c1", "123456");
+    });
+    expect(res).toBe(true);
+    expect(global.fetch).toHaveBeenLastCalledWith("/api/auth/2fa/verify", expect.objectContaining({ body: JSON.stringify({ challengeId: "c1", code: "123456" }) }));
+    await waitFor(() => expect(result.current.isAuthenticated).toBe(true));
+  });
+
   it("login fallido (res !ok) registra error y no navega", async () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: false,
       json: async () => ({ message: "Credenciales inválidas" }),
     });
     const { result } = setup();
-    let ok: boolean | undefined;
+    let ok: boolean | string | undefined;
     await act(async () => {
       ok = await result.current.login({ email: "a@b.com", password: "bad" });
     });
@@ -64,7 +85,7 @@ describe("useAuth", () => {
   it("login con fallo de red captura la excepción y no rompe", async () => {
     (global.fetch as jest.Mock).mockRejectedValueOnce(new Error("network down"));
     const { result } = setup();
-    let ok: boolean | undefined;
+    let ok: boolean | string | undefined;
     await act(async () => {
       ok = await result.current.login({ email: "a@b.com", password: "secret12" });
     });

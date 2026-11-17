@@ -21,12 +21,12 @@ import { CryptoPaymentComponent, type CryptoPaymentTexts } from '../components/c
   template: `
     @let t = i18n.t().web3;
     <aula-card-page [heading]="t.cryptoTitle" [subtitle]="t.cryptoSubtitle">
-      <p class="mb-4 text-xs text-muted-foreground">{{ t.network }}</p>
+      <p class="mb-4 type-meta text-muted-foreground">{{ t.network }}</p>
       @if (crypto.actionError() ?? wallet.actionError(); as err) {
-        <p role="alert" class="mb-3 text-sm text-tone-danger">{{ err }}</p>
+        <p role="alert" class="mb-3 text-tone-danger">{{ err }}</p>
       }
       @if (!id() && !orden()) {
-        <p class="text-sm">{{ t.noOrder }}</p>
+        <p>{{ t.noOrder }}</p>
         <a aulaBackLink href="/checkout">{{ t.backCheckout }}</a>
       } @else {
         @switch (crypto.payment.status()) {
@@ -45,7 +45,7 @@ import { CryptoPaymentComponent, type CryptoPaymentTexts } from '../components/c
             @if (crypto.payment.data(); as p) {
               @if (p.status === 'pending' && !wallet.account()) {
                 <div class="mb-4 rounded-xl border border-border bg-muted/40 p-4">
-                  <p class="mb-2 text-sm font-semibold">{{ t.connectFirst }}</p>
+                  <p class="mb-2 font-semibold">{{ t.connectFirst }}</p>
                   <aula-connect-wallet [wallets]="wallet.discovered()" [texts]="connectTexts()" (picked)="wallet.connect($event)" (rediscover)="wallet.rediscover()" />
                 </div>
               }

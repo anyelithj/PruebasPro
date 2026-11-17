@@ -191,7 +191,8 @@ export class PublicWebFetcher implements WebPageFetcher {
   }
 
   // [request]: un GET con lookup protegido, tiempo y tamaño máximos | `new Promise` (ES2015) sobre la API de callbacks de Node
-  private request(url: URL, headers: Record<string, string>): Promise<RawResponse> {
+  // [Fix 2026-11-05 · ENOTFOUND transitorio]: el DNS de Windows a veces falla una vez (ENOTFOUND/EAI_AGAIN) aunque el dominio exista → 1 reintento tras 1 s
+  private request(url: URL, headers: Record<string, string>, retryDns = true): Promise<RawResponse> {
     return new Promise((resolve, reject) => {
       const lib = url.protocol === 'https:' ? https : http;
       const req = lib.get(url, { lookup: guardedLookup, timeout: TIMEOUT_MS, headers }, (res) => {
@@ -210,15 +211,19 @@ export class PublicWebFetcher implements WebPageFetcher {
         res.on('error', (e) => reject(new WebFetchError('network', e.message)));
       });
       req.on('timeout', () => req.destroy(new WebFetchError('timeout', 'La página tardó demasiado en responder.')));
-      req.on('error', (err) =>
+      req.on('error', (err: NodeJS.ErrnoException) => {
+        if (retryDns && (err.code === 'ENOTFOUND' || err.code === 'EAI_AGAIN')) {
+          setTimeout(() => this.request(url, headers, false).then(resolve, reject), 1000);
+          return;
+        }
         reject(
           err instanceof WebFetchError
             ? err
             : err.message === 'PRIVATE_ADDRESS'
               ? new WebFetchError('private_address', 'Ese enlace apunta a una red privada y no está permitido.')
               : new WebFetchError('network', `No se pudo conectar con el sitio (${err.message}).`),
-        ),
-      );
+        );
+      });
     });
   }
 }

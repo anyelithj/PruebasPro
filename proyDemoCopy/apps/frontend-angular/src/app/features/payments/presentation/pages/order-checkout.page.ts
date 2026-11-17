@@ -35,7 +35,7 @@ const STATUS_TONE: Record<PaymentStatus, BadgeTone> = {
       <aula-card-page [heading]="t.confirmTitle" [subtitle]="t.confirmSubtitle">
         @let p = status.hasValue() ? status.value() : undefined;
         @if (status.error()) {
-          <p role="alert" class="text-sm text-tone-danger">{{ errorText(status.error()) }}</p>
+          <p role="alert" class="text-tone-danger">{{ errorText(status.error()) }}</p>
         } @else if (!p) {
           <aula-spinner [label]="i18n.t().common.loading" />
         } @else {
@@ -57,12 +57,12 @@ const STATUS_TONE: Record<PaymentStatus, BadgeTone> = {
       <aula-card-page [heading]="t.checkoutTitle" [subtitle]="t.checkoutSubtitle">
         @if (!cart.items().length && !demoDone()) {
           <div class="space-y-3 text-center">
-            <p class="text-sm text-muted-foreground">{{ t.emptyCart }}</p>
+            <p class="text-muted-foreground">{{ t.emptyCart }}</p>
             <a aulaButton variant="outline" href="/courses">{{ t.browse }}</a>
           </div>
         } @else if (demoDone()) {
           <div role="status" class="space-y-3">
-            <p class="text-sm">{{ t.demoDone }}</p>
+            <p>{{ t.demoDone }}</p>
             <a aulaButton href="/courses">{{ t.goCourses }}</a>
           </div>
         } @else {
@@ -70,10 +70,10 @@ const STATUS_TONE: Record<PaymentStatus, BadgeTone> = {
             <aula-order-summary [heading]="t.summary" [totalLabel]="t.total" [lines]="cartLines()" [totalMinor]="cartTotalMinor()" [currency]="cart.currency()" [locale]="i18n.intl()" />
             <div class="space-y-3">
               @if (facade.order.error(); as err) {
-                <p role="alert" class="text-sm text-tone-danger">{{ err }}</p>
+                <p role="alert" class="text-tone-danger">{{ err }}</p>
               }
               @if (facade.actionError(); as err) {
-                <p role="alert" class="text-sm text-tone-danger">{{ err }}</p>
+                <p role="alert" class="text-tone-danger">{{ err }}</p>
               }
               @if (facade.demoMode()) {
                 <div role="status" class="space-y-2 rounded-xl border border-border bg-muted/50 p-4 text-sm">
@@ -82,14 +82,20 @@ const STATUS_TONE: Record<PaymentStatus, BadgeTone> = {
                   <button aulaButton type="button" [loading]="paying()" (click)="demoBuy()">{{ t.demoBuy }}</button>
                 </div>
               } @else if (facade.session(); as s) {
-                <p class="text-xs text-muted-foreground">{{ t.testMode }}</p>
-                <aula-card-payment [clientSecret]="s.clientSecret" [publishableKey]="s.publishableKey" [label]="t.cardForm" (failed)="cardError.set($event)" />
+                @if (s.redirectUrl) {
+                  <!-- [2026-11-16 · Mercado Pago Checkout Pro]: la tarjeta se escribe en la página de Mercado Pago (PCI) · al volver, /checkout/confirmacion consulta el estado -->
+                  <a aulaButton class="w-full" [href]="s.redirectUrl">{{ t.payMercadoPago }}</a>
+                  <p class="type-meta text-muted-foreground">{{ t.mercadoPagoHint }}</p>
+                } @else {
+                  <p class="type-meta text-muted-foreground">{{ t.testMode }}</p>
+                  <aula-card-payment [clientSecret]="s.clientSecret" [publishableKey]="s.publishableKey" [label]="t.cardForm" (failed)="cardError.set($event)" />
+                }
                 @if (cardError()) {
-                  <p role="alert" class="text-sm text-tone-danger">{{ t.cardError }}</p>
+                  <p role="alert" class="text-tone-danger">{{ t.cardError }}</p>
                 }
                 <button aulaButton variant="ghost" size="sm" type="button" (click)="facade.cancel()">{{ t.cancel }}</button>
               } @else if (facade.order.data()?.status === 'cancelled') {
-                <p role="status" class="text-sm text-muted-foreground">{{ t.cancelled }}</p>
+                <p role="status" class="text-muted-foreground">{{ t.cancelled }}</p>
                 <button aulaButton type="button" (click)="pay()">{{ t.pay }}</button>
               } @else {
                 <button aulaButton type="button" class="w-full" [loading]="facade.order.loading()" (click)="pay()">

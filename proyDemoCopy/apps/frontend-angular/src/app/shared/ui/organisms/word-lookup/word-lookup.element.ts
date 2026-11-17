@@ -8,9 +8,10 @@ import { WordLookupComponent } from './word-lookup.component';
   imports: [WordLookupComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   // [Atributo, no etiqueta]: <span aulaWordText> evita crear otro <aula-word-lookup> (sería el propio Custom Element → recursión)
-  template: `<span aulaWordText [text]="text()" [language]="language()"></span>`,
+  template: `<span aulaWordText [text]="text()" [language]="language()" [ruleWords]="ruleWords()"></span>`,
 })
 export class WordLookupElement {
   readonly text = input(''); // Atributo `text`
   readonly language = input('en'); // Atributo `language` (ISO 639-1)
+  readonly ruleWords = input<string | null>(null); // [2026-11-14] Atributo `rule-words`: palabras de la regla separadas por comas (ver WordLookupComponent)
 }

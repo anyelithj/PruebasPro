@@ -117,12 +117,12 @@ export function UserForm({ initial }: UserFormProps) {
         <div className="space-y-1.5">
           <Label htmlFor="firstName">Nombre *</Label>
           <Input id="firstName" autoComplete="given-name" {...register("firstName")} />
-          {errors.firstName && <p className="text-xs text-destructive">{errors.firstName.message}</p>}
+          {errors.firstName && <p className="type-meta text-destructive">{errors.firstName.message}</p>}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="lastName">Apellido *</Label>
           <Input id="lastName" autoComplete="family-name" {...register("lastName")} />
-          {errors.lastName && <p className="text-xs text-destructive">{errors.lastName.message}</p>}
+          {errors.lastName && <p className="type-meta text-destructive">{errors.lastName.message}</p>}
         </div>
       </div>
 
@@ -131,19 +131,19 @@ export function UserForm({ initial }: UserFormProps) {
         {/* [Edición]: email visible pero de solo lectura (identidad de la cuenta) | `readOnly` sigue siendo enfocable y legible por lectores */}
         <Input id="email" type="email" autoComplete="email" readOnly={isEdit} aria-describedby={isEdit ? "email-hint" : undefined} {...register("email")} />
         {isEdit && (
-          <p id="email-hint" className="text-xs text-muted-foreground">
+          <p id="email-hint" className="type-meta text-muted-foreground">
             El email y la contraseña no se editan desde aquí. Cada usuario cambia su contraseña en «Mi perfil».
           </p>
         )}
-        {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+        {errors.email && <p className="type-meta text-destructive">{errors.email.message}</p>}
       </div>
 
       {/* [Teléfono · 2026-10-24]: `type="tel"` + `autoComplete="tel"` (HTML) → teclado telefónico en móvil y autocompletado */}
       <div className="space-y-1.5">
         <Label htmlFor="phone">Teléfono</Label>
         <Input id="phone" type="tel" inputMode="tel" autoComplete="tel" placeholder={PHONE_PLACEHOLDER} maxLength={PHONE_MAX_LENGTH} aria-describedby="phone-hint" {...register("phone")} />
-        <p id="phone-hint" className="text-xs text-muted-foreground">Opcional. Con indicativo del país.</p>
-        {errors.phone && <p className="text-xs text-destructive">{errors.phone.message}</p>}
+        <p id="phone-hint" className="type-meta text-muted-foreground">Opcional. Con indicativo del país.</p>
+        {errors.phone && <p className="type-meta text-destructive">{errors.phone.message}</p>}
       </div>
 
       {/* [Alta]: contraseña + confirmación con icono de ojo | [Responsive]: 2 columnas desde sm */}
@@ -152,13 +152,13 @@ export function UserForm({ initial }: UserFormProps) {
           <div className="space-y-1.5">
             <Label htmlFor="password">Contraseña *</Label>
             <PasswordInput id="password" autoComplete="new-password" aria-describedby="password-hint" {...register("password")} />
-            <p id="password-hint" className="text-xs text-muted-foreground">Mínimo 8 caracteres, con mayúscula, minúscula y número.</p>
-            {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+            <p id="password-hint" className="type-meta text-muted-foreground">Mínimo 8 caracteres, con mayúscula, minúscula y número.</p>
+            {errors.password && <p className="type-meta text-destructive">{errors.password.message}</p>}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="confirmPassword">Repetir contraseña *</Label>
             <PasswordInput id="confirmPassword" autoComplete="new-password" {...register("confirmPassword")} />
-            {errors.confirmPassword && <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>}
+            {errors.confirmPassword && <p className="type-meta text-destructive">{errors.confirmPassword.message}</p>}
           </div>
         </div>
       )}
@@ -179,8 +179,8 @@ export function UserForm({ initial }: UserFormProps) {
             <Label htmlFor="section">Sección / grupo</Label>
             <Input id="section" placeholder="Ej. 11-1, A, 2024-2" aria-describedby="section-hint" {...register("section")} />
             {/* [UX 2026-10-23]: explica para qué sirve el campo (la usuaria no lo entendía) */}
-            <p id="section-hint" className="text-xs text-muted-foreground">Opcional. Grupo o salón del estudiante; el docente filtra y compara estudiantes por sección.</p>
-            {errors.section && <p className="text-xs text-destructive">{errors.section.message}</p>}
+            <p id="section-hint" className="type-meta text-muted-foreground">Opcional. Grupo o salón del estudiante; el docente filtra y compara estudiantes por sección.</p>
+            {errors.section && <p className="type-meta text-destructive">{errors.section.message}</p>}
           </div>
         )}
       </div>

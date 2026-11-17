@@ -1,0 +1,43 @@
+# Nombre del proyecto de Docker Compose (aparece en «docker compose ls» y como prefijo de redes y volúmenes).
+name: gestion-procesos
+
+# Producción:  docker compose up --build -d             → http://localhost:8080   (contenedor «gestion-procesos»)
+# Desarrollo:  docker compose --profile dev up dev      → http://localhost:5173   (contenedor «gestion-procesos-dev»)
+# Detener:     docker compose down
+#
+# Las variables se leen del archivo .env que está JUNTO a este docker-compose.yml (copia .env.example).
+# Vite incrusta las variables al compilar: si cambias el .env, vuelve a construir con --build.
+services:
+  app:
+    image: gestion-procesos:latest
+    container_name: gestion-procesos
+    build:
+      context: .
+      target: prod
+      args:
+        VITE_APP_NAME: ${VITE_APP_NAME:-Gestión de Procesos}
+        VITE_FIREBASE_API_KEY: ${VITE_FIREBASE_API_KEY}
+        VITE_FIREBASE_AUTH_DOMAIN: ${VITE_FIREBASE_AUTH_DOMAIN}
+        VITE_FIREBASE_PROJECT_ID: ${VITE_FIREBASE_PROJECT_ID}
+        VITE_FIREBASE_STORAGE_BUCKET: ${VITE_FIREBASE_STORAGE_BUCKET}
+        VITE_FIREBASE_MESSAGING_SENDER_ID: ${VITE_FIREBASE_MESSAGING_SENDER_ID}
+        VITE_FIREBASE_APP_ID: ${VITE_FIREBASE_APP_ID}
+        VITE_FILES_BACKEND: ${VITE_FILES_BACKEND:-firestore}
+    ports:
+      - '8080:80'
+    restart: unless-stopped
+
+  dev:
+    profiles: ['dev']
+    image: gestion-procesos:dev
+    container_name: gestion-procesos-dev
+    build:
+      context: .
+      target: dev
+    env_file: .env
+    ports:
+      - '5173:5173'
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./index.html:/app/index.html

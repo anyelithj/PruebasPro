@@ -81,8 +81,8 @@ def _run(args: list[str], text: str) -> str:
 
 
 def _clean_ipa(raw: str) -> str:
-    """Una línea, sin marcas de cambio de idioma y con espacios normalizados. [Paradigma]: función pura."""
-    return " ".join(_LANG_SWITCH.sub("", raw).split())
+    """Una línea, sin marcas de cambio de idioma, sin guiones de enlace («lə-», «mə-») y con espacios normalizados. [Paradigma]: función pura."""
+    return " ".join(w.rstrip("-") for w in _LANG_SWITCH.sub("", raw).split() if w.strip("-"))
 
 
 def _batch_item(text: str) -> str:

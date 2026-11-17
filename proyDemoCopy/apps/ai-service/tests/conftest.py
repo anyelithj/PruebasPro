@@ -29,6 +29,7 @@ class FakeLLMClient:
         max_tokens: int = 512,
         temperature: float = 0.7,
         system: str | None = None,
+        strict: bool = False,  # [2026-10-27]: mismo contrato que LLMClient (el Agente Guía lo pide)
     ) -> str:
         # [Registro de llamada]: permite verificar prompt/parametros en los tests
         self.calls.append(

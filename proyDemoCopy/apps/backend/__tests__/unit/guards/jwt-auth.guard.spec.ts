@@ -2,10 +2,10 @@ import { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtAuthGuard } from '../../../src/shared/guards/jwt-auth.guard';
 
-function makeContext(): ExecutionContext {
+function makeContext(headers: Record<string, string> = {}): ExecutionContext {
   return {
     switchToHttp: () => ({
-      getRequest: () => ({ headers: {} }),
+      getRequest: () => ({ headers }),
       getResponse: () => ({}),
     }),
     getHandler: () => jest.fn(),
@@ -40,5 +40,25 @@ describe('JwtAuthGuard', () => {
     expect(superSpy).toHaveBeenCalledTimes(1);
     expect(result).toBe('delegated');
     superSpy.mockRestore();
+  });
+
+  // [Caso F · 2026-11-13]: autenticación OPCIONAL en rutas públicas → el catálogo ve al usuario y devuelve su ⭐/👍/❤️
+  describe('ruta @Public con «Authorization: Bearer»', () => {
+    const proto = () => Object.getPrototypeOf(Object.getPrototypeOf(guard));
+
+    it('token válido → delega en passport (rellena request.user) y deja pasar', async () => {
+      reflector.getAllAndOverride.mockReturnValue(true);
+      const spy = jest.spyOn(proto(), 'canActivate').mockResolvedValue(true as never);
+      await expect(guard.canActivate(makeContext({ authorization: 'Bearer abc.def.ghi' }))).resolves.toBe(true);
+      expect(spy).toHaveBeenCalledTimes(1);
+      spy.mockRestore();
+    });
+
+    it('token inválido o vencido → sigue como visitante (nunca 401 en una ruta pública)', async () => {
+      reflector.getAllAndOverride.mockReturnValue(true);
+      const spy = jest.spyOn(proto(), 'canActivate').mockRejectedValue(new Error('jwt expired') as never);
+      await expect(guard.canActivate(makeContext({ authorization: 'Bearer vencido' }))).resolves.toBe(true);
+      spy.mockRestore();
+    });
   });
 });

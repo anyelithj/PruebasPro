@@ -7,7 +7,8 @@ import type { ChatChunk } from '@features/assistant/domain/models/assistant';
 import AssistantPage from '@features/assistant/presentation/pages/assistant.page';
 // [Spec AssistantPage]: contenedor — vacío, enviar con Enter, respuesta del tutor y error | [Patrón]: Test Double del puerto (sin HTTP)
 
-const providers = (stream: AssistantRepository['stream']) => [AssistantFacade, { provide: AssistantRepository, useValue: { stream } }];
+// [2026-10-28]: la página carga «Mis conversaciones» al iniciar → el doble también responde `list`
+const providers = (stream: AssistantRepository['stream']) => [AssistantFacade, { provide: AssistantRepository, useValue: { stream, list: () => of([]) } }];
 
 async function type(el: HTMLElement, text: string) {
   const area = el.querySelector('textarea')!;
@@ -17,10 +18,12 @@ async function type(el: HTMLElement, text: string) {
 }
 
 describe('AssistantPage', () => {
-  it('estado vacío; Enter envía y aparece la respuesta del tutor', async () => {
+  it('estado vacío (saludo del tutor, meta del nivel); Enter envía y aparece la respuesta del tutor', async () => {
     const chunks: ChatChunk[] = [{ type: 'token', text: 'Present perfect = have + participio' }, { type: 'done' }];
     const { fixture, el } = await render(AssistantPage, providers(() => of(...chunks)));
-    expect(el.textContent).toContain('Aún no hay mensajes');
+    expect(getByRole(el, 'log').textContent).toContain('¿En qué te puedo ayudar hoy?');
+    expect(el.textContent).toContain('Aún no tienes conversaciones guardadas');
+    expect(el.textContent).toContain('0 % / meta 40 %'); // Nivel A2 por defecto
     const area = await type(el, '¿Present perfect?');
     await settle(fixture);
     area.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));

@@ -5,21 +5,22 @@ import Link from "next/link";
 import { BRAND } from "@/config/brand";
 import { PUBLIC_THEMES, THEME_STORAGE_KEY, isTheme } from "@aula/ui-tokens/tailwind-preset";
 import { applyTheme, usePreferences } from "@/components/layout/PreferencesProvider";
-import { LanguageMenu, ThemeMenu } from "@/components/portal/PortalToolbar";
+import { LanguageMenu, ThemeMenu, TopbarSearch } from "@/components/portal/PortalToolbar";
 // [PublicNavbar]: barra de las páginas públicas (landing, login, registro) — marca, secciones, tema Claro/Oscuro e idioma | [Patrón]: Composite + DRY (reutiliza ThemeMenu/LanguageMenu del portal) | [Principio]: SRP | [Paradigma]: Declarativo
 
 // [Secciones de la landing]: anclas internas (solo en la home)
 // [Sprint 7.13]: el orden del informe (Idiomas, Niveles, Cómo funciona, Planes y FAQ)
+// [2026-11-06 · Misma barra en todas las páginas públicas]: rutas absolutas «/#…» → desde /login o /idiomas/* también llevan a la sección de la landing
 const SECTIONS = [
-  { href: "#cursos", key: "courses" }, // Primero: los cursos de idiomas son el servicio principal de la plataforma
-  { href: "#niveles", key: "levels" },
-  { href: "#como-funciona", key: "how" },
-  { href: "#planes", key: "pricing" },
-  { href: "#faq", key: "faq" },
+  { href: "/#cursos", key: "courses" }, // Primero: los cursos de idiomas son el servicio principal de la plataforma
+  { href: "/#niveles", key: "levels" },
+  { href: "/#como-funciona", key: "how" },
+  { href: "/#planes", key: "pricing" },
+  { href: "/#faq", key: "faq" },
 ] as const;
 
-// `showSections`: la landing muestra las anclas; login/registro no (no tendrían destino)
-export function PublicNavbar({ showSections = false }: { showSections?: boolean }) {
+// [2026-11-06]: antes `showSections` cambiaba la barra entre la landing y login/registro (secciones, buscador y hamburguesa distintos) → ahora es SIEMPRE la misma
+export function PublicNavbar() {
   const { t, theme } = usePreferences();
   const n = t.publicNav;
   const [menuOpen, setMenuOpen] = useState(false); // [Menú móvil]: panel desplegable bajo la barra (< lg)
@@ -60,24 +61,25 @@ export function PublicNavbar({ showSections = false }: { showSections?: boolean 
           </span>
         </Link>
 
-        {showSections && (
-          <nav aria-label={n.home} className="hidden items-center gap-7 lg:flex">
-            {SECTIONS.map((s) => (
-              <a key={s.href} href={s.href} className="text-sm font-medium text-muted-foreground hover:text-primary">
-                {n[s.key]}
-              </a>
-            ))}
-          </nav>
-        )}
+        <nav aria-label={n.home} className="hidden items-center gap-7 lg:flex">
+          {SECTIONS.map((s) => (
+            <a key={s.href} href={s.href} className="text-sm font-medium text-muted-foreground hover:text-primary">
+              {n[s.key]}
+            </a>
+          ))}
+        </nav>
+
+        {/* [Buscador · 2026-10-30]: el mismo del portal | con las anclas de la landing solo cabe desde xl */}
+        <TopbarSearch className="hidden max-w-sm flex-1 xl:block" />
 
         <div className="flex items-center gap-1.5">
           <ThemeMenu themes={PUBLIC_THEMES} />
           <LanguageMenu />
           {/* [2026-10-23 · 4.º pase]: «Iniciar sesión» vuelve a su color de contorno (distinto del morado de «Registrarse») · ambos con el radio de «Comenzar gratis» (btn-cta) */}
-          <Link href="/login" className="btn btn-outline btn-sm btn-cta hidden sm:inline-flex">
+          <Link href="/login" className="btn btn-outline btn-sm btn-cta hidden [--btn-h:2.25rem] sm:inline-flex">
             {n.login}
           </Link>
-          <Link href="/register" className="btn btn-primary btn-sm btn-cta">
+          <Link href="/register" className="btn btn-primary btn-sm btn-cta [--btn-h:2.25rem]" /* [2026-11-06]: 36 px como el buscador y los menús */>
             {n.register}
           </Link>
           {/* [Hamburguesa]: solo < lg (secciones ocultas) o < sm (botón de login oculto) | `aria-expanded` + `aria-controls` (WAI-ARIA) */}
@@ -87,7 +89,7 @@ export function PublicNavbar({ showSections = false }: { showSections?: boolean 
             aria-label={menuOpen ? t.nav.closeMenu : t.nav.openMenu}
             aria-expanded={menuOpen}
             aria-controls="public-mobile-menu"
-            className={`grid size-9 place-items-center rounded-lg border border-border text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${showSections ? "lg:hidden" : "sm:hidden"}`}
+            className={`grid size-9 place-items-center rounded-lg border border-border text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden`}
           >
             {menuOpen ? <X className="size-5" aria-hidden /> : <Menu className="size-5" aria-hidden />}
           </button>
@@ -96,10 +98,9 @@ export function PublicNavbar({ showSections = false }: { showSections?: boolean 
 
       {/* [Panel móvil]: secciones + iniciar sesión; se cierra al elegir un enlace */}
       {menuOpen && (
-        <nav id="public-mobile-menu" aria-label={n.home} className={`border-t border-border bg-background px-4 py-3 sm:px-6 ${showSections ? "lg:hidden" : "sm:hidden"}`}>
+        <nav id="public-mobile-menu" aria-label={n.home} className={`border-t border-border bg-background px-4 py-3 sm:px-6 lg:hidden`}>
           <ul className="mx-auto flex max-w-[1240px] flex-col gap-1">
-            {showSections &&
-              SECTIONS.map((s) => (
+            {SECTIONS.map((s) => (
                 <li key={s.href}>
                   <a href={s.href} onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-primary">
                     {n[s.key]}

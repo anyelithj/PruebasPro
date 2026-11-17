@@ -1,5 +1,5 @@
 import type { Dictionary } from "@aula/shared-i18n";
-// [LocalAiPrivacy · Sprint 7.13]: IA local (Ollama), contenido revisado primero y certificados verificables | [Patrón]: Presentational Component | [Principio]: SRP + transparencia (la landing dice cómo se usa la IA) | [Paradigma]: Declarativo
+// [LocalAiPrivacy · Sprint 7.13]: IA (Ollama), contenido revisado primero y certificados verificables | [Patrón]: Presentational Component | [Principio]: SRP + transparencia (la landing dice cómo se usa la IA) | [Paradigma]: Declarativo
 
 export function LocalAiPrivacy({ l }: { l: Dictionary["landing"] }) {
   return (

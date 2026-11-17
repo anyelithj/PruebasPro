@@ -1,5 +1,6 @@
 import * as z from 'zod'; // [Tree-shaking · Zod 4]: import de namespace (`* as z`) → esbuild empaqueta solo las funciones usadas (con `{ z }` arrastraba Zod entero, ~450 kB)
 import type { TranscriptLine } from '@shared/ui/organisms/synced-transcript/transcript-line.model';
+import { CorrectorResultSchema } from '@features/own-llm/domain/models/own-llm';
 // [Modelo Dialogues · Dominio · Sprints 9.11–9.13]: temas, diálogos guionados con nivel estimado/confirmado, turnos con IPA y traducción y conversaciones con el avatar — contrato de /api/dialogues/* de NestJS | [Patrón]: Schema-First (Zod) + funciones puras | [Principio]: SSOT + Type-Safe | [Paradigma]: Funcional
 
 export const TopicSchema = z.object({
@@ -26,7 +27,8 @@ export const TurnSchema = z.object({
   translation: z.string().nullable().default(null),
   startS: z.number().nullable().default(null),
   endS: z.number().nullable().default(null),
-  correction: z.string().nullable().default(null),
+  correction: z.string().nullable().default(null), // [Histórico]: turnos anteriores al 2026-11-13
+  feedback: CorrectorResultSchema.nullable().default(null), // [2026-11-13 · Anexo A]: corrección pedagógica única del turno del usuario
   audioKey: z.string().nullable().default(null), // [2026-10-20]: hay grabación de voz guardada para este turno del usuario
 });
 export type Turn = z.infer<typeof TurnSchema>;
@@ -90,7 +92,7 @@ export type StartResult = z.infer<typeof StartResultSchema>;
 export const TurnResultSchema = z.object({
   userTurn: TurnSchema,
   avatarTurn: TurnSchema,
-  correction: z.string().nullable(),
+  feedback: CorrectorResultSchema.nullable().default(null), // [2026-11-13]: antes `correction` (texto del LLM del avatar)
   vocabularyUsed: z.array(z.string()),
   ended: z.boolean().default(false), // [2026-10-23]: el usuario se despidió → la sesión ya está cerrada
 });
@@ -155,13 +157,14 @@ export const toTranscript = (
 });
 
 // [similarity]: proporción de palabras de la frase objetivo que aparecen en lo dicho (sin tildes ni mayúsculas) | Función pura — determinista, sin IA
+const words = (s: string): string[] =>
+  s
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .match(/[\p{L}\p{N}'’]+/gu) ?? [];
+
 export function similarity(target: string, said: string): number {
-  const words = (s: string) =>
-    s
-      .normalize('NFD')
-      .replace(/\p{M}/gu, '')
-      .toLowerCase()
-      .match(/[\p{L}\p{N}'’]+/gu) ?? [];
   const want = words(target);
   if (!want.length) return 0;
   const pool = [...words(said)];
@@ -171,5 +174,51 @@ export function similarity(target: string, said: string): number {
     return k >= 0;
   }).length;
   return hits / want.length;
+}
+// [missingWords · 2026-11-05]: palabras de la frase objetivo que no aparecen en lo dicho (con su forma original) → corrector para el alumno | Función pura
+export function missingWords(target: string, said: string): string[] {
+  const pool = words(said);
+  return (target.match(/[\p{L}\p{N}'’]+/gu) ?? []).filter((w) => {
+    const k = pool.indexOf(words(w)[0] ?? '');
+    if (k >= 0) pool.splice(k, 1);
+    return k < 0;
+  });
+}
+// [markWords · 2026-11-06]: `text` en trozos; cada palabra con `ok` = aparece en `other` (cada palabra de `other` se usa una vez) · separadores con ok = null
+// target vs dicho → en rojo lo que faltó · dicho vs target → en rojo lo que sobra o se dijo mal | Función pura
+export interface MarkedPiece {
+  readonly text: string;
+  readonly ok: boolean | null;
+}
+export function markWords(text: string, other: string): MarkedPiece[] {
+  const pool = words(other);
+  return (text.match(/[\p{L}\p{N}'’]+|[^\p{L}\p{N}'’]+/gu) ?? []).map((piece) => {
+    const w = words(piece)[0];
+    if (!w) return { text: piece, ok: null };
+    const k = pool.indexOf(w);
+    if (k >= 0) pool.splice(k, 1);
+    return { text: piece, ok: k >= 0 };
+  });
+}
+// [splitCorrection · 2026-11-06]: «frase corregida» explicación (formato del avatar, ver dialogue_agent.with_corrected) → partes | sin «» = solo explicación (turnos antiguos) | Función pura
+export function splitCorrection(c: string | null | undefined): { corrected: string; why: string } {
+  const m = /^\s*«([^»]+)»\s*(.*)$/s.exec(c ?? '');
+  return m ? { corrected: m[1]!.trim(), why: m[2]!.trim() } : { corrected: '', why: (c ?? '').trim() };
+}
+// [sameWords · 2026-11-09]: iguales salvo mayúsculas, puntuación y espacios → «three cats → three cats.» no es una corrección
+export const sameWords = (a: string, b: string): boolean => {
+  const n = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}']+/gu, ' ').trim();
+  return n(a) === n(b);
+};
+// [realCorrection · 2026-11-09]: la corrección del avatar solo cuenta si cambia palabras; su explicación se descarta si cita una frase («no I has») que el alumno NO dijo
+export function realCorrection(text: string, c: string | null | undefined): string | null {
+  if (!c) return null;
+  const { corrected, why } = splitCorrection(c);
+  if (corrected && sameWords(corrected, text)) return null;
+  if (/[<>]/.test(why)) return null; // [2026-11-10]: «Se dice <nombre>, no <name>» = plantilla copiada por la IA
+  const quoted = /\bno\s+([^,.;·]+)\s*[.]?$/i.exec(why)?.[1]?.trim();
+  const whyOk = !quoted || text.toLowerCase().includes(quoted.toLowerCase());
+  if (!whyOk) return null; // [2026-11-10]: «Mejor así: yes, I had…» con «no I had» que no dijo → la frase «corregida» también es mala
+  return corrected ? `«${corrected}» ${why}`.trim() : why;
 }
 export const PASS_SIMILARITY = 0.7; // ≥ 70 % de las palabras → turno superado

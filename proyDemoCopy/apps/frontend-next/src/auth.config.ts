@@ -1,7 +1,6 @@
 import type { NextAuthConfig } from "next-auth";
 import Google from "next-auth/providers/google";
-import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
-import { PORTAL_PREFIXES } from "./lib/constants";
+import { isProtectedPath } from "./lib/constants";
 // [Auth.js v5 config edge-safe]: providers OAuth + matchers para proxy edge | [Patrón]: Strategy | [Principio]: SRP
 // [Nota]: nada que dependa de Node-only APIs (crypto, fs, etc). Credentials provider y callbacks que hacen fetch al backend viven en auth.ts.
 
@@ -17,13 +16,7 @@ export const authConfig = {
       clientSecret: process.env.AUTH_GOOGLE_SECRET,
       authorization: { params: { prompt: "select_account" } },
     }),
-    MicrosoftEntraID({
-      clientId: process.env.AUTH_MICROSOFT_ENTRA_ID_ID,
-      clientSecret: process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET,
-      issuer:
-        process.env.AUTH_MICROSOFT_ENTRA_ID_ISSUER ??
-        `https://login.microsoftonline.com/${process.env.AUTH_MICROSOFT_ENTRA_ID_TENANT_ID ?? "common"}/v2.0`,
-    }),
+    // [2026-11-16]: Microsoft Entra ID retirado → solo Google
   ],
   callbacks: {
     // [authorized]: usado por proxy.ts para gatekeep edge sin DB | [Principio]: SRP
@@ -33,7 +26,7 @@ export const authConfig = {
       const isLogged = !!auth?.accessToken && auth.error !== "RefreshAccessTokenError";
 
       // [SSOT]: mismos prefijos que proxy.ts (antes lista duplicada y desincronizada) | [Principio]: DRY
-      if (PORTAL_PREFIXES.some((p) => pathname.startsWith(p))) return isLogged;
+      if (isProtectedPath(pathname)) return isLogged; // [Caso E]: misma regla que proxy.ts (las rutas públicas ganan)
       if (AUTH_PAGES.some((p) => pathname.startsWith(p)) && isLogged) {
         return Response.redirect(new URL("/dashboard", request.nextUrl));
       }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiFetch } from "@/lib/api-client";
-import { getCurrentAccessToken } from "@/lib/auth";
+import { getFreshAccessToken } from "@/lib/auth";
 import { ApiError } from "@/lib/errors";
 // [Route /api/ai/feedback]: Next.js → NestJS proxy para feedback ad-hoc | [Patron]: Proxy + Facade | [Principio]: SRP
 
@@ -37,7 +37,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
-  const bearer = (await getCurrentAccessToken()) ?? undefined;
+  const bearer = (await getFreshAccessToken()) ?? undefined;
   try {
     const result = await apiFetch<FeedbackResult | null>("/ai/feedback/generate", {
       method: "POST",

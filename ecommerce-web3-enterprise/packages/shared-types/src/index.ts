@@ -51,12 +51,15 @@ export interface AdminNavItem {
   readonly icon: string; // Clave de "icons"
   readonly rf?: string; // Requisito funcional (RF) de la especificación que cubre la pantalla (se muestra junto al título)
   readonly adminOnly?: boolean; // true => solo ADMIN (oculto al rol VENDOR y a los clientes)
+  readonly everyone?: boolean; // true => visible para toda sesión aunque su grupo no lo sea (el chatbot del grupo de atención)
+  readonly keywords?: string; // Términos extra del buscador del menú ("auditoria" encuentra Historial de actividad)
   readonly match?: readonly string[]; // Prefijos extra de ruta que también activan el ítem ("?" => propiedad opcional)
   readonly label: Readonly<Record<AdminLocale, string>>;
   readonly description?: Readonly<Record<AdminLocale, string>>; // Subtítulo del encabezado de la página (opcional)
 }
 export interface AdminNavGroup {
   readonly key: string;
+  readonly icon: string; // Clave de "icons": fila de la sección en el menú lateral
   readonly label: Readonly<Record<AdminLocale, string>>;
   readonly everyone?: boolean; // true => grupo visible para toda sesión (sus ítems adminOnly siguen siendo solo ADMIN)
   readonly items: readonly AdminNavItem[];
@@ -71,9 +74,10 @@ export interface AdminNav {
 }
 
 // Reglas del menú (las aplican AdminSidebar.tsx y AdminSidebar.vue; este paquete solo exporta tipos, sin runtime):
-// - Visibilidad: ADMIN ve todo; un ítem adminOnly solo lo ve ADMIN; los grupos "everyone" (Mi cuenta, IA) los ve toda
-//   sesión; VENDOR ve además todo ítem (Next o Nuxt) sin adminOnly.
-// - Organización: máximo 6 ítems por grupo, una sola responsabilidad por grupo, acordeón exclusivo (un grupo abierto).
-// - Query en "path": el ítem cuya query coincide con la URL gana (puntaje +1) sobre el mismo path sin query.
+// - Visibilidad: ADMIN ve todo; un ítem adminOnly solo lo ve ADMIN; los grupos e ítems "everyone" los ve toda sesión;
+//   VENDOR ve además todo ítem (Next o Nuxt) sin adminOnly.
+// - Organización (regla única): grupo = sección = un enlace en el menú; ítem = pestaña de PanelTabs; lo que no cabe va al
+//   Dropdown «Más»; con un solo ítem visible no hay barra.
+// - Query en "path": el ítem cuya query coincide con la pestaña activa gana (puntaje +1) sobre el resto.
 // - Inicio del panel: ADMIN -> /dashboard (resumen); VENDOR -> /dashboard/products (su catálogo); resto -> /account.
 // - Ítem activo: el de ruta (o "match") más larga que coincide con la URL (/account no queda activo en /account/orders).

@@ -27,6 +27,17 @@ describe('PolyglotFacade', () => {
     expect(repo.table).toHaveBeenCalledWith('p1', ['en', 'de', 'fr', 'pt', 'ru', 'zh', 'es']);
   });
 
+  // [Fix 2026-10-31]: «Probar» de Gestión → Actividades abre el tema del enlace, no el primero
+  it('abre el tema del enlace (?tema=); si no existe, el primero', async () => {
+    const linked = setup();
+    await linked.p.loadTopics('p2');
+    expect(linked.p.topicId()).toBe('p2');
+    TestBed.resetTestingModule();
+    const unknown = setup();
+    await unknown.p.loadTopics('borrador-ajeno');
+    expect(unknown.p.topicId()).toBe('p1');
+  });
+
   it('mover un idioma no pide la tabla; agregar uno sí', async () => {
     const { p, repo } = setup();
     await p.loadTopics();
@@ -39,17 +50,6 @@ describe('PolyglotFacade', () => {
     expect(repo.table).toHaveBeenCalledTimes(1);
   });
 
-  it('guardar y abrir una comparación', async () => {
-    const { p, repo } = setup();
-    await p.loadTopics();
-    await p.loadViews();
-    expect(await p.saveView('Mi familia')).toBe(true);
-    expect(repo.saveView).toHaveBeenCalledWith({ topicId: 'p1', name: 'Mi familia', languages: p.languages() });
-    expect(p.views.data()?.[0].id).toBe('v2');
-    p.openView(pgView);
-    expect(p.languages()).toEqual(['es', 'en']);
-  });
-
   it('borrador con IA devuelve cuántos conceptos se agregaron y recarga la tabla', async () => {
     const { p, repo } = setup();
     await p.loadTopics();
@@ -60,9 +60,10 @@ describe('PolyglotFacade', () => {
   });
 
   it('error de la acción → visible', async () => {
-    const { p } = setup({ saveView: jest.fn(() => throwError(() => new Error('Tema no encontrado'))) });
+    // [2026-11-14]: las comparaciones guardadas salieron de la vista del estudiante → el error se comprueba con otra acción (borrador con IA)
+    const { p } = setup({ draft: jest.fn(() => throwError(() => new Error('Tema no encontrado'))) });
     await p.loadTopics();
-    expect(await p.saveView('x')).toBe(false);
+    expect(await p.draft('word', 5)).toBeNull();
     expect(p.actionError()).toBe('Tema no encontrado');
   });
 });

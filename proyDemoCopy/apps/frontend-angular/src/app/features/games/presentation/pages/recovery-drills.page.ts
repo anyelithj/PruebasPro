@@ -8,6 +8,7 @@ import { AudioPlayerComponent } from '../components/audio-player.component';
 import { GameShellComponent } from '../components/game-shell.component';
 import { GapFillComponent } from '../components/gap-fill.component';
 import { PromptCardComponent } from '../components/prompt-card.component';
+import { SayComponent } from '@features/vocabulary/presentation/components/say.component'; // [2026-10-28]: IPA + traducción + sonido (IPA_TEXT_PROVIDERS en games.routes)
 // [RecoveryDrillsPage · Presentación · Sprint 8.10]: /juegos/recuperacion — recuperación rápida de vocabulario: imagen → palabra, audio → palabra y traducción inversa, midiendo el tiempo hasta responder | [Patrón]: Strategy (modo de estímulo) + State Machine | [Principio]: SRP + DIP | [Paradigma]: Declarativo + Reactivo
 // [Objetivo]: pasar de «conozco la palabra» a «me sale automáticamente» (RF-103) → el reloj es visible y queda guardado en cada ronda
 // [Modos sin dato]: «traducción inversa» solo se ofrece si las palabras tienen traducción (tu vocabulario); el banco propio trae emoji
@@ -22,6 +23,7 @@ type DrillMode = 'image' | 'audio' | 'reverse';
     AudioPlayerComponent,
     GapFillComponent,
     AnswerTimerComponent,
+    SayComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -93,6 +95,7 @@ type DrillMode = 'image' | 'audio' | 'reverse';
             @default {
               <aula-prompt-card
                 [emoji]="it.emoji ?? '❔'"
+                [image]="it.image"
                 [emojiLabel]="it.translation ?? ''"
                 [caption]="index() + 1 + ' / ' + total()"
               />
@@ -112,6 +115,17 @@ type DrillMode = 'image' | 'audio' | 'reverse';
             (answered)="answer($event)"
             (next)="next()"
           />
+          <!-- [2026-10-28]: tras responder (nunca antes: la palabra ES la respuesta) → la palabra con sonido, IPA y traducción -->
+          @if (verdict()) {
+            <aula-say
+              class="rounded-xl border border-border bg-muted/40 px-3 py-2"
+              [text]="it.term"
+              [language]="gl"
+              [translation]="it.translation"
+              [withText]="true"
+              [label]="tx.listenWord"
+            />
+          }
         </div>
       }
     </aula-game-shell>
@@ -138,7 +152,7 @@ export default class RecoveryDrillsPage {
     const it = this.items();
     return this.modes.filter((m) =>
       m === 'image'
-        ? it.some((w) => w.emoji)
+        ? it.some((w) => w.emoji || w.image)
         : m === 'reverse'
           ? it.some((w) => w.translation)
           : true,

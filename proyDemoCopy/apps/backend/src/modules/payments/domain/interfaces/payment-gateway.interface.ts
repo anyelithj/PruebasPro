@@ -20,7 +20,15 @@ export interface CreateCheckoutInput {
 
 export interface CheckoutSessionResult {
   sessionId: string;
-  clientSecret: string; // Lo usa @stripe/stripe-js para montar el formulario embebido
+  clientSecret: string; // Lo usa @stripe/stripe-js para montar el formulario embebido ('' en pasarelas con redirección)
+  redirectUrl?: string; // [2026-11-16 · Mercado Pago]: página de pago de la pasarela (Checkout Pro) → el navegador va allí
+}
+
+// [WebhookMeta · 2026-11-16]: datos extra del webhook que algunas pasarelas firman (Mercado Pago: x-request-id y ?data.id=…&type=…)
+export interface WebhookMeta {
+  requestId?: string;
+  dataId?: string;
+  topic?: string;
 }
 
 // [Estado normalizado]: lo que el dominio necesita saber de una sesión, sin tipos del SDK
@@ -38,7 +46,7 @@ export type GatewayEvent =
   | { kind: 'ignored'; eventId: string; type: string };
 
 export interface PaymentGatewayPort {
-  readonly provider: string; // 'stripe'
+  readonly provider: string; // 'stripe' | 'mercadopago'
   readonly enabled: boolean; // false sin claves → los casos de uso responden 503
   createCheckoutSession(
     input: CreateCheckoutInput,
@@ -51,5 +59,10 @@ export interface PaymentGatewayPort {
     idempotencyKey: string,
   ): Promise<{ refundId: string; status: 'pending' | 'succeeded' | 'failed' }>;
   // [parseWebhook]: verifica la firma con el cuerpo CRUDO y lanza si no es válida | [Seguridad]: nunca confiar en un webhook sin firma
-  parseWebhook(rawBody: Buffer, signature: string): GatewayEvent;
+  // [2026-11-16]: puede ser asíncrono (Mercado Pago consulta el pago en su API antes de decidir)
+  parseWebhook(
+    rawBody: Buffer,
+    signature: string,
+    meta?: WebhookMeta,
+  ): GatewayEvent | Promise<GatewayEvent>;
 }

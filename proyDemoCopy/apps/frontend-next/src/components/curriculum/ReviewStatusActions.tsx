@@ -9,7 +9,8 @@ import { STATUS_HELP, STATUS_LABEL, STATUS_TRANSITIONS, transitionAction, type R
 
 const FLOW: ReadonlyArray<ReviewStatus> = ["draft", "review_required", "reviewed", "approved"]; // Camino feliz mostrado como pasos
 
-export function ReviewStatusActions({ id, status, version }: { id: string; status: ReviewStatus; version: number }) {
+// `canApprove` (2026-10-27): solo el ADMIN publica (backend: canApproveCurriculum) → al docente no se le ofrece «Publicar» (fallaría con 403); envía a revisión y lo ve en «Borradores»
+export function ReviewStatusActions({ id, status, version, canApprove = true }: { id: string; status: ReviewStatus; version: number; canApprove?: boolean }) {
   const router = useRouter();
   const [pending, setPending] = useState<ReviewStatus | null>(null); // Acción que espera comentario (paso 2 de 2)
   const [note, setNote] = useState("");
@@ -47,7 +48,7 @@ export function ReviewStatusActions({ id, status, version }: { id: string; statu
   return (
     <div className="space-y-4">
       {/* [Pasos del flujo]: <ol> semántico + aria-current="step" en el actual */}
-      <ol className="flex flex-wrap items-center gap-2 text-xs" aria-label="Flujo de publicación">
+      <ol className="flex flex-wrap items-center gap-2 type-meta" aria-label="Flujo de publicación">
         {FLOW.map((s, i) => (
           <li key={s} className="flex items-center gap-2">
             <span
@@ -65,12 +66,14 @@ export function ReviewStatusActions({ id, status, version }: { id: string; statu
         ))}
         {stepIndex === -1 && <li className="badge bg-tone-warning-soft text-tone-warning">Ahora: {STATUS_LABEL[status]}</li>}
       </ol>
-      <p className="text-sm text-muted-foreground">{STATUS_HELP[status]}</p>
+      <p className="text-muted-foreground">{STATUS_HELP[status]}</p>
+      {!canApprove && status !== "approved" && <p className="type-meta text-muted-foreground">Un administrador revisa y publica el recurso; mientras tanto lo ves en la lista con el filtro de estado.</p>}
 
       {/* [Acciones válidas desde el estado actual] */}
       {!pending && (
         <div className="flex flex-wrap gap-2">
-          {STATUS_TRANSITIONS[status].map((to) => {
+          {/* [2026-10-27]: sin permiso de ADMIN no se ofrecen «Publicar» ni «Devolver» (review_required/reviewed → draft): NestJS respondería 403 */}
+          {STATUS_TRANSITIONS[status].filter((to) => canApprove || (to !== "approved" && !(to === "draft" && (status === "review_required" || status === "reviewed")))).map((to) => {
             const a = transitionAction(status, to);
             return (
               <button key={to} type="button" disabled={busy} onClick={() => onAction(to)} className={cn("btn btn-sm", a.tone === "primary" ? "btn-primary" : a.tone === "danger" ? "border border-tone-danger-line bg-card text-tone-danger hover:bg-tone-danger-soft" : "btn-outline")}>
@@ -113,7 +116,7 @@ export function ReviewStatusActions({ id, status, version }: { id: string; statu
       )}
 
       {error && (
-        <p role="alert" className="text-xs text-tone-danger">
+        <p role="alert" className="type-meta text-tone-danger">
           {error}
         </p>
       )}

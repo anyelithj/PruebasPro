@@ -1,6 +1,6 @@
 "use client";
 // `"use client"` (Next.js): este componente se hidrata en el navegador porque tiene estado e interacción
-import { FileUp, PenLine, Recycle, Search, Sparkles } from "lucide-react"; // [2026-10-23]: iconos SVG uniformes (antes emojis)
+import { FileUp, PenLine, Recycle, Search, Sparkles, Trash2 } from "lucide-react"; // [2026-10-23]: iconos SVG uniformes (antes emojis)
 import { KindIcon } from "@/components/shared/KindIcon"; // [2026-10-23]: iconos SVG uniformes por tipo de recurso
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -16,10 +16,11 @@ import { ContentEditor, missingFields } from "@/components/curriculum/ContentEdi
 import { ResourcePreview } from "@/components/curriculum/ResourcePreview";
 import { GenerationTrace } from "@/components/curriculum/GenerationTrace";
 import { ResultDialog, type SaveResult } from "@/components/shared/ResultDialog"; // [Modal]: "se creó con éxito" / error
-import { curatedTopics } from "@/config/curriculum-topics";
+import { curatedTopicsAllLevels, textLevel, topicLevel } from "@/config/curriculum-topics";
 import { findPhoneme } from "@/config/ipa-chart"; // [2026-10-23 · 4.º pase]: regla del fonema elegido como tema de Pronunciación
 import { ImportPanel } from "@/components/curriculum/ImportPanel"; // [Importar]: Excel, Word, PDF, texto o imagen → elementos editables // [Catálogo curado]: temas por tipo × idioma × nivel (SSOT, sin IA)
 import Link from "next/link";
+import { deleteResourceAction } from "@/app/(portal)/admin/curriculum/actions"; // [2026-11-13]: eliminar un elemento existente del tema
 import {
   EMPTY_CONTENT,
   KIND_META,
@@ -33,7 +34,6 @@ import {
   type CurriculumItemKind,
   type CurriculumSkill,
   type CurriculumSource,
-  type CurriculumTopic,
   type DraftResult,
   groupQuery,
   type KeyCheckResult,
@@ -41,6 +41,8 @@ import {
 } from "@/types/curriculum";
 import type { CefrLevel } from "@/types/courses";
 import type { Language } from "@/types/quiz";
+import { TopicSelect, topicGroups, useCatalogTopics } from "@/components/curriculum/TopicSelect"; // [2026-10-27 · DRY]: mismo campo «Tema» que «Crear actividad»
+import { mapLimit } from "@/lib/map-limit"; // [2026-10-27 · Rendimiento]: guardado de varios elementos en paralelo acotado
 import { TopicTitle } from "@/components/language/TopicTitle"; // [2026-10-19]: tema en el idioma estudiado con IPA, audio y traducción
 // [Organismo CurriculumItemForm]: crear/editar recursos en 4 pasos — idioma y nivel · tipo · tema (lista) · contenido (uno o VARIOS elementos, con IA o a mano) | [Patrón]: Wizard ligero + Controlled Components + Strategy (editor por tipo) | [Principio]: SRP + DRY + KISS | [Paradigma]: Funcional + Reactivo
 // [UX]: el tema se ELIGE de una lista (temario + sugerencias de IA en grupos separados); "Otro tema" permite escribir uno nuevo; al guardar aparece un modal de éxito/error
@@ -49,12 +51,17 @@ import { TopicTitle } from "@/components/language/TopicTitle"; // [2026-10-19]: 
 const LEVELS = LEVEL_OPTIONS;
 const SKILLS = Object.keys(SKILL_LABEL) as CurriculumSkill[];
 const PROVENANCES: ReadonlyArray<Provenance> = ["manual", "imported", "generated", "expert_validated"];
-const OTHER_TOPIC = "__other__"; // Valor centinela del <option> "Otro tema"
 // [Lote de IA = 3]: 10 elementos tardaban ~6,5 min en CPU (francés A1, 2026-10-19) y el fetch del BFF de Next.js corta a los 300 s (headersTimeout de undici)
 // → «El servidor no responde». Con 3 por llamada cada lote tarda ~2 min, la barra de progreso avanza y un fallo solo pierde un lote | ≤ MAX_BATCH del backend
 const AI_BATCH = 3;
+// [Fix 2026-11-13 · 504 en /api/curriculum/ai/content]: fichas largas (pronunciación, regla gramatical, rúbrica: 650–800 tokens c/u) en lotes de 3 → ~2700 tokens
+// en CPU superaban los 5 min de una petición → 504. Esos tipos van de 1 en 1 (cada lote cabe en el plazo y el progreso avanza) | [Patrón]: Lookup Table
+const HEAVY_KINDS = new Set<CurriculumItemKind>(["pronunciation", "grammar_rule", "rubric"]);
+const batchFor = (kind: CurriculumItemKind) => (HEAVY_KINDS.has(kind) ? 1 : AI_BATCH);
 const RETRIES = 6; // [2026-10-23]: reintentos ante 429 (6 × 15 s ≈ más que la ventana de 60 s del throttler)
 const RETRY_WAIT_S = 15;
+const DRY_LIMIT = 2; // [Fix 2026-10-28]: rondas SEGUIDAS sin elementos nuevos antes de rendirse (cada ronda ≈ 1–2 min en CPU)
+const SAVE_PARALLEL = 3; // [2026-10-27]: recursos guardados a la vez (cada alta es solo BD: validación + transacción) — bajo para no agotar el throttler de NestJS
 
 type SourceOption = CurriculumSource & SearchOption;
 const toSourceOption = (s: CurriculumSource): SourceOption => ({ ...s, label: s.name, hint: s.license ?? undefined });
@@ -96,13 +103,13 @@ export function Step({ n, title, hint, children, disabled = false, invalid = fal
   return (
     <section className={cn("surface space-y-4 p-5", invalid && "border-destructive ring-1 ring-destructive/40")} aria-labelledby={`step-${n}`} aria-invalid={invalid || undefined}>
       <header>
-        <h2 id={`step-${n}`} className="flex items-center gap-2 text-base font-bold">
+        <h2 id={`step-${n}`} className="title-section flex items-center gap-2">
           <span className="grid size-6 place-items-center rounded-full bg-gradient-brand text-xs text-white" aria-hidden>
             {n}
           </span>
           {title}
         </h2>
-        {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+        {hint && <p className="mt-1 type-meta text-muted-foreground">{hint}</p>}
       </header>
       {/* `display: contents`: el fieldset no altera el layout; solo aporta `disabled` */}
       <fieldset disabled={disabled} className="contents">
@@ -114,13 +121,13 @@ export function Step({ n, title, hint, children, disabled = false, invalid = fal
 
 // [SelectField]: label + <select> nativo (accesible y sin librerías) | `<T extends string>` (TS Generics)
 // `invalid` → aria-invalid: `.control` pinta el borde en rojo (globals.css) y el lector de pantalla anuncia el error
-function SelectField<T extends string>({ id, label, value, onChange, placeholder, options, hint, invalid = false }: { id: string; label: string; value: T | ""; onChange: (v: T | "") => void; placeholder: string; options: ReadonlyArray<{ value: T; label: string }>; hint?: string; invalid?: boolean }) {
+function SelectField<T extends string>({ id, label, value, onChange, placeholder, options, hint, invalid = false, disabled = false }: { id: string; label: string; value: T | ""; onChange: (v: T | "") => void; placeholder: string; options: ReadonlyArray<{ value: T; label: string }>; hint?: string; invalid?: boolean; disabled?: boolean }) {
   return (
     <div>
       <label htmlFor={id} className="mb-1 block text-xs font-semibold text-muted-foreground">
         {label} <span className="req" aria-hidden>*</span>
       </label>
-      <select id={id} required value={value} onChange={(e) => onChange(e.target.value as T | "")} className="control w-full" aria-invalid={invalid || undefined} aria-describedby={hint ? `${id}-hint` : undefined}>
+      <select id={id} required value={value} onChange={(e) => onChange(e.target.value as T | "")} disabled={disabled} className="control w-full disabled:cursor-not-allowed disabled:opacity-70" aria-invalid={invalid || undefined} aria-describedby={hint ? `${id}-hint` : undefined}>
         <option value="">{placeholder}</option>
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -129,7 +136,7 @@ function SelectField<T extends string>({ id, label, value, onChange, placeholder
         ))}
       </select>
       {hint && (
-        <p id={`${id}-hint`} className="mt-1 text-[11px] text-muted-foreground">
+        <p id={`${id}-hint`} className="mt-1 type-meta text-muted-foreground">
           {hint}
         </p>
       )}
@@ -186,15 +193,15 @@ export function CountInput({ id, value, onChange, label = "¿Cuántos elementos?
 // Las tres tarjetas (IA · a mano · importar) tienen la MISMA estructura → la acción queda alineada al pie (`mt-auto`) aunque los textos midan distinto
 export function ChoiceCard({ icon, title, hint, children }: { icon: React.ReactNode; title: string; hint: string; children: React.ReactNode }) {
   return (
-    <section className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4">
+    <section className="flex flex-col gap-3 surface-item">
       <header className="space-y-1">
-        <h3 className="flex items-center gap-2 text-sm font-bold">
+        <h3 className="title-card flex items-center gap-2">
           <span className="grid size-7 place-items-center rounded-lg bg-tone-brand-soft text-tone-brand" aria-hidden>
             {icon}
           </span>
           {title}
         </h3>
-        <p className="text-xs text-muted-foreground">{hint}</p>
+        <p className="type-meta text-muted-foreground">{hint}</p>
       </header>
       <div className="mt-auto space-y-2">{children}</div>
     </section>
@@ -245,33 +252,23 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
 
   const meta = KIND_META[kind];
   const skillFixed = meta.skill?.mode === "fixed";
+  // [Nivel auto · 2026-11-16]: al CREAR el nivel lo fija el tema (bloqueado) · editable al editar · tema libre sin nivel detectable → se elige a mano
+  const autoLevel = topicName.trim().length >= 2 ? (topicLevel(topicName, language) ?? textLevel(topicName, language)) : null;
+  const levelLocked = !locked && !(customTopic && !autoLevel);
   const comboReady = Boolean(language && level && skill);
   const comboKey = comboReady ? `${language}|${level}|${skill}|${kind}` : "";
   const languageLabel = LANGUAGES.find((l) => l.value === language)?.label ?? "";
   const phoneme = kind === "pronunciation" && language ? findPhoneme(language, topicName) : null; // [2026-10-23 · 4.º pase]: null si el tema no es un fonema
 
   // ───── Temas del temario (opciones del select) ─────
-  const [topics, setTopics] = useState<{ key: string; list: CurriculumTopic[] }>({ key: "", list: [] });
-  useEffect(() => {
-    if (!comboKey) return;
-    const controller = new AbortController(); // Cancela si cambia la combinación
-    const qs = new URLSearchParams({ language, level, skill, kind, limit: "50" }); // El backend admite máx. 50
-    fetch(`/api/curriculum/topics?${qs}`, { signal: controller.signal })
-      .then((r) => (r.ok ? (r.json() as Promise<CurriculumTopic[]>) : []))
-      .then((list) => setTopics({ key: comboKey, list }))
-      .catch(() => undefined); // Sin temario se puede pedir a la IA o escribir "Otro tema"
-    return () => controller.abort();
-  }, [comboKey, language, level, skill, kind]);
-  const catalog = topics.key === comboKey ? topics.list : [];
+  // [2026-10-27 · DRY]: hook y <select> extraídos a TopicSelect → «Crear actividad» usa EXACTAMENTE la misma lista de temas
+  const catalog = useCatalogTopics({ language, level, skill, kind });
   const suggested = aiTopics.key === comboKey ? aiTopics.list : [];
   // [Grupos de la lista]: 1) catálogo curado (tipo × idioma × nivel) · 2) temario guardado en BD que no esté ya · 3) sugerencias de IA nuevas
-  const curated = language && level ? curatedTopics(kind, language, level) : [];
-  const curatedKeys = new Set(curated.flatMap((g) => g.topics.map((x) => slugify(x)))); // `Set` (ES2015) de slugs: compara sin tildes ni mayúsculas
-  const savedTopics = catalog.map((x) => x.name).filter((name) => !curatedKeys.has(slugify(name)));
-  const aiTopicsFresh = suggested.filter((name) => !curatedKeys.has(slugify(name)) && !savedTopics.some((x) => slugify(x) === slugify(name)));
-  const knownTopics = new Set([...curated.flatMap((g) => g.topics), ...savedTopics, ...aiTopicsFresh]); // Búsqueda O(1)
-  // [Tema actual fuera de las listas]: p. ej. al editar un recurso antiguo → se muestra como opción para no perderlo
-  const orphanTopic = !customTopic && topicName && !knownTopics.has(topicName) ? topicName : null;
+  // [2026-11-09]: temas de TODOS los niveles (primero el elegido) → elegir el tema asigna el nivel
+  const curated = language ? curatedTopicsAllLevels(kind, language, level) : [];
+  const groups = topicGroups(curated, catalog, [{ label: "Sugeridos por la IA", topics: suggested }]);
+  const aiTopicsFresh = groups.find((g) => g.label === "Sugeridos por la IA")?.topics ?? []; // Solo las sugerencias que no estaban ya
   // [Tema del catálogo]: si el texto coincide con un tema existente se enlaza por id | `localeCompare` sensitivity "base": ignora mayúsculas/tildes
   const catalogTopic = catalog.find((x) => x.name.localeCompare(topicName.trim(), "es", { sensitivity: "base" }) === 0) ?? null;
   const key = manualKey?.trim() || catalogTopic?.slug || (initial && initial.topic === topicName ? initial.key : slugify(topicName)); // Clave natural derivada
@@ -303,9 +300,9 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
   };
 
   // [Tema desde el select]: "Otro tema" abre el campo de texto; cualquier otra opción fija el tema
-  const onTopicSelect = (value: string) => {
-    setCustomTopic(value === OTHER_TOPIC);
-    setTopicName(value === OTHER_TOPIC ? "" : value);
+  const onTopicSelect = (value: string, custom: boolean) => {
+    setCustomTopic(custom);
+    setTopicName(value);
   };
 
   const onProvenanceChange = (next: Provenance) => {
@@ -315,6 +312,7 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
   };
 
   // [Comprobación de clave duplicada]: solo con un elemento (con varios la clave incluye el texto de cada uno); el backend vuelve a validar
+  const titleTopic = useDebounce(topicName, customTopic ? 700 : 0); // Tema escrito a mano → se traduce al dejar de teclear
   const keyCheckInput = useDebounce(language && key && !isGroup && entries.length <= 1 ? `${language}|${kind}|${key}` : "", 400);
   const keyConflict = keyCheckInput !== "" && keyCheck.input === keyCheckInput ? keyCheck.message : null;
   useEffect(() => {
@@ -337,19 +335,23 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
   }, []);
 
   // ───── IA ─────
-  const postAi = async <T,>(action: "topics" | "content", body: Record<string, unknown>): Promise<T | null> => {
+  // [Fix 2026-10-28]: `status` en el error (opcional) → la generación por rondas distingue «ronda sin elementos nuevos» (422) de un fallo real (red, 5xx)
+  const postAi = async <T,>(action: "topics" | "content", body: Record<string, unknown>, onError?: (status: number, message: string) => void): Promise<T | null> => {
     setAiBusy(action);
     setAiError(null);
     try {
       const res = await fetch(`/api/curriculum/ai/${action}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      const data = (await res.json()) as T & { message?: string };
+      const data = (await res.json().catch(() => ({}))) as T & { message?: string }; // `.catch`: un 502/504 con HTML no rompe con SyntaxError
       if (!res.ok) {
-        setAiError(data.message ?? `HTTP ${res.status}`);
+        const message = data.message ?? `HTTP ${res.status}`;
+        setAiError(message);
+        onError?.(res.status, message); // `?.()` (ES2020): solo si quien llama quiere el detalle
         return null;
       }
       return data;
     } catch {
       setAiError("No se pudo conectar con el servidor.");
+      onError?.(0, "No se pudo conectar con el servidor.");
       return null;
     } finally {
       setAiBusy(null);
@@ -370,18 +372,41 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
     const seen = new Set(append ? entries.map((e) => slugify(headline(e.content))) : []); // [Sin duplicados entre lotes]: `Set` (ES2015)
     let last: DraftResult | null = null;
     // [Hasta completar · 2026-10-23]: antes el bucle avanzaba AI_BATCH aunque un lote trajera menos (repetidos o inválidos) → se creaban menos de los pedidos.
-    // Ahora se pide lo que FALTA hasta llegar a `total`, con un tope de intentos (lotes + 2 reintentos) para no quedar en bucle si la IA ya no tiene más ideas
-    const maxRounds = Math.ceil(total / AI_BATCH) + 2;
-    for (let round = 0; created.length < total && round < maxRounds; round++) {
+    // Ahora se pide lo que FALTA hasta llegar a `total`, con un tope de rondas para no quedar en bucle si la IA ya no tiene más ideas
+    // [Fix 2026-10-28 · «La IA creó 4 de 16» + 422]: una ronda en la que la IA solo repitió lo existente (o devolvió JSON inválido) responde 422 y ANTES cortaba toda la
+    // generación → ahora es una «ronda seca»: se reintenta (force + exclusiones) y solo se para tras DRY_LIMIT rondas secas SEGUIDAS; un fallo real (red, 5xx, 400) sí corta
+    // [Patrón]: Batch Processing + Retry acotado | [Principio]: Fail Soft (se conserva lo generado) + Fail Fast ante errores no recuperables
+    const batch = batchFor(kind);
+    const maxRounds = Math.ceil(total / batch) + 4;
+    let dry = 0; // Rondas seguidas sin elementos nuevos
+    let lastFailure: { status: number; message: string } | null = null;
+    for (let round = 0; created.length < total && round < maxRounds && dry < DRY_LIMIT; round++) {
       const done = created.length;
       setAiProgress({ done, total });
       // Lotes 2…n: `force` → la caché no devuelve el mismo lote otra vez
       // [exclude]: lo que ya hay en el formulario + lo generado en lotes anteriores → la IA propone elementos NUEVOS (el backend añade lo ya guardado del tema)
-      const exclude = [...entries.map((e) => headline(e.content)), ...created.map((e) => headline(e.content))].filter(Boolean).slice(0, 200);
-      const data = await postAi<DraftResult>("content", { kind, language, level, skill, topic: topicName.trim(), force: force || round > 0, count: Math.min(AI_BATCH, total - done), exclude });
-      if (!data) break; // Error ya mostrado en aiError; se conserva lo generado hasta aquí
+      // [Fix 2026-10-28]: cada titular ≤ 160 caracteres (@MaxLength del DTO; una traducción o enunciado largo daba 400) y los MÁS RECIENTES al final (el backend los prioriza en el prompt)
+      const exclude = [...entries.map((e) => headline(e.content)), ...created.map((e) => headline(e.content))]
+        .filter(Boolean)
+        .map((h) => h.slice(0, 160))
+        .slice(-200); // `slice(-200)` (JS): @ArrayMaxSize(200) conservando los últimos
+      lastFailure = null;
+      const data = await postAi<DraftResult>("content", { kind, language, level, skill, topic: topicName.trim(), force: force || round > 0, count: Math.min(batch, total - done), exclude }, (status, message) => {
+        lastFailure = { status, message };
+      });
+      if (!data) {
+        // `as` (TS): el callback asigna dentro de un closure → el análisis de flujo no lo ve
+        const failure = lastFailure as { status: number; message: string } | null;
+        // [Fix 2026-10-30]: 503/504 también cuentan como ronda seca → la IA en CPU puede agotar el plazo en un lote suelto y antes eso tiraba por la borda el resto de la cantidad pedida
+        if (failure && [422, 503, 504].includes(failure.status)) {
+          dry++;
+          continue; // Ronda seca: se vuelve a pedir con más variedad (el backend sube la temperatura y lista lo repetido)
+        }
+        break; // Error no recuperable: ya mostrado en aiError; se conserva lo generado hasta aquí
+      }
       last = data;
       if (data.strategy === "existing") break; // [No duplicar]: se ofrece abrir el recurso existente
+      const before = created.length;
       for (const d of data.drafts ?? [{ content: data.content, generationId: data.generationId }]) {
         const h = slugify(headline(d.content));
         // ponytail: lotes independientes pueden repetir elementos → se descartan por titular; puede quedar alguno menos que lo pedido
@@ -389,11 +414,13 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
         seen.add(h);
         created.push(newEntry(kind, d.content, d.generationId));
       }
+      dry = created.length > before ? 0 : dry + 1; // Lote que solo trajo repetidos también cuenta como seco
     }
     setAiProgress(null);
     setDraft(last);
     // [Aviso]: la IA no encontró suficientes elementos nuevos → se dice cuántos faltan (no se ocultan)
-    if (created.length && created.length < total && last?.strategy !== "existing") setAiError(`La IA creó ${created.length} de ${total}: no encontró más elementos nuevos sobre este tema. Añade los que faltan a mano o prueba con un tema más amplio.`);
+    // [Fix 2026-10-28]: el aviso parcial dice cuántas rondas se intentaron → queda claro que no fue un fallo silencioso
+    if (created.length && created.length < total && last?.strategy !== "existing") setAiError(`La IA creó ${created.length} de ${total}: tras varios intentos no encontró más elementos nuevos sobre este tema (sin repetir los existentes). Revisa los creados, añade los que faltan a mano o pulsa «Generar más» con un tema más amplio.`);
     if (!created.length) return;
     setEntries((prev) => (append ? [...prev, ...created] : created));
     setContentMode("fields");
@@ -407,7 +434,11 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
   };
 
   // [Importar archivo]: los elementos leídos se AÑADEN al formulario para revisarlos antes de guardar
-  const addImported = (contents: Record<string, unknown>[]) => {
+  const addImported = (contents: Record<string, unknown>[], sourceName = "") => {
+    // [Valores por defecto · 2026-11-03]: con idioma y nivel ya elegidos, lo importado rellena lo que falte → «Qué practica» (la del tipo) y el tema (título del archivo/página)
+    if (!skill) setSkill(meta.skill?.value ?? SKILLS[0]!);
+    const name = sourceName.replace(/\.[a-z0-9]{2,5}$/i, "").replace(/[_-]+/g, " ").trim(); // «partes-del-cuerpo.pdf» → «partes del cuerpo»
+    if (!topicName.trim() && name.length >= 2) { setTopicName(name.slice(0, 120)); setCustomTopic(true); }
     setEntries((prev) => [...prev, ...contents.map((c) => newEntry(kind, c))]);
     setContentMode("fields");
   };
@@ -417,6 +448,17 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
     const next = entries.filter((e) => e.uid !== uid);
     setEntries(next);
     if (!next.length) setContentMode("choose"); // Sin elementos → vuelve a la elección inicial
+  };
+  // [deleteEntry · 2026-11-13]: elemento ya guardado → baja definitiva en NestJS (solo ADMIN) antes de quitarlo del formulario
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const deleteEntry = async (entry: { uid: string; itemId?: string }) => {
+    if (!entry.itemId) return removeEntry(entry.uid);
+    if (!window.confirm("¿Eliminar este elemento del tema? No se puede deshacer.")) return;
+    setDeleting(entry.uid);
+    const r = await deleteResourceAction(entry.itemId);
+    setDeleting(null);
+    if (r.ok) removeEntry(entry.uid);
+    else setErrors([r.message]);
   };
 
   // ───── Guardar ─────
@@ -464,8 +506,12 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
         setProgress(null);
         return send(entry, i, attempt + 1); // Recursión acotada por RETRIES
       }
-      const body = (await res.json()) as { message?: string; id?: string; version?: number };
-      return res.ok ? { id: body.id ?? entry.itemId, version: body.version } : { error: body.message ?? `HTTP ${res.status}` };
+      // [2026-10-27]: `.catch` → una respuesta sin JSON (proxy caído) no se convierte en «No se pudo conectar» · `message` puede ser lista (class-validator/Zod)
+      const body = (await res.json().catch(() => ({}))) as { message?: string | string[]; id?: string; version?: number };
+      if (res.ok) return { id: body.id ?? entry.itemId, version: body.version };
+      const message = Array.isArray(body.message) ? body.message.join("; ") : body.message;
+      // [Mensaje real]: el backend ya traduce los errores conocidos (BD, tamaño, validación); el 500 genérico se explica en vez de mostrar «Internal server error»
+      return { error: !message || message === "Internal server error" ? `Error interno del servidor (HTTP ${res.status}). Revisa el registro del backend.` : message };
     } catch {
       return { error: "No se pudo conectar con el servidor." };
     }
@@ -477,14 +523,17 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
     if (missing.length || keyConflict || submitting) return;
     setSubmitting(true);
     setErrors([]);
-    // [Envío secuencial]: un recurso por elemento → el backend valida cada uno (esquema, idioma, clave única) | `for…of` + `await`
+    // [Envío por elemento]: un recurso por elemento → el backend valida cada uno (esquema, idioma, clave única)
+    // [2026-10-27 · Rendimiento]: antes `for…of` + `await` (uno tras otro) → ahora SAVE_PARALLEL a la vez con mapLimit; los resultados se procesan en el orden del formulario
     const created: string[] = [];
     const saved = new Map<string, { id: string; version?: number; key: string }>(); // uid → resultado (modo tema)
     let updated = 0;
     const failed: Array<{ uid: string; message: string }> = [];
+    // [Sin cambios]: no se envía (ahorra peticiones y versiones) → `null` = omitido
+    const results = await mapLimit(entries, SAVE_PARALLEL, (entry, i) => (entry.itemId && !entry.dirty ? Promise.resolve(null) : send(entry, i)));
     for (const [i, entry] of entries.entries()) {
-      if (entry.itemId && !entry.dirty) continue; // [Sin cambios]: no se envía (ahorra peticiones y versiones)
-      const r = await send(entry, i);
+      const r = results[i];
+      if (!r) continue;
       if (r.id) {
         if (entry.itemId) updated += 1;
         else created.push(r.id);
@@ -530,7 +579,7 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
   const topicReady = comboReady && topicName.trim().length >= 2;
   const canGenerate = topicReady && aiBusy === null && !aiProgress;
   // [Texto de progreso]: "Generando 11–20 de 25…" en lotes; un solo lote → aviso de duración
-  const generatingLabel = aiProgress && aiProgress.total > AI_BATCH ? `Generando ${aiProgress.done + 1}–${Math.min(aiProgress.done + AI_BATCH, aiProgress.total)} de ${aiProgress.total}…` : "Generando… (1-2 min)";
+  const generatingLabel = aiProgress && aiProgress.total > 1 ? `Generando ${aiProgress.done + 1}–${Math.min(aiProgress.done + batchFor(kind), aiProgress.total)} de ${aiProgress.total}…` : "Generando… (1-2 min)";
 
   return (
     <form onSubmit={onSubmit} className="space-y-5" noValidate data-tried={triedSubmit || undefined}>
@@ -540,24 +589,16 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
         <div role="alert" className="rounded-lg border border-tone-danger-line bg-tone-danger-soft px-4 py-3 text-sm text-tone-danger">
           <p className="font-semibold">{errors.length ? "El servidor no aceptó el recurso:" : "Falta completar:"}</p>
           <ul className="mt-1 list-disc space-y-0.5 pl-5">
-            {shownErrors.map((m) => (
-              <li key={m}>{m}</li>
+            {shownErrors.map((m, i) => (
+              <li key={`${i}-${m}`}>{m}</li> // [2026-10-27]: mensajes repetidos (mismo texto en dos ejemplos) → clave posición + texto
             ))}
           </ul>
         </div>
       )}
 
-      {/* ── Paso 1: idioma y nivel (condicionan todo lo demás) ── */}
-      <Step n={1} title="¿Para qué idioma y nivel?" hint={isGroup ? "Idioma y nivel del tema (fijos al editar un tema)." : "El contenido se escribirá en este idioma."} disabled={isGroup}>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <SelectField<Language> id="language" label="Idioma" value={language} onChange={onLanguageChange} placeholder="Elige idioma…" options={LANGUAGES.map((l) => ({ value: l.value, label: l.label }))} invalid={triedSubmit && !language} />
-          <SelectField<CefrLevel> id="level" label="Nivel del estudiante" value={level} onChange={setLevel} placeholder="Elige nivel…" options={LEVELS} invalid={triedSubmit && !level} />
-        </div>
-      </Step>
-
-      {/* ── Paso 2: tipo ── */}
-      <Step n={2} title="¿Qué vas a crear?" hint={isEdit ? "El tipo de un recurso existente no se puede cambiar." : undefined}>
-        <div role="radiogroup" aria-labelledby="step-2" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      {/* ── Paso 1: tipo ── */}
+      <Step n={1} title="¿Qué vas a crear?" hint={isEdit ? "El tipo de un recurso existente no se puede cambiar." : undefined}>
+        <div role="radiogroup" aria-labelledby="step-1" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {/* [2026-10-23 · 4.º pase]: sin «Traducción» (ahora es el Traductor del menú) salvo al editar un recurso que ya es de ese tipo */}
           {KINDS.filter((k) => RESOURCE_KINDS.includes(k) || k === kind).map((k) => {
             const m = KIND_META[k];
@@ -588,52 +629,26 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
         </div>
       </Step>
 
+      {/* ── Paso 2: idioma y nivel (condicionan todo lo demás) ── */}
+      <Step n={2} title="¿Para qué idioma y nivel?" hint={isGroup ? "Idioma y nivel del tema (fijos al editar un tema)." : "El contenido se escribirá en este idioma."} disabled={isGroup}>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <SelectField<Language> id="language" label="Idioma" value={language} onChange={onLanguageChange} placeholder="Elige idioma…" options={LANGUAGES.map((l) => ({ value: l.value, label: l.label }))} invalid={triedSubmit && !language} />
+          <SelectField<CefrLevel> id="level" label="Nivel del estudiante" value={level} onChange={setLevel} placeholder="Elige nivel…" options={LEVELS} invalid={triedSubmit && !level} disabled={levelLocked} hint={levelLocked ? "Se asigna solo al elegir el tema (paso 3). Podrás cambiarlo al editar." : undefined} />
+        </div>
+      </Step>
+
       {/* ── Paso 3: tema (lista) ── */}
       <Step
         n={3}
         title="¿Sobre qué tema?"
         // [Rúbrica · 2026-10-23]: se explica para qué sirve → el tema es la TAREA que se corrige y sus criterios van en español porque los lee el docente
-        hint={comboReady && kind === "rubric" ? `Una rúbrica es la plantilla para CORREGIR una tarea abierta (redacción u oral) de ${languageLabel} ${level}. El tema es la tarea que se evalúa (p. ej. «Correo informal»); los criterios y descriptores van en español porque los usa el docente al calificar.` : comboReady ? `Temas de «${meta.label}» para ${languageLabel} ${level}. ¿No está el que buscas? Pide más a la IA (se añaden a la lista) o elige «Otro tema» al final.` : "Primero elige idioma y nivel: la lista de temas depende de ellos y del tipo de recurso."}
+        hint={comboReady && kind === "rubric" ? `Una rúbrica es la plantilla para CORREGIR una tarea abierta (redacción u oral) de ${languageLabel} ${level}. El tema es la tarea que se evalúa (p. ej. «Correo informal»); los criterios y descriptores van en español porque los usa el docente al calificar.` : comboReady ? `Temas de «${meta.label}» para ${languageLabel} ${level}. ¿No está el que buscas? Pide más a la IA (se añaden a la lista) o elige «Otro tema» al final.` : language ? "Elige el tema: el nivel se asigna según el tema (puedes cambiarlo)." : "Primero elige el idioma: la lista de temas depende de él y del tipo de recurso."}
         disabled={isGroup}
       >
         <div className={cn("grid gap-3", !skillFixed && "sm:grid-cols-[1fr_16rem]")}>
           <div className="space-y-2">
-            <label htmlFor="topic" className="block text-xs font-semibold text-muted-foreground">
-              Tema <span className="req" aria-hidden>*</span>
-            </label>
-            {/* [Select de temas]: <optgroup> (HTML) separa el temario de las sugerencias de la IA → queda claro de dónde sale cada opción */}
-            <select id="topic" required value={customTopic ? OTHER_TOPIC : topicName} onChange={(e) => onTopicSelect(e.target.value)} disabled={!comboReady} className="control w-full" aria-invalid={(triedSubmit && topicName.trim().length < 2) || undefined}>
-              <option value="">{comboReady ? "Elige un tema…" : "Primero elige idioma y nivel"}</option>
-              {orphanTopic && <option value={orphanTopic}>{orphanTopic}</option>}
-              {curated.map((g) => (
-                <optgroup key={g.label} label={g.label}>
-                  {g.topics.map((name) => (
-                    <option key={name} value={name}>
-                      {name}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-              {savedTopics.length > 0 && (
-                <optgroup label="Temario guardado">
-                  {savedTopics.map((name) => (
-                    <option key={name} value={name}>
-                      {name}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-              {aiTopicsFresh.length > 0 && (
-                <optgroup label="Sugeridos por la IA">
-                  {aiTopicsFresh.map((name) => (
-                    <option key={name} value={name}>
-                      {name}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-              <option value={OTHER_TOPIC}>Otro tema (escribirlo)…</option>
-            </select>
+            {/* [Select de temas · 2026-10-27]: componente compartido (TopicSelect) — <optgroup> separa el temario de las sugerencias de la IA */}
+            <TopicSelect id="topic" value={topicName} custom={customTopic} onChange={onTopicSelect} groups={groups} ready={Boolean(language)} language={language} invalid={triedSubmit && topicName.trim().length < 2} showTitle={false} level={level} onLevelChange={setLevel} />
             {/* [2026-10-19]: el tema en el idioma elegido, con IPA, audio y traducción (se ve antes de guardar) */}
             {/* [Pronunciación · 2026-10-23 · 4.º pase]: el tema es un fonema IPA → se muestra CUÁNDO se aplica (grafías + regla) en lugar de traducir el tema */}
             {kind === "pronunciation" && phoneme ? (
@@ -645,10 +660,8 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
                 <p><b>Cuándo se aplica:</b> {phoneme.ruleEs}</p>
               </div>
             ) : (
-              language && topicName.trim().length >= 2 && !customTopic && <TopicTitle topic={topicName} language={language} />
-            )}
-            {customTopic && (
-              <input aria-label="Escribe el tema" required aria-invalid={(triedSubmit && topicName.trim().length < 2) || undefined} value={topicName} onChange={(e) => setTopicName(e.target.value)} maxLength={160} placeholder="Ej.: Pedir en un restaurante" className="control w-full" autoFocus autoComplete="off" />
+              // [2026-11-13]: también los temas propios / generados con IA → título en el idioma estudiado + traducción (con espera al teclear)
+              language && titleTopic.trim().length >= 2 && <TopicTitle topic={titleTopic} language={language} />
             )}
           </div>
           {!skillFixed && (
@@ -675,7 +688,7 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
           )}
         </div>
         {keyConflict && (
-          <p role="alert" className="text-xs text-tone-danger">
+          <p role="alert" className="type-meta text-tone-danger">
             {keyConflict}
           </p>
         )}
@@ -702,16 +715,17 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
             <CountInput id="count-choose" value={count} onChange={setCount} />
             <div className="grid gap-3 md:grid-cols-3">
               <ChoiceCard icon={<Sparkles className="size-4" />} title="Generar con IA" hint={canGenerate || aiBusy ? `Crea ${count === 1 ? "el elemento" : `${count} elementos distintos`} en ${languageLabel}; luego los revisas antes de guardar.` : "Para generar con IA, primero completa idioma, nivel y tema."}>
-                <button type="button" className="btn btn-primary w-full" disabled={!canGenerate} aria-busy={aiBusy === "content"} onClick={() => void generateContent()}>
-                  {aiBusy === "content" || aiProgress ? generatingLabel : `Generar ${count} con IA`}
+                <button type="button" className="btn btn-primary h-10 w-full" disabled={!canGenerate} aria-busy={aiBusy === "content"} onClick={() => void generateContent()}>
+                  {/* [2026-11-16]: texto corto «Generar» (el número ya está en «¿Cuántos?») */}
+                  {aiBusy === "content" || aiProgress ? generatingLabel : "Generar"}
                 </button>
               </ChoiceCard>
               <ChoiceCard icon={<PenLine className="size-4" />} title="Escribir a mano" hint="Llenas tú los campos de cada elemento, con vista previa al lado.">
-                <button type="button" className="btn btn-outline w-full" onClick={() => addManual(count)}>
-                  Escribir {count === 1 ? "a mano" : `${count} a mano`}
+                <button type="button" className="btn btn-outline h-10 w-full" onClick={() => addManual(count)}>
+                  Escribir
                 </button>
               </ChoiceCard>
-              <ChoiceCard icon={<FileUp className="size-4" />} title="Importar" hint={language ? "Excel, CSV, Word, PDF, texto, imagen o el enlace de una página web: una fila por elemento." : "Primero elige el idioma (se usa para leer imágenes y la IPA)."}>
+              <ChoiceCard icon={<FileUp className="size-4" />} title="Importar" hint={!language ? "Primero elige el idioma (se usa para leer imágenes y la IPA)." : kind === "exercise" ? "Word, PDF, imagen (OCR), Excel o el enlace de una página: se leen las preguntas, opciones y respuestas para revisarlas." : "Excel, CSV, Word, PDF, texto, imagen o el enlace de una página web: una fila por elemento."}>
                 {/* [Importar]: requiere el idioma (OCR y variante IPA) */}
                 <ImportPanel kind={kind} language={language} topic={topicName} disabled={!language} onImport={addImported} />
               </ChoiceCard>
@@ -721,17 +735,18 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
           <div className="space-y-4">
             {entries.map((entry, i) => (
               // [Tarjeta por elemento]: editor + vista previa | `key` = uid estable (no el índice) → React conserva el foco al quitar elementos
-              <article key={entry.uid} aria-label={`Elemento ${i + 1}`} className="space-y-3 rounded-xl border border-border p-4">
+              <article key={entry.uid} aria-label={`Elemento ${i + 1}`} className="space-y-3 surface-item">
                 {(entries.length > 1 || !isEdit) && (
                   <header className="flex items-center justify-between gap-2">
-                    <h3 className="text-sm font-bold">
+                    <h3 className="title-card">
                       Elemento {i + 1}
                       {headline(entry.content) && <span className="font-normal text-muted-foreground"> · {headline(entry.content).slice(0, 60)}</span>}
                     </h3>
                     {isGroup && !entry.itemId && <span className="badge bg-tone-brand-soft text-tone-brand">Nuevo</span>}
-                    {!isEdit && !entry.itemId && (
-                      <button type="button" onClick={() => removeEntry(entry.uid)} aria-label={`Quitar elemento ${i + 1}`} className="btn btn-ghost text-tone-danger">
-                        ✕ Quitar
+                    {/* [2026-11-13]: nuevos → se quitan del formulario; existentes (modo tema, ADMIN) → DELETE /curriculum/:id tras confirmar | icono sin texto (mismo botón que Actividades) */}
+                    {!isEdit && (!entry.itemId || (canAdmin && entries.length > 1)) && (
+                      <button type="button" onClick={() => void deleteEntry(entry)} disabled={deleting === entry.uid} aria-busy={deleting === entry.uid} aria-label={`${entry.itemId ? "Eliminar" : "Quitar"} elemento ${i + 1}`} title={entry.itemId ? "Eliminar" : "Quitar"} className="btn btn-ghost btn-sm size-8 shrink-0 px-0! text-tone-danger">
+                        <Trash2 aria-hidden className="size-4" />
                       </button>
                     )}
                   </header>
@@ -739,7 +754,7 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
                 <div className="grid gap-5 lg:grid-cols-[1fr_18rem]">
                   <ContentEditor kind={kind} language={language} value={entry.content as unknown as ContentByKind[typeof kind]} onChange={(v) => updateEntry(entry.uid, v as unknown as Record<string, unknown>)} />
                   <aside aria-label={`Vista previa del elemento ${i + 1}`} className="h-fit rounded-xl border border-dashed border-tone-brand-line bg-muted p-4">
-                    <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Así lo verá el estudiante</p>
+                    <p className="mb-2 type-meta font-bold uppercase tracking-wider text-muted-foreground">Así lo verá el estudiante</p>
                     <ResourcePreview kind={kind} content={entry.content} language={language || undefined} />
                   </aside>
                 </div>
@@ -771,7 +786,7 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
           </div>
         )}
         {aiError && (
-          <p role="alert" className="rounded-lg border border-tone-danger-line bg-tone-danger-soft px-3 py-2 text-xs text-tone-danger">
+          <p role="alert" className="rounded-lg border border-tone-danger-line bg-tone-danger-soft px-3 py-2 type-meta text-tone-danger">
             {aiError}
           </p>
         )}
@@ -853,7 +868,7 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
       </details>
 
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <p className="mr-auto text-[11px] text-muted-foreground">
+        <p className="mr-auto type-meta text-muted-foreground">
           {isGroup
             ? "Solo se guardan los elementos nuevos y los que modificaste (cada cambio crea una versión)."
             : isEdit
@@ -861,7 +876,7 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
               : "Se guarda como borrador: los estudiantes lo verán cuando se publique."}
         </p>
         {progress && (
-          <p role="status" aria-live="polite" className="w-full text-xs font-semibold text-tone-brand">
+          <p role="status" aria-live="polite" className="w-full type-meta font-semibold text-tone-brand">
             {progress}
           </p>
         )}
@@ -871,11 +886,9 @@ export function CurriculumItemForm({ initial, initialGroup, canAdmin = false, ow
         <button type="submit" className="btn btn-primary" disabled={submitting} aria-busy={submitting}>
           {submitting
             ? "Guardando…"
-            : isGroup
-              ? `Guardar tema (${entries.filter((e) => !e.itemId).length} nuevos)`
-              : isEdit
-                ? "Guardar cambios"
-                : entries.length > 1
+            : isGroup || isEdit
+              ? "Guardar" // [2026-11-13]: edición = «Cancelar» + «Guardar» (mismo par que Actividades)
+              : entries.length > 1
                   ? `Crear ${entries.length} recursos`
                   : "Crear recurso"}
         </button>

@@ -4,9 +4,13 @@ import {
   USER_REPOSITORY,
   type IUserRepository,
 } from '../../domain/interfaces/user.repository.interface';
+import {
+  socialLinksOf,
+  type SocialUrlField,
+} from '../../domain/value-objects/social-links.vo'; // [2026-10-28]: redes sociales del perfil
 // [Use Case GetProfile]: perfil propio + estadísticas de aprendizaje (cursos inscritos y nivel MCER) | [Patrón]: Query (CQRS-lite) + Read Model | [Principio]: SRP + DIP
 
-export interface PublicProfile {
+export type PublicProfile = {
   id: string;
   email: string;
   firstName: string;
@@ -21,7 +25,7 @@ export interface PublicProfile {
   level: string | null; // Nivel MCER: mayor certificado obtenido, si no el mayor nivel de los cursos inscritos
   isActive: boolean;
   createdAt: Date;
-}
+} & Record<SocialUrlField, string | null>; // [2026-10-28]: linkedinUrl/twitterUrl/spotifyUrl/youtubeUrl (null = sin configurar)
 
 // `const` + regex (JS): solo niveles MCER válidos (los cursos legacy tienen categorías no MCER) | [Principio]: SSOT del formato
 const CEFR = /^[ABC][12]$/;
@@ -41,6 +45,7 @@ export class GetProfileUseCase {
       this.stats(userId),
     ]);
     if (!user) throw new NotFoundException('User not found');
+    const social = socialLinksOf(user);
     return {
       id: user.id,
       email: user.email,
@@ -52,6 +57,11 @@ export class GetProfileUseCase {
       phone: user.phone ?? null,
       timezone: user.timezone ?? null,
       preferredLanguage: user.preferredLanguage ?? null,
+      // [2026-10-28]: `socialLinksOf` re-valida (https + dominio) y deja null lo vacío | se renombra a `<red>Url` (mismo nombre que el PATCH)
+      linkedinUrl: social.linkedin,
+      twitterUrl: social.twitter,
+      spotifyUrl: social.spotify,
+      youtubeUrl: social.youtube,
       ...stats, // `...` spread (ES2018): enrolledCourses + level
       isActive: user.isActive,
       createdAt: user.createdAt,

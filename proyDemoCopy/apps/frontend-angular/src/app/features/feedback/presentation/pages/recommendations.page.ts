@@ -30,11 +30,11 @@ import { FeedbackFacade } from '../../application/feedback.facade';
         }
         @default {
           @if (facade.noData()) {
-            <p class="py-6 text-center text-sm text-muted-foreground">{{ t.noData }}</p>
+            <p class="py-6 text-center text-muted-foreground">{{ t.noData }}</p>
           } @else {
             <div class="grid gap-6 md:grid-cols-2">
               <section aria-labelledby="weak-title">
-                <h2 id="weak-title" class="mb-2 text-sm font-bold">{{ t.weak }}</h2>
+                <h2 id="weak-title" class="title-section mb-2">{{ t.weak }}</h2>
                 @if (facade.plan.data(); as view) {
                   <ul class="space-y-2">
                     @for (w of view.weaknesses.weak_topics; track w.topic) {
@@ -43,12 +43,12 @@ import { FeedbackFacade } from '../../application/feedback.facade';
                           <b>{{ w.topic }}</b>
                           <aula-badge tone="warning" icon="alert">{{ i18n.fmt(t.accuracy, { n: pct(w.accuracy) }) }}</aula-badge>
                         </div>
-                        <p class="mt-1 text-sm text-muted-foreground">{{ w.recommendation }}</p>
+                        <p class="mt-1 text-muted-foreground">{{ w.recommendation }}</p>
                       </li>
                     }
                   </ul>
                   @if (view.weaknesses.strong_topics.length) {
-                    <h2 class="mb-2 mt-4 text-sm font-bold">{{ t.strong }}</h2>
+                    <h2 class="title-section mb-2 mt-4">{{ t.strong }}</h2>
                     <p class="flex flex-wrap gap-1.5">
                       @for (s of view.weaknesses.strong_topics; track s) {
                         <aula-badge tone="info" icon="check">{{ s }}</aula-badge>
@@ -56,11 +56,11 @@ import { FeedbackFacade } from '../../application/feedback.facade';
                     </p>
                   }
                 } @else {
-                  <p role="status" class="text-sm text-muted-foreground">{{ t.aiUnavailable }}</p>
+                  <p role="status" class="text-muted-foreground">{{ t.aiUnavailable }}</p>
                 }
               </section>
               <section aria-labelledby="progress-title">
-                <h2 id="progress-title" class="mb-2 text-sm font-bold">{{ i18n.shell().nav.studyPlan }}</h2>
+                <h2 id="progress-title" class="title-section mb-2">{{ i18n.shell().nav.studyPlan }}</h2>
                 <ul class="space-y-3">
                   @for (row of progress(); track row.topic) {
                     <li>
@@ -71,7 +71,7 @@ import { FeedbackFacade } from '../../application/feedback.facade';
                 </ul>
               </section>
             </div>
-            <p class="mt-4 text-xs text-muted-foreground">{{ i18n.t().common.aiReview }}</p>
+            <p class="mt-4 type-meta text-muted-foreground">{{ i18n.t().common.aiReview }}</p>
           }
         }
       }

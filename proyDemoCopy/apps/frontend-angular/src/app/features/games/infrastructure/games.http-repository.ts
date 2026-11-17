@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { map, type Observable } from 'rxjs';
 import * as z from 'zod'; // [Tree-shaking · Zod 4]: import de namespace (`* as z`) → esbuild empaqueta solo las funciones usadas (con `{ z }` arrastraba Zod entero, ~450 kB)
 import { API_URL } from '@core/http/api-url.token';
-import { GamesRepository, type GameDeck } from '../domain/games.repository.port';
+import { GamesRepository, type GameDeck, type GameThemes } from '../domain/games.repository.port';
 import {
   AgentTurnSchema,
   CatalogSchema,
@@ -39,6 +39,14 @@ export class GamesHttpRepository extends GamesRepository {
 
   decks(): Observable<GameDeck[]> {
     return this.http.get<GameDeck[]>(`${this.base}/decks`);
+  }
+
+  deck(id: string): Observable<GameDeck> {
+    return this.http.get<GameDeck>(`${this.base}/decks/${this.id(id)}`);
+  }
+
+  themes(language: string): Observable<GameThemes> {
+    return this.http.get<GameThemes>(`${this.base}/themes`, { params: { language } });
   }
 
   catalog(): Observable<Catalog> {

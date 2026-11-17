@@ -1,0 +1,27 @@
+// SMACSS · THEME — paleta y medidas como variables CSS. Cambiar la apariencia = cambiar estos valores.
+:root {
+  --ink: #14232e;
+  --petrol: #1b4d6b;
+  --amber: #e3a008;
+  --line: #d8e0e5;
+  --surface: #ffffff;
+  --muted: #566874;
+  --tint: #e3eef3;
+  --danger: #b3412f;
+  --sidebar-w: 16rem;
+  --topbar-h: 3.5rem;
+  --radius: 0.75rem;
+  --radius-sm: 0.5rem;
+  // Espaciado único para todo el sistema (escala de 4px).
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space: 1rem;
+  --space-lg: 1.5rem;
+  // Relleno de contenedores: tarjetas/paneles y filas/ítems internos.
+  --pad-card: 1.25rem;
+  --pad-item: 0.75rem 1rem;
+  // Tipografía de apoyo.
+  --fs-sm: 0.875rem;
+  --fs-xs: 0.75rem;
+  --shadow-card: 0 1px 2px rgba(20, 35, 46, 0.04);
+}

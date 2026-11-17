@@ -15,6 +15,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from huggingface_hub.constants import HF_HUB_CACHE
 
+from src.modules.speech.application.schemas.engine_response import SpeechModelsResponse, SpeechStatusResponse
 from src.modules.speech.application.schemas.fluency_request import FluencyRequest, FluencyResponse
 from src.modules.speech.application.schemas.transcribe_response import TranscribeResponse
 from src.modules.speech.application.use_cases.analyze_fluency import AnalyzeFluencyUseCase
@@ -43,7 +44,7 @@ async def fluency(payload: FluencyRequest, _user: CurrentUserDep) -> FluencyResp
     return AnalyzeFluencyUseCase(get_settings().speech_pause_threshold_s).execute(payload)
 
 
-@router.get("/models", summary="Modelos de voz instalados y su tamaño")
+@router.get("/models", response_model=SpeechModelsResponse, summary="Modelos de voz instalados y su tamaño")
 async def list_models(_user: CurrentUserDep) -> dict[str, object]:
     s = get_settings()
     # Caché de Hugging Face donde faster-whisper guarda los modelos descargados | `HF_HUB_CACHE` respeta HF_HOME/HF_HUB_CACHE
@@ -56,7 +57,7 @@ async def list_models(_user: CurrentUserDep) -> dict[str, object]:
     return {"active": s.whisper_model, "compute_type": s.whisper_compute_type, "installed": installed}
 
 
-@router.get("/status", summary="¿Está instalado el motor de voz a texto? (sin autenticación, sin cargar el modelo)")
+@router.get("/status", response_model=SpeechStatusResponse, summary="¿Está instalado el motor de voz a texto? (sin autenticación, sin cargar el modelo)")
 async def status() -> dict[str, object]:
     # [2026-10-25 · Observabilidad]: el frontend/NestJS saben si ofrecer el respaldo (dictado del navegador o escribir)
     # `asyncio.to_thread`: el primer import de faster-whisper (ctranslate2 + PyAV) bloquea ~1 s → fuera del event loop

@@ -53,6 +53,13 @@ export class CourseFilterDto {
   @IsBooleanString()
   isProBono?: string;
 
+  @ApiPropertyOptional({
+    description: 'Gestión: true = publicados · false = borradores',
+  })
+  @IsOptional()
+  @IsBooleanString()
+  isPublished?: string;
+
   @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()
   @Type(() => Number)

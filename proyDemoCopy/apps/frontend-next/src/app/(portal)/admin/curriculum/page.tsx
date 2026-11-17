@@ -1,13 +1,15 @@
 import { Pagination, paginate } from "@/components/shared/Pagination"; // [2026-10-23 · 4.º pase]: máx. 10 filas por página
 import { RememberReturn } from "@/components/shared/RememberReturn"; // [2026-10-23 · 4.º pase]: el «Volver» de los formularios regresa a esta pestaña/filtros
-import { FilterSelect } from "@/components/admin/FilterSelect"; // [2026-10-23]: compartido con Gestión → Actividades (DRY)
+import { FilterPanel } from "@/components/admin/FilterPanel"; // [2026-11-11]: MISMO panel en todas las tablas (y «Limpiar» que sí limpia)
 import { Library } from "lucide-react"; // [2026-10-23]: icono SVG del estado vacío (antes emoji)
 import { KindIcon } from "@/components/shared/KindIcon"; // [2026-10-23]: iconos SVG uniformes por tipo de recurso
 import type { Metadata } from "next";
 import Link from "next/link";
+import { TopicTitle } from "@/components/language/TopicTitle";
 import { listTopicGroups } from "@/lib/curriculum-api";
 import { getCurrentUserPayload } from "@/lib/auth";
-import { LANGUAGES, languageLabel } from "@/lib/languages";
+import { isLanguage, languageLabel } from "@/lib/languages";
+import { LanguageChips } from "@/components/shared/LanguageChips"; // [2026-10-27]: clasificación por idioma igual que el catálogo de Cursos
 import { ManagementHeader } from "@/components/portal/ManagementHeader";
 import { toPortalRole } from "@/components/portal/portal-role";
 import { RowActions } from "@/components/admin/RowActions"; // [CRUD por fila]: mismo componente que la tabla de cursos | [Principio]: DRY
@@ -59,12 +61,13 @@ export default async function CurriculumListPage(props: { searchParams: Promise<
   const role = toPortalRole(user?.role ?? null);
   const isAdmin = user?.role === Role.ADMIN; // Solo ADMIN elimina (el backend lo exige)
   const activeKind = KINDS.includes(sp.kind as CurriculumItemKind) ? (sp.kind as CurriculumItemKind) : undefined;
+  const activeLanguage = isLanguage(sp.language) ? sp.language : undefined; // [2026-10-27]: idioma validado contra el SSOT
 
   let groups: TopicGroup[] = [];
   let loadError: string | null = null;
   try {
     // [perKind]: una fila por tema y tipo | `status` filtra los elementos antes de agrupar
-    groups = await listTopicGroups({ ...sp, page: undefined, kind: activeKind, perKind: true }); // `page` es de la tabla (Pagination), no del backend
+    groups = await listTopicGroups({ ...sp, page: undefined, language: activeLanguage, kind: activeKind, perKind: true }); // `page` es de la tabla (Pagination), no del backend
   } catch (err) {
     loadError = err instanceof Error ? err.message : "error desconocido";
   }
@@ -80,7 +83,7 @@ export default async function CurriculumListPage(props: { searchParams: Promise<
       {/* [Barra de la pestaña · 2026-10-19]: MISMO patrón que Usuarios, Exámenes y Cursos → resumen a la izquierda y UN botón primario a la derecha
           (se quitó «Exámenes oficiales»: los exámenes ya se gestionan en su pestaña; «Comparar fuentes» pasó a la barra de filtros, donde se elige el idioma) */}
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <p className="max-w-2xl text-sm text-muted-foreground">
+        <p className="max-w-2xl text-muted-foreground">
           Material de estudio propio (vocabulario, reglas, ejemplos, ejercicios…). La plataforma lo usa antes de recurrir a la IA.{" "}
           <b className="text-foreground">
             {groups.length} tema{groups.length === 1 ? "" : "s"} · {totalItems} elemento{totalItems === 1 ? "" : "s"}
@@ -105,32 +108,24 @@ export default async function CurriculumListPage(props: { searchParams: Promise<
       </nav>
 
       {/* [Filtros]: GET nativo → URL compartible | cada select con etiqueta visible */}
-      <form method="get" className="surface flex flex-wrap items-end gap-3 p-4" aria-label="Filtros de recursos">
-        {activeKind && <input type="hidden" name="kind" value={activeKind} />}
-        <div className="min-w-48 flex-[2]">
-          <label htmlFor="f-search" className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Buscar
-          </label>
-          <input id="f-search" name="search" type="search" defaultValue={sp.search ?? ""} placeholder="Tema o palabra clave…" className="control w-full" />
-        </div>
-        <FilterSelect name="language" label="Idioma" value={sp.language} all="Todos" options={LANGUAGES.map((l) => ({ value: l.value, label: l.label }))} />
-        <FilterSelect name="level" label="Nivel" value={sp.level} all="Todos" options={CEFR_LEVELS.map((l) => ({ value: l, label: l }))} />
-        <FilterSelect name="skill" label="Habilidad" value={sp.skill} all="Todas" options={(Object.keys(SKILL_LABEL) as CurriculumSkill[]).map((s) => ({ value: s, label: SKILL_LABEL[s] }))} />
-        <FilterSelect name="status" label="Estado" value={sp.status} all="Todos" options={(Object.keys(STATUS_LABEL) as ReviewStatus[]).map((s) => ({ value: s, label: STATUS_LABEL[s] }))} />
-        <div className="flex flex-wrap items-center gap-2">
-          <button type="submit" className="btn btn-primary">
-            Filtrar
-          </button>
-          <Link href="/admin/curriculum" className="btn btn-ghost">
-            Limpiar
-          </Link>
-        </div>
-      </form>
+      {/* [Panel de filtros · 2026-10-27]: MISMO panel que el catálogo de Cursos → fila de filtros y, debajo, las pestañas de idioma */}
+      <FilterPanel
+        label="Filtros de recursos"
+        clearHref={href({}, { kind: activeKind })}
+        hidden={{ kind: activeKind, language: activeLanguage }}
+        search={{ value: sp.search, placeholder: "Tema o palabra clave…" }}
+        selects={[
+          { name: "level", label: "Nivel", value: sp.level, all: "Todos", options: CEFR_LEVELS.map((l) => ({ value: l, label: l })) },
+          { name: "skill", label: "Habilidad", value: sp.skill, all: "Todas", options: (Object.keys(SKILL_LABEL) as CurriculumSkill[]).map((s) => ({ value: s, label: SKILL_LABEL[s] })) },
+          { name: "status", label: "Estado", value: sp.status, all: "Todos", options: (Object.keys(STATUS_LABEL) as ReviewStatus[]).map((s) => ({ value: s, label: STATUS_LABEL[s] })) },
+        ]}
+        chips={<LanguageChips active={activeLanguage} hrefFor={(language) => href(sp, { language })} allLabel="Todos" label="Idioma" />}
+      />
       {/* [Comparar fuentes]: depende del idioma filtrado → vive junto a los filtros */}
       <ContradictionScanButton language={sp.language} />
 
       {loadError && (
-        <p role="alert" className="rounded-lg border border-tone-danger-line bg-tone-danger-soft p-4 text-sm text-tone-danger">
+        <p role="alert" className="rounded-lg border border-tone-danger-line bg-tone-danger-soft p-4 text-tone-danger">
           No se pudieron cargar los recursos: {loadError}
         </p>
       )}
@@ -139,7 +134,7 @@ export default async function CurriculumListPage(props: { searchParams: Promise<
         // [Estado vacío]: explica qué hacer (no solo "sin datos")
         <div role="status" className="surface p-10 text-center">
           <Library aria-hidden className="mx-auto size-10 text-tone-brand" />
-          <p className="mt-2 text-sm text-muted-foreground">No hay recursos con estos filtros.</p>
+          <p className="mt-2 text-muted-foreground">No hay recursos con estos filtros.</p>
           <Link href="/admin/curriculum/new" className="btn btn-primary mt-4">
             + Crear el primero
           </Link>
@@ -169,7 +164,11 @@ export default async function CurriculumListPage(props: { searchParams: Promise<
                     <td className="px-4 py-2">
                       <Link href={`/admin/curriculum/tema?${q}`} className="flex items-center gap-2 font-semibold text-primary hover:underline">
                         <KindIcon kind={kind} className="size-5 shrink-0" />
-                        {g.topic}
+                        <span>
+                          {g.topic}
+                          {/* [2026-11-13]: título en el idioma estudiado bajo el original (temas a mano o con IA) */}
+                          <TopicTitle compact topic={g.topic} language={g.language} />
+                        </span>
                       </Link>
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap">

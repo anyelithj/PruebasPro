@@ -18,9 +18,9 @@ export interface ConnectWalletTexts {
   template: `
     @let t = texts();
     <section aria-labelledby="connect-wallet-title" class="space-y-3">
-      <h2 id="connect-wallet-title" class="text-base font-bold">{{ t.heading }}</h2>
+      <h2 id="connect-wallet-title" class="title-section">{{ t.heading }}</h2>
       @if (!wallets().length) {
-        <p class="text-sm text-muted-foreground">{{ t.empty }}</p>
+        <p class="text-muted-foreground">{{ t.empty }}</p>
       } @else {
         <ul class="grid gap-2 sm:grid-cols-2">
           @for (w of wallets(); track w.info.uuid) {

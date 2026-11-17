@@ -74,4 +74,4 @@ async def test_un_saludo_no_trae_material_ni_historial_inventado() -> None:
     retriever = RAGRetriever(None)
     await TutorAgent(llm, retriever).reply(conv, "hola", "en")
     prompt = llm.calls[0]["prompt"]
-    assert "(sin material del curso" in prompt and "es el primer mensaje" in prompt
+    assert "sin material del curso" in prompt and "es el primer mensaje" in prompt

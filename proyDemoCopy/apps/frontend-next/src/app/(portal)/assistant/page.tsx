@@ -81,8 +81,8 @@ export default function AssistantPage() {
   return (
     <div className="w-full space-y-5 py-4">
       <header>
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Feedback IA</h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <h1 className="title-page">Feedback IA</h1>
+        <p className="text-muted-foreground mt-1">
           Pregunta al tutor IA por una retroalimentación pedagógica sobre cualquier respuesta.
           La IA explica el concepto clave sin darte la respuesta directa.
         </p>
@@ -113,7 +113,7 @@ export default function AssistantPage() {
             {...register("questionText")}
           />
           {errors.questionText && (
-            <p className="text-xs text-destructive">{errors.questionText.message}</p>
+            <p className="type-meta text-destructive">{errors.questionText.message}</p>
           )}
         </div>
 
@@ -126,7 +126,7 @@ export default function AssistantPage() {
               {...register("correctAnswer")}
             />
             {errors.correctAnswer && (
-              <p className="text-xs text-destructive">{errors.correctAnswer.message}</p>
+              <p className="type-meta text-destructive">{errors.correctAnswer.message}</p>
             )}
           </div>
 
@@ -138,7 +138,7 @@ export default function AssistantPage() {
               {...register("userAnswer")}
             />
             {errors.userAnswer && (
-              <p className="text-xs text-destructive">{errors.userAnswer.message}</p>
+              <p className="type-meta text-destructive">{errors.userAnswer.message}</p>
             )}
           </div>
         </div>
@@ -173,24 +173,24 @@ export default function AssistantPage() {
           aria-live="polite"
           className="rounded-xl border border-primary/30 bg-primary/5 p-5 space-y-3"
         >
-          <h2 className="text-lg font-bold tracking-tight">Tutor IA</h2>
-          <p className="text-sm text-foreground whitespace-pre-line">{result.message}</p>
+          <h2 className="title-section">Tutor IA</h2>
+          <p className="text-foreground whitespace-pre-line">{result.message}</p>
 
           {result.suggestion && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="type-meta font-semibold uppercase tracking-wide text-muted-foreground">
                 Sugerencia
               </p>
-              <p className="text-sm">{result.suggestion}</p>
+              <p>{result.suggestion}</p>
             </div>
           )}
 
           {result.references.length > 0 && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+              <p className="type-meta font-semibold uppercase tracking-wide text-muted-foreground mb-1">
                 Referencias
               </p>
-              <ul className="list-disc list-inside space-y-1 text-xs text-muted-foreground">
+              <ul className="list-disc list-inside space-y-1 type-meta text-muted-foreground">
                 {result.references.map((ref, i) => (
                   <li key={i}>{ref}</li>
                 ))}

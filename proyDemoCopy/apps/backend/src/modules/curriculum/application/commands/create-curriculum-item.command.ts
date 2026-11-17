@@ -1,3 +1,5 @@
+import { vocabularyArticleProblem } from '../../domain/content/vocabulary-article'; // [2026-11-02]: artículo obligatorio en sustantivos de/fr/pt/es
+import { CurriculumItemKind } from '../../domain/value-objects/curriculum-item-kind.vo';
 import {
   BadRequestException,
   ConflictException,
@@ -22,6 +24,7 @@ import {
   type CurriculumActor,
 } from '../curriculum-actor';
 import { resolveCatalogRefs } from '../resolve-catalog-refs';
+import { assertNoDuplicateHeadline } from '../duplicate-headline'; // [2026-10-28]: sin elementos repetidos dentro del tema
 import type { CreateCurriculumItemDto } from '../dtos/curriculum-item.dto';
 // [Command CreateCurriculumItem]: alta de un recurso pedagógico introducido manualmente | [Patrón]: Command Handler (CQRS, sin bus) + Use Case | [Principio]: SRP + DIP | [Paradigma]: POO + async/await
 // [Tecnología]: NestJS (@Injectable = proveedor del contenedor DI)
@@ -83,6 +86,8 @@ export class CreateCurriculumItemCommand {
     const mismatch = languageMismatch(dto.language, validation.content);
     if (mismatch)
       throw new BadRequestException([`content.ipa.variant: ${mismatch}`]);
+    const articleError = dto.kind === CurriculumItemKind.VOCABULARY ? vocabularyArticleProblem(dto.language, validation.content) : null;
+    if (articleError) throw new BadRequestException([`content.article: ${articleError}`]);
 
     // [Idempotencia / no duplicados]: la clave natural (idioma + tipo + key) debe ser única
     const existing = await this.repo.findByNaturalKey(
@@ -95,6 +100,15 @@ export class CreateCurriculumItemCommand {
         `La clave "${key}" ya está en uso por otro recurso del mismo tipo e idioma (tema "${existing.topic}"). Elige otro tema o edita el recurso existente.`,
       );
     }
+
+    // [Fix 2026-10-28 · Sin duplicados]: mismo titular (palabra, frase, título…) ya guardado en este idioma + nivel + tipo + tema → 409
+    await assertNoDuplicateHeadline(this.repo, {
+      language: dto.language,
+      level: dto.level,
+      kind: dto.kind,
+      topic,
+      content: validation.content,
+    });
 
     // [Persistencia + auditoría en una transacción]: el adapter crea el ítem y su revisión CREATED
     return this.repo.createWithRevision(

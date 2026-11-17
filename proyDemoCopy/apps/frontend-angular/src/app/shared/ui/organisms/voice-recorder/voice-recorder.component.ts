@@ -16,7 +16,8 @@ export type RecorderState = 'idle' | 'asking' | 'recording' | 'done' | 'error';
 export interface Recording {
   blob: Blob; // Audio (webm/opus en Chrome y Firefox, mp4 en Safari)
   durationMs: number;
-  liveText?: string; // [2026-10-23]: lo que dictó el navegador en vivo ('' sin Web Speech) → respaldo si Whisper no responde
+  liveText?: string; // [2026-10-23]: lo que dictó el navegador en vivo ('' sin Web Speech)
+  liveError?: 'network' | 'denied' | null; // [2026-11-09]: por qué el dictado no dio texto (null = sin error)
 }
 
 // [LiveRecognition]: lo mínimo de la Web Speech API (TypeScript no la declara: no está en todos los navegadores)
@@ -24,8 +25,9 @@ export interface LiveRecognition {
   lang: string;
   interimResults: boolean;
   continuous: boolean;
-  onresult: (e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void;
-  onerror: () => void;
+  onresult: (e: { resultIndex: number; results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }> }) => void;
+  onerror: (e: { error: string }) => void;
+  onend: () => void;
   start(): void;
   stop(): void;
 }
@@ -77,7 +79,7 @@ export interface RecorderLabels {
         </button>
       }
       <!-- [Estado del micrófono]: texto + punto pulsante; aria-live="polite" anuncia los cambios sin interrumpir -->
-      <p class="flex items-center gap-2 text-sm font-semibold" aria-live="polite">
+      <p class="flex items-center gap-2 font-semibold" aria-live="polite">
         @switch (state()) {
           @case ('recording') {
             <span
@@ -123,6 +125,7 @@ export class VoiceRecorderComponent {
   private timer: ReturnType<typeof setInterval> | undefined;
   private live: LiveRecognition | null = null;
   private liveText = '';
+  private liveError: 'network' | 'denied' | null = null;
   private readonly voices = inject(SpeechSynthesisService);
 
   constructor() {
@@ -152,9 +155,25 @@ export class VoiceRecorderComponent {
     this.recorder.ondataavailable = (e) => e.data.size && this.chunks.push(e.data);
     this.recorder.onstop = () => {
       const blob = new Blob(this.chunks, { type: this.recorder?.mimeType || 'audio/webm' });
-      this.release();
-      this.state.set('done');
-      this.recorded.emit({ blob, durationMs: Date.now() - this.startedAt, liveText: this.liveText });
+      const durationMs = Date.now() - this.startedAt;
+      const r = this.live;
+      this.release(); // Apaga micrófono y contador (el dictado se para abajo, esperando su texto final)
+      // [Fix 2026-11-09 · «Grabación lista» sin texto]: el resultado FINAL del dictado llega después de pararlo → se espera su `onend` (máx. 1,5 s) antes de entregar
+      let sent = false;
+      const finish = () => {
+        if (sent) return;
+        sent = true;
+        this.state.set('done');
+        this.recorded.emit({ blob, durationMs, liveText: this.liveText, liveError: this.liveText ? null : this.liveError });
+      };
+      if (!r) return finish();
+      r.onend = finish;
+      try {
+        r.stop();
+      } catch {
+        finish();
+      }
+      setTimeout(finish, 1500);
     };
     this.startedAt = Date.now();
     this.elapsed.set(0);
@@ -174,9 +193,13 @@ export class VoiceRecorderComponent {
     if (this.recorder?.state === 'recording') this.recorder.stop(); // `onstop` entrega el audio
   }
 
-  // [dictate · Progressive Enhancement]: Web Speech API en paralelo a MediaRecorder; sin soporte o sin permiso → solo Whisper al terminar
+  // [dictate · Progressive Enhancement]: Web Speech API en paralelo a MediaRecorder → el texto aparece en el campo mientras se habla
+  // La grabación NO sale del navegador (solo memoria de la página) | [Fix 2026-11-09]: Chrome CORTA el dictado tras unos segundos de silencio
+  // (p. ej. si el alumno tarda en empezar) → se reinicia mientras se graba y el texto ya reconocido se conserva entre sesiones
   private dictate(): void {
     this.liveText = '';
+    this.liveError = null;
+    let committed = ''; // Frases finales de todas las sesiones de reconocimiento
     const lang = this.language();
     const w = window as unknown as Record<string, (new () => LiveRecognition) | undefined>;
     const Recognition = w['SpeechRecognition'] ?? w['webkitSpeechRecognition'];
@@ -186,10 +209,28 @@ export class VoiceRecorderComponent {
     r.interimResults = true; // Resultados parciales → el texto aparece mientras se habla
     r.continuous = true;
     r.onresult = (e) => {
-      this.liveText = Array.from(e.results, (x) => x[0]?.transcript ?? '').join(' ').trim();
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i]?.[0]?.transcript ?? '';
+        if (e.results[i]?.isFinal) committed = `${committed} ${t}`.trim();
+        else interim += ` ${t}`;
+      }
+      this.liveText = `${committed} ${interim}`.replace(/\s+/g, ' ').trim();
       this.transcript.emit(this.liveText);
     };
-    r.onerror = () => undefined; // Sin red o sin permiso: Whisper lo resuelve al terminar
+    // Permiso bloqueado o servicio sin red (Brave/Firefox, sin internet) → no se reintenta y la página dice por qué
+    r.onerror = (e) => {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') this.liveError = 'denied';
+      else if (e.error === 'network' || e.error === 'audio-capture') this.liveError = 'network';
+    };
+    r.onend = () => {
+      if (this.live !== r || this.state() !== 'recording' || this.liveError) return;
+      try {
+        r.start(); // Silencio largo → sigue escuchando
+      } catch {
+        /* ya arrancado */
+      }
+    };
     try {
       r.start();
       this.live = r;
@@ -207,8 +248,13 @@ export class VoiceRecorderComponent {
   // [release]: corta el contador y apaga cada pista → el indicador de micrófono del navegador se apaga
   private release(): void {
     clearInterval(this.timer);
-    this.live?.stop(); // Apaga también el dictado en vivo
-    this.live = null;
+    const r = this.live;
+    this.live = null; // Primero → su `onend` ya no reinicia
+    try {
+      r?.stop(); // Apaga también el dictado en vivo
+    } catch {
+      /* ya parado */
+    }
     this.stream?.getTracks().forEach((t) => t.stop());
     this.stream = null;
   }

@@ -48,7 +48,7 @@ import { VocabularyEntryTableComponent } from '../components/vocabulary-entry-ta
       </div>
 
       @if (facade.actionError(); as err) {
-        <p role="alert" class="mb-3 text-sm text-tone-danger">{{ err }}</p>
+        <p role="alert" class="mb-3 text-tone-danger">{{ err }}</p>
       }
 
       <!-- [Detalle]: corrección de la entrada abierta (ruta /vocabulario/:id) -->
@@ -59,7 +59,7 @@ import { VocabularyEntryTableComponent } from '../components/vocabulary-entry-ta
               <aula-spinner [label]="i18n.t().common.loading" />
             }
             @case ('error') {
-              <p role="alert" class="text-sm text-tone-danger">{{ facade.selected.error() }}</p>
+              <p role="alert" class="text-tone-danger">{{ facade.selected.error() }}</p>
             }
             @case ('success') {
               <aula-vocabulary-entry-form
@@ -118,17 +118,17 @@ import { VocabularyEntryTableComponent } from '../components/vocabulary-entry-ta
           <aula-spinner [label]="i18n.t().common.loading" />
         }
         @case ('error') {
-          <p role="alert" class="text-sm text-tone-danger">{{ facade.list.error() }}</p>
+          <p role="alert" class="text-tone-danger">{{ facade.list.error() }}</p>
         }
         @case ('empty') {
           <p
-            class="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground"
+            class="rounded-xl border border-dashed border-border p-6 text-center text-muted-foreground"
           >
             {{ tx.emptyBank }}
           </p>
         }
         @case ('success') {
-          <p class="mb-2 text-xs text-muted-foreground">
+          <p class="mb-2 type-meta text-muted-foreground">
             {{ i18n.fmt(tx.count, { n: facade.list.data()!.length }) }}
           </p>
           <aula-vocabulary-entry-table

@@ -117,10 +117,26 @@ describe('Licencia y revisión de canciones', () => {
     ).resolves.toMatchObject({ status: 'published' });
   });
 
+  // [2026-10-27 · Publicar/Despublicar]: el autor retira su canción publicada; el ADMIN publica directo desde borrador (con requisitos)
+  it('el autor despublica; el ADMIN publica directo desde borrador si no falta nada', async () => {
+    await expect(
+      setup('published').execute(teacher, 's', 'draft'),
+    ).resolves.toMatchObject({ status: 'draft' });
+    await expect(
+      setup('draft').execute(teacher, 's', 'published'),
+    ).rejects.toThrow(/No se puede/);
+    await expect(
+      setup('draft').execute(admin, 's', 'published'),
+    ).resolves.toMatchObject({ status: 'published' });
+    await expect(
+      setup('draft', 3, null).execute(admin, 's', 'published'),
+    ).resolves.toMatchObject({ status: 'published' }); // [2026-10-31]: audio opcional (song-readiness)
+  });
+
   it('sin audio o sin letra no se envía; rechazar exige motivo', async () => {
     await expect(
       setup('draft', 3, null).execute(teacher, 's', 'review'),
-    ).rejects.toThrow(/audio/);
+    ).resolves.toMatchObject({ status: 'review' }); // [2026-10-31]: audio opcional
     await expect(
       setup('draft', 0).execute(teacher, 's', 'review'),
     ).rejects.toThrow(/letra/);
@@ -163,7 +179,8 @@ describe('Temas de diálogo', () => {
     const rows = seed.map((t, i) => ({ ...t, id: String(i) }));
     const repo = {
       find: jest.fn(async () => rows),
-      existsBy: jest.fn(async () => true),
+      // [Fake]: ya existe un tema activo con ese slug (no archivado) → create debe rechazar
+      findOneBy: jest.fn(async () => ({ ...rows[0], archivedAt: null })),
     };
     const crud = new TopicCrudService<DialogueTopic>(repo as never);
     expect((await crud.list({ level: 'C1' })).map((t) => t.slug)).toEqual([
@@ -186,7 +203,8 @@ describe('Temas de diálogo', () => {
 });
 
 describe('SubmitUserTurnUseCase', () => {
-  it('guarda el turno del usuario con la corrección y el del avatar, y acumula el vocabulario', async () => {
+  // [2026-11-13 · Caso A]: UNA corrección (Anexo A) con la pregunta previa → se guarda en `feedback` y el avatar responde a la frase CORREGIDA
+  it('corrige el turno una sola vez, guarda el feedback y el avatar responde a la frase corregida', async () => {
     const session = {
       id: 's1',
       userId: 'u',
@@ -202,6 +220,14 @@ describe('SubmitUserTurnUseCase', () => {
     const topics = { get: jest.fn(async () => buildDialogueTopicSeed()[5]) };
     const sessions = { save: jest.fn(async (x: unknown) => x) };
     const turns = {
+      // Historial guardado: apertura del avatar (pregunta previa) → [Tarea 1] viaja a FastAPI como `history`
+      find: jest.fn(async () => [
+        {
+          speaker: 'avatar',
+          text: "Hi! I'm Aula. What's your name, and where are you from?",
+          feedback: null,
+        },
+      ]),
       countBy: jest.fn(async () => 1),
       create: (x: unknown) => x,
       save: jest.fn(async (x: unknown) => x),
@@ -209,12 +235,28 @@ describe('SubmitUserTurnUseCase', () => {
     const agent = {
       turn: jest.fn(async () => ({
         sessionId: 'c2',
-        reply: 'Why?',
+        reply: 'Nice to meet you, Laura! What do you like about Colombia?',
         answeredBy: 'llm',
-        correction: 'Se dice «I like».',
+        correction: null,
         vocabularyUsed: ['spicy'],
       })),
     };
+    const feedback = {
+      correccion: {
+        frase_corregida: "My name is Laura. I'm from Colombia.",
+        veredicto: 'con_errores' as const,
+        errores: [],
+        traduccion: 'Me llamo Laura. Soy de Colombia.',
+        alternativas_traduccion: [],
+        comentario: '',
+      },
+      puntuacion: 30,
+      modelo: 'aula-corrector',
+      respaldo: false,
+      version_prompt: 'corrector_system@abc',
+      latencia_ms: 5,
+    };
+    const corrector = { correct: jest.fn(async () => feedback) };
     const enricher = {
       enrich: jest.fn(async (t: string[]) =>
         t.map(() => ({ ipa: 'x', ipaUs: 'y', translation: 'z' })),
@@ -228,18 +270,46 @@ describe('SubmitUserTurnUseCase', () => {
       agent,
       enricher as never,
       { execute: jest.fn() } as never, // EndDialogueSessionUseCase (solo se llama si el usuario se despide)
+      corrector,
     );
-    const out = await uc.execute('u', 's1', 'I likes spicy food', 'tok');
+    const out = await uc.execute(
+      'u',
+      's1',
+      "my niece is Laura I'm on from Columbia",
+      'tok',
+      'voz',
+    );
+    expect(corrector.correct).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pregunta_previa:
+          "Hi! I'm Aula. What's your name, and where are you from?",
+        origen: 'voz',
+        idioma: 'en',
+        nivel: 'A2',
+      }),
+      'tok',
+    );
+    expect(agent.turn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "My name is Laura. I'm from Colombia.",
+        history: [
+          {
+            role: 'assistant',
+            content: "Hi! I'm Aula. What's your name, and where are you from?",
+          },
+        ],
+      }),
+      'tok',
+    ); // No la transcripción cruda · con el historial de la BD
     expect(out.userTurn).toMatchObject({
       speaker: 'user',
       position: 1,
-      correction: 'Se dice «I like».',
+      text: "my niece is Laura I'm on from Columbia",
+      correction: null,
+      feedback,
     });
-    expect(out.avatarTurn).toMatchObject({
-      speaker: 'avatar',
-      position: 2,
-      text: 'Why?',
-    });
+    expect(out.feedback?.correccion.veredicto).toBe('con_errores');
+    expect(out.avatarTurn).toMatchObject({ speaker: 'avatar', position: 2 });
     expect(out.vocabularyUsed).toEqual(['pasta', 'spicy']);
     expect(session).toMatchObject({ userTurns: 1, conversationId: 'c2' });
     expect(enricher.enrich).toHaveBeenCalledTimes(1); // Una sola llamada a LanguageTools para los dos turnos

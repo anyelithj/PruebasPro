@@ -54,7 +54,7 @@ export function Dropdown({ label, trigger, triggerClassName, panelClassName, pan
         title={label}
         className={cn(
           "relative flex items-center gap-1.5 rounded-full border border-border bg-muted text-xs font-semibold text-foreground transition-colors hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          triggerClassName ?? "px-2.5 py-1.5",
+          triggerClassName ?? "h-9 px-3" // [2026-11-06]: altura fija 36 px (antes py-1.5 ≈ 30 px → desalineado con el buscador y los botones),
         )}
       >
         {trigger}

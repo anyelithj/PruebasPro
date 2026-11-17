@@ -72,7 +72,15 @@ async def test_manual_con_citas_y_solo_del_rol(tmp_path) -> None:
 async def test_sin_coincidencias_o_no_se_dice_que_no_sabe(tmp_path) -> None:
     agent = await _agent(tmp_path, FakeLLMClient(reply="NO_SE"))
     assert (await agent.reply(Conversation("c", "u"), "¿cómo hago un examen?", context=ScreenContext(None, "USER"))).answered_by == "none"
-    assert (await agent.reply(Conversation("c", "u"), "certificado", context=ScreenContext(None, "USER", "en"))).text.startswith("I could not find")
+    assert (await agent.reply(Conversation("c", "u"), "unicornio volador", context=ScreenContext(None, "USER", "en"))).text.startswith("I am not sure I understood")
+    # [2026-11-09]: tema frecuente sin respuesta del manual → pasos básicos (no «no lo sé»)
+    assert (await agent.reply(Conversation("c", "u"), "certificado", context=ScreenContext(None, "USER", "en"))).text.startswith("To get your certificate")
+
+
+async def test_saludo_responde_amable(tmp_path) -> None:
+    llm = FakeLLMClient(reply="NO_SE")
+    r = await (await _agent(tmp_path, llm)).reply(Conversation("c", "u"), "hola", context=ScreenContext(None, "USER"))
+    assert r.text.startswith("¡Hola!") and llm.calls == []
 
 
 async def test_llm_caido_devuelve_la_seccion_verificada(tmp_path) -> None:
@@ -81,4 +89,17 @@ async def test_llm_caido_devuelve_la_seccion_verificada(tmp_path) -> None:
             raise RuntimeError("Ollama caído")
 
     r = await (await _agent(tmp_path, DownLLM())).reply(Conversation("c", "u"), "pago", context=ScreenContext(None, "USER"))
+    assert r.answered_by == "manual" and "carrito" in r.text
+
+
+async def test_pide_strict_para_no_publicar_el_texto_generico_de_ollama(tmp_path) -> None:
+    """[2026-10-27]: OllamaClient sin `strict` devuelve «Revisa el concepto clave…» con Ollama caído → el guía debe pedir strict y caer a la sección verificada."""
+
+    class OllamaLike(FakeLLMClient):
+        async def generate(self, prompt: str, *, strict: bool = False, **kw: object) -> str:
+            if strict:
+                raise RuntimeError("Ollama caído")
+            return "Revisa el concepto clave de la pregunta."
+
+    r = await (await _agent(tmp_path, OllamaLike())).reply(Conversation("c", "u"), "pago", context=ScreenContext(None, "USER"))
     assert r.answered_by == "manual" and "carrito" in r.text

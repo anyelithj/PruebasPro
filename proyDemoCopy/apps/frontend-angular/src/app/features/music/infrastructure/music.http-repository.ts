@@ -28,7 +28,7 @@ import {
   type Song,
   type SongDetail,
   type SongFilter,
-  type SongInput,
+  type SongInput, type SongPatch,
   type SongLine,
   type SongPracticeKind,
   type SongStatus,
@@ -93,6 +93,12 @@ export class MusicHttpRepository extends MusicRepository {
   createSong(input: SongInput): Observable<Song> {
     return this.http
       .post<unknown>(`${this.base}/songs`, input)
+      .pipe(map((r) => SongSchema.parse(r)));
+  }
+
+  updateSong(id: string, patch: SongPatch): Observable<Song> {
+    return this.http
+      .patch<unknown>(`${this.base}/songs/${this.id(id)}`, patch)
       .pipe(map((r) => SongSchema.parse(r)));
   }
 

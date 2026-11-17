@@ -18,3 +18,4 @@ class LookupResponse(BaseModel):
     ipa_us: str | None = None  # Solo inglés
     ipa: str | None = None  # Resto de idiomas (una sola variante)
     engine: str
+    detected_language: str | None = None  # [2026-10-27]: idioma detectado si se pidió source="auto" (`language` ya es el detectado)

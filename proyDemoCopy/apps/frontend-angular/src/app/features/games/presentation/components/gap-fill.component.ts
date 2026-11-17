@@ -55,7 +55,7 @@ import type { Verdict } from '../../domain/models/games';
       @if (verdict(); as v) {
         <p
           role="status"
-          class="rounded-lg px-3 py-2 text-sm font-semibold"
+          class="rounded-lg px-3 py-2 font-semibold"
           [class]="
             v.correct === false
               ? 'bg-tone-danger-soft text-tone-danger'

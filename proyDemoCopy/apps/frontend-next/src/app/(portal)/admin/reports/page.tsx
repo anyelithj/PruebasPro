@@ -46,8 +46,8 @@ export default async function AdminReportsPage(props: {
     <div className="w-full space-y-5 py-4">
       {/* [2026-10-23 · 4.º pase]: la barra de filtros va DEBAJO del título (antes a su altura, a la derecha) → misma jerarquía que Recursos | [Semántica]: <header> = título + subtítulo; la barra es un <div> de herramientas */}
       <header>
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Reportes</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h1 className="title-page">Reportes</h1>
+        <p className="mt-1 text-muted-foreground">
           Métricas agregadas del sistema: usuarios, quizzes y desempeño.
         </p>
       </header>

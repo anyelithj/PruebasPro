@@ -24,11 +24,11 @@ useSeoMeta({ title }); // <title> = texto del menú (el sufijo del sitio lo agre
 
 <template>
   <header class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-    <div class="flex flex-col gap-1">
-      <h1 class="flex items-center gap-2 text-2xl font-semibold text-slate-900">
+    <div class="flex flex-col gap-0.5">
+      <h1 class="flex items-center gap-2 text-xl font-semibold text-slate-900">
         {{ title }}
         <!-- Código RF de la especificación (manifiesto compartido: el mismo que muestra Next.js) -->
-        <span v-if="item?.rf" class="rounded bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">{{ item.rf }}</span>
+        <span v-if="item?.rf" class="rounded bg-secondary px-1.5 py-0.5 text-xs font-semibold text-secondary-foreground">{{ item.rf }}</span>
       </h1>
       <p v-if="item?.description" class="text-sm text-slate-600">{{ item.description[lang] }}</p>
     </div>

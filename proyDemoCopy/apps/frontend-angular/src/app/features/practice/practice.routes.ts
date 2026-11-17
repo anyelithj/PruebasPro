@@ -4,6 +4,7 @@ import { ActivityBuilderFacade } from './application/activity-builder.facade';
 import { PracticeFacade } from './application/practice.facade';
 import { PracticeRepository } from './domain/practice.repository.port';
 import { PracticeHttpRepository } from './infrastructure/practice.http-repository';
+import { IPA_TEXT_PROVIDERS } from '@features/vocabulary/ipa-text.providers'; // [2026-10-28]: <aula-say> (IPA + traducción + sonido) en los ítems
 // [Rutas Practice · Sprints 8.14/8.15]: /practica (lista), /practica/:activityId (reproductor con corrección) y /practica/constructor[/:id] (solo DOCENTE/ADMIN) — lazy y con sesión | [Patrón]: Composition Root por funcionalidad (puerto → adaptador) | [Principio]: DIP + mínimo privilegio (guard de rol; NestJS vuelve a comprobarlo)
 // [Orden]: «constructor» va ANTES de «:activityId» (ruta más específica primero)
 
@@ -15,6 +16,7 @@ export const PRACTICE_ROUTES: Routes = [
       { provide: PracticeRepository, useClass: PracticeHttpRepository },
       PracticeFacade,
       ActivityBuilderFacade,
+      ...IPA_TEXT_PROVIDERS, // `...` (ES2015): puerto del vocabulario + caché de IPA compartida por la ruta
     ],
     children: [
       {

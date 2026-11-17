@@ -25,6 +25,7 @@ import {
   Languages,
   MessagesSquare,
   Music,
+  Star,
   ChevronDown,
   X,
   type LucideIcon,
@@ -41,6 +42,7 @@ export type { PortalRole }; // `export type { … }` (TS): re-exporta el tipo pa
 
 // [ICONS]: nombre lucide del config → componente lucide-react | `Record<NavIcon, …>` (TS) obliga a cubrir todos los iconos | [Patrón]: Lookup Table
 const ICONS: Record<NavIcon, LucideIcon> = {
+  star: Star, // [Caso F]: Mis favoritos
   "layout-grid": LayoutGrid,
   "file-text": FileText,
   "message-square": MessageSquare,

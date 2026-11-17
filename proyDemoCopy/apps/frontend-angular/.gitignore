@@ -47,3 +47,7 @@ Thumbs.db
 /coverage
 /test-results
 /playwright-report
+
+# storybook (Sprint 11.2)
+/storybook-static
+*storybook.log

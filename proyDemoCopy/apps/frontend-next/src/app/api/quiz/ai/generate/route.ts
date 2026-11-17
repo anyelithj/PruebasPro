@@ -13,6 +13,7 @@ interface GenerateAIBody {
   type?: string;
   provider?: string;
   language?: string;
+  sourceText?: string; // [2026-11-03]: material importado (archivo o enlace)
 }
 
 export async function POST(request: Request): Promise<NextResponse> {

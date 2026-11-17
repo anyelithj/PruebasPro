@@ -1,4 +1,4 @@
-// [Test CourseSyllabus · 2026-10-25]: temario = subtemas · bloqueado sin iniciar el curso · «Marcar como estudiado» llama a la Server Action
+// [Test CourseSyllabus · 2026-10-25]: temario = subtemas · bloqueado sin iniciar el curso · «Marcar como completado» llama a la Server Action
 import { fireEvent, render, screen } from "@testing-library/react";
 import { CourseSyllabus } from "@/components/courses/CourseSyllabus";
 
@@ -17,8 +17,8 @@ it("bloqueado: solo títulos, sin explicación ni botones", () => {
 
 it("inscrito: marca un subtema como estudiado", () => {
   render(<CourseSyllabus courseId="c1" content={MD} completed={[]} locked={false} canTrack color="#000" />);
-  expect(screen.getByText("0 de 2 subtemas estudiados")).toBeInTheDocument();
-  fireEvent.click(screen.getAllByRole("button", { name: /Marcar como estudiado/ })[0]!);
+  expect(screen.getByText("0 de 2 subtemas completados")).toBeInTheDocument();
+  fireEvent.click(screen.getAllByRole("button", { name: /Marcar como completado/ })[0]!);
   expect(action).toHaveBeenCalledWith("c1", "To be", true);
-  expect(screen.getByText("1 de 2 subtemas estudiados")).toBeInTheDocument();
+  expect(screen.getByText("1 de 2 subtemas completados")).toBeInTheDocument();
 });

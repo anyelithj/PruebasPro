@@ -25,10 +25,10 @@ import {
       <div class="space-y-4 p-5">
         <header class="flex items-start justify-between gap-3">
           <div>
-            <h2 id="ai-draft-title" class="text-lg font-extrabold">
+            <h2 id="ai-draft-title" class="title-section">
               <aula-icon name="sparkles" /> {{ title() }}
             </h2>
-            <p class="mt-1 text-sm text-muted-foreground">{{ hint() }}</p>
+            <p class="mt-1 text-muted-foreground">{{ hint() }}</p>
           </div>
           <button
             type="button"

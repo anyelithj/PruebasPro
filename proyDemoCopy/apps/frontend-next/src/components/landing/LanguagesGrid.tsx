@@ -4,6 +4,7 @@ import { plural, type Dictionary, type Locale } from "@aula/shared-i18n";
 import { courseListJsonLd } from "@/lib/seo";
 import { LANGUAGE_GROUPS, type LanguageGroup } from "@/types/courses"; // [SSOT]: mismos 7 idiomas y orden que el catálogo
 import { SEOHead } from "@/components/shared/SEOHead";
+import { LanguageFlag } from "@/components/shared/LanguageFlag";
 // [LanguagesGrid · Sprint 7.13]: los siete idiomas con su conteo de cursos publicados y enlace a su página propia (/idiomas/[lang]) | [Patrón]: Presentational Component + Data-driven rendering | [Principio]: SRP + DRY (mismas tarjetas `feature-card` que el resto de la landing) | [Paradigma]: Declarativo
 // [SEO]: ItemList de Course (JSON-LD) · [A11y]: <ul> semántico («lista, 7 elementos») y enlaces con nombre por idioma
 
@@ -24,8 +25,9 @@ export function LanguagesGrid({ l, locale, counts }: { l: Dictionary["landing"];
             return (
               <li key={g} className="feature-card course-card">
                 <div className="course-head">
+                  {/* [2026-11-06]: bandera del idioma (SVG) en lugar de solo el código */}
                   <div className="icon" aria-hidden>
-                    <b>{g}</b>
+                    <LanguageFlag code={g} size={32} />
                   </div>
                   <div>
                     <h3>

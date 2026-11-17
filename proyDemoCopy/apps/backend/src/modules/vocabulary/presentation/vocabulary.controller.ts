@@ -60,8 +60,9 @@ export class VocabularyController {
     @CurrentUser() u: JwtPayload,
     @Query('language') language?: string,
     @Query('q') q?: string,
+    @Headers('authorization') auth?: string,
   ) {
-    return this.list.execute(u.sub, { language, q });
+    return this.list.execute(u.sub, { language, q }, auth ? bearer(auth) : undefined);
   }
 
   @Get(':id')

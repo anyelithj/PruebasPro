@@ -38,8 +38,8 @@ export default async function LeaderboardPage() {
   return (
     <div className="w-full space-y-5 py-4">
       <header>
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl"><Trophy aria-hidden className="inline size-4 align-[-0.125em]" /> Leaderboard</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h1 className="title-page"><Trophy aria-hidden className="inline size-4 align-[-0.125em]" /> Leaderboard</h1>
+        <p className="mt-1 text-muted-foreground">
           Top {entries.length} de la comunidad. Actualiza cada 60s.
         </p>
       </header>

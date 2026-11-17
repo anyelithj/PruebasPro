@@ -1,0 +1,7 @@
+/* [tsconfig de Storybook]: compila la app + historias (excluidas del build normal en tsconfig.app.json) | [Principio]: SRP (build, test y catálogo separados) */
+{
+  "extends": "../tsconfig.app.json",
+  "compilerOptions": { "types": ["node"] },
+  "include": ["../src/**/*.ts", "../../../packages/**/*.ts", "./*.ts"],
+  "exclude": ["../src/**/*.spec.ts"]
+}

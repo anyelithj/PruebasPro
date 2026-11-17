@@ -5,9 +5,9 @@
 [Paradigma]: Declarativo.
 """
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from src.shared.domain.error_finding import ErrorFinding  # [DRY]: el mismo hallazgo que usa Grading
+from src.modules.own_llm.domain.writing_finding import WritingFinding  # [2026-10-28]: ErrorFinding (DRY con Grading) + categoría «Mayúsculas»
 
 
 class CorrectionDraft(BaseModel):
@@ -15,9 +15,16 @@ class CorrectionDraft(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="ignore")
 
-    findings: list[ErrorFinding] = Field(default_factory=list, max_length=40)
+    findings: list[WritingFinding] = Field(default_factory=list, max_length=40)
     corrected_text: str = Field(..., min_length=1, max_length=4000)
     explanation_es: str = Field(default="", max_length=1500, description="Resumen pedagógico en español")
+
+    # [2026-10-28]: un ErrorFinding compartido (diff, tests) no es instancia de WritingFinding → se revalida desde su dict
+    # `mode="before"` (Pydantic v2): corre antes de validar la lista | `model_dump()` (Pydantic v2): modelo → dict
+    @field_validator("findings", mode="before")
+    @classmethod
+    def _as_dicts(cls, value: object) -> object:
+        return [f.model_dump() if isinstance(f, BaseModel) else f for f in value] if isinstance(value, list) else value
 
 
 class WritingResponse(CorrectionDraft):
@@ -28,6 +35,8 @@ class WritingResponse(CorrectionDraft):
     latency_ms: int = Field(..., ge=0)
     # [Especificación]: el contenido de IA nunca se presenta como verificado
     flags: list[str] = Field(default_factory=lambda: ["REQUIERE_REVISION"])
+    language: str = Field(default="en", description="Idioma con el que se corrigió (el detectado si se pidió «auto»)")
+    detected_language: str | None = Field(default=None, description="[2026-10-27]: idioma detectado cuando language=«auto»")
 
 
 class ScopeResponse(BaseModel):

@@ -35,12 +35,12 @@ import { TurnTimerComponent } from './turn-timer.component';
           [noteFor]="noteFor"
         />
         @if (agent.error() || speech.error(); as err) {
-          <p role="alert" class="text-sm text-tone-danger">{{ err }}</p>
+          <p role="alert" class="text-tone-danger">{{ err }}</p>
         }
         @if (agent.finished()) {
           <p
             role="status"
-            class="rounded-lg bg-tone-brand-soft px-3 py-2 text-sm font-semibold text-tone-brand"
+            class="rounded-lg bg-tone-brand-soft px-3 py-2 font-semibold text-tone-brand"
           >
             <aula-icon name="flag" /> {{ tx.gameOver }}
           </p>
@@ -93,11 +93,11 @@ import { TurnTimerComponent } from './turn-timer.component';
       </div>
       @if (objectives().length) {
         <aside class="surface h-fit space-y-3 p-4" [attr.aria-label]="tx.objectives">
-          <h3 class="text-sm font-bold">{{ tx.objectives }}</h3>
+          <h3 class="title-card">{{ tx.objectives }}</h3>
           <ul class="space-y-2">
             @for (o of objectives(); track o.id) {
               @let done = agent.met().includes(o.id);
-              <li class="flex items-start gap-2 text-sm">
+              <li class="flex items-start gap-2">
                 <aula-icon [name]="done ? 'circle-check' : 'square'" />
                 <span>
                   {{ o.text }}

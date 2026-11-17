@@ -26,3 +26,23 @@ export const PHONE_PLACEHOLDER = "+57 300 123 4567"; // Ejemplo con indicativo d
 // [READING_GENRES · Lectura · 2026-10-25]: géneros de los textos de lectura (espejo de ReadingGenre de NestJS: reading/domain/reading-genre.ts) | `as const` → `z.enum(READING_GENRES)` y tipo unión
 export const READING_GENRES = ["tale", "fable", "animals", "poem", "news", "dialogue", "biography", "legend"] as const;
 export type ReadingGenre = (typeof READING_GENRES)[number];
+
+// [splitArticleIpa · 2026-11-10]: «der Hund» + «deːɐ̯ ˈhʊnt» → ["deːɐ̯", "ˈhʊnt"] (el artículo se pinta aparte y en otro color en Next y Angular) | [Principio]: SSOT + DRY
+// IPA con espacio → primera palabra; IA/importado SIN espacio («deːɐ̯ˈhʊnt») → corte en el acento ˈ/ˌ del sustantivo · sin artículo → null | Función pura
+export const ARTICLES: Record<string, ReadonlySet<string>> = {
+  de: new Set(["der", "die", "das", "den", "dem", "des", "ein", "eine", "einen", "einem", "einer", "eines"]),
+  fr: new Set(["le", "la", "les", "un", "une", "des"]),
+  es: new Set(["el", "la", "los", "las", "un", "una"]),
+  it: new Set(["il", "lo", "la", "i", "gli", "le", "un", "uno", "una"]),
+  pt: new Set(["o", "a", "os", "as", "um", "uma"]),
+};
+export const ARTICLE_IPA_COLOR = "#f72585"; // Color del IPA del artículo (pedido del usuario)
+export function splitArticleIpa(ipaRaw: string | null | undefined, text: string | null | undefined, language: string): [string, string] | null {
+  const ipa = (ipaRaw ?? "").trim().replace(/^[/[]|[/\]]$/g, "").trim();
+  const words = (text ?? "").trim().split(/\s+/);
+  if (!ipa || words.length < 2 || !ARTICLES[language]?.has(words[0]!.toLowerCase())) return null;
+  const tokens = ipa.split(/\s+/);
+  if (tokens.length >= 2) return [tokens[0]!, tokens.slice(1).join(" ")];
+  const cut = ipa.slice(1).search(/[ˈˌ]/) + 1;
+  return cut > 0 ? [ipa.slice(0, cut), ipa.slice(cut)] : null;
+}

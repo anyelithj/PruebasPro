@@ -66,13 +66,19 @@ export class SessionService {
     }
   }
 
-  // [onSessionExpired · Sprint 7.13]: un 401 solo cierra la sesión de quien la TENÍA → el visitante de una pantalla pública (/ayuda/faq, /verificar) no es enviado al login | [Principio]: DRY (lo usan la app y los Angular Elements)
-  onSessionExpired(): void {
-    if (this.isAuthenticated()) this.redirectToLogin();
+  // [check · 2026-10-31]: comprueba (y renueva) la sesión; un 401 lo atiende el interceptor de errores → `session-expired` → login | sin red: se queda en la pantalla
+  async check(): Promise<void> {
+    if (!this.isAuthenticated() || document.visibilityState !== 'visible') return;
+    await firstValueFrom(this.http.get(`${this.api}/auth/me`)).catch(() => undefined);
   }
 
-  // [redirectToLogin]: el login vive en Next.js → navegación completa con `from` (mismo parámetro que usa proxy.ts) | `location.assign` (DOM)
-  redirectToLogin(): void {
-    location.assign(`/login?from=${encodeURIComponent(location.pathname + location.search)}`);
+  // [onSessionExpired · Sprint 7.13]: un 401 solo cierra la sesión de quien la TENÍA → el visitante de una pantalla pública (/ayuda/faq, /verificar) no es enviado al login | [Principio]: DRY (lo usan la app y los Angular Elements)
+  onSessionExpired(): void {
+    if (this.isAuthenticated()) this.redirectToLogin(true);
+  }
+
+  // [redirectToLogin]: el login vive en Next.js → navegación completa con `from` (mismo parámetro que usa proxy.ts) | `expired`: el login explica el motivo | `location.assign` (DOM)
+  redirectToLogin(expired = false): void {
+    location.assign(`/login?${expired ? 'expired=1&' : ''}from=${encodeURIComponent(location.pathname + location.search)}`);
   }
 }

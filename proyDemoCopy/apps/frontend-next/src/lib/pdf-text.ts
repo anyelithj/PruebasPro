@@ -3,8 +3,27 @@
 
 // [2026-10-24]: la reconstrucción de líneas y los idiomas de OCR viven en lib/pdf-text-core (puros, también los usa el servidor) → se re-exportan aquí
 // para no romper a los importadores existentes (ImportPanel, PdfReader, tests) | [Principio]: OCP (API pública intacta) | `export … from` (ES2015): re-exportación
-import { OCR_LANG, OCR_MAX_PAGES, pdfItemsToText, type PdfTextItem } from "./pdf-text-core";
-export { OCR_LANG, pdfItemsToText, type PdfTextItem };
+import { OCR_LANG, OCR_MAX_PAGES, pdfItemsToText, stripPageFurniture, type PdfTextItem } from "./pdf-text-core";
+export { OCR_LANG, pdfItemsToText, stripPageFurniture, type PdfTextItem };
+
+// [pdfBlocks · 2026-10-30]: texto de PDF → bloques de lectura | línea nueva = bloque nuevo si empieza por numeración/viñeta/título o si la anterior terminó la frase; si no, es la misma frase partida por el ancho de la página
+// [Patrón]: Normalizer | [Paradigma]: Funcional (pura) | ponytail: heurística para fichas y textos corridos; tablas complejas siguen viéndose línea a línea
+const NEW_BLOCK = /^(?:\d{1,3}[.)]|[-•*·▪●]\s|(?:ejercicio|exercise|ficha|parte|part)\b)/iu;
+export function pdfBlocks(raw: string): string[] {
+  const out: string[] = [];
+  let open = false; // ¿El bloque actual sigue abierto (la línea anterior no cerró la frase)?
+  for (const rawLine of raw.replace(/-\n(?=\p{Ll})/gu, "").split(/\n/)) {
+    const line = rawLine.replace(/\s+/g, " ").trim();
+    if (!line) {
+      open = false;
+      continue;
+    }
+    if (open && !NEW_BLOCK.test(line)) out[out.length - 1] += ` ${line}`;
+    else out.push(line);
+    open = !/[.!?:…»)]$/u.test(line);
+  }
+  return out;
+}
 
 // [loadPdf]: Web Worker de pdf.js (una sola vez) + documento desde URL o bytes | [Principio]: DRY (texto y OCR)
 async function loadPdf(source: { url: string } | { data: ArrayBuffer }) {
@@ -28,7 +47,7 @@ export async function pdfText(source: { url: string } | { data: ArrayBuffer }): 
   } finally {
     void task.destroy(); // Libera memoria del worker aunque falle una página
   }
-  return raw;
+  return stripPageFurniture(raw); // [2026-11-16]: sin pies/encabezados de página (lector en voz alta e importación)
 }
 
 

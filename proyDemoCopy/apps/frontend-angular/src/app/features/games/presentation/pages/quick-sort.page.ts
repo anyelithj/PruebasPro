@@ -38,13 +38,18 @@ import { GameShellComponent } from '../components/game-shell.component';
                 [attr.lang]="gl"
                 (click)="selected.set(selected() === i ? null : i)"
               >
-                {{ items()[i].emoji }} {{ items()[i].term }}
+                @if (items()[i].image; as img) {
+                  <img [src]="img" alt="" class="mx-auto mb-1 max-h-16 object-contain" referrerpolicy="no-referrer" />
+                } @else {
+                  {{ items()[i].emoji }}
+                }
+                {{ items()[i].term }}
               </button>
             </li>
           }
         </ul>
         @if (selected() !== null) {
-          <p class="text-sm font-semibold" aria-live="polite">
+          <p class="font-semibold" aria-live="polite">
             {{ i18n.fmt(tx.pickBucket, { word: items()[selected()!].term }) }}
           </p>
         }

@@ -1,9 +1,12 @@
+import { curatedGrammar } from '../../domain/content/grammar-templates'; // [2026-11-13 · Caso D]: reglas verificadas (sin LLM)
+import { contentIpa } from '../../../../shared/domain/article-ipa';
 import { headline, headlineText, textKey } from '../../domain/headline'; // [Dominio]: titular normalizado compartido (DRY)
 import { draftContradiction } from '../../domain/source-comparison'; // [Etapa 4]: comparación con otras fuentes
 import { createHash } from 'node:crypto'; // [Node.js crypto]: sha256 determinista para la huella de la petición
 import {
   Inject,
   Injectable,
+  Optional,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -37,6 +40,13 @@ import {
 } from '../../domain/interfaces/curriculum.repository.interface';
 import { slugify } from '../../domain/slug';
 import {
+  applyGrammar,
+  needsGrammar,
+  withArticle,
+} from '../../domain/content/vocabulary-grammar'; // [2026-11-06]: artículo (también deducido del género)
+import { articleInLemma } from '../../domain/content/vocabulary-article';
+import { NounGrammarService } from '../../../../shared/noun-grammar/noun-grammar.service';
+import {
   CURRICULUM_ITEM_KIND_LABEL_ES,
   CurriculumItemKind,
 } from '../../domain/value-objects/curriculum-item-kind.vo';
@@ -45,12 +55,13 @@ import {
 // [Garantía]: la salida del LLM pasa por el MISMO esquema Zod que el contenido manual + la regla de coherencia de idioma
 
 // [Versión del prompt]: cambiarla invalida la caché de borradores (evita reutilizar salidas de un prompt antiguo)
-export const PROMPT_VERSION = 'content-v5'; // v5 (2026-10-24): reglas gramaticales robustas + ficha de fonema (cuándo/cómo/palabras/frases) → invalida los borradores v4
+export const PROMPT_VERSION = 'content-v6'; // v6 (2026-11-05): vocabulario con artículo, plural y clasificador por idioma
+// // v5 (2026-10-24): reglas gramaticales robustas + ficha de fonema (cuándo/cómo/palabras/frases) → invalida los borradores v4
 
 // [Forma JSON esperada por tipo]: descripción compacta que va dentro del prompt (espejo de curriculum-content.schema.ts) | `Record<Enum, string>` exhaustivo | [Patrón]: Lookup Table
 const SHAPE: Readonly<Record<CurriculumItemKind, string>> = {
   [CurriculumItemKind.VOCABULARY]:
-    '{"lemma": palabra en el idioma, "partOfSpeech": categoría en español (sustantivo, verbo…), "gender": género si aplica o "", "translationEs": traducción, "ipa": {"value": "/IPA/", "variant": código BCP-47 del idioma (p. ej. fr-FR), "source": "diccionario de referencia"}, "romanization": solo zh/ru o "", "emoji": un emoji que represente la palabra o "", "examples": [{"text": frase en el idioma, "translationEs": traducción}] (2 ejemplos)}',
+    '{"lemma": palabra en el idioma (sustantivo de/fr/pt/es: SIEMPRE con su artículo definido delante, p. ej. "der Tisch", "l\'école"), "partOfSpeech": categoría en español (sustantivo, verbo…), "gender": género si aplica o "", "article": artículo definido del sustantivo o "", "plural": plural con su artículo (p. ej. "die Tische") o "", "classifier": solo zh, clasificador con numeral (p. ej. "一本书") o "", "translationEs": traducción, "ipa": {"value": "/IPA/", "variant": código BCP-47 del idioma (p. ej. fr-FR), "source": "diccionario de referencia"}, "romanization": solo zh/ru o "", "emoji": un emoji que represente la palabra o "", "examples": [{"text": frase en el idioma, "translationEs": traducción}] (2 ejemplos)}',
   // [2026-10-24]: tipos explícitos ("texto", lista de OBJETOS) → los modelos pequeños devolvían explanationEs como lista o los ejemplos como cadenas sueltas y el esquema los rechazaba
   [CurriculumItemKind.GRAMMAR_RULE]:
     '{"title": nombre corto de la regla (texto), "structure": fórmula corta (texto, p. ej. "Sujeto + have/has + participio"), "explanationEs": explicación clara en español en UN solo texto de 3-5 frases (cuándo y cómo se usa), "examples": [{"text": frase en el idioma, "translationEs": su traducción al español}] (3 objetos)}',
@@ -82,7 +93,26 @@ const LEXICAL = new Set<CurriculumItemKind>([
   CurriculumItemKind.VOCABULARY,
   CurriculumItemKind.PRONUNCIATION,
 ]); // Llevan IPA de palabra
+// [ARTICLE_EXERCISE · 2026-11-05]: en ejercicios con sustantivos se evalúa el artículo (o el clasificador): las opciones difieren en él y la respuesta lo incluye
+const ARTICLE_EXERCISE: Readonly<Partial<Record<Language, string>>> = {
+  [Language.DE]:
+    'Si el ejercicio usa sustantivos, al menos la mitad deben evaluar el artículo correcto (der/die/das) o el plural: las opciones solo difieren en el artículo y la respuesta lo incluye (p. ej. "___ Tisch" → "der").',
+  [Language.FR]:
+    'Si el ejercicio usa sustantivos, al menos la mitad deben evaluar el artículo correcto (le/la/l’/les): las opciones difieren en el artículo y la respuesta lo incluye.',
+  [Language.PT]:
+    'Si el ejercicio usa sustantivos, al menos la mitad deben evaluar el artículo correcto (o/a/os/as): las opciones difieren en el artículo y la respuesta lo incluye.',
+  [Language.ES]:
+    'Si el ejercicio usa sustantivos, al menos la mitad deben evaluar el artículo correcto (el/la/los/las): las opciones difieren en el artículo y la respuesta lo incluye.',
+  [Language.EN]:
+    'Si el ejercicio usa sustantivos, incluye preguntas sobre a/an/the y sobre contables e incontables (sin artículo cuando el inglés no lo usa).',
+  [Language.ZH]:
+    'Si el ejercicio usa sustantivos con números o cantidades, al menos la mitad deben evaluar el clasificador correcto (个/本/张…): las opciones difieren en el clasificador.',
+};
+
 const KIND_RULES: Readonly<Partial<Record<CurriculumItemKind, string>>> = {
+  // [2026-11-05 · Regla obligatoria de vocabulario]: cada sustantivo es una unidad gramatical completa (artículo/género/plural/clasificador según el idioma)
+  [CurriculumItemKind.VOCABULARY]:
+    'Vocabulario: si es sustantivo, incluye SIEMPRE sus datos gramaticales según el idioma. Alemán: "lemma" con der/die/das ("der Tisch"), "plural" con artículo ("die Tische"), "gender". Francés: "lemma" con le/la/l\' ("le livre", "l\'école"), "plural" ("les livres"), "gender" masculino o femenino. Portugués: "lemma" con o/a ("o livro"), "plural" con os/as ("os livros"), "gender". Español: "lemma" con el/la ("el libro"), "plural" con los/las ("los libros"), "gender". Inglés: "lemma" con a/an/the solo cuando el uso natural lo pide ("a book", "an apple"; incontables sin artículo: "water") y en "partOfSpeech" indica contable o incontable. Ruso: SIN artículo; "gender" masculino/femenino/neutro y "plural" en nominativo plural. Mandarín: SIN artículo; "lemma" en caracteres, "romanization" con pinyin y "classifier" con numeral ("一本书"). No traduzcas literalmente los artículos de un idioma a otro.',
   [CurriculumItemKind.GRAMMAR_RULE]:
     'Regla gramatical: "title" es el nombre de la regla en español o en el idioma (p. ej. "Present perfect"); si creas varias, cada una trata un ASPECTO DISTINTO del tema (afirmativa, negativa, preguntas, usos…) con un título diferente. "explanationEs" es UN texto (no una lista). Cada ejemplo es un OBJETO con "text" en el idioma y "translationEs" en español.',
   [CurriculumItemKind.PRONUNCIATION]:
@@ -117,7 +147,7 @@ export interface DraftTarget {
 }
 
 // [Estrategia usada]: para la UI y el registro → deja claro si se gastó cómputo de LLM o no
-export type DraftStrategy = 'existing' | 'cache' | 'llm';
+export type DraftStrategy = 'existing' | 'cache' | 'llm' | 'template'; // [2026-11-13 · Caso D]: + plantilla curada (sin LLM)
 
 // [Borrador individual]: un elemento del lote con su registro trazable
 export interface DraftItem {
@@ -137,6 +167,12 @@ export interface DraftResult {
 }
 
 export const MAX_BATCH = 10; // Máximo de elementos por generación (límite de contexto del modelo local)
+// [Presupuesto de reintentos · 2026-10-27]: un lote de 3 elementos tarda 1–2 min en CPU; antes se encadenaban hasta 3 inferencias por petición (≈ 6 min)
+// y el formulario repetía además los lotes incompletos → ~6,5 min para crear 10 recursos. Ahora no se EMPIEZA otro intento pasado este plazo: se devuelve lo válido
+// y el cliente pide solo lo que falta | [Patrón]: Deadline (presupuesto de tiempo) | [Principio]: Fail Fast — la petición siempre cabe en los 300 s del BFF
+export const DRAFT_BUDGET_MS = 90_000;
+// [Tope de exclusiones en el prompt · 2026-10-27]: cada titular excluido son tokens que el CPU evalúa antes de generar (80 → 40 ≈ −10/20 s por llamada) | los repetidos igual se filtran después
+const EXCLUDE_IN_PROMPT = 40;
 const ROMANIZED = new Set<Language>([Language.ZH, Language.RU]); // Solo estos idiomas llevan romanización
 const GENDERED = new Set<Language>([
   Language.ES,
@@ -176,6 +212,8 @@ export function requestHash(
     .digest('hex');
 }
 
+export { withArticle } from '../../domain/content/vocabulary-grammar'; // [2026-11-06]: movido al dominio (compatibilidad de imports)
+
 // [cleanDraft]: correcciones deterministas SIN inventar contenido | [Paradigma]: Funcional
 // - variante IPA ausente → la del idioma · - romanización solo en zh/ru (los modelos pequeños la inventan para otros idiomas)
 function cleanDraft(language: Language, raw: unknown): Record<string, unknown> {
@@ -192,6 +230,8 @@ function cleanDraft(language: Language, raw: unknown): Record<string, unknown> {
   if (typeof draft.answerKey === 'string') draft.answerKey = [draft.answerKey];
   // [Chino · 2026-10-20]: el modelo pone el pinyin en el campo principal y los caracteres en `romanization` → se intercambian si es así
   if (language === Language.ZH) swapPinyin(draft);
+  withArticle(language, draft); // [2026-11-05]: la palabra se guarda con su artículo (der Tisch)
+  contentIpa(language, draft); // [2026-11-06]: … y su IPA también (der Tisch → /deːɐ̯ tɪʃ/)
   if (!GENDERED.has(language)) delete draft.gender; // [Determinista]: el inglés y el chino no tienen género gramatical (evita "skirt · femenino")
   if (!ROMANIZED.has(language)) {
     delete draft.romanization; // `delete` (JS): quita la propiedad del objeto copiado
@@ -454,6 +494,7 @@ export class GenerateContentDraftQuery {
     private readonly items: ICurriculumRepository,
     @InjectRepository(CurriculumGeneration)
     private readonly generations: Repository<CurriculumGeneration>,
+    @Optional() private readonly nouns?: NounGrammarService, // [2026-11-06]: artículo, género y plural AL GENERAR (opcional: tests sin FastAPI)
   ) {}
 
   // `force`: el autor pidió explícitamente una versión nueva (salta existente y caché) · `count`: cuántos elementos distintos crear (1…MAX_BATCH)
@@ -477,11 +518,13 @@ export class GenerateContentDraftQuery {
       page: 1,
       limit: 100,
     });
+    // [Fix 2026-10-28 · Orden]: lo guardado PRIMERO y lo del formulario (lo más reciente) AL FINAL → el prompt toma los últimos EXCLUDE_IN_PROMPT
+    // (antes los recién generados quedaban fuera del prompt al pasar de 40 → la IA los repetía y el lote acababa en 422 «solo propuso elementos que ya existen»)
     const exclude = [
       ...new Set(
         [
-          ...(input.exclude ?? []),
           ...existingInTopic.data.map((i) => headlineText(i.content)),
+          ...(input.exclude ?? []),
         ].filter(Boolean),
       ),
     ];
@@ -503,6 +546,31 @@ export class GenerateContentDraftQuery {
         };
     }
 
+    // ── 1b) [2026-11-13 · Caso D · RNF-37]: regla gramatical con plantilla curada → NO se genera libremente con un modelo pequeño
+    // (la IA publicó «a antes de consonantes sonoras»). Se entregan las reglas verificadas que aún no están en el tema; quedan como borrador para revisión
+    const templates =
+      input.kind === CurriculumItemKind.GRAMMAR_RULE
+        ? curatedGrammar(input.language, input.topic)
+        : null;
+    if (templates) {
+      const fresh = templates
+        .filter((t) => !excluded.has(textKey(t.title))) // Sin repetir lo que ya tiene el tema o el formulario
+        .slice(0, count)
+        .map((t) => ({
+          content: structuredClone(t) as unknown as Record<string, unknown>,
+        })); // `structuredClone` (Web API/Node 17+): copia mutable de la plantilla inmutable
+      if (!fresh.length)
+        throw new UnprocessableEntityException(
+          'Este tema ya tiene todas las reglas curadas. Revísalas y publícalas, o escribe una nueva a mano.',
+        );
+      return {
+        strategy: 'template',
+        llmRequired: false,
+        content: fresh[0]!.content,
+        drafts: fresh,
+      };
+    }
+
     // ── 2) Caché persistente: petición idéntica (incluida la cantidad) ya generada → mismo lote sin volver a llamar al LLM
     const hash = requestHash({ ...input, count });
     if (!input.force && !exclude.length) {
@@ -517,6 +585,12 @@ export class GenerateContentDraftQuery {
         cached.length === count &&
         cached.every((g) => !languageMismatch(input.language, g.content))
       ) {
+        // [2026-11-06]: borradores guardados antes de la regla → también salen con artículo/género/plural
+        if (input.kind === CurriculumItemKind.VOCABULARY && this.nouns) {
+          const contents = cached.map((g) => g.content);
+          await this.completeNouns(input.language, contents, actorId);
+          cached.forEach((g, i) => (g.content = contents[i]!));
+        }
         return {
           strategy: 'cache',
           llmRequired: false,
@@ -539,7 +613,10 @@ export class GenerateContentDraftQuery {
     let repeated: string[] = [];
     const seen = new Set<string>(excluded); // [Sin duplicados]: ni dentro del lote ni con lo ya creado | `Set` (ES2015)
     const avoid = [...exclude];
+    const deadline = Date.now() + DRAFT_BUDGET_MS; // `Date.now()` (JS): ms desde epoch → plazo absoluto de esta petición
     for (let attempt = 0; attempt < 3 && valid.length < count; attempt++) {
+      // [Deadline]: reintentar solo si queda presupuesto; si ya hay válidos se devuelven (el cliente pide el resto) y si no hay ninguno se informa el motivo
+      if (attempt > 0 && Date.now() >= deadline) break;
       const missing = count - valid.length;
       const res = await this.llm.generateJson(
         this.prompt(input, missing, problems, avoid, repeated),
@@ -594,6 +671,10 @@ export class GenerateContentDraftQuery {
       );
     }
 
+    // [2026-11-06 · Regla obligatoria de vocabulario]: el modelo pequeño ignora «der Tisch» del prompt → se completa aquí, en UNA llamada para todo el lote
+    if (input.kind === CurriculumItemKind.VOCABULARY && this.nouns)
+      await this.completeNouns(input.language, valid, actorId);
+
     // [Etapa 4 · Contradicciones]: cada borrador se compara con lo ya guardado del mismo idioma y tipo (otras fuentes) → bandera en la traza
     const stored = await this.items.listForComparison(
       input.language,
@@ -629,6 +710,29 @@ export class GenerateContentDraftQuery {
       generationId: saved[0].id,
       trace: saved[0],
     };
+  }
+
+  // [completeNouns]: sustantivos sin artículo/género/plural/clasificador → /noun-grammar/batch → solo se rellena lo que falta (muta `valid`) | fallo → quedan igual
+  private async completeNouns(
+    language: Language,
+    valid: Record<string, unknown>[],
+    actorId: string,
+  ): Promise<void> {
+    const idx = valid
+      .map((c, i) => (needsGrammar(language, c) ? i : -1))
+      .filter((i) => i >= 0);
+    if (!idx.length) return;
+    const terms = idx.map((i) => {
+      const lemma = String(valid[i]!.lemma ?? '').trim();
+      const art = articleInLemma(language, lemma);
+      return art ? lemma.slice(art.length).trim() : lemma; // «der Tisch» → «Tisch»
+    });
+    const results = await this.nouns!.many(terms, language, actorId);
+    idx.forEach((i, k) => {
+      const r = results[k];
+      const next = r ? applyGrammar(language, valid[i]!, r) : null;
+      if (next) valid[i] = contentIpa(language, next)!; // [2026-11-10]: el artículo llegó tarde → el IPA del borrador también lo lleva (antes solo al guardar)
+    });
   }
 
   // [prompt]: instrucciones explícitas de idioma + forma JSON; en el reintento incluye por qué se rechazó la respuesta anterior | [Principio]: SRP
@@ -671,7 +775,7 @@ export class GenerateContentDraftQuery {
       'No copies material protegido ni preguntas de exámenes oficiales.',
       input.guidance ?? '', // [Etapa 5]: formato de la certificación + originalidad
       exclude.length
-        ? `NO repitas estos elementos que ya existen: ${exclude.slice(0, 80).join(', ')}.`
+        ? `NO repitas estos elementos que ya existen: ${exclude.slice(-EXCLUDE_IN_PROMPT).join(', ')}.` // `slice(-n)` (JS): los n MÁS RECIENTES (los que la IA tiende a repetir)
         : '',
       problems.length
         ? `Tu respuesta anterior fue rechazada por: ${problems.slice(0, 3).join(' | ')}. Corrígelo.`
@@ -679,11 +783,20 @@ export class GenerateContentDraftQuery {
       repeated.length
         ? `Repetiste elementos que YA EXISTEN (${repeated.slice(0, 10).join(', ')}): propón otros DIFERENTES del mismo tema, también menos frecuentes o más específicos.`
         : '',
+      // [Fix 2026-10-28 · Variedad]: con muchos elementos ya creados se pide explorar sub-aspectos del tema → más elementos NUEVOS por ronda (pedir 16 de un tema ya no se queda en 4)
+      exclude.length >= 6
+        ? 'Ya hay muchos elementos de este tema: explora sub-aspectos, situaciones, sinónimos o casos menos frecuentes pero útiles para el nivel, sin salirte del tema.'
+        : '',
       input.language === Language.ZH
         ? 'Chino: el campo principal (lemma/text/source) y los ejemplos van en caracteres chinos (汉字); el pinyin con tonos va SOLO en "romanization".'
         : '',
       input.language === Language.RU
         ? 'Ruso: el campo principal y los ejemplos van en alfabeto cirílico; la transliteración latina va SOLO en "romanization".'
+        : '',
+      // [2026-11-05 · Regla de vocabulario]: los ejercicios también evalúan artículos y clasificadores
+      input.kind === CurriculumItemKind.EXERCISE &&
+      ARTICLE_EXERCISE[input.language]
+        ? ARTICLE_EXERCISE[input.language]
         : '',
       input.kind === CurriculumItemKind.EXERCISE
         ? '"answerKey" es SIEMPRE una lista (array) aunque haya una sola respuesta, p. ej. ["la bonne réponse"].'

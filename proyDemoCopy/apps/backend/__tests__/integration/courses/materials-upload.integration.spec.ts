@@ -19,6 +19,11 @@ describe('POST /courses/:id/materials (multer real)', () => {
       providers: [{ provide: CourseMaterialsUseCase, useValue: { upload } }],
     }).compile();
     app = mod.createNestApplication();
+    // [2026-10-27]: el guard JWT global no se monta aquí → middleware que simula `req.user` (el controller pasa sub/role al caso de uso para la regla de propiedad) | [Patrón]: Test Double
+    app.use((req: { user?: unknown }, _res: unknown, next: () => void) => {
+      req.user = { sub: '22222222-2222-4222-8222-222222222222', role: 'ADMIN' };
+      next();
+    });
     await app.init();
   });
   afterAll(() => app.close());

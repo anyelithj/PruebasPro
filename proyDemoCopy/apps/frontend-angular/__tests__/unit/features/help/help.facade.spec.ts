@@ -65,7 +65,7 @@ describe('GuideFacade', () => {
     stream.next({ type: 'session', sessionId: 's1' });
     stream.next({ type: 'token', text: 'Ve a ' });
     stream.next({ type: 'token', text: 'Mis certificados.' });
-    stream.next({ type: 'sources', sources: [{ kind: 'manual', id: 'estudiante#mis-certificados', title: 'Mis certificados' }], answeredBy: 'llm' });
+    stream.next({ type: 'sources', sources: [{ kind: 'manual', id: 'estudiante#mis-certificados', title: 'Mis certificados' }], answeredBy: 'llm', degraded: false });
     stream.next({ type: 'done' });
     expect(guide.turns()[1]).toMatchObject({ content: 'Ve a Mis certificados.', answeredBy: 'llm' });
     await guide.rate(1, true);
@@ -76,11 +76,23 @@ describe('GuideFacade', () => {
     expect(guide.isEmpty()).toBe(true);
   });
 
-  it('si el agente falla quita el turno vacío y muestra el error', () => {
+  // [2026-10-27 · Nunca solo un error]: el turno vacío se convierte en una respuesta amable local (no valorable) + la alerta con el detalle
+  it('si el agente falla rellena el turno con una respuesta amable y muestra el error', () => {
     const { guide } = setup({ ask: () => throwError(() => new ApiError(429, 'ThrottlerException: Too Many Requests')) });
     guide.ask('hola');
-    expect(guide.turns()).toHaveLength(1);
+    expect(guide.turns()).toHaveLength(2);
+    expect(guide.turns()[1]).toMatchObject({ role: 'assistant', answeredBy: 'none', degraded: true, offline: true });
+    expect(guide.turns()[1].content).toContain('/ayuda/faq');
     expect(guide.error()).toContain('Too Many');
+  });
+
+  it('respuesta sin IA (modo degradado del servidor) → el turno queda marcado `degraded`', () => {
+    const stream = new Subject<GuideChunk>();
+    const { guide } = setup({ ask: jest.fn(() => stream.asObservable()) });
+    guide.ask('¿mis pagos?');
+    stream.next({ type: 'token', text: 'En Pagos → Historial.' });
+    stream.next({ type: 'sources', sources: [], answeredBy: 'faq', degraded: true });
+    expect(guide.turns()[1]).toMatchObject({ answeredBy: 'faq', degraded: true });
   });
 });
 
@@ -93,6 +105,7 @@ describe('reglas puras de Help', () => {
 
   it('toGuideChunk: `sources` válido → trozo; inválido → null', () => {
     expect(toGuideChunk({ type: 'sources', data: { sources: [{ kind: 'faq', id: 'f1', title: 'q', ref: null }], answered_by: 'faq' } })).toMatchObject({ type: 'sources', answeredBy: 'faq' });
+    expect(toGuideChunk({ type: 'sources', data: { sources: [], answered_by: 'manual', degraded: true } })).toMatchObject({ degraded: true }); // [2026-10-27]
     expect(toGuideChunk({ type: 'sources', data: { sources: 'x' } })).toBeNull();
   });
 

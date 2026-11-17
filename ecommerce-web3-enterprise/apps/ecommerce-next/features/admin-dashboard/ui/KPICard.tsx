@@ -16,7 +16,7 @@ export function KPICard({ label, value, change, trendLabel, invert = false }: KP
   const good = change === undefined || change === 0 ? null : invert ? !up : up;
   const percent = change === undefined ? null : `${up ? "+" : ""}${(change * 100).toFixed(1)} %`;
   return (
-    <article className="flex flex-col gap-1 rounded-lg border bg-background p-4 shadow-sm">
+    <article className="flex flex-col gap-1 rounded-lg border border-l-2 border-l-primary bg-background p-4">
       <h3 className="text-sm font-medium text-slate-600">{label}</h3>
       <p className="text-2xl font-semibold tabular-nums text-slate-900">{value}</p>
       {percent && (

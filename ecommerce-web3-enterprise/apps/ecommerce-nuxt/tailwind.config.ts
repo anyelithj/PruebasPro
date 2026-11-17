@@ -14,7 +14,9 @@ export default {
         slate: SCALE,
         gray: SCALE,
         // brand = slate-900 / slate-50: en oscuro se invierte (botón claro con texto oscuro), contraste AA en ambos temas
-        brand: { DEFAULT: "rgb(var(--slate-900) / <alpha-value>)", foreground: "rgb(var(--slate-50) / <alpha-value>)" },
+        brand: { DEFAULT: "rgb(var(--brand) / <alpha-value>)", foreground: "rgb(var(--brand-foreground) / <alpha-value>)" },
+        // secondary = botón de apoyo: en la tienda claro con borde; en el panel con tinte de marca (tailwind.css)
+        secondary: { DEFAULT: "rgb(var(--secondary) / <alpha-value>)", foreground: "rgb(var(--secondary-foreground) / <alpha-value>)", border: "rgb(var(--secondary-border) / <alpha-value>)", hover: "rgb(var(--secondary-hover) / <alpha-value>)" },
         accent: { DEFAULT: "#2563eb", foreground: "#ffffff" },
       },
       fontFamily: { sans: ["Inter", "system-ui", "sans-serif"] }, // Inter como Next.js (Google Fonts en nuxt.config); respaldo del sistema

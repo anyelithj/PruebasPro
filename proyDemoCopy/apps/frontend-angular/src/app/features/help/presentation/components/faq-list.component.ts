@@ -40,7 +40,7 @@ import type { Faq } from '../../domain/models/help';
           </details>
         </li>
       } @empty {
-        <li class="p-6 text-center text-sm text-muted-foreground">{{ tx.empty }}</li>
+        <li class="p-6 text-center text-muted-foreground">{{ tx.empty }}</li>
       }
     </ul>
   `,

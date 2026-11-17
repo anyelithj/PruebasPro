@@ -1,0 +1,14 @@
+node_modules
+dist
+.git
+.env
+.env.local
+*.md
+Dockerfile
+docker-compose.yml
+storybook-static
+coverage
+cypress
+*-firebase-adminsdk-*.json
+serviceAccount*.json
+database

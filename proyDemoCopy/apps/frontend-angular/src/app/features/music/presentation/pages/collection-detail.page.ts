@@ -41,7 +41,7 @@ import { SongCardComponent } from '../components/song-card.component';
           <aula-spinner [label]="i18n.t().common.loading" />
         }
         @case ('error') {
-          <p role="alert" class="text-sm text-tone-danger">{{ music.collection.error() }}</p>
+          <p role="alert" class="text-tone-danger">{{ music.collection.error() }}</p>
         }
         @case ('success') {
           @if (c?.songs?.length) {
@@ -62,7 +62,7 @@ import { SongCardComponent } from '../components/song-card.component';
             </ol>
           } @else {
             <p
-              class="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground"
+              class="rounded-xl border border-dashed border-border p-4 text-center text-muted-foreground"
             >
               {{ tx.noSongs }}
             </p>

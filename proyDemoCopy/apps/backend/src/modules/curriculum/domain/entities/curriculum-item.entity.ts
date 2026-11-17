@@ -1,4 +1,6 @@
+import { contentIpa } from '../../../../shared/domain/article-ipa';
 import {
+  AfterLoad,
   Column,
   CreateDateColumn,
   Entity,
@@ -113,4 +115,10 @@ export class CurriculumItem {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt!: Date;
+
+  // [2026-11-06 · IPA con artículo]: ficha de vocabulario «der Hund» → su IPA incluye «deːɐ̯» (IA, importada o manual; también lo ya guardado)
+  @AfterLoad()
+  protected articleInIpa(): void {
+    if (this.kind === CurriculumItemKind.VOCABULARY) contentIpa(this.language, this.content);
+  }
 }

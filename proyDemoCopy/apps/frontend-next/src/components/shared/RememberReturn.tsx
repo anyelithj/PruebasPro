@@ -1,5 +1,5 @@
 "use client"; // [Next.js]: Client Component → lee la URL del navegador y usa sessionStorage
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 // [RememberReturn · 2026-10-23 · 4.º pase]: un listado (pestaña + filtros + página) se anota como «lugar de regreso» → el «Volver a …» de sus formularios
 // (crear, ver, editar) regresa a ESA pestaña/filtro, igual que Gestión → Actividades con ?volver= | sobrevive a redirecciones (crear → ver detalle → editar)
@@ -23,14 +23,18 @@ export function readReturn(memo: string): string | null {
 function Recorder({ memo }: { memo: string | readonly string[] }) {
   const pathname = usePathname(); // [Next.js hooks]: cambian con cada navegación cliente (pestañas, filtros, páginas)
   const search = useSearchParams().toString();
+  // [Fix 2026-11-13]: al salir del listado con navegación cliente, `usePathname` ya trae la página DESTINO antes de desmontar → se anotaba
+  // p. ej. /admin/users?tab=examenes como regreso de Recursos. Solo se anota mientras sigamos en la ruta donde se montó el listado
+  const [home] = useState(pathname);
   useEffect(() => {
+    if (pathname !== home) return;
     const url = search ? `${pathname}?${search}` : pathname;
     try {
       for (const m of typeof memo === "string" ? [memo] : memo) sessionStorage.setItem(KEY(m), url);
     } catch {
       /* Sin almacenamiento → el «Volver» usa su destino por defecto */
     }
-  }, [memo, pathname, search]);
+  }, [memo, pathname, search, home]);
   return null; // Sin UI
 }
 

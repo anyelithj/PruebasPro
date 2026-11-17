@@ -28,7 +28,8 @@ export type NavIcon =
   | "music" // [Sprint 9.8]: Música
   | "messages-square" // [Sprint 9.11]: Diálogos
   | "globe" // [Sprint 10.7]: Poliglota
-  | "book-open"; // [Sprint 10.11]: Gramática
+  | "book-open" // [Sprint 10.11]: Gramática
+  | "star"; // [Caso F · 2026-11-13]: Mis favoritos
 
 // `keyof Dictionary["nav"]` (TS): la etiqueta es una CLAVE del diccionario → imposible escribir una traducción inexistente | [Tipado seguro]
 // `also` = prefijos extra que marcan el ítem como activo (Gestión agrupa varias rutas)
@@ -73,11 +74,13 @@ export const isNavGroup = (e: NavEntry): e is NavGroup => "items" in e;
 
 // [Items comunes a todos los roles]: se declaran una sola vez y se reutilizan | [Principio]: DRY
 const COURSES_ITEM: NavItem = { href: "/courses", labelKey: "courses", icon: "library" };
+// [Caso F · 2026-11-13]: «Mis favoritos» = cursos guardados con ⭐ (privados) | página de Next.js /courses/favoritos
+const FAVORITES_ITEM: NavItem = { href: "/courses/favoritos", labelKey: "favorites", icon: "star" };
 const PROFILE_ITEM: NavItem = { href: "/profile/edit", labelKey: "profile", icon: "user-round" };
 // [Recursos]: material de estudio publicado (vocabulario, reglas, ejercicios…) visible para todos, igual que Cursos
 const RESOURCES_ITEM: NavItem = { href: "/resources", labelKey: "resources", icon: "notebook-text" };
 // [Sprint 7.8 · Certificados]: sección PROPIA para todos los roles (no es parte de Recursos ni de Gestión) | `also` → activo también en /verificar
-const CERTIFICATES_ITEM: NavItem = { href: "/certificados", labelKey: "certificates", icon: "award", also: ["/verificar"], hard: true };
+const CERTIFICATES_ITEM: NavItem = { href: "/certificados", labelKey: "certificates", icon: "award", hard: true }; // [Caso E]: la verificación vive en /certificados/verificar
 // [Angular 22]: tutor IA (5.3) y corrector de redacciones con el LLM propio (5.6) — para todos los roles
 const ANGULAR_ITEMS: readonly NavItem[] = [
   // [2026-10-23]: «Vocabulario» y «Gramática» salen del menú: ese contenido ya está en Recursos (pestañas). Las rutas /vocabulario, /traductor y /gramatica siguen activas (enlaces desde Recursos)
@@ -94,13 +97,14 @@ const ANGULAR_ITEMS: readonly NavItem[] = [
   { href: "/ayuda/faq", labelKey: "help", icon: "circle-help", also: ["/ayuda"], hard: true },
 ];
 
-// [Gestión unificada]: el contenido curricular (y los cursos, en admin) viven DENTRO de Gestión como pestañas | [Orden]: "Mi perfil" primero, luego Dashboard
+// [Gestión unificada]: el contenido curricular y los cursos (admin: todos · docente: los suyos) viven DENTRO de Gestión como pestañas | [Orden]: "Mi perfil" primero, luego Dashboard
 // `Readonly<Record<…>>` (TS): mapa rol → ítems, inmutable en compilación
 export const NAV_BY_ROLE: Readonly<Record<PortalRole, readonly NavItem[]>> = {
   estudiante: [
     PROFILE_ITEM,
     { href: "/dashboard/estudiante", labelKey: "dashboard", icon: "layout-grid" },
     COURSES_ITEM,
+    FAVORITES_ITEM,
     RESOURCES_ITEM,
     { href: "/quiz", labelKey: "exams", icon: "file-text" },
     // [Feedback IA]: resumen de exámenes + detalle por pregunta con feedback
@@ -115,9 +119,11 @@ export const NAV_BY_ROLE: Readonly<Record<PortalRole, readonly NavItem[]>> = {
   docente: [
     PROFILE_ITEM,
     { href: "/dashboard/docente", labelKey: "dashboard", icon: "layout-grid" },
-    { href: "/teacher/quizzes", labelKey: "management", icon: "users", also: ["/admin/curriculum", "/admin/activities"] },
+    // [2026-10-27]: `also` incluye /admin/courses → el docente gestiona (crea/edita/publica) SUS cursos dentro de Gestión
+    { href: "/teacher/quizzes", labelKey: "management", icon: "users", also: ["/admin/curriculum", "/admin/courses", "/admin/activities", "/admin/certificados"] },
     { href: "/teacher/students", labelKey: "students", icon: "graduation-cap" },
     COURSES_ITEM,
+    FAVORITES_ITEM, // [Fix 2026-11-14]: el docente también marca ⭐ → necesita ver «Mis favoritos» (antes solo estudiante)
     RESOURCES_ITEM,
     { href: "/quiz", labelKey: "exams", icon: "file-text" },
     CERTIFICATES_ITEM,
@@ -126,13 +132,14 @@ export const NAV_BY_ROLE: Readonly<Record<PortalRole, readonly NavItem[]>> = {
   admin: [
     PROFILE_ITEM,
     { href: "/dashboard/admin", labelKey: "dashboard", icon: "layout-grid" },
-    { href: "/admin/users", labelKey: "management", icon: "users", also: ["/admin/curriculum", "/admin/courses", "/admin/activities"] },
+    { href: "/admin/users", labelKey: "management", icon: "users", also: ["/admin/curriculum", "/admin/courses", "/admin/activities", "/admin/certificados"] },
     { href: "/teacher/students", labelKey: "students", icon: "graduation-cap" },
     // [Reportes]: activo también en las exportaciones de Angular (/reportes/exportaciones)
     { href: "/admin/reports", labelKey: "reports", icon: "chart-column", also: ["/reportes"] },
     // [Sprint 7.18]: panel de colas y tareas programadas
     { href: "/admin/jobs", labelKey: "jobs", icon: "clipboard-list" },
     COURSES_ITEM,
+    FAVORITES_ITEM, // [Fix 2026-11-14]: ídem admin
     RESOURCES_ITEM,
     { href: "/quiz", labelKey: "exams", icon: "file-text" },
     CERTIFICATES_ITEM,

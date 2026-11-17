@@ -26,10 +26,10 @@ describe('CertificatesPage', () => {
     expect(el.querySelector('button[aria-label="Solicitar certificado: Francés A2"]')).not.toBeNull();
   });
 
-  it('emitido: código enlazado a /verificar, «Vigente», anclaje pendiente y descarga del PDF', async () => {
+  it('emitido: código enlazado a /certificados/verificar (ruta única del QR · Caso E), «Vigente», anclaje pendiente y descarga del PDF', async () => {
     mine({ items: [cert], eligible: [] });
     const { el } = await render(CertificatesPage, providers);
-    expect(el.querySelector('a[href="/verificar/AULA-7KQ2-M9XD"]')).not.toBeNull();
+    expect(el.querySelector('a[href="/certificados/verificar/AULA-7KQ2-M9XD"]')).not.toBeNull();
     expect(el.textContent).toContain('Vigente');
     expect(el.textContent).toContain('Pendiente de anclaje');
     expect(el.querySelector(`a[download][href="${API}/certificates/c1/pdf"]`)).not.toBeNull();

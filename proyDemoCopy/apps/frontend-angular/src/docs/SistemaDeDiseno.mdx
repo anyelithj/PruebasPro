@@ -1,0 +1,64 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Guía/Sistema de diseño" />
+
+# Sistema de diseño compartido con Next.js
+
+`src/styles.css` importa `apps/frontend-next/src/app/globals.css`: **una sola hoja** (Tailwind CSS 4 + `@aula/ui-tokens`) para los dos
+frontends. Los temas, colores, escala tipográfica y utilidades son los mismos; por eso una pantalla Angular dentro del shell Next.js
+no se distingue del resto del portal.
+
+## Temas
+
+`core/theme` lee `THEMES` de `@aula/ui-tokens/tailwind-preset` y pone la clase en `<html>`:
+`light` ☀ · `dark` 🌙 · `sepia` 📜 · `hcontrast` ⚡ · `deepfocus` 🎯 · `vr` 🥽.
+Los componentes usan variables de color (`bg-background`, `text-foreground`, `text-tone-brand`…), nunca hexadecimales.
+
+## Utilidades del sistema (en vivo)
+
+<div className="space-y-6">
+  <section className="space-y-2">
+    <p className="title-overline">Botones · `btn` (el átomo `button[aulaButton]` las aplica)</p>
+    <div className="flex flex-wrap gap-2">
+      <button type="button" className="btn btn-primary">btn-primary</button>
+      <button type="button" className="btn btn-outline">btn-outline</button>
+      <button type="button" className="btn btn-ghost">btn-ghost</button>
+      <button type="button" className="btn btn-danger">btn-danger</button>
+      <button type="button" className="btn btn-primary btn-sm">btn-sm</button>
+    </div>
+  </section>
+
+  <section className="space-y-2">
+    <p className="title-overline">Campos · `control` (átomo `text-input`)</p>
+    <label className="type-label block max-w-sm space-y-1">
+      <span>Correo electrónico</span>
+      <input className="control w-full" type="email" placeholder="tu@correo.com" />
+    </label>
+  </section>
+
+  <section className="space-y-2">
+    <p className="title-overline">Chips, etiquetas y superficie · `chip` · `badge` · `surface`</p>
+    <div className="flex flex-wrap items-center gap-2">
+      <a href="#chips" className="chip" aria-current="page">Activo</a>
+      <a href="#chips" className="chip">Inactivo</a>
+      <span className="badge">badge</span>
+    </div>
+    <div className="surface max-w-sm p-4">Tarjeta con borde, fondo y sombra del tema.</div>
+  </section>
+
+  <section className="space-y-2">
+    <p className="title-overline">Escala tipográfica · `title-*` · `type-*`</p>
+    <p className="title-page">title-page</p>
+    <p className="title-section">title-section</p>
+    <p className="title-card">title-card</p>
+    <p className="type-body">type-body — texto normal</p>
+    <p className="type-meta text-muted-foreground">type-meta — datos secundarios</p>
+  </section>
+</div>
+
+## Convenciones
+
+1. Plantillas y estilos en línea con Tailwind; las **utilidades** (`btn`, `control`, `chip`, `surface`) antes que clases sueltas.
+2. Nombres en kebab-case e inglés con sufijo de rol: `.component.ts`, `.page.ts`, `.facade.ts`, `.element.ts`, `.template.ts`.
+3. Responsive con los breakpoints de Tailwind, primero móvil (por ejemplo `two-column` apila columnas por debajo de `md`).
+4. Movimiento reducido respetado por `motion.css` de `@aula/ui-tokens`.

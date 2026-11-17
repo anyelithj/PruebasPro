@@ -9,6 +9,8 @@ import type {
 // [Adapter Ollama para Curriculum]: implementa el puerto CurriculumLlm reutilizando OllamaClient (módulo AI) y devuelve MÉTRICAS REALES de cada inferencia | [Patrón]: Adapter (Hexagonal) + Delegation | [Principio]: SRP + LSP + DIP + DRY | [Paradigma]: POO + async/await
 // [Tecnología]: NestJS DI + OllamaClient (API REST de Ollama: /api/generate, /api/show, /api/ps)
 
+const CURRICULUM_LLM_TIMEOUT_MS = 150_000; // < 170 s del BFF y < 300 s de undici (timeout escalonado)
+
 // `@Injectable()` (NestJS): el contenedor DI lo entrega como implementación del token CURRICULUM_LLM
 @Injectable()
 export class OllamaCurriculumLlm implements CurriculumLlm {
@@ -40,6 +42,9 @@ export class OllamaCurriculumLlm implements CurriculumLlm {
         num_predict: maxTokens,
         num_ctx: 4096,
       }, // Temperatura baja: contenido consistente
+      // [Fix 2026-11-13]: plazo por inferencia → Ollama CANCELA la generación (libera CPU) y responde 504 explicado; el formulario lo cuenta como ronda seca y sigue
+      // Antes: 600 s por defecto → la petición moría a los 5 min en Next (504 opaco) y Ollama seguía generando en segundo plano, frenando el siguiente lote
+      timeoutMs: CURRICULUM_LLM_TIMEOUT_MS,
     });
     let data: unknown; // `unknown` (TS): obliga a validar con Zod en la capa de aplicación
     try {

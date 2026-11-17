@@ -23,7 +23,7 @@ import { PostListComponent } from '../components/post-list.component';
   template: `
     @let t = i18n.t().forums;
     @if (facade.actionError(); as err) {
-      <p role="alert" class="mt-4 text-sm text-tone-danger">{{ err }}</p>
+      <p role="alert" class="mt-4 text-tone-danger">{{ err }}</p>
     }
     @if (lessonId()) {
       <!-- ───── Vista: hilos de la lección ───── -->
@@ -33,7 +33,7 @@ import { PostListComponent } from '../components/post-list.component';
         }
         @case ('error') {
           <aula-card-page [heading]="t.title">
-            <p role="alert" class="text-sm text-tone-danger">{{ facade.lesson.error() }}</p>
+            <p role="alert" class="text-tone-danger">{{ facade.lesson.error() }}</p>
           </aula-card-page>
         }
         @case ('success') {
@@ -45,7 +45,7 @@ import { PostListComponent } from '../components/post-list.component';
                 <li class="flex flex-wrap items-center justify-between gap-2 p-3">
                   <div class="min-w-0">
                     <a class="font-semibold text-primary hover:underline" [routerLink]="['/foros/hilo', th.id]">{{ th.title }}</a>
-                    <p class="text-xs text-muted-foreground">{{ th.authorName }} · {{ i18n.fmt(t.replies, { n: th.postsCount }) }} · <time [attr.datetime]="th.lastPostAt">{{ date(th.lastPostAt) }}</time></p>
+                    <p class="type-meta text-muted-foreground">{{ th.authorName }} · {{ i18n.fmt(t.replies, { n: th.postsCount }) }} · <time [attr.datetime]="th.lastPostAt">{{ date(th.lastPostAt) }}</time></p>
                   </div>
                   <div class="flex gap-1">
                     @if (th.pinned) {
@@ -57,7 +57,7 @@ import { PostListComponent } from '../components/post-list.component';
                   </div>
                 </li>
               } @empty {
-                <li class="p-6 text-center text-sm text-muted-foreground">{{ t.noThreads }}</li>
+                <li class="p-6 text-center text-muted-foreground">{{ t.noThreads }}</li>
               }
             </ul>
             <aula-forum-thread-form [t]="t" [busy]="facade.busy()" (submitted)="createThread(data.lesson.id, $event)" />
@@ -72,7 +72,7 @@ import { PostListComponent } from '../components/post-list.component';
         }
         @case ('error') {
           <aula-card-page [heading]="t.title">
-            <p role="alert" class="text-sm text-tone-danger">{{ facade.thread.error() }}</p>
+            <p role="alert" class="text-tone-danger">{{ facade.thread.error() }}</p>
           </aula-card-page>
         }
         @case ('success') {
@@ -95,14 +95,14 @@ import { PostListComponent } from '../components/post-list.component';
                 <button aulaButton variant="ghost" size="sm" type="button" class="text-tone-danger" (click)="removeThread(th)">{{ t.removeThread }}</button>
               }
             </div>
-            <p class="mb-6 whitespace-pre-line text-sm">{{ th.body }}</p>
-            <h2 class="mb-2 text-base font-bold">{{ i18n.fmt(t.replies, { n: th.postsCount }) }}</h2>
+            <p class="mb-6 whitespace-pre-line">{{ th.body }}</p>
+            <h2 class="title-section mb-2">{{ i18n.fmt(t.replies, { n: th.postsCount }) }}</h2>
             <aula-post-list [posts]="data.items" [viewer]="viewer()" [t]="t" [busy]="facade.busy()" [date]="date" (edit)="facade.editPost(th.id, $event.id, $event.body)" (remove)="removePost(th.id, $event)" />
             <div class="mt-4">
               @if (th.status === 'open') {
                 <aula-forum-post-form [label]="t.reply" [submitLabel]="t.send" [busy]="facade.busy()" (submitted)="facade.reply(th.id, $event)" />
               } @else {
-                <p class="text-sm text-muted-foreground">{{ t.closedHint }}</p>
+                <p class="text-muted-foreground">{{ t.closedHint }}</p>
               }
             </div>
           </aula-card-page>

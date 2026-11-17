@@ -1,6 +1,7 @@
 import { PartyPopper } from "lucide-react"; // [2026-10-23]: iconos SVG uniformes (antes emojis)
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { pctOf } from "@/lib/course-progress";
 import type { CourseOutline, OutlineNode } from "@/types/curriculum";
 // [CourseTimeline]: ruta del curso como línea de tiempo Nivel → Módulo → Unidad → Lección, con la SIGUIENTE lección destacada | [Patrón]: Composite (render recursivo del árbol) + Presentational | [Principio]: SRP | [Tecnología]: React Server Component + Tailwind CSS (cero JS en el cliente)
 // [Accesibilidad]: <ol> anidadas (el lector anuncia «lista, 5 elementos») · aria-current="step" en la siguiente lección · el estado va en TEXTO, no solo en el color (WCAG 1.4.1)
@@ -20,9 +21,9 @@ const DOT: Readonly<Record<LessonState, string>> = {
 const LABEL: Readonly<Record<LessonState, string>> = { done: "Completada", next: "Siguiente", todo: "Pendiente", soon: "Próximamente" };
 const ICON: Readonly<Record<LessonState, string>> = { done: "✓", next: "▶", todo: "", soon: "…" };
 
-export function CourseTimeline({ courseId, outline, canEdit }: { courseId: string; outline: CourseOutline; canEdit: boolean }) {
+export function CourseTimeline({ courseId, outline }: { courseId: string; outline: CourseOutline }) {
   const { lessons, completed, nextLessonId } = outline.summary;
-  const pct = lessons ? Math.round((completed / lessons) * 100) : 0; // `Math.round`: porcentaje entero
+  const pct = pctOf(completed, lessons); // [DRY 2026-10-28]: porcentaje entero acotado 0..100 (lib/course-progress)
   const lessonHref = (id: string) => `/courses/${courseId}/path/${id}`;
 
   // [renderNode]: recursivo → cada nivel del árbol con su propio encabezado; las lecciones son los puntos de la línea
@@ -70,19 +71,15 @@ export function CourseTimeline({ courseId, outline, canEdit }: { courseId: strin
     <section aria-labelledby="timeline-title" className="surface space-y-4 p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 id="timeline-title" className="text-base font-bold">
+          <h2 id="timeline-title" className="title-section">
             Ruta del curso
           </h2>
-          <p className="text-xs text-muted-foreground">
+          <p className="type-meta text-muted-foreground">
             {completed} de {lessons} lecciones completadas
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {canEdit && (
-            <Link href={`/admin/courses/${courseId}/outline`} className="btn btn-outline btn-sm">
-              Editar estructura
-            </Link>
-          )}
+          {/* [2026-11-16]: sin «Editar estructura» (se pidió quitarlo: el temario del curso ya cumple esa función) */}
           {nextLessonId ? (
             <Link href={lessonHref(nextLessonId)} className="btn btn-primary btn-sm">
               {completed ? "Continuar con la siguiente lección →" : "Empezar el curso →"}
@@ -93,13 +90,14 @@ export function CourseTimeline({ courseId, outline, canEdit }: { courseId: strin
         </div>
       </div>
       {/* `role="progressbar"` + aria-valuenow (WAI-ARIA): progreso anunciado por el lector de pantalla */}
-      <div role="progressbar" aria-label="Progreso del curso" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} className="h-2 overflow-hidden rounded-full bg-muted">
+      {/* [Fix 2026-10-28]: mide lecciones de la RUTA completadas → «Progreso de la ruta» (el «Progreso del curso» suma además recursos y subtemas) */}
+      <div role="progressbar" aria-label="Progreso de la ruta" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-valuetext={`${pct}% · ${completed} de ${lessons} lecciones`} className="h-2 overflow-hidden rounded-full bg-muted">
         <div className="h-full rounded-full bg-primary motion-safe:transition-[width]" style={{ width: `${pct}%` }} />
       </div>
       {lessons ? (
         <ol className="space-y-5">{outline.levels.map((n) => renderNode(n, 0))}</ol>
       ) : (
-        <p className="text-sm text-muted-foreground">Este curso todavía no tiene lecciones publicadas.</p>
+        <p className="text-muted-foreground">Este curso todavía no tiene lecciones publicadas.</p>
       )}
     </section>
   );

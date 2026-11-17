@@ -134,8 +134,8 @@ export default async function FeedbackPage() {
   return (
     <div className="w-full space-y-5 py-4">
       <header>
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Feedback generado por IA</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h1 className="title-page">Feedback generado por IA</h1>
+        <p className="mt-1 text-muted-foreground">
           Retroalimentación personalizada de tus evaluaciones. Revisa el detalle por
           pregunta para identificar qué reforzar.
         </p>
@@ -154,10 +154,10 @@ export default async function FeedbackPage() {
       {completed.length > 0 && (
         <section aria-labelledby="plan-title" className="surface space-y-4 p-5">
           <div>
-            <h2 id="plan-title" className="text-xl font-bold">
+            <h2 id="plan-title" className="title-section">
               Tu plan de estudio
             </h2>
-            <p className="text-sm text-muted-foreground">Calculado con tu precisión por categoría en {completed.length} examen(es) completado(s).</p>
+            <p className="text-muted-foreground">Calculado con tu precisión por categoría en {completed.length} examen(es) completado(s).</p>
           </div>
           {studyPlan ? (
             <>
@@ -165,11 +165,11 @@ export default async function FeedbackPage() {
               {studyPlan.plan?.plan.length ? (
                 <StudyPlan steps={studyPlan.plan.plan} totalMinutes={studyPlan.plan.total_minutes} />
               ) : (
-                <p className="text-sm text-muted-foreground">No tienes temas por debajo del 60 %: sigue con exámenes de mayor dificultad.</p>
+                <p className="text-muted-foreground">No tienes temas por debajo del 60 %: sigue con exámenes de mayor dificultad.</p>
               )}
             </>
           ) : (
-            <p role="status" className="text-sm text-muted-foreground">
+            <p role="status" className="text-muted-foreground">
               El análisis con IA no está disponible en este momento. Tu historial sigue abajo.
             </p>
           )}
@@ -178,8 +178,8 @@ export default async function FeedbackPage() {
 
       {items.length === 0 ? (
         <div className="rounded-xl border bg-card p-8 text-center space-y-3">
-          <h2 className="text-xl font-bold">Aún no hay evaluaciones</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="title-section">Aún no hay evaluaciones</h2>
+          <p className="text-muted-foreground">
             Cuando completes un examen verás aquí el análisis y el feedback por pregunta.
           </p>
           <Link
@@ -204,8 +204,8 @@ export default async function FeedbackPage() {
                 {/* [Resumen del examen] */}
                 <header className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-lg font-bold">{item.quizTitle}</h2>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <h2 className="title-section">{item.quizTitle}</h2>
+                    <p className="type-meta text-muted-foreground mt-0.5">
                       {fmtDate(item.completedAt ?? item.startedAt)} ·{" "}
                       {categoryLabel(item.quizCategory)} ·{" "}
                       {DIFFICULTY_LABEL[item.quizDifficulty]}
@@ -237,7 +237,7 @@ export default async function FeedbackPage() {
                       {line}
                     </p>
                   ))}
-                  <p className="text-xs text-muted-foreground">
+                  <p className="type-meta text-muted-foreground">
                     Puntaje total: <b>{item.totalScore.toFixed(0)}</b> puntos ·{" "}
                     {incorrect.length} incorrecta{incorrect.length === 1 ? "" : "s"}.
                   </p>
@@ -246,7 +246,7 @@ export default async function FeedbackPage() {
                 {/* [Desglose por tema — precisión real por tipo de pregunta] */}
                 {typeBreakdown.length > 0 && (
                   <div className="space-y-2.5">
-                    <h3 className="text-sm font-semibold">Desglose por tema</h3>
+                    <h3 className="title-card">Desglose por tema</h3>
                     {typeBreakdown.map((t) => {
                       const pct = Math.round(t.accuracy * 100);
                       return (
@@ -303,13 +303,13 @@ export default async function FeedbackPage() {
                             <td className="py-2 pr-3">
                               <p className="font-medium">{a.questionText}</p>
                               {!a.isCorrect && a.feedback && (
-                                <p className="mt-1 rounded-md bg-primary/5 px-2 py-1 text-xs text-foreground">
+                                <p className="mt-1 rounded-md bg-primary/5 px-2 py-1 type-meta text-foreground">
                                   <span className="font-semibold">Feedback: </span>
                                   {a.feedback}
                                 </p>
                               )}
                               {!a.isCorrect && a.explanation && (
-                                <p className="mt-1 rounded-md bg-muted/40 px-2 py-1 text-xs">
+                                <p className="mt-1 rounded-md bg-muted/40 px-2 py-1 type-meta">
                                   <span className="font-semibold">Explicación: </span>
                                   {a.explanation}
                                 </p>
@@ -345,7 +345,7 @@ export default async function FeedbackPage() {
       )}
 
       {completed.length > 0 && (
-        <p className="text-xs text-muted-foreground">
+        <p className="type-meta text-muted-foreground">
           {completed.length} {completed.length === 1 ? "examen" : "exámenes"} {completed.length === 1 ? "completado" : "completados"}
           {completed.length === 1 ? "" : "s"}.
         </p>

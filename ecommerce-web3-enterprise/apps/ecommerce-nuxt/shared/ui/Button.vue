@@ -21,13 +21,14 @@ const props = withDefaults(
 );
 
 // VARIANTS / SIZES => tablas de estrategia (agregar una variante = una línea: OCP)
+// Jerarquía: primary (principal), secondary (apoyo), ghost (terciaria), danger / dangerOutline (destructivas)
 const VARIANTS = {
-  primary: "bg-brand text-brand-foreground hover:bg-slate-800",
-  secondary: "border border-slate-300 bg-white text-slate-800 shadow-sm hover:border-slate-400 hover:bg-slate-100", // igual que Next.js
+  primary: "bg-brand text-brand-foreground hover:bg-brand/90",
+  secondary: "border border-secondary-border bg-secondary text-secondary-foreground hover:bg-secondary-hover", // Tokens: en la tienda sigue claro; en el panel lleva tinte de marca
   ghost: "text-slate-700 hover:bg-slate-100",
   danger: "bg-red-700 text-white hover:bg-red-800",
   // dangerOutline => acción destructiva de fila (eliminar/archivar): mismo estilo que la variante de Next.js
-  dangerOutline: "border border-red-300 bg-white text-red-700 shadow-sm hover:border-red-400 hover:bg-red-50",
+  dangerOutline: "border border-red-300 bg-red-50 text-red-700 hover:border-red-400 hover:bg-red-100",
 } as const;
 const SIZES = { sm: "h-9 px-3 text-sm", md: "h-9 px-4 text-sm", icon: "size-9 shrink-0 p-0" } as const;
 

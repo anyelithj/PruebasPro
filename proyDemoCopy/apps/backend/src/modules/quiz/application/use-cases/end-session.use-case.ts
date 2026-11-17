@@ -13,6 +13,8 @@ import {
   QuizCompletedEvent,
 } from '../../domain/events/quiz-completed.event';
 import { SessionStatus } from '../../domain/entities/quiz-session.entity';
+import { isExam, percentOf } from '../../domain/exam-rules';
+import { EXAM_PASSED_EVENT, type ExamPassedEvent } from '../../domain/events/exam-passed.event';
 // [Use Case EndSession]: cierra sesion + agrega totales + emite QuizCompleted | [Patron]: Command | [Principio]: SRP | [Paradigma]: POO
 
 @Injectable()
@@ -35,15 +37,34 @@ export class EndSessionUseCase {
     const totalScore = session.answers.reduce((s, a) => s + a.score, 0);
     const correctCount = session.answers.filter((a) => a.isCorrect).length;
 
-    const finalized = await this.repo.finalizeSession(
-      sessionId,
-      abandoned ? SessionStatus.ABANDONED : SessionStatus.COMPLETED,
-      totalScore,
-      correctCount,
-    );
-
     const quiz = await this.repo.findQuizById(session.quizId, true);
-    const totalQuestions = quiz?.questions?.length ?? 0;
+    const totalQuestions = session.questionIds?.length ?? quiz?.questions?.length ?? 0;
+    // [2026-11-06 · Exámenes]: % sobre las preguntas del intento (sin contestar = fallo) · abandonar cuenta como suspenso
+    const exam = quiz && isExam(quiz.kind);
+    const percent = percentOf(correctCount, totalQuestions);
+    const passed = exam ? !abandoned && percent >= quiz.passScore : null;
+
+    const finalized = await (exam
+      ? this.repo.finalizeSession(
+          sessionId,
+          abandoned ? SessionStatus.ABANDONED : SessionStatus.COMPLETED,
+          totalScore,
+          correctCount,
+          { percent, passed },
+        )
+      : this.repo.finalizeSession(
+          sessionId,
+          abandoned ? SessionStatus.ABANDONED : SessionStatus.COMPLETED,
+          totalScore,
+          correctCount,
+        ));
+    if (passed)
+      this.events.emit(EXAM_PASSED_EVENT, {
+        userId,
+        quizId: quiz!.id,
+        courseId: quiz!.kind === 'final' ? quiz!.courseId : null,
+        percent,
+      } satisfies ExamPassedEvent);
 
     if (!abandoned) {
       this.events.emit(

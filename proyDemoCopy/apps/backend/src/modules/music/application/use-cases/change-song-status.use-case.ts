@@ -13,15 +13,19 @@ import { type MusicActor, SongAccess } from './get-song.use-case';
 // [2026-10-24]: los requisitos viven en domain/song-readiness (SSOT) → el 400 enumera TODO lo que falta y la UI muestra la misma lista antes de llamar
 
 // [Transiciones]: estado actual → estados a los que puede pasar (y quién)
+// [2026-10-27 · Publicar/Despublicar]: el autor puede DESPUBLICAR su canción (published → draft: retirarla de los estudiantes nunca infringe derechos) · publicar sigue siendo del ADMIN (verificación humana de la licencia, RF-128)
+// y el ADMIN publica directamente desde borrador o rechazada (el interruptor de Gestión no necesita pasar por «revisión» cuando quien revisa es él mismo)
 const AUTHOR: Partial<Record<SongStatus, SongStatus[]>> = {
   draft: ['review'],
   rejected: ['review'],
   review: ['draft'],
+  published: ['draft'],
 };
 const ADMIN: Partial<Record<SongStatus, SongStatus[]>> = {
   ...AUTHOR,
+  draft: ['review', 'published'],
+  rejected: ['review', 'published'],
   review: ['draft', 'published', 'rejected'],
-  published: ['draft'],
 };
 
 @Injectable()

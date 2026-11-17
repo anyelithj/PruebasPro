@@ -5,7 +5,7 @@ import { BadgeComponent } from '@shared/ui/atoms/badge/badge.component';
 import { ButtonComponent } from '@shared/ui/atoms/button/button.component';
 import { IpaLabelComponent } from '@shared/ui/atoms/ipa-label/ipa-label.component';
 import { PronunciationButtonComponent } from '@shared/ui/molecules/pronunciation-button/pronunciation-button.component';
-import { ipaFor, type VocabularyEntry } from '../../domain/models/vocabulary';
+import { genderLabel, grammarPending, headwordOf, ipaFor, type VocabularyEntry } from '../../domain/models/vocabulary';
 // [VocabularyEntryTableComponent · Presentacional · Sprint 8.3]: tabla del banco con IPA (según el acento activo), sonido y estado «automático» / «revisado» | [Patrón]: Presentational Component | [Principio]: SRP | [Paradigma]: Declarativo
 // [A11y]: <table> con <caption> y <th scope> · estado con texto + icono (no solo color) · acciones con el término en el nombre accesible
 // [Responsive]: en móvil la tabla se desplaza dentro de su caja (`overflow-x-auto`) en vez de romper la página
@@ -44,13 +44,22 @@ import { ipaFor, type VocabularyEntry } from '../../domain/models/vocabulary';
                     [label]="tx.listen"
                   />
                   <div class="min-w-0">
-                    <p class="font-semibold" [attr.lang]="e.language">{{ e.term }}</p>
-                    <p class="text-xs text-muted-foreground">{{ i18n.languageName(e.language) }}</p>
+                    <p class="font-semibold" [attr.lang]="e.language">{{ headword(e) }}</p>
+                    <!-- [2026-11-03 · Regla obligatoria]: género / contable / clasificador + aviso si faltan datos gramaticales -->
+                    <p class="type-meta text-muted-foreground">
+                      {{ i18n.languageName(e.language) }}
+                      @if (gender(e.grammar)) { · {{ gender(e.grammar) }} }
+                      @if (e.grammar?.countable === false) { · incontable }
+                      @if (e.grammar?.classifier) { · clasificador {{ e.grammar.classifier }} }
+                    </p>
+                    @if (e.grammar?.is_noun !== false && pending(e.grammar)) {
+                      <aula-badge tone="warning">{{ e.grammar ? "Gramática incompleta" : "Revisando gramática…" }}</aula-badge>
+                    }
                   </div>
                 </div>
               </td>
               <td class="px-3 py-2" lang="es">{{ e.translation || '—' }}</td>
-              <td class="px-3 py-2"><aula-ipa-label [ipa]="ipa(e)" [language]="e.language" /></td>
+              <td class="px-3 py-2"><aula-ipa-label [ipa]="ipa(e)" [language]="e.language" [text]="headword(e)" /></td>
               <td class="px-3 py-2">
                 @if (e.reviewed) {
                   <aula-badge tone="brand">{{ tx.reviewed }}</aula-badge>
@@ -92,6 +101,9 @@ import { ipaFor, type VocabularyEntry } from '../../domain/models/vocabulary';
   `,
 })
 export class VocabularyEntryTableComponent {
+  protected readonly headword = headwordOf;
+  protected readonly gender = genderLabel;
+  protected readonly pending = grammarPending;
   protected readonly i18n = inject(I18nService);
   private readonly speech = inject(SpeechSynthesisService);
   readonly t = input.required<Dict['vocabulary']>();

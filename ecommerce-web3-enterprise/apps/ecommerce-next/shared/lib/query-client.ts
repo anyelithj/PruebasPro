@@ -7,6 +7,7 @@ import { CombinedGraphQLErrors } from "@apollo/client/errors";
 import { SetContextLink } from "@apollo/client/link/context";
 import { GraphQLWsLink } from "@apollo/client/link/subscriptions";
 import { QueryCache, QueryClient } from "@tanstack/react-query";
+import { getSession } from "next-auth/react";
 import { OperationTypeNode } from "graphql";
 import { createClient } from "graphql-ws";
 import { ApiError } from "./api-client";
@@ -14,12 +15,16 @@ import { config } from "../constants/config";
 
 // makeQueryClient => Factory: una instancia por pestaña del navegador (se crea en providers.tsx).
 // "onError" => aviso global cuando una lectura falla SIN datos previos (antes la sección quedaba vacía o con su
-// esqueleto para siempre). Los 401 se omiten: la sesión vencida ya la maneja AuthBanner/middleware.
+// esqueleto para siempre). Un 401 no muestra aviso: revalida la sesión (getSession renueva el token y notifica a
+// SessionProvider); si ya no es válida, PanelFrame (useSessionGuard) lleva al login.
+// ponytail: un token revocado en Express con la sesión de next-auth aún vigente espera hasta que el token venza; para
+// expulsar al instante, Express debería distinguir "revocado" de "vencido" en el 401.
 export function makeQueryClient(onError?: (error: unknown) => void): QueryClient {
   return new QueryClient({
     queryCache: new QueryCache({
       onError: (error, query) => {
-        if (query.state.data === undefined && !(error instanceof ApiError && error.status === 401)) onError?.(error);
+        if (error instanceof ApiError && error.status === 401) void getSession();
+        else if (query.state.data === undefined) onError?.(error);
       },
     }),
     defaultOptions: {

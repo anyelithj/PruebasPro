@@ -4,7 +4,7 @@ import { GamesRepository } from '../domain/games.repository.port';
 import { GamesFacade } from './games.facade';
 // [GameAgentFacade · Aplicación · Sprints 8.7/8.9]: turnos contra el agente de juegos (tabú, 20 preguntas, describe y adivina, historia, debate y role-play) | [Patrón]: Facade + State Machine (esperando → pensando → respondió) + Observer (signals) | [Principio]: SRP (conversación) + DIP + DRY (comparte la partida con GamesFacade) | [Paradigma]: Reactivo + async/await
 // [Tiempo hasta responder]: se mide desde que el agente terminó de hablar hasta que el usuario envía (métrica de fluidez, RF-105)
-// [Turno]: POST /api/games/agent/turn → el motor determinista de FastAPI decide primero (pistas prohibidas, adivinar, objetivos) y el LLM solo redacta; si la IA local tarda, la UI muestra «pensando…»
+// [Turno]: POST /api/games/agent/turn → el motor determinista de FastAPI decide primero (pistas prohibidas, adivinar, objetivos) y el LLM solo redacta; si la IA tarda, la UI muestra «pensando…»
 
 export interface ChatTurn {
   readonly who: 'user' | 'agent';

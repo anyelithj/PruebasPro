@@ -6,12 +6,11 @@ import { useRouter } from "next/navigation";
 import { fmt, type Dictionary } from "@aula/shared-i18n";
 import { usePreferences } from "@/components/layout/PreferencesProvider";
 import { useCart } from "@/hooks/useCart";
-import { useCourseReactions } from "@/hooks/useCourses"; // [2026-10-23 · 4.º pase]: reacciones optimistas en su hook (SRP)
+import { CourseReactionBar } from "@/components/courses/CourseReactionBar"; // [Caso F · 2026-11-13]: barra ÚNICA ⭐ 👍 ❤️ (card, detalle y «Mis favoritos»)
+import type { CourseEngagement } from "@/types/courses";
 import { enrollAction } from "@/lib/purchase-actions"; // [Inscripción gratuita]: Server Action → desbloquea el material // [Carrito]: "Comprar" agrega al carrito del topbar (como NeuroLearning)
 // [cra · CourseActions]: CTA dinámica + botón Lab + barra de reacciones (★ 👍 ❤) del original | [Patrón]: Optimistic Update + Strategy (etiqueta según progreso) | [Principio]: SRP
 
-const GOLD = "#D4A017"; // Favorito (igual al original)
-const CORAL = "#FF6B6B"; // Me encanta (igual al original)
 
 export interface CourseActionsProps {
   courseId: string;
@@ -21,22 +20,21 @@ export interface CourseActionsProps {
   hasAccess?: boolean; // [Comprado o inscrito]: sin él se asume sin acceso
   color: string;
   lab?: string | null; // Laboratorio asociado → botón "Lab" (activo si el curso ya empezó)
-  // [estado inicial servidor]: hidrata para evitar parpadeo SSR/CSR | [Principio]: SSOT
-  initialFavorite?: boolean;
-  initialLike?: boolean;
-  initialLove?: boolean;
+  // [estado inicial servidor · Caso F]: ⭐ + reacción + conteos → hidrata sin parpadeo SSR/CSR y conserva el estado al recargar | [Principio]: SSOT
+  engagement: CourseEngagement;
   // [primaryHref]: navegación principal de la card — detalle o lección | [Patrón]: URL State
   primaryHref?: string;
   // [variant]: card = CTA + Lab + reacciones · detail = solo CTA grande | [Principio]: OCP
   variant?: "card" | "detail";
   // [purchase]: datos para el carrito (solo cursos de pago) | `?` (TS): opcional → sin él, "Comprar" navega al detalle
   purchase?: { title: string; price: number; currency: string };
+  canStart?: boolean; // [2026-11-04]: puede entrar al temario (inscrito/comprado, ADMIN o docente dueño) → habilita «Iniciar curso» del detalle | por defecto = hasAccess
 }
 
 // [primaryLabel]: deriva la etiqueta del progreso + isFree (misma regla que el original) | [Patrón]: Strategy | [Paradigma]: Funcional (pura)
 function primaryLabel(progress: number, isFree: boolean, hasAccess: boolean, t: Dictionary["courses"]["actions"]): string {
   if (!hasAccess) return isFree ? t.enterFree : t.buy; // Sin acceso: inscribirse (gratis) o comprar
-  if (progress === 100) return t.certificate;
+  if (progress === 100) return t.finalExam; // [2026-11-06]: el certificado se gana aprobando el examen final
   if (progress > 0) return t.continue;
   return t.start; // Con acceso y sin empezar
 }
@@ -45,6 +43,9 @@ function primaryLabel(progress: number, isFree: boolean, hasAccess: boolean, t: 
 const PRIMARY_CLASS =
   "cursor-pointer rounded-full bg-gradient-brand font-semibold text-white transition-[transform,opacity] hover:-translate-y-0.5 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 
+// [COURSE_CTA_CLASS · 2026-10-31]: botón grande de la columna lateral del curso («Iniciar curso», «Adjuntar material») → mismo ancho y altura | [Principio]: DRY + SSOT
+export const COURSE_CTA_CLASS = `${PRIMARY_CLASS} w-full py-2.5 text-sm`;
+
 export function CourseActions({
   courseId,
   progress,
@@ -52,12 +53,11 @@ export function CourseActions({
   hasAccess = false,
   color,
   lab,
-  initialFavorite = false,
-  initialLike = false,
-  initialLove = false,
+  engagement,
   primaryHref,
   variant = "card",
   purchase,
+  canStart = hasAccess,
 }: CourseActionsProps) {
   const router = useRouter();
   const { t } = usePreferences();
@@ -65,7 +65,6 @@ export function CourseActions({
   const buyable = !hasAccess && !isFree && Boolean(purchase); // Curso de pago aún no comprado
   const [enrolling, startEnrolling] = useTransition(); // [React 19]: estado de la inscripción gratuita
   const inCart = buyable && cart.has(courseId);
-  const { state, pending, toggle } = useCourseReactions(courseId, { favorite: initialFavorite, like: initialLike, love: initialLove });
 
   // [Acción primaria]: comprar → al carrito (si ya está, abre el detalle) · resto → navegar | [Patrón]: Strategy
   const goPrimary = useCallback(() => {
@@ -82,9 +81,9 @@ export function CourseActions({
       cart.add({ id: courseId, title: purchase.title, price: purchase.price, currency: purchase.currency, color, href: primaryHref ?? "/courses" });
       return;
     }
-    // [Sprint 7.8]: curso al 100 % → «◈ Certificado» abre Mis certificados (pantalla Angular: navegación completa, como los ítems `hard` del menú)
+    // [2026-11-06]: curso al 100 % → examen final (aprobado → certificado automático)
     if (hasAccess && progress === 100) {
-      window.location.assign("/certificados");
+      router.push(`/quiz/examen/curso/${courseId}?desde=curso`);
       return;
     }
     if (primaryHref) router.push(primaryHref);
@@ -92,11 +91,38 @@ export function CourseActions({
 
   const primary = enrolling ? t.courses.actions.enrolling : inCart ? t.courses.actions.inCart : primaryLabel(progress, isFree, hasAccess, t.courses.actions);
 
+  // [Reacciones · Caso F]: también en el detalle («Acceso al curso») → mismo componente, sin lógica duplicada
+  const reactions = <CourseReactionBar courseId={courseId} initial={engagement} />;
+
+  // [Detalle · 2026-11-04]: «Acceso al curso» con DOS botones → 1) Comprar / Inscribirse (o «ya lo tienes») · 2) Iniciar curso → temario (Continuar / Certificado según el avance)
   if (variant === "detail") {
+    const a = t.courses.actions;
+    const buyLabel = enrolling ? a.enrolling : inCart ? a.inCart : hasAccess ? a.owned : isFree ? a.enterFree : a.buy;
+    const start = () => (progress === 100 && hasAccess ? router.push(`/quiz/examen/curso/${courseId}?desde=curso`) : primaryHref && router.push(primaryHref));
     return (
-      <button type="button" onClick={goPrimary} disabled={enrolling} aria-busy={enrolling} className={`${PRIMARY_CLASS} w-full py-2.5 text-sm`}>
-        {primary}
-      </button>
+      <>
+        <div className="space-y-2">
+          <button type="button" onClick={goPrimary} disabled={enrolling || hasAccess || inCart} aria-busy={enrolling} className={`${COURSE_CTA_CLASS} disabled:cursor-default disabled:opacity-60`}>
+            {buyLabel}
+          </button>
+          <button type="button" onClick={start} disabled={!canStart} title={canStart ? undefined : a.startLocked} className="btn btn-outline w-full py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-60">
+            {primaryLabel(progress, isFree, true, a)}
+          </button>
+          {!canStart && <p className="type-meta text-muted-foreground">{a.startLocked}</p>}
+          {/* [2026-11-06 · Examen final]: bloqueado hasta terminar el curso al 100 % → entonces lleva a su examen (aprobarlo emite el certificado) */}
+          {hasAccess && progress === 100 ? (
+            <Link href={`/quiz/examen/curso/${courseId}?desde=curso`} className="btn btn-primary w-full py-2.5 text-sm">📝 Presentar examen final</Link>
+          ) : (
+            <div className="rounded-xl border border-dashed border-border p-3 text-sm" aria-disabled="true">
+              <p className="font-semibold">🔒 Examen final</p>
+              <p className="type-meta text-muted-foreground">
+                Se desbloquea al terminar el curso al 100 %{hasAccess ? ` (vas en ${progress} %)` : ""}. Aprobarlo con 70 % te da el certificado.
+              </p>
+            </div>
+          )}
+        </div>
+        {reactions}
+      </>
     );
   }
 
@@ -141,43 +167,7 @@ export function CourseActions({
         )}
       </div>
 
-      {/* Barra de reacciones */}
-      <div className="mt-2.5 flex flex-wrap items-center gap-[5px] border-t border-border pt-2">
-        <ReactionPill on={state.favorite} color={GOLD} label={t.courses.actions.favorite} disabled={pending === "favorite"} onClick={() => toggle("favorite")} />
-        <ReactionPill on={state.like} color={color} label={t.courses.actions.like} disabled={pending === "like"} onClick={() => toggle("like")} />
-        <ReactionPill on={state.love} color={CORAL} label={t.courses.actions.love} disabled={pending === "love"} onClick={() => toggle("love")} />
-      </div>
+      {reactions}
     </>
-  );
-}
-
-interface ReactionPillProps {
-  on: boolean;
-  color: string;
-  label: string; // Incluye el icono ("★ Favorito") igual que el original
-  disabled?: boolean;
-  onClick: () => void;
-}
-
-// [ReactionPill]: botón conmutador | `aria-pressed` (WAI-ARIA): anuncia el estado activo/inactivo al lector de pantalla
-function ReactionPill({ on, color, label, disabled, onClick }: ReactionPillProps) {
-  return (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation(); // No dispara navegación de la card
-        onClick();
-      }}
-      disabled={disabled}
-      aria-pressed={on}
-      className="flex cursor-pointer items-center gap-[3px] rounded-[20px] px-2.5 py-1 text-[11px] transition-all duration-200 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      style={{
-        border: `1px solid ${on ? color : "var(--nl-brd)"}`,
-        background: on ? `${color}22` : "transparent",
-        color: on ? color : "var(--nl-txt2)",
-      }}
-    >
-      {label}
-    </button>
   );
 }

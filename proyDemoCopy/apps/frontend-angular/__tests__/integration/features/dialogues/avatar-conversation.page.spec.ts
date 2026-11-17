@@ -4,6 +4,7 @@ import { server } from '@testing/msw/server';
 import { render, settle } from '@testing/render';
 import { getByRole } from '@testing/a11y';
 import { SpeechSynthesisService } from '@core/audio/speech-synthesis.service';
+import { DictionaryFacade } from '@core/dictionary/dictionary.facade';
 import { DialoguesFacade } from '@features/dialogues/application/dialogues.facade';
 import { DialoguesRepository } from '@features/dialogues/domain/dialogues.repository.port';
 import { DialoguesHttpRepository } from '@features/dialogues/infrastructure/dialogues.http-repository';
@@ -12,7 +13,7 @@ import { session, sessionAs, topic, turn } from '@testing/music-dialogues';
 // [Spec AvatarConversationPage · Sprint 9.12]: objetivos y vocabulario antes de empezar → apertura del avatar con IPA y traducción → turno escrito por SSE con corrección suave bajo el turno → terminar; transcripción de una sesión anterior | [Herramienta]: render() + voz falsa + msw
 
 const speech = { speak: jest.fn((_t: string, _l: string, _r: number, h: { end?: () => void } = {}) => h.end?.()), stop: jest.fn(), hasVoice: () => true, hasNaturalVoice: () => true, speaking: () => false, accent: () => 'uk', setAccent: jest.fn() };
-const providers = [{ provide: DialoguesRepository, useClass: DialoguesHttpRepository }, DialoguesFacade, sessionAs('USER'), { provide: SpeechSynthesisService, useValue: speech }];
+const providers = [{ provide: DialoguesRepository, useClass: DialoguesHttpRepository }, DialoguesFacade, sessionAs('USER'), { provide: SpeechSynthesisService, useValue: speech }, { provide: DictionaryFacade, useValue: { translate: async () => '' } }];
 const sse = [
   `event: user\ndata: ${JSON.stringify(turn(1, 'user', 'I likes pasta', 'Se dice «I like».'))}\n\n`,
   `event: avatar\ndata: ${JSON.stringify({ ...turn(2, 'avatar', 'Pasta is great!'), vocabularyUsed: ['pasta'] })}\n\n`,

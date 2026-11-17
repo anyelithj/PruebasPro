@@ -10,7 +10,9 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
     <div
       class="flex min-h-40 flex-col items-center justify-center gap-3 rounded-2xl border border-border bg-gradient-soft p-6 text-center"
     >
-      @if (emoji()) {
+      @if (image()) {
+        <img [src]="image()" [alt]="emojiLabel()" class="max-h-40 rounded-xl object-contain" referrerpolicy="no-referrer" />
+      } @else if (emoji()) {
         <span
           class="text-6xl leading-none"
           role="img"
@@ -24,7 +26,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
         </p>
       }
       @if (caption()) {
-        <p class="text-sm text-muted-foreground">{{ caption() }}</p>
+        <p class="text-muted-foreground">{{ caption() }}</p>
       }
       <ng-content />
     </div>
@@ -32,6 +34,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 })
 export class PromptCardComponent {
   readonly emoji = input('');
+  readonly image = input<string | undefined>(undefined); // [2026-11-03]: imagen del mazo (gana al emoji)
   readonly emojiLabel = input('');
   readonly text = input('');
   readonly caption = input('');

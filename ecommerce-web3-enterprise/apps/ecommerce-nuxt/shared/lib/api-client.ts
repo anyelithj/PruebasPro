@@ -6,6 +6,7 @@ import { useCookie, useNuxtApp, useRuntimeConfig } from "#imports";
 import type { ApiResult, Query } from "../types/api.types";
 import { AUTH_COOKIES } from "./auth-config";
 import { deviceId } from "./device-id";
+import { storeLoginUrl } from "../constants/config";
 
 // deviceHeader => RF-08.11 huella del dispositivo (solo en el navegador; en SSR no hay dispositivo del cliente)
 const deviceHeader = async (): Promise<Record<string, string>> => {
@@ -40,6 +41,19 @@ interface Envelope<T> {
 // cleanQuery => quita undefined/null/"" (URLs canónicas y cacheables). Función pura.
 const cleanQuery = (query: Query = {}) => Object.fromEntries(Object.entries(query).filter(([, value]) => value !== undefined && value !== null && value !== ""));
 
+// onPanelUnauthorized => 401 dentro del panel (token vencido en una pantalla abierta; la tienda no se interrumpe): se borra
+// el token y se recarga UNA vez para que Nitro (server/middleware/auth.ts) pida uno nuevo a Next. Si otro 401 llega en menos
+// de 30 s la sesión ya no es válida => login, que con sesión vigente devuelve al panel: nunca hay bucle de recargas.
+const RELOADED_AT = "panel-401-reload";
+function onPanelUnauthorized(clearToken: () => void, loginUrl: string): void {
+  if (!import.meta.client || !document.getElementById("panel-sidebar")) return;
+  clearToken();
+  const last = Number(sessionStorage.getItem(RELOADED_AT) ?? 0);
+  if (Date.now() - last < 30_000) return window.location.assign(loginUrl);
+  sessionStorage.setItem(RELOADED_AT, String(Date.now()));
+  window.location.reload();
+}
+
 // useApi => se llama en setup()/composables: captura config, cookie e idioma DENTRO del contexto de Nuxt y devuelve
 // funciones que se pueden usar después en eventos o acciones de Pinia (Closure).
 // "anonymous" => SIN token: obligatorio en páginas públicas con ISR (la respuesta se guarda en una caché compartida y
@@ -67,7 +81,9 @@ export function useApi(settings: { anonymous?: boolean } = {}) {
       if (!envelope) return { data: undefined as T }; // 204 No Content
       return { data: envelope.data, meta: envelope.meta, ...(envelope.queued ? { queued: true } : {}) };
     } catch (error) {
-      throw toApiError(error);
+      const failure = toApiError(error);
+      if (failure.status === 401) onPanelUnauthorized(() => (cookie.value = null), storeLoginUrl(config.public.storefrontUrl as string, locale?.value ?? "es"));
+      throw failure;
     }
   }
 

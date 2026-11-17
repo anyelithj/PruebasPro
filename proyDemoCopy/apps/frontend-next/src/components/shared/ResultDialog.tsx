@@ -1,4 +1,6 @@
 "use client"; // [Next.js]: Client Component → diálogo interactivo (Radix)
+import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { usePreferences } from "@/components/layout/PreferencesProvider";
 // [ResultDialog]: ventana modal "se creó con éxito" / "error" tras guardar curso, examen o recurso | [Patrón]: Presentational + Controlled Component | [Principio]: SRP + DRY (un solo diálogo para los tres formularios)
@@ -40,4 +42,25 @@ export function ResultDialog({ result, onClose }: ResultDialogProps) {
       </DialogContent>
     </Dialog>
   );
+}
+
+// [useResultDialog · 2026-10-28]: estado + navegación del modal de resultado en UN hook → los formularios de Actividades (crear, editar, juego) siguen el MISMO flujo que Recursos/Exámenes
+// «se creó con éxito» → Continuar (o X / Escape) → navega al registro · error → solo cierra y el formulario sigue editable
+// [Patrón]: Custom Hook (React) + Post/Redirect/Get | [Principio]: DRY (antes cada formulario repetía useState + onClose + router.push) + SRP | [Paradigma]: Reactivo
+export function useResultDialog() {
+  const router = useRouter(); // [Next.js]: navegación de cliente (App Router)
+  // `href?` (TS): destino solo en éxito | `null` = modal cerrado
+  const [state, setState] = useState<{ result: SaveResult; href?: string } | null>(null);
+  // `useCallback` (React): referencia estable → se puede usar dentro de efectos o pasar a hijos sin re-render extra
+  const show = useCallback((result: SaveResult, href?: string) => setState({ result, href }), []);
+  const onClose = () => {
+    const href = state?.result.ok ? state.href : undefined; // `?.` (ES2020): encadenamiento opcional
+    setState(null);
+    if (href) {
+      router.push(href);
+      router.refresh(); // El destino (detalle/lista) vuelve a pedir el RSC con lo recién guardado
+    }
+  };
+  // `dialog`: props listas para `<ResultDialog {...dialog} />` | [Patrón]: Prop Getter
+  return { show, dialog: { result: state?.result ?? null, onClose } satisfies ResultDialogProps };
 }

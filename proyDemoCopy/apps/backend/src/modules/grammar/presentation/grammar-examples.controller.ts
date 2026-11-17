@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
@@ -43,14 +44,15 @@ export class GrammarExamplesController {
 
   @Post('sections/:id/examples')
   @Roles(Role.TEACHER, Role.ADMIN)
-  @ApiOperation({ summary: 'Agregar un ejemplo con su IPA y su traducción' })
+  @ApiOperation({ summary: 'Agregar un ejemplo con su IPA y su traducción (`?defer=true`: se completan en segundo plano)' })
   addOne(
     @CurrentUser() u: JwtPayload,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: ExampleBody,
     @Headers('authorization') auth: string,
+    @Query('defer') defer?: string, // [2026-10-27]: alta de una ficha completa → no espera al LLM por cada ejemplo
   ) {
-    return this.add.execute(actorOf(u), id, body, bearer(auth));
+    return this.add.execute(actorOf(u), id, body, bearer(auth), defer === 'true' || defer === '1');
   }
 
   @Get('sections/:id/examples')

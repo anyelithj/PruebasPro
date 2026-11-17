@@ -34,7 +34,7 @@ export class ClassifyDialogueLevelUseCase {
         token,
       );
       Object.assign(dialogue, {
-        level: estimate.level,
+        level: dialogue.level ?? estimate.level, // [2026-10-27]: el nivel que eligió el docente al crearlo prevalece; la IA solo aporta la estimación
         levelEstimate: estimate,
         levelStatus: 'estimated',
       });

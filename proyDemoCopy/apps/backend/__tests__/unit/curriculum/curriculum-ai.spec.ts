@@ -187,7 +187,7 @@ describe('GenerateContentDraftQuery — normalización de vocabulario (fr)', () 
   });
 
   it('IPA como cadena → objeto con la variante del idioma; IPA vacía → se omite', async () => {
-    expect((await run({ lemma: 'la maison', translationEs: 'la casa', ipa: '/mɛ.zɔ̃/' })).content.ipa).toEqual({ value: '/mɛ.zɔ̃/', variant: 'fr-FR' });
+    expect((await run({ lemma: 'la maison', translationEs: 'la casa', ipa: '/mɛ.zɔ̃/' })).content.ipa).toEqual({ value: '/la mɛ.zɔ̃/', variant: 'fr-FR' }); // [2026-11-06]: + IPA del artículo
     expect((await run({ lemma: 'la porte', translationEs: 'la puerta', ipa: { value: '', variant: 'fr-FR' } })).content).not.toHaveProperty('ipa');
   });
 

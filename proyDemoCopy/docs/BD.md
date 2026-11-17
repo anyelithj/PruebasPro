@@ -574,3 +574,9 @@ Usuarios: admin@neuroedu.ia, docente@neuroedu.ia y estudiante@neuroedu.ia, con l
 ├───────────────┼────────────────────────┼───────────────┤
 │ Estudiante    │ estudiante@neuroedu.ia │ StrongP@ss123 │
 └───────────────┴────────────────────────┴───────────────
+
+- En desarrollo, no uses migration:run. Basta con reiniciar el backend y synchronize aplica los cambios.
+- Si algún día quieres usar migraciones (por ejemplo para producción), primero hay que marcar las 34 como ya aplicadas, sin ejecutarlas:
+pnpm typeorm migration:run --fake
+  Cuidado: marca todas como hechas sin comprobar que la base coincida. Solo úsalo si confías en que synchronize ya dejó todo igual.
+ss123

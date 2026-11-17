@@ -48,10 +48,8 @@ export class AskGuideBody {
   @IsOptional() @IsUUID() sessionId?: string;
   @IsOptional() @Matches(ROUTE) @MaxLength(200) route?: string;
   @IsIn(HELP_LOCALES) locale!: HelpLocale;
-  // [2026-10-19]: modo del chatbot flotante (Tutor · Soporte · Guía); el tutor recibe idioma y nivel
-  @IsOptional() @IsIn(['guide', 'support', 'tutor']) mode?: 'guide' | 'support' | 'tutor';
-  @IsOptional() @IsIn(['en', 'fr', 'de', 'es', 'pt', 'zh', 'ru']) language?: string;
-  @IsOptional() @IsIn(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']) level?: string;
+  // [2026-10-19 → 2026-10-28]: modo del asistente «Soporte y Guía» (Soporte · Guía) — ya NO hay modo tutor (el Tutor IA vive en /tutor)
+  @IsOptional() @IsIn(['guide', 'support']) mode?: 'guide' | 'support';
 }
 
 export class RateGuideBody {
@@ -77,8 +75,12 @@ export class GuideController {
   @ApiOperation({
     summary: 'Preguntar al Agente Guía (FAQ → manual → LLM, con citas)',
   })
-  askOne(@Body() body: AskGuideBody, @Headers('authorization') auth: string) {
-    return this.ask.execute(body, bearer(auth));
+  askOne(
+    @CurrentUser() user: JwtPayload,
+    @Body() body: AskGuideBody,
+    @Headers('authorization') auth: string,
+  ) {
+    return this.ask.execute(body, bearer(auth), user.role); // [2026-10-27]: el rol solo filtra la FAQ/manual del modo degradado (sin IA)
   }
 
   // [SSE por POST]: igual que el tutor — la pregunta viaja en el cuerpo; `@Res()` canaliza el flujo sin envoltorio
@@ -89,19 +91,26 @@ export class GuideController {
       'Preguntar al Agente Guía en streaming (session, token, sources, done)',
   })
   async askStream(
+    @CurrentUser() user: JwtPayload,
     @Body() body: AskGuideBody,
     @Headers('authorization') auth: string,
     @Res() res: Response,
   ): Promise<void> {
     const abort = new AbortController();
     res.on('close', () => abort.abort()); // Cliente desconectado → cancelar FastAPI
-    const upstream = await this.ask.stream(body, bearer(auth), abort.signal);
+    // [2026-10-27]: FastAPI caído → el caso de uso ya devuelve un SSE propio (FAQ/manual, `degraded`) en vez de lanzar 503
+    const upstream = await this.ask.stream(body, bearer(auth), abort.signal, user.role);
     res.status(200).set({
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache, no-transform',
       'X-Accel-Buffering': 'no',
     });
     res.flushHeaders();
+    // [Fix 2026-10-27]: un corte de FastAPI A MITAD del flujo emitía 'error' en un Readable sin oyente → excepción no capturada (tumbaba el proceso de NestJS)
+    // → se cierra el SSE con `done` para que la UI termine el turno | `stream.on('error')` (Node): sin oyente, 'error' se relanza
+    upstream.on('error', () => {
+      if (!res.writableEnded) res.end('event: done\ndata: {}\n\n');
+    });
     upstream.pipe(res);
   }
 

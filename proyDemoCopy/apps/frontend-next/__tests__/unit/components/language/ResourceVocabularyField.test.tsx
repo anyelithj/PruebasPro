@@ -29,7 +29,7 @@ describe("ResourceVocabularyField", () => {
     global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => lookup("unavailable") });
     render(<ResourceVocabularyField term="airport" language="en" onTranslation={jest.fn()} onIpa={jest.fn()} />);
     await userEvent.click(screen.getByRole("button", { name: /Consultar/ }));
-    expect(await screen.findByText(/la IA local no respondió/)).toBeInTheDocument();
+    expect(await screen.findByText(/la IA no respondió/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Usar traducción/ })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Usar IPA británico/ })).toBeInTheDocument();
   });

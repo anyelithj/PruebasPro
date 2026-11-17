@@ -14,8 +14,8 @@ import { ForumPostFormComponent } from './forum-post-form.component';
     @let tx = t();
     <ol class="space-y-3">
       @for (p of posts(); track p.id) {
-        <li class="rounded-xl border border-border p-3 text-sm">
-          <p class="mb-1 text-xs text-muted-foreground">
+        <li class="rounded-xl border border-border p-3">
+          <p class="mb-1 type-meta text-muted-foreground">
             <span class="font-semibold text-foreground">{{ p.authorName }}</span> ·
             <time [attr.datetime]="p.createdAt">{{ date()(p.createdAt) }}</time>
             @if (p.editedAt) {
@@ -37,7 +37,7 @@ import { ForumPostFormComponent } from './forum-post-form.component';
           }
         </li>
       } @empty {
-        <li class="py-6 text-center text-sm text-muted-foreground">{{ tx.noPosts }}</li>
+        <li class="py-6 text-center text-muted-foreground">{{ tx.noPosts }}</li>
       }
     </ol>
   `,

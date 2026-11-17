@@ -1,0 +1,25 @@
+// SMACSS · MODULE — row-list: lista de filas con acciones (tareas, flujos, archivos, reglas, avisos).
+.row-list {
+  list-style: none;
+  padding: 0;
+  margin: var(--space) 0 0;
+  display: grid;
+  gap: 0.5rem;
+  &__item {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: var(--pad-item);
+  }
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+  }
+}

@@ -17,7 +17,7 @@ export function Pricing({ l }: { l: Dictionary["landing"] }) {
             <li key={p.id} className="role-card">
               <span className="badge">{p.name}</span>
               <h3>{p.price}</h3>
-              <p className="text-sm text-[var(--text-muted)]">{p.text}</p>
+              <p className="text-[var(--text-muted)]">{p.text}</p>
               <ul>
                 {p.items.map((it) => (
                   <li key={it}>{it}</li>
@@ -29,7 +29,7 @@ export function Pricing({ l }: { l: Dictionary["landing"] }) {
             </li>
           ))}
         </ul>
-        <p className="mt-6 text-center text-sm text-[var(--text-muted)]">{l.paymentNote}</p>
+        <p className="mt-6 text-center text-[var(--text-muted)]">{l.paymentNote}</p>
       </div>
     </section>
   );

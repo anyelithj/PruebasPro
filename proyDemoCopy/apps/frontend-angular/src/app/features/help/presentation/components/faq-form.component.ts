@@ -19,7 +19,7 @@ const empty = (locale: HelpLocale): FaqInput => ({ question: '', answer: '', cat
     @let tx = t();
     <dialog #dlg class="w-[min(36rem,calc(100vw-2rem))] rounded-2xl border border-border bg-card p-0 text-foreground shadow-xl backdrop:bg-slate-900/50" aria-labelledby="faq-form-title" (close)="closed.emit()">
       <form class="space-y-4 p-5" (submit)="onSubmit($event)" novalidate>
-        <h2 id="faq-form-title" class="text-lg font-bold">{{ faq() ? tx.formTitleEdit : tx.formTitleNew }}</h2>
+        <h2 id="faq-form-title" class="title-section">{{ faq() ? tx.formTitleEdit : tx.formTitleNew }}</h2>
         <aula-form-field #q fieldId="faq-question" [label]="tx.question" [error]="err('question')">
           <aula-text-input inputId="faq-question" [formField]="f.question" [describedBy]="q.describedBy()" />
         </aula-form-field>

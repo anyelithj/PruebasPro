@@ -14,9 +14,9 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
     </div>
     <ng-content />
     @if (error()) {
-      <p class="text-xs text-tone-danger" role="alert" [id]="errorId()">{{ error() }}</p>
+      <p class="type-meta text-tone-danger" role="alert" [id]="errorId()">{{ error() }}</p>
     } @else if (hint()) {
-      <p class="text-xs text-muted-foreground" [id]="hintId()">{{ hint() }}</p>
+      <p class="type-meta text-muted-foreground" [id]="hintId()">{{ hint() }}</p>
     }
   `,
 })

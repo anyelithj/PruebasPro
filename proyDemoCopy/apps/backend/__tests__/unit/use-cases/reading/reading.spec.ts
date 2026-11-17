@@ -1,24 +1,84 @@
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import type { Repository } from 'typeorm';
 import { ReadingAccess } from '../../../../src/modules/reading/application/use-cases/reading-access';
-import { needsEnrichment, ReadingContentWriter } from '../../../../src/modules/reading/application/use-cases/reading-content.writer';
+import {
+  BACKFILL_COOLDOWN_MS,
+  needsEnrichment,
+  ReadingContentWriter,
+} from '../../../../src/modules/reading/application/use-cases/reading-content.writer';
 import { ListReadingTextsUseCase } from '../../../../src/modules/reading/application/use-cases/list-reading-texts.use-case';
 import { SaveReadingProgressUseCase } from '../../../../src/modules/reading/application/use-cases/reading-progress.use-case';
-import { ENRICH_BATCH, SentenceEnricher } from '../../../../src/modules/reading/application/use-cases/sentence-enricher';
-import { publishProblem, UpdateReadingTextUseCase } from '../../../../src/modules/reading/application/use-cases/update-reading-text.use-case';
+import {
+  ENRICH_BATCH,
+  SentenceEnricher,
+} from '../../../../src/modules/reading/application/use-cases/sentence-enricher';
+import {
+  publishProblem,
+  UpdateReadingTextUseCase,
+} from '../../../../src/modules/reading/application/use-cases/update-reading-text.use-case';
 import type { ReadingProgress } from '../../../../src/modules/reading/domain/entities/reading-progress.entity';
 import type { ReadingSentence } from '../../../../src/modules/reading/domain/entities/reading-sentence.entity';
 import type { ReadingText } from '../../../../src/modules/reading/domain/entities/reading-text.entity';
-import { fileName, groupParagraphs, toTxt } from '../../../../src/modules/reading/domain/reading-export';
-import { isReadingGenre, ReadingGenre } from '../../../../src/modules/reading/domain/reading-genre';
-import { buildSentences, chunkLong, countWords, splitParagraphs, splitSentences } from '../../../../src/modules/reading/domain/sentence-splitter';
-import { paragraphsOf, parseLoose } from '../../../../src/modules/reading/infrastructure/ai/reading-draft-client.adapter';
+import {
+  fileName,
+  groupParagraphs,
+  toTxt,
+} from '../../../../src/modules/reading/domain/reading-export';
+import {
+  isReadingGenre,
+  ReadingGenre,
+} from '../../../../src/modules/reading/domain/reading-genre';
+import {
+  buildSentences,
+  chunkLong,
+  countWords,
+  splitParagraphs,
+  splitSentences,
+} from '../../../../src/modules/reading/domain/sentence-splitter';
+import {
+  draftIssue,
+  paragraphsOf,
+  parseLoose,
+  ReadingDraftClient,
+  rebalance,
+  salvageParagraphs,
+  shapeOf,
+  shortfall,
+} from '../../../../src/modules/reading/infrastructure/ai/reading-draft-client.adapter';
+import type { OllamaClient } from '../../../../src/modules/ai/ollama.client';
+import type { ConfigService } from '@nestjs/config';
 import { readingPdf } from '../../../../src/modules/reading/infrastructure/export/reading-pdf';
-import type { LanguageToolsPort, LinesResult } from '../../../../src/shared/domain/interfaces/language-tools.interface';
+import type {
+  LanguageToolsPort,
+  LinesResult,
+} from '../../../../src/shared/domain/interfaces/language-tools.interface';
+import { BackgroundTasks } from '../../../../src/shared/background/background-tasks';
 // [Suite Lectura · 2026-10-25]: división en frases, normalización del JSON de la IA, enriquecimiento por lotes con fallos parciales, reutilización de traducciones al editar, permisos, publicación, marcador y exportación | [Patrón]: Test Double (repositorios y puertos en memoria) | [Herramienta]: Jest
 
 const TEXT = (over: Partial<ReadingText> = {}): ReadingText =>
-  ({ id: 't1', title: 'The Fox', language: 'en', level: 'A2', genre: ReadingGenre.FABLE, topic: null, summary: null, status: 'draft', source: 'manual', sourceRef: null, sentenceCount: 0, wordCount: 0, createdBy: 'teacher-1', withdrawnAt: null, createdAt: new Date(), updatedAt: new Date(), ...over }) as ReadingText;
+  ({
+    id: 't1',
+    title: 'The Fox',
+    language: 'en',
+    level: 'A2',
+    genre: ReadingGenre.FABLE,
+    topic: null,
+    summary: null,
+    status: 'draft',
+    source: 'manual',
+    sourceRef: null,
+    sentenceCount: 0,
+    wordCount: 0,
+    createdBy: 'teacher-1',
+    withdrawnAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...over,
+  }) as ReadingText;
 
 // [toolsStub]: LanguageToolsPort en memoria — `failOn` hace fallar el lote cuyo primer texto coincide
 function toolsStub(failOn?: string) {
@@ -26,14 +86,29 @@ function toolsStub(failOn?: string) {
   const lines = jest.fn(async (texts: string[]): Promise<LinesResult> => {
     calls.push(texts);
     if (failOn && texts.includes(failOn)) throw new Error('LLM ocupado');
-    return { engine: 'stub', needs_native_review: false, lines: texts.map((t, index) => ({ index, text: t, ipa: `ipa(${t})`, ipa_us: null, translation: `es(${t})` })) };
+    return {
+      engine: 'stub',
+      needs_native_review: false,
+      lines: texts.map((t, index) => ({
+        index,
+        text: t,
+        ipa: `ipa(${t})`,
+        ipa_us: null,
+        translation: `es(${t})`,
+      })),
+    };
   });
   return { port: { lines } as unknown as LanguageToolsPort, calls, lines };
 }
 
 describe('SentenceSplitter', () => {
   it('separa frases sin cortar abreviaturas ni iniciales', () => {
-    expect(splitSentences('Mr. Smith met Dr. Brown. They talked! Did J. K. Rowling come? Yes.', 'en')).toEqual([
+    expect(
+      splitSentences(
+        'Mr. Smith met Dr. Brown. They talked! Did J. K. Rowling come? Yes.',
+        'en',
+      ),
+    ).toEqual([
       'Mr. Smith met Dr. Brown.',
       'They talked!',
       'Did J. K. Rowling come?',
@@ -42,24 +117,52 @@ describe('SentenceSplitter', () => {
   });
 
   it('respeta los signos de apertura del español y las comillas de cierre', () => {
-    expect(splitSentences('Hola, Sra. Pérez. ¿Cómo está? «Bien», dijo ella. ¡Qué día!', 'es')).toEqual(['Hola, Sra. Pérez.', '¿Cómo está?', '«Bien», dijo ella.', '¡Qué día!']);
+    expect(
+      splitSentences(
+        'Hola, Sra. Pérez. ¿Cómo está? «Bien», dijo ella. ¡Qué día!',
+        'es',
+      ),
+    ).toEqual([
+      'Hola, Sra. Pérez.',
+      '¿Cómo está?',
+      '«Bien», dijo ella.',
+      '¡Qué día!',
+    ]);
   });
 
   it('chino: corta en 。！？ sin espacios', () => {
-    expect(splitSentences('我喜欢猫。你呢？很好！', 'zh')).toEqual(['我喜欢猫。', '你呢？', '很好！']);
+    expect(splitSentences('我喜欢猫。你呢？很好！', 'zh')).toEqual([
+      '我喜欢猫。',
+      '你呢？',
+      '很好！',
+    ]);
   });
 
   it('alemán: un ordinal no cierra la frase', () => {
-    expect(splitSentences('Wir treffen uns am 3. Mai im Park. Das ist schön.', 'de')).toEqual(['Wir treffen uns am 3. Mai im Park.', 'Das ist schön.']);
+    expect(
+      splitSentences('Wir treffen uns am 3. Mai im Park. Das ist schön.', 'de'),
+    ).toEqual(['Wir treffen uns am 3. Mai im Park.', 'Das ist schön.']);
   });
 
   it('párrafos por línea en blanco; en verso se conservan los saltos', () => {
-    expect(splitParagraphs('Uno\ndos.\r\n\r\nTres.')).toEqual(['Uno dos.', 'Tres.']);
-    expect(splitParagraphs('Roses are red\nViolets are blue\n\nSugar is sweet', true)).toEqual(['Roses are red\nViolets are blue', 'Sugar is sweet']);
+    expect(splitParagraphs('Uno\ndos.\r\n\r\nTres.')).toEqual([
+      'Uno dos.',
+      'Tres.',
+    ]);
+    expect(
+      splitParagraphs(
+        'Roses are red\nViolets are blue\n\nSugar is sweet',
+        true,
+      ),
+    ).toEqual(['Roses are red\nViolets are blue', 'Sugar is sweet']);
   });
 
   it('buildSentences numera párrafo y posición global; el poema va verso a verso', () => {
-    const s = buildSentences(['Roses are red\nViolets are blue', 'Sugar is sweet'], 'en', true);
+    const s = buildSentences(
+      ['Roses are red\nViolets are blue', 'Sugar is sweet'],
+      'en',
+      true,
+    );
     expect(s.map((x) => [x.paragraph, x.position, x.text])).toEqual([
       [0, 0, 'Roses are red'],
       [0, 1, 'Violets are blue'],
@@ -68,7 +171,10 @@ describe('SentenceSplitter', () => {
   });
 
   it('trocea frases demasiado largas entre palabras y cuenta palabras', () => {
-    const parts = chunkLong(Array.from({ length: 30 }, () => 'word').join(' '), 50);
+    const parts = chunkLong(
+      Array.from({ length: 30 }, () => 'word').join(' '),
+      50,
+    );
     expect(parts.every((p) => p.length <= 50)).toBe(true);
     expect(parts.join(' ').split(' ')).toHaveLength(30);
     expect(countWords("It's a cat-like fox.", 'en')).toBe(4);
@@ -84,10 +190,194 @@ describe('Borrador de la IA (normalización del JSON)', () => {
   });
 
   it('paragraphsOf tolera cadenas, objetos, listas de versos y un único texto', () => {
-    expect(paragraphsOf({ paragraphs: ['A  b.', { text: 'C.' }, ''] }, false)).toEqual(['A b.', 'C.']);
+    expect(
+      paragraphsOf({ paragraphs: ['A  b.', { text: 'C.' }, ''] }, false),
+    ).toEqual(['A b.', 'C.']);
     expect(paragraphsOf({ stanzas: [['v1', 'v2']] }, true)).toEqual(['v1\nv2']);
-    expect(paragraphsOf({ story: 'Uno.\n\nDos.' }, false)).toEqual(['Uno.', 'Dos.']);
+    expect(paragraphsOf({ story: 'Uno.\n\nDos.' }, false)).toEqual([
+      'Uno.',
+      'Dos.',
+    ]);
     expect(paragraphsOf({}, false)).toEqual([]);
+  });
+
+  // [2026-10-27]: longitud por nivel, JSON truncado y reintento por idioma o por texto demasiado corto
+  // [2026-10-28]: ≥ 6 párrafos × ~5 frases en todos los niveles (poema: 6 estrofas de 4–5 versos)
+  it('shapeOf: más de 5 párrafos de ~5 frases por nivel MCER (B1+ → B1)', () => {
+    expect(shapeOf('A1', false)).toMatchObject({
+      paragraphs: 6,
+      sentences: [5, 5],
+    });
+    expect(shapeOf('B1+', false)).toMatchObject({
+      paragraphs: 6,
+      sentences: [5, 6],
+    });
+    expect(shapeOf('C2', false).paragraphs).toBe(8);
+    expect(shapeOf('A2', true)).toMatchObject({
+      paragraphs: 6,
+      sentences: [4, 5],
+    });
+  });
+
+  it('salvageParagraphs rescata las cadenas completas de un JSON cortado (y no las claves)', () => {
+    const cut =
+      '{"title":"The Fox","paragraphs":["One. Two.","Three. Four.","Fiv';
+    expect(parseLoose(cut)).toBeNull();
+    expect(salvageParagraphs(cut)).toEqual({
+      title: 'The Fox',
+      paragraphs: ['One. Two.', 'Three. Four.'],
+    });
+    expect(
+      salvageParagraphs('{"paragraphs":[{"text":"A b."},{"text":"C'),
+    ).toEqual({ paragraphs: ['A b.'] });
+    expect(salvageParagraphs('{"title":"x"')).toBeNull();
+  });
+
+  // [P5]: párrafo de 5 frases en inglés (forma A1 = 6 × 5 → mínimo aceptable 27 frases)
+  const P5 =
+    'The fox is happy. It runs in the forest. It has a friend. The friend is a bear. They play.';
+
+  it('draftIssue: idioma equivocado o < 60 % de las frases (reescribir)', () => {
+    const shape = shapeOf('A1', false); // 6 × 5 → 60 % = 18 frases
+    expect(draftIssue([P5, P5, P5, P5], 'en', shape, false)).toBeNull(); // 20 frases: se CONTINÚA, no se reescribe
+    expect(
+      draftIssue(['The fox is happy. It runs.'], 'en', shape, false),
+    ).toEqual({ kind: 'short', got: 2 });
+    expect(
+      draftIssue(
+        [
+          'El zorro está muy feliz y tiene un amigo. Los dos son amigos del oso.',
+        ],
+        'en',
+        shape,
+        false,
+      ),
+    ).toEqual({ kind: 'language', found: 'es' });
+  });
+
+  it('shortfall: párrafos y frases que faltan para la forma mínima', () => {
+    const shape = shapeOf('A1', false);
+    expect(shortfall(Array(6).fill(P5), 'en', shape, false)).toBeNull();
+    expect(shortfall(Array(4).fill(P5), 'en', shape, false)).toEqual({
+      paragraphs: 2,
+      sentences: 7,
+    });
+  });
+
+  it('rebalance: reparte frases sueltas o párrafos enormes en párrafos de ~5 frases; respeta un texto bien formado', () => {
+    const shape = shapeOf('A1', false);
+    const lone = Array.from(
+      { length: 30 },
+      (_, i) => `Sentence number ${i + 1} is here.`,
+    );
+    const out = rebalance(lone, 'en', shape, false);
+    expect(out).toHaveLength(6);
+    expect(out.every((p) => splitSentences(p, 'en').length === 5)).toBe(true);
+    expect(rebalance([lone.join(' ')], 'en', shape, false)).toHaveLength(6); // Un bloque → 6 párrafos
+    const good = Array(6).fill(P5);
+    expect(rebalance(good, 'en', shape, false)).toEqual(good);
+    expect(rebalance(['v1\nv2'], 'en', shapeOf('A1', true), true)).toEqual([
+      'v1\nv2',
+    ]); // Verso: intacto
+  });
+
+  it('ReadingDraftClient: reintenta UNA vez si es muy corto y luego CONTINÚA hasta la forma mínima', async () => {
+    const short = JSON.stringify({
+      title: 'Fox',
+      summary: 'Un zorro.',
+      paragraphs: ['The fox is happy. It runs.'],
+    });
+    const four = JSON.stringify({
+      title: 'Fox',
+      summary: 'Un zorro.',
+      paragraphs: [
+        P5,
+        P5.replace('fox', 'cat'),
+        P5.replace('fox', 'dog'),
+        P5.replace('fox', 'owl'),
+      ],
+    });
+    const more = JSON.stringify({
+      paragraphs: [P5.replace('fox', 'hen'), P5.replace('fox', 'pig')],
+    });
+    const generate = jest
+      .fn()
+      .mockResolvedValueOnce({ response: short })
+      .mockResolvedValueOnce({ response: four })
+      .mockResolvedValueOnce({ response: more });
+    const client = new ReadingDraftClient(
+      { generate } as unknown as OllamaClient,
+      { get: () => undefined } as unknown as ConfigService,
+    );
+    const d = await client.draft({
+      language: 'en',
+      level: 'A1',
+      genre: ReadingGenre.TALE,
+      topic: 'Un zorro',
+      words: 60,
+    });
+    expect(d.paragraphs).toHaveLength(6);
+    expect(generate).toHaveBeenCalledTimes(3);
+    const [first, retry, cont] = generate.mock.calls.map(
+      (c) => c[0] as { prompt: string; options: { num_predict: number } },
+    );
+    expect(first.prompt).toContain('ENTIRELY in English');
+    expect(first.prompt).toContain('at least 6 paragraphs');
+    expect(first.options.num_predict).toBeGreaterThanOrEqual(900); // 220 palabras (A1) aunque el cliente pidiera 60
+    expect(retry.prompt).toContain('TOO SHORT');
+    expect(cont.prompt).toContain('Write 2 NEW paragraphs that CONTINUE');
+  });
+
+  it('ReadingDraftClient: continuaciones acotadas (sin progreso → devuelve lo mejor que hay)', async () => {
+    const four = JSON.stringify({
+      title: 'Fox',
+      paragraphs: [
+        P5,
+        P5.replace('fox', 'cat'),
+        P5.replace('fox', 'dog'),
+        P5.replace('fox', 'owl'),
+      ],
+    });
+    const generate = jest
+      .fn()
+      .mockResolvedValueOnce({ response: four })
+      .mockResolvedValue({ response: 'no json' });
+    const client = new ReadingDraftClient(
+      { generate } as unknown as OllamaClient,
+      { get: () => undefined } as unknown as ConfigService,
+    );
+    const d = await client.draft({
+      language: 'en',
+      level: 'A1',
+      genre: ReadingGenre.TALE,
+      topic: 'Un zorro',
+      words: 120,
+    });
+    expect(d.paragraphs.length).toBeGreaterThanOrEqual(4);
+    expect(generate).toHaveBeenCalledTimes(2); // 1.ª + una continuación vacía → se para
+  });
+
+  it('ReadingDraftClient: un borrador correcto no se repite', async () => {
+    const generate = jest
+      .fn()
+      .mockResolvedValue({
+        response: JSON.stringify({
+          title: 'Fox',
+          paragraphs: Array(6).fill(P5),
+        }),
+      });
+    const client = new ReadingDraftClient(
+      { generate } as unknown as OllamaClient,
+      { get: () => undefined } as unknown as ConfigService,
+    );
+    await client.draft({
+      language: 'en',
+      level: 'A1',
+      genre: ReadingGenre.TALE,
+      topic: 'Un zorro',
+      words: 120,
+    });
+    expect(generate).toHaveBeenCalledTimes(1);
   });
 
   it('géneros: type guard', () => {
@@ -100,51 +390,223 @@ describe('SentenceEnricher (lotes con fallo parcial)', () => {
   it('un lote que falla deja vacías solo sus frases', async () => {
     const texts = Array.from({ length: ENRICH_BATCH + 3 }, (_, i) => `s${i}`);
     const { port, calls } = toolsStub(`s${ENRICH_BATCH}`); // Falla el segundo lote
-    const { items, failed } = await new SentenceEnricher(port).enrich(texts, 'en', 'tok');
-    expect(calls).toHaveLength(2);
-    expect(failed).toBe(3);
-    expect(items[0]).toEqual({ ipa: 'ipa(s0)', ipaUs: null, translation: 'es(s0)' });
-    expect(items[ENRICH_BATCH]).toEqual({ ipa: '', ipaUs: null, translation: null });
+    const { items, failed } = await new SentenceEnricher(port).enrich(
+      texts,
+      'en',
+      'tok',
+    );
+    expect(calls).toHaveLength(4);
+    expect(failed).toBe(1);
+    expect(items[0]).toEqual({
+      ipa: 'ipa(s0)',
+      ipaUs: null,
+      translation: 'es(s0)',
+    });
+    expect(items[ENRICH_BATCH]).toEqual({
+      ipa: '',
+      ipaUs: null,
+      translation: null,
+    });
   });
 });
 
 describe('ReadingContentWriter', () => {
-  // [repo en memoria]: create = identidad · transaction ejecuta el callback con un EntityManager falso
+  // [repo en memoria]: create = identidad · transaction ejecuta el callback con un EntityManager falso · find = frases guardadas (para `fill`)
+  // [2026-10-27]: las frases se guardan SIN esperar a FastAPI; IPA + traducción llegan después por BackgroundTasks (`await background.idle()`)
   function writerWith(port: LanguageToolsPort) {
-    const saved: { texts: ReadingText[]; sentences: ReadingSentence[] } = { texts: [], sentences: [] };
+    const saved: { texts: ReadingText[]; sentences: ReadingSentence[] } = {
+      texts: [],
+      sentences: [],
+    };
     const em = {
       delete: jest.fn(async () => undefined),
       save: jest.fn(async (_cls: unknown, v: unknown) => {
-        if (Array.isArray(v)) saved.sentences = v as ReadingSentence[];
+        if (Array.isArray(v))
+          saved.sentences = (v as ReadingSentence[]).map((x, i) =>
+            Object.assign({}, x, { id: x.id ?? `s${i}` }),
+          );
         else saved.texts.push(v as ReadingText);
-        return v;
+        return Array.isArray(v) ? saved.sentences : v;
       }),
+      // `update(criterio, cambios)`: solo modifica filas que existen con ese id Y ese texto (nunca inserta)
+      update: jest.fn(
+        async (
+          _cls: unknown,
+          where: { id: string; text: string },
+          patch: Partial<ReadingSentence>,
+        ) => {
+          const row = saved.sentences.find(
+            (r) => r.id === where.id && r.text === where.text,
+          );
+          if (row) Object.assign(row, patch);
+          return { affected: row ? 1 : 0 };
+        },
+      ),
     };
-    const repo = { create: (x: Partial<ReadingSentence>) => x as ReadingSentence, manager: { transaction: (fn: (m: typeof em) => unknown) => fn(em) } } as unknown as Repository<ReadingSentence>;
-    return { writer: new ReadingContentWriter(repo, new SentenceEnricher(port)), saved, em };
+    const repo = {
+      create: (x: Partial<ReadingSentence>) => x as ReadingSentence,
+      find: jest.fn(async () => saved.sentences.map((r) => ({ ...r }))), // Copias: como TypeORM, entidades nuevas por consulta
+      manager: { transaction: (fn: (m: typeof em) => unknown) => fn(em) },
+    } as unknown as Repository<ReadingSentence>;
+    const background = new BackgroundTasks(2);
+    return {
+      writer: new ReadingContentWriter(
+        repo,
+        new SentenceEnricher(port),
+        background,
+      ),
+      saved,
+      em,
+      background,
+    };
   }
 
-  it('divide, enriquece y actualiza contadores en una transacción', async () => {
-    const { port } = toolsStub();
-    const { writer, saved, em } = writerWith(port);
+  it('guarda y responde SIN esperar a FastAPI; IPA y traducción llegan en segundo plano', async () => {
+    const { port, lines } = toolsStub();
+    const { writer, saved, em, background } = writerWith(port);
     const text = TEXT();
     const res = await writer.write(text, ['The fox runs. It is fast.'], 'tok');
-    expect(res.sentences.map((s) => s.text)).toEqual(['The fox runs.', 'It is fast.']);
-    expect(res.pending).toBe(0);
+    expect(res.sentences.map((s) => s.text)).toEqual([
+      'The fox runs.',
+      'It is fast.',
+    ]);
+    expect(res).toMatchObject({ pending: 2, enriching: true });
+    expect(writer.isEnriching('t1')).toBe(true);
     expect(text.sentenceCount).toBe(2);
     expect(text.wordCount).toBe(6);
     expect(em.delete).toHaveBeenCalled();
+    await background.idle();
+    expect(lines).toHaveBeenCalledTimes(2); // [2026-10-31]: una petición por frase (ENRICH_BATCH)
     expect(saved.sentences[1]!.translation).toBe('es(It is fast.)');
+    expect(writer.isEnriching('t1')).toBe(false);
   });
 
-  it('al editar reutiliza traducción/IPA (y la revisión) de las frases sin cambios', async () => {
+  it('al editar reutiliza traducción/IPA (y la revisión) de las frases sin cambios; solo la nueva va a FastAPI', async () => {
     const { port, calls } = toolsStub();
+    const { writer, saved, background } = writerWith(port);
+    const previous = [
+      {
+        text: 'The fox runs.',
+        ipa: 'ðə fɒks',
+        ipaUs: null,
+        translation: 'El zorro corre (revisada).',
+        reviewed: true,
+      },
+    ] as ReadingSentence[];
+    const res = await writer.write(
+      TEXT(),
+      ['The fox runs. A new line.'],
+      'tok',
+      previous,
+    );
+    expect(res.sentences[0]).toMatchObject({
+      translation: 'El zorro corre (revisada).',
+      reviewed: true,
+    });
+    expect(res.pending).toBe(1);
+    await background.idle();
+    expect(calls).toEqual([['A new line.']]);
+    expect(saved.sentences[1]).toMatchObject({
+      translation: 'es(A new line.)',
+      reviewed: false,
+    });
+  });
+
+  it('sin nada pendiente no programa tareas', async () => {
+    const { port, lines } = toolsStub();
     const { writer } = writerWith(port);
-    const previous = [{ text: 'The fox runs.', ipa: 'ðə fɒks', ipaUs: null, translation: 'El zorro corre (revisada).', reviewed: true }] as ReadingSentence[];
-    const res = await writer.write(TEXT(), ['The fox runs. A new line.'], 'tok', previous);
-    expect(calls).toEqual([['A new line.']]); // Solo la nueva va a FastAPI
-    expect(res.sentences[0]).toMatchObject({ translation: 'El zorro corre (revisada).', reviewed: true });
-    expect(res.sentences[1]).toMatchObject({ translation: 'es(A new line.)', reviewed: false });
+    const previous = [
+      {
+        text: 'Hola.',
+        ipa: 'ˈola',
+        ipaUs: null,
+        translation: null,
+        reviewed: false,
+      },
+    ] as ReadingSentence[];
+    const res = await writer.write(
+      TEXT({ language: 'es' }),
+      ['Hola.'],
+      'tok',
+      previous,
+    );
+    expect(res).toMatchObject({ pending: 0, enriching: false });
+    expect(lines).not.toHaveBeenCalled();
+  });
+
+  // [2026-10-28]: el lector (GET) completa las traducciones que falten y las guarda; un fallo no se reintenta en cada GET (cooldown)
+  it('backfill: rellena en segundo plano al leer, cachea en las filas y respeta el cooldown', async () => {
+    const { port, lines } = toolsStub();
+    const { writer, saved, background } = writerWith(port);
+    saved.sentences = [
+      {
+        id: 's0',
+        textId: 't1',
+        text: 'The fox runs.',
+        ipa: '',
+        ipaUs: null,
+        translation: null,
+        reviewed: false,
+      } as unknown as ReadingSentence,
+    ];
+    expect(writer.backfill('t1', 'en', '', 0)).toBe(false); // Sin JWT no se llama a FastAPI
+    expect(writer.backfill('t1', 'en', 'tok', 1_000_000)).toBe(true);
+    await background.idle();
+    expect(lines).toHaveBeenCalledTimes(1);
+    expect(saved.sentences[0]!.translation).toBe('es(The fox runs.)');
+    expect(
+      writer.backfill('t1', 'en', 'tok', 1_000_000 + BACKFILL_COOLDOWN_MS - 1),
+    ).toBe(false); // Dentro del cooldown
+  });
+
+  it('fill no resucita frases borradas ni pisa las reescritas mientras se traducía', async () => {
+    const { port } = toolsStub();
+    const { writer, saved, em } = writerWith(port);
+    saved.sentences = [
+      {
+        id: 's0',
+        textId: 't1',
+        text: 'Old one.',
+        ipa: '',
+        ipaUs: null,
+        translation: null,
+        reviewed: false,
+      } as unknown as ReadingSentence,
+    ];
+    const lines = port.lines as jest.Mock;
+    lines.mockImplementationOnce(async (texts: string[]) => {
+      saved.sentences = [
+        {
+          id: 's9',
+          textId: 't1',
+          text: 'Rewritten.',
+          ipa: '',
+          ipaUs: null,
+          translation: null,
+          reviewed: false,
+        } as unknown as ReadingSentence,
+      ]; // El docente reescribió el texto
+      return {
+        engine: 'stub',
+        needs_native_review: false,
+        lines: texts.map((t, index) => ({
+          index,
+          text: t,
+          ipa: 'x',
+          ipa_us: null,
+          translation: 'y',
+        })),
+      };
+    });
+    await writer.fill('t1', 'en', 'tok');
+    expect(em.update).toHaveBeenCalledWith(
+      expect.anything(),
+      { id: 's0', text: 'Old one.' },
+      expect.any(Object),
+    );
+    expect(saved.sentences).toEqual([
+      expect.objectContaining({ id: 's9', ipa: '' }),
+    ]); // Ni insertada ni modificada
   });
 
   it('needsEnrichment: falta IPA o traducción (salvo español)', () => {
@@ -155,29 +617,56 @@ describe('ReadingContentWriter', () => {
 });
 
 describe('ReadingAccess y lista', () => {
-  const repoOf = (t: ReadingText | null) => ({ findOneBy: jest.fn(async () => t) }) as unknown as Repository<ReadingText>;
+  const repoOf = (t: ReadingText | null) =>
+    ({
+      findOneBy: jest.fn(async () => t),
+    }) as unknown as Repository<ReadingText>;
   const student = { id: 'u1', role: 'USER' };
   const owner = { id: 'teacher-1', role: 'TEACHER' };
   const other = { id: 'teacher-2', role: 'TEACHER' };
 
   it('el estudiante no ve borradores (404); sí publicados', async () => {
-    await expect(new ReadingAccess(repoOf(TEXT())).readable(student, 't1')).rejects.toBeInstanceOf(NotFoundException);
-    await expect(new ReadingAccess(repoOf(TEXT({ status: 'published' }))).readable(student, 't1')).resolves.toMatchObject({ id: 't1' });
+    await expect(
+      new ReadingAccess(repoOf(TEXT())).readable(student, 't1'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    await expect(
+      new ReadingAccess(repoOf(TEXT({ status: 'published' }))).readable(
+        student,
+        't1',
+      ),
+    ).resolves.toMatchObject({ id: 't1' });
   });
 
   it('solo el autor o un ADMIN editan', async () => {
-    await expect(new ReadingAccess(repoOf(TEXT())).editable(other, 't1')).rejects.toBeInstanceOf(ForbiddenException);
-    await expect(new ReadingAccess(repoOf(TEXT())).editable(owner, 't1')).resolves.toBeTruthy();
-    await expect(new ReadingAccess(repoOf(TEXT())).editable({ id: 'x', role: 'ADMIN' }, 't1')).resolves.toBeTruthy();
+    await expect(
+      new ReadingAccess(repoOf(TEXT())).editable(other, 't1'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      new ReadingAccess(repoOf(TEXT())).editable(owner, 't1'),
+    ).resolves.toBeTruthy();
+    await expect(
+      new ReadingAccess(repoOf(TEXT())).editable(
+        { id: 'x', role: 'ADMIN' },
+        't1',
+      ),
+    ).resolves.toBeTruthy();
   });
 
   it('lista: publicados para el estudiante aunque pida mine; propios para el docente; todos para el ADMIN', async () => {
-    const find = jest.fn(async (_opts: { where: object }) => [] as ReadingText[]);
-    const uc = new ListReadingTextsUseCase({ find } as unknown as Repository<ReadingText>);
+    const find = jest.fn(
+      async (_opts: { where: object }) => [] as ReadingText[],
+    );
+    const uc = new ListReadingTextsUseCase({
+      find,
+    } as unknown as Repository<ReadingText>);
     await uc.execute(student, { mine: true, genre: 'poem' });
-    expect(find.mock.calls[0]![0]).toMatchObject({ where: { status: 'published', genre: 'poem' } });
+    expect(find.mock.calls[0]![0]).toMatchObject({
+      where: { status: 'published', genre: 'poem' },
+    });
     await uc.execute(owner, { mine: true });
-    expect(find.mock.calls[1]![0]).toMatchObject({ where: { createdBy: 'teacher-1' } });
+    expect(find.mock.calls[1]![0]).toMatchObject({
+      where: { createdBy: 'teacher-1' },
+    });
     await uc.execute({ id: 'a', role: 'ADMIN' }, { mine: true });
     expect(find.mock.calls[2]![0].where).not.toHaveProperty('createdBy');
     expect(find.mock.calls[2]![0].where).not.toHaveProperty('status');
@@ -192,30 +681,74 @@ describe('Publicación y marcador', () => {
 
   it('no publica una lectura vacía', async () => {
     const t = TEXT();
-    const access = { editable: jest.fn(async () => t) } as unknown as ReadingAccess;
-    const uc = new UpdateReadingTextUseCase(access, { save: jest.fn(async (x: ReadingText) => x) } as unknown as Repository<ReadingText>, {} as Repository<ReadingSentence>, {} as ReadingContentWriter);
-    await expect(uc.status(owner(), 't1', 'published')).rejects.toBeInstanceOf(BadRequestException);
+    const access = {
+      editable: jest.fn(async () => t),
+    } as unknown as ReadingAccess;
+    const uc = new UpdateReadingTextUseCase(
+      access,
+      {
+        save: jest.fn(async (x: ReadingText) => x),
+      } as unknown as Repository<ReadingText>,
+      {} as Repository<ReadingSentence>,
+      {} as ReadingContentWriter,
+    );
+    await expect(uc.status(owner(), 't1', 'published')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
     t.sentenceCount = 4;
-    await expect(uc.status(owner(), 't1', 'published')).resolves.toMatchObject({ status: 'published' });
+    await expect(uc.status(owner(), 't1', 'published')).resolves.toMatchObject({
+      status: 'published',
+    });
   });
 
   it('el marcador se acota a la última frase y «terminada» no se pierde', async () => {
-    const access = { readable: jest.fn(async () => TEXT({ status: 'published', sentenceCount: 5 })) } as unknown as ReadingAccess;
+    const access = {
+      readable: jest.fn(async () =>
+        TEXT({ status: 'published', sentenceCount: 5 }),
+      ),
+    } as unknown as ReadingAccess;
     const upsert = jest.fn(async () => undefined);
-    const repo = { findOneBy: jest.fn(async () => ({ finished: true }) as ReadingProgress), upsert } as unknown as Repository<ReadingProgress>;
-    const res = await new SaveReadingProgressUseCase(access, repo).execute({ id: 'u1', role: 'USER' }, 't1', { sentence: 99, word: 2 });
+    const repo = {
+      findOneBy: jest.fn(async () => ({ finished: true }) as ReadingProgress),
+      upsert,
+    } as unknown as Repository<ReadingProgress>;
+    const res = await new SaveReadingProgressUseCase(access, repo).execute(
+      { id: 'u1', role: 'USER' },
+      't1',
+      { sentence: 99, word: 2 },
+    );
     expect(res).toEqual({ sentence: 4, word: 2, finished: true });
-    expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ userId: 'u1', textId: 't1', sentenceIndex: 4 }), { conflictPaths: ['userId', 'textId'] });
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'u1', textId: 't1', sentenceIndex: 4 }),
+      { conflictPaths: ['userId', 'textId'] },
+    );
   });
 });
 
 describe('Exportar (TXT y PDF)', () => {
   const sentences = [
-    { paragraph: 0, text: 'The fox runs.', translation: 'El zorro corre.', ipa: 'ðə fɒks rʌnz' },
-    { paragraph: 0, text: 'It is fast.', translation: 'Es rápido.', ipa: 'ɪt ɪz fɑːst' },
+    {
+      paragraph: 0,
+      text: 'The fox runs.',
+      translation: 'El zorro corre.',
+      ipa: 'ðə fɒks rʌnz',
+    },
+    {
+      paragraph: 0,
+      text: 'It is fast.',
+      translation: 'Es rápido.',
+      ipa: 'ɪt ɪz fɑːst',
+    },
     { paragraph: 1, text: 'The end.', translation: 'Fin.', ipa: 'ðiː end' },
   ];
-  const t = { title: 'The Fox', language: 'en', level: 'A2', genre: ReadingGenre.FABLE, summary: null, sourceRef: null };
+  const t = {
+    title: 'The Fox',
+    language: 'en',
+    level: 'A2',
+    genre: ReadingGenre.FABLE,
+    summary: null,
+    sourceRef: null,
+  };
 
   it('agrupa por párrafo', () => {
     expect(groupParagraphs(sentences).map((p) => p.length)).toEqual([2, 1]);
@@ -224,8 +757,12 @@ describe('Exportar (TXT y PDF)', () => {
   it('TXT con traducción e IPA bajo cada frase; sin partes → párrafo corrido', () => {
     const full = toTxt(t, sentences, ['translation', 'ipa']);
     expect(full).toContain('Fábula · EN · A2');
-    expect(full).toContain('The fox runs.\n  IPA: /ðə fɒks rʌnz/\n  ES: El zorro corre.');
-    expect(toTxt(t, sentences, [])).toContain('The fox runs. It is fast.\n\nThe end.');
+    expect(full).toContain(
+      'The fox runs.\n  IPA: /ðə fɒks rʌnz/\n  ES: El zorro corre.',
+    );
+    expect(toTxt(t, sentences, [])).toContain(
+      'The fox runs. It is fast.\n\nThe end.',
+    );
   });
 
   it('nombre de archivo seguro y PDF declarativo con la cabecera', () => {

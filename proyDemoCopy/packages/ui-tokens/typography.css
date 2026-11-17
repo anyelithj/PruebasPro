@@ -1,0 +1,44 @@
+/* [@aula/ui-tokens/typography.css · 2026-10-28]: escala tipográfica ÚNICA del portal (Next.js y Angular la cargan vía globals.css, igual que ./motion.css)
+   [Tema]: todos los títulos de un mismo nivel comparten familia, tamaño, peso e interlineado; todos los párrafos, el mismo cuerpo de texto
+   [Patrón]: Design Tokens (custom properties CSS en :root) + Type Scale | [Principio]: DRY + SSOT (cambiar un tamaño aquí cambia todo el portal) | [Paradigma]: Declarativo
+   [Tecnología]: CSS puro sin Tailwind → se consume con var(--fs-*) desde @layer base, @utility (Tailwind v4) y landing.css
+   [A11y]: tamaños en rem (respetan el tamaño de letra elegido en el navegador, WCAG 1.4.4) · `clamp()` = tamaño fluido entre móvil y escritorio sin media queries
+   [Referencia]: la raíz <html> vale 93.75 % (= 15 px con el ajuste por defecto del navegador) → 1rem ≈ 15 px */
+:root {
+  /* [Familias]: una para títulos y otra para texto (hoy ambas Inter; separarlas permite cambiar la de títulos sin tocar componentes) | --font-inter lo define next/font en Next y styles.css en Angular */
+  --ff-heading: var(--font-inter), "Segoe UI", system-ui, -apple-system, sans-serif;
+  --ff-body: var(--font-inter), "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  /* [Tamaños de título]: `clamp(mín, preferido, máx)` (CSS Values 4) → crece con el ancho de la ventana (vw) pero nunca baja del mínimo ni pasa del máximo */
+  --fs-display: clamp(1.875rem, 1.1rem + 3.6vw, 3.6rem); /* Hero de la landing y pantallas de error (≈ 28 → 54 px) */
+  --fs-display-2: clamp(1.4667rem, 1rem + 2vw, 2.5333rem); /* Títulos de sección de la landing (≈ 22 → 38 px): escaparate público, más grande que el portal */
+  --fs-lead: clamp(1rem, 0.93rem + 0.35vw, 1.2rem); /* Entradilla bajo un título display (≈ 15 → 18 px) */
+  --fs-h1: clamp(1.5rem, 1.32rem + 0.8vw, 1.875rem); /* Título de página (≈ 22.5 → 28 px; antes text-2xl sm:text-3xl) */
+  --fs-h2: clamp(1.125rem, 1.07rem + 0.25vw, 1.25rem); /* Título de sección (≈ 17 → 19 px) */
+  --fs-h3: 1.0625rem; /* Título de tarjeta (≈ 16 px) */
+  --fs-h4: 1rem; /* Subtítulo dentro de tarjeta / h5 / h6 (≈ 15 px) */
+  --fs-overline: 0.75rem; /* Rótulo de grupo en MAYÚSCULAS (≈ 11 px) */
+
+  /* [Tamaños de texto]: cuerpo, etiquetas y metadatos */
+  --fs-body: clamp(0.8667rem, 0.83rem + 0.15vw, 0.9333rem); /* Párrafos y listas: 13 px en móvil → 14 px en escritorio (clamp = fluido sin media queries; 1rem ≈ 15 px) · [2026-10-28]: el usuario fijó 13 px responsive */
+  --fs-label: 0.875rem; /* <label>, celdas de tabla, botones (≈ 13 px) */
+  --fs-meta: 0.8125rem; /* <small>, fechas, ayudas, descripciones secundarias (≈ 12 px) */
+  --fs-caption: 0.75rem; /* Insignias y chips (≈ 11 px) */
+
+  /* [Pesos]: 800 solo para títulos grandes; 700 para el resto de títulos; 600 para etiquetas */
+  --fw-display: 800;
+  --fw-heading: 700;
+  --fw-label: 600;
+  --fw-body: 400;
+
+  /* [Interlineado]: sin unidad (se multiplica por el tamaño de cada elemento) | WCAG 1.4.12 recomienda ≥ 1.5 en párrafos */
+  --lh-display: 1.1;
+  --lh-heading: 1.25;
+  --lh-body: 1.6;
+  --lh-tight: 1.4; /* Etiquetas y metadatos de una línea */
+
+  /* [Interletrado]: títulos ligeramente apretados (se ven más compactos a tamaños grandes); rótulos en mayúsculas, más abiertos */
+  --ls-heading: -0.015em;
+  --ls-display: -0.025em;
+  --ls-overline: 0.06em;
+}

@@ -73,6 +73,8 @@ class TestAudioQuality:
             b"RIFF-fake",  # Empieza por RIFF pero no es un WAV
             b"",
         ],
+        # `ids` (pytest): nombres cortos → en Windows el id con los bytes del WAV superaba el límite de 32 767 caracteres de PYTEST_CURRENT_TEST
+        ids=["silencio", "inaudible", "sin-muestras", "riff-falso", "vacio"],
     )
     def test_rechaza_audio_vacio_mudo_o_corrupto(self, audio: bytes) -> None:
         with pytest.raises(SilentAudioError) as exc:

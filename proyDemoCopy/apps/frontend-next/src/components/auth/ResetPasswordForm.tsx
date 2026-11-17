@@ -63,8 +63,8 @@ export function ResetPasswordForm({ token }: { token: string }) {
   if (!token) {
     return (
       <div className="w-full max-w-[420px] space-y-4">
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{r.missingTitle}</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="title-page">{r.missingTitle}</h1>
+        <p className="text-muted-foreground">
           {r.missingA}
           <Link href={AUTH_ROUTES.forgotPassword} className="font-semibold text-primary hover:text-primary-dark">
             {r.missingLink}
@@ -78,8 +78,8 @@ export function ResetPasswordForm({ token }: { token: string }) {
   return (
     <form method="post" onSubmit={onSubmit} className="w-full max-w-[420px] space-y-5" noValidate aria-label={r.formLabel}>
       <header className="mb-2">
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{r.title}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">{r.subtitle}</p>
+        <h1 className="title-page">{r.title}</h1>
+        <p className="mt-2 text-muted-foreground">{r.subtitle}</p>
       </header>
 
       {message && (
@@ -116,7 +116,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
           {...register("newPassword")}
         />
         {errors.newPassword && (
-          <p id="newPassword-error" role="alert" className="text-xs text-destructive">
+          <p id="newPassword-error" role="alert" className="type-meta text-destructive">
             {errors.newPassword.message}
           </p>
         )}
@@ -133,7 +133,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
           {...register("confirmPassword")}
         />
         {errors.confirmPassword && (
-          <p id="confirmPassword-error" role="alert" className="text-xs text-destructive">
+          <p id="confirmPassword-error" role="alert" className="type-meta text-destructive">
             {errors.confirmPassword.message}
           </p>
         )}
@@ -143,7 +143,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         {status === "sending" ? r.submitting : r.submit}
       </Button>
 
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-center text-muted-foreground">
         {r.remembered}{" "}
         <Link href={AUTH_ROUTES.login} className="font-semibold text-primary hover:text-primary-dark">
           {a.login.submit}

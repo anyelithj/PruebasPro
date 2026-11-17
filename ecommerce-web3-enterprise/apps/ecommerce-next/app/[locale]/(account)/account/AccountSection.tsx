@@ -16,7 +16,7 @@ export function accountMetadata(key: string) {
 export function AccountHeading({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2">
-      <h1 className="text-2xl font-semibold">{children}</h1>
+      <h1 className="text-xl font-semibold">{children}</h1>
       {action}
     </div>
   );

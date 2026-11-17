@@ -19,6 +19,10 @@ import {
 } from '../../domain/events/user-logged-in.event';
 import { LoginDto } from '../dtos/login.dto';
 import type { AuthResponseDto } from '../dtos/auth-response.dto';
+import {
+  IssueLoginOtpUseCase,
+  type TwoFactorChallenge,
+} from './issue-login-otp.use-case';
 // [Use Case Login]: valida credenciales + emite tokens + crea sesión | [Patrón]: Command + Use Case | [Principio]: SRP + DIP | [Paradigma]: POO
 
 @Injectable()
@@ -31,13 +35,15 @@ export class LoginUseCase {
     private readonly sessionRepo: ISessionRepository,
     @Inject(TOKEN_SERVICE) private readonly tokens: ITokenService,
     private readonly events: EventEmitter2,
+    // [2FA · 2026-11-16]: si el usuario lo activó, el login devuelve un reto en vez de tokens
+    private readonly otp: IssueLoginOtpUseCase,
   ) {}
 
   // [execute]: flujo principal del login | [Principio]: SRP
   async execute(
     dto: LoginDto,
     context?: { ipAddress?: string; userAgent?: string },
-  ): Promise<AuthResponseDto> {
+  ): Promise<AuthResponseDto | TwoFactorChallenge> {
     const user = await this.users.findByEmail(dto.email);
 
     // [Mensaje genérico]: no revelar si email o password fueron incorrectos (anti enumeration)
@@ -50,6 +56,9 @@ export class LoginUseCase {
     if (!valid) {
       throw new UnauthorizedException('Invalid credentials');
     }
+
+    // [Segundo factor]: contraseña correcta pero falta el código del correo → sin tokens todavía | [Patrón]: Chain of Responsibility (paso 2 del login)
+    if (user.twoFactorEnabled) return this.otp.execute(user);
 
     return this.issue(user, context);
   }

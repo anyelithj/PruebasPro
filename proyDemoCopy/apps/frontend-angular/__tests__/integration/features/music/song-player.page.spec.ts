@@ -33,7 +33,7 @@ describe('SongPlayerPage', () => {
     expect(el.querySelector('[lang="en-fonipa"]')?.textContent).toContain('/ipa-');
     expect(el.querySelector('[role="switch"]')).not.toBeNull(); // Interruptor UK/US (inglés)
     expect(getByRole(el, 'button', 'Reproducir')).toBeTruthy();
-    expect(el.querySelector('a[href="/musica/cancion/s1/practica"]')).not.toBeNull();
+    expect(el.textContent).toContain('Completar la letra'); // [2026-11-10]: las prácticas van encima del reproductor (antes un enlace)
   });
 
   it('canción en español: sin columna de traducción ni interruptor', async () => {

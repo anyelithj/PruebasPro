@@ -1,7 +1,8 @@
 "use client"; // [Next.js]: Client Component → edición en línea, Server Actions y audio de prueba
-import { useMemo, useState, useTransition } from "react";
-import { BookOpenText, Download, Eye, Languages, RefreshCw, Save, Send, Undo2 } from "lucide-react";
-import { enrichReadingAction, replaceReadingTextAction, setReadingStatusAction, updateReadingMetaAction } from "@/app/(portal)/admin/activities/lectura/actions";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation"; // [2026-10-27]: `router.refresh()` vuelve a pedir el RSC mientras se genera la IPA/traducción
+import { BookOpenText, Download, Eye, Languages, RefreshCw, Send, Undo2 } from "lucide-react";
+import { enrichReadingAction, replaceReadingTextAction, setReadingStatusAction, updateReadingMetaAction, updateSentenceAction } from "@/app/(portal)/admin/activities/lectura/actions";
 import { LEVEL_OPTIONS, languageLabel } from "@/lib/languages";
 import { paragraphsFromSentences, READING_GENRE_LABEL, READING_GENRE_OPTIONS, textToParagraphs, type ReadingTextDetail } from "@/lib/reading";
 import { SentenceRow } from "./SentenceRow";
@@ -15,18 +16,72 @@ export function ReadingEditor({ text }: { text: ReadingTextDetail }) {
   const verse = text.genre === "poem";
   const [pending, start] = useTransition(); // `useTransition` (React 19): la UI sigue respondiendo mientras corre la acción
   const [msg, setMsg] = useState<Msg>(null);
-  const [meta, setMeta] = useState({ title: text.title, level: text.level, genre: text.genre as string, summary: text.summary ?? "", sourceRef: text.sourceRef ?? "" });
+  const initialMeta = { title: text.title, level: text.level, genre: text.genre as string, summary: text.summary ?? "", sourceRef: text.sourceRef ?? "" };
+  const [meta, setMeta] = useState(initialMeta);
+  // [2026-11-16 · UN solo Guardar]: cambios de cada frase (id → campos cambiados) · `resetKey` remonta las filas al cancelar
+  const [patches, setPatches] = useState<Record<string, Record<string, string>>>({});
+  const [resetKey, setResetKey] = useState(0);
   // `useMemo`: el texto completo solo se recalcula si cambian las frases
   const fullText = useMemo(() => paragraphsFromSentences(text.sentences, verse).join("\n\n"), [text.sentences, verse]);
   const [body, setBody] = useState(fullText);
   const published = text.status === "published";
   const enc = encodeURIComponent;
+  const router = useRouter();
+
+  // [Sondeo mientras se enriquece · 2026-10-27]: NestJS guarda las frases al instante y genera IPA + traducción en segundo plano (`enriching`)
+  // → cada 5 s se refresca el Server Component (las props `text` llegan con lo ya traducido) hasta que termina | `useEffect` + `setInterval` con limpieza (React)
+  // [Patrón]: Polling acotado al estado | el estado local (texto en edición, datos) se conserva: `router.refresh` no remonta el componente
+  useEffect(() => {
+    if (!text.enriching) return;
+    const timer = setInterval(() => router.refresh(), 5_000);
+    return () => clearInterval(timer); // Limpieza: deja de sondear al terminar o al salir de la página
+  }, [text.enriching, router]);
 
   // [run]: ejecuta una Server Action y muestra su resultado (el RSC se revalida en el servidor → props nuevas)
   const run = (fn: () => Promise<{ ok: boolean; message?: string }>, okText: string) =>
     start(async () => {
       const res = await fn();
       setMsg(res.ok ? { ok: true, text: okText } : { ok: false, text: res.message ?? "No se pudo completar." });
+    });
+
+  const metaDirty = (Object.keys(initialMeta) as Array<keyof typeof initialMeta>).some((k) => meta[k] !== initialMeta[k]);
+  const dirty = metaDirty || body !== fullText || Object.keys(patches).length > 0;
+  const onRowChange = (id: string, patch: Record<string, string> | null) =>
+    setPatches((all) => {
+      const next = { ...all };
+      if (patch) next[id] = patch;
+      else delete next[id];
+      return next;
+    });
+
+  // [cancel]: descarta TODO lo no guardado (datos, texto completo y frases)
+  const cancel = () => {
+    setMeta(initialMeta);
+    setBody(fullText);
+    setPatches({});
+    setResetKey((k) => k + 1);
+    setMsg(null);
+  };
+
+  // [saveAll]: datos → texto completo (si cambió, re-divide y manda sobre las frases) o, si no, cada frase cambiada | secuencial: un error se informa y se detiene
+  const saveAll = () =>
+    start(async () => {
+      if (metaDirty) {
+        const r = await updateReadingMetaAction(text.id, meta);
+        if (!r.ok) return setMsg({ ok: false, text: r.message ?? "No se pudieron guardar los datos." });
+      }
+      if (body !== fullText) {
+        const res = await replaceReadingTextAction(text.id, textToParagraphs(body, verse));
+        if (!res.ok) return setMsg({ ok: false, text: res.message });
+        setPatches({});
+        return setMsg({ ok: true, text: !res.pending ? "Guardado. El texto se dividió en frases." : res.enriching ? `Guardado. Generando IPA y traducción de ${res.pending} frase(s) en segundo plano…` : `Guardado. ${res.pending} frase(s) sin IPA o traducción: usa «Completar IPA y traducción».` });
+      }
+      for (const [id, patch] of Object.entries(patches)) {
+        const r = await updateSentenceAction(text.id, id, patch);
+        if (!r.ok) return setMsg({ ok: false, text: r.message });
+      }
+      setPatches({});
+      setMsg({ ok: true, text: "Cambios guardados." });
     });
 
   const paragraphsByIndex = useMemo(() => {
@@ -39,10 +94,10 @@ export function ReadingEditor({ text }: { text: ReadingTextDetail }) {
     <div className="space-y-5">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
+          <h1 className="title-page flex items-center gap-2">
             <BookOpenText aria-hidden className="size-7 shrink-0 text-tone-brand" /> <span className="truncate">{text.title}</span>
           </h1>
-          <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
+          <p className="mt-1 flex flex-wrap items-center gap-1.5 type-meta">
             <span className="badge bg-tone-brand-soft text-tone-brand">{languageLabel(text.language)}</span>
             <span className="badge bg-muted">{text.level}</span>
             <span className="badge bg-muted">{READING_GENRE_LABEL[text.genre] ?? text.genre}</span>
@@ -74,14 +129,9 @@ export function ReadingEditor({ text }: { text: ReadingTextDetail }) {
 
       {/* ── Datos ── */}
       <section aria-labelledby="reading-meta" className="surface space-y-3 p-5">
-        <h2 id="reading-meta" className="text-lg font-bold">Datos</h2>
-        <form
-          className="grid gap-3 sm:grid-cols-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            run(() => updateReadingMetaAction(text.id, meta), "Datos guardados.");
-          }}
-        >
+        <h2 id="reading-meta" className="title-section">Datos</h2>
+        {/* [2026-11-16]: sin «Guardar» propio → lo guarda el botón único del final */}
+        <div className="grid gap-3 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label htmlFor="rd-title" className="mb-1 block text-xs font-semibold text-muted-foreground">Título <span className="req" aria-hidden>*</span></label>
             <input id="rd-title" required minLength={2} maxLength={160} value={meta.title} onChange={(e) => setMeta((m) => ({ ...m, title: e.target.value }))} className="control w-full" />
@@ -110,46 +160,29 @@ export function ReadingEditor({ text }: { text: ReadingTextDetail }) {
             <label htmlFor="rd-source" className="mb-1 block text-xs font-semibold text-muted-foreground">Autor o fuente</label>
             <input id="rd-source" maxLength={300} value={meta.sourceRef} onChange={(e) => setMeta((m) => ({ ...m, sourceRef: e.target.value }))} className="control w-full" />
           </div>
-          <div className="flex justify-end sm:col-span-2">
-            <button type="submit" className="btn btn-primary" disabled={pending} aria-busy={pending}>
-              <Save aria-hidden className="size-4" /> Guardar datos
-            </button>
-          </div>
-        </form>
+        </div>
       </section>
 
       {/* ── Texto completo (re-divide en frases) ── */}
       <details className="surface p-5">
         <summary className="cursor-pointer text-lg font-bold">Editar el texto completo</summary>
-        <p className="mt-2 text-xs text-muted-foreground">Separa los párrafos con una línea en blanco{verse ? " (en un poema, un verso por línea)" : ""}. Al guardar se vuelve a dividir en frases; las que no cambian conservan su traducción e IPA.</p>
+        <p className="mt-2 type-meta text-muted-foreground">Separa los párrafos con una línea en blanco{verse ? " (en un poema, un verso por línea)" : ""}. Al guardar se vuelve a dividir en frases; las que no cambian conservan su traducción e IPA.</p>
         <label htmlFor="rd-body" className="sr-only">Texto completo</label>
         <textarea id="rd-body" rows={12} value={body} onChange={(e) => setBody(e.target.value)} lang={text.language} className="control mt-3 w-full font-serif leading-relaxed" />
-        <div className="mt-3 flex flex-wrap justify-end gap-2">
-          <button type="button" className="btn btn-ghost" disabled={pending || body === fullText} onClick={() => setBody(fullText)}>
-            Deshacer cambios
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={pending || body === fullText || !body.trim()}
-            aria-busy={pending}
-            onClick={() =>
-              start(async () => {
-                const res = await replaceReadingTextAction(text.id, textToParagraphs(body, verse));
-                setMsg(res.ok ? { ok: true, text: res.pending ? `Texto guardado. ${res.pending} frase(s) sin IPA o traducción: usa «Completar IPA y traducción».` : "Texto guardado y dividido en frases." } : { ok: false, text: res.message });
-              })
-            }
-          >
-            <Save aria-hidden className="size-4" /> Guardar texto
-          </button>
-        </div>
       </details>
 
       {/* ── Frases ── */}
       <section aria-labelledby="reading-sentences" className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 id="reading-sentences" className="text-lg font-bold">
-            Frases ({text.sentences.length}){text.pending > 0 && <span className="ml-2 badge bg-tone-warning-soft text-tone-warning">{text.pending} sin IPA o traducción</span>}
+          <h2 id="reading-sentences" className="title-section">
+            Frases ({text.sentences.length})
+            {/* [2026-10-27]: en segundo plano → aviso informativo (role="status": el lector de pantalla lo anuncia sin interrumpir) */}
+            {text.pending > 0 &&
+              (text.enriching ? (
+                <span role="status" className="ml-2 badge bg-tone-brand-soft text-tone-brand">Generando IPA/traducción… ({text.pending})</span>
+              ) : (
+                <span className="ml-2 badge bg-tone-warning-soft text-tone-warning">{text.pending} sin IPA o traducción</span>
+              ))}
           </h2>
           <div className="flex flex-wrap gap-2">
             <button type="button" className="btn btn-outline btn-sm" disabled={pending} aria-busy={pending} onClick={() => run(async () => {
@@ -168,11 +201,22 @@ export function ReadingEditor({ text }: { text: ReadingTextDetail }) {
             <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{verse ? "Estrofa" : "Párrafo"} {p + 1}</legend>
             {sentences.map((s) => (
               // `key` con el texto: si el servidor cambia la frase, la fila se reinicia con los valores nuevos
-              <SentenceRow key={`${s.id}:${s.text}:${s.translation}:${s.ipa}`} textId={text.id} language={text.language} sentence={s} onResult={setMsg} />
+              <SentenceRow key={`${resetKey}:${s.id}:${s.text}:${s.translation}:${s.ipa}`} language={text.language} sentence={s} onResult={setMsg} onChange={onRowChange} />
             ))}
           </fieldset>
         ))}
       </section>
+
+      {/* [2026-11-16 · Acciones únicas]: Cancelar + Guardar al final (antes un «Guardar» por frase, por datos y por texto) | barra fija abajo mientras hay cambios */}
+      <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-end gap-2 rounded-xl border border-border bg-card/95 p-3 shadow-sm backdrop-blur">
+        {dirty && <span className="mr-auto type-meta text-tone-warning">Hay cambios sin guardar.</span>}
+        <button type="button" className="btn btn-ghost" disabled={pending || !dirty} onClick={cancel}>
+          Cancelar
+        </button>
+        <button type="button" className="btn btn-primary" disabled={pending || !dirty || !body.trim() || meta.title.trim().length < 2} aria-busy={pending} onClick={saveAll}>
+          {pending ? "Guardando…" : "Guardar"}
+        </button>
+      </div>
     </div>
   );
 }

@@ -8,6 +8,7 @@ export interface DraftConcept {
   emoji: string;
   gloss: string; // Significado en español
   terms: Record<string, string>; // idioma → término (en, de, fr, pt, ru, zh, es)
+  grammar?: Record<string, string>; // [2026-11-16]: idioma → nota gramatical (grammarNote)
 }
 
 export interface PolyglotDraftPort {

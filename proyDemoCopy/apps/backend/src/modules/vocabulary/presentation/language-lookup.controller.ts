@@ -15,6 +15,7 @@ import { Roles } from '../../../shared/decorators/roles.decorator';
 import { Role } from '../../users/domain/value-objects/role.vo';
 import { bearer } from '../../ai/assistant.controller';
 import {
+  DetectLanguageDto,
   LookupTermDto,
   TopicTitleDto,
   TranslateTextDto,
@@ -54,11 +55,30 @@ export class LanguageLookupController {
     @Body() dto: TranslateTextDto,
     @Headers('authorization') auth: string,
   ) {
-    return this.tools.translate(dto.text, dto.source, dto.target, bearer(auth));
+    return this.tools.translate(
+      dto.text,
+      dto.source,
+      dto.target,
+      bearer(auth),
+      { kind: dto.tipo_de_texto, context: dto.context },
+    );
+  }
+
+  // [2026-10-30]: «Detectado: X» al pulsar Enter en /traductor (FastAPI, sin LLM) | `@HttpCode(200)` (NestJS): es una consulta, no crea nada
+  @Post('detect')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Detectar el idioma de un texto, sin traducirlo' })
+  detectOne(
+    @Body() dto: DetectLanguageDto,
+    @Headers('authorization') auth: string,
+  ) {
+    return this.tools.detect(dto.text, bearer(auth));
   }
 
   // [2026-10-19]: el título del tema de vocabulario en el idioma estudiado, con IPA (UK/US en inglés) y la traducción al español
+  // `@HttpCode(200)` (2026-10-27): es una CONSULTA (no crea nada) → 200 en vez del 201 por defecto de POST · nunca 503 (Fail Soft en el caso de uso)
   @Post('topic')
+  @HttpCode(200)
   @ApiOperation({
     summary: 'Título de un tema (español) en el idioma estudiado, con IPA',
   })

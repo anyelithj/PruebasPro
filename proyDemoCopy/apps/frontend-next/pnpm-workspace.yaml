@@ -3,4 +3,5 @@ allowBuilds:
   sharp: false # Next.js usa sus binarios precompilados
   unrs-resolver: false
   msw: true # Genera el service worker de los mocks de pruebas
+  esbuild: true # Binario nativo de Vite (Storybook · Sprint 11.2)
   tesseract.js: false # Solo aviso de financiación (los modelos OCR se descargan en runtime)

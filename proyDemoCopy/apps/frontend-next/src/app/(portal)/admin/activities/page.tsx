@@ -4,12 +4,13 @@ import Link from "next/link";
 import { LayoutGrid, Plus } from "lucide-react";
 import { getCurrentUserPayload } from "@/lib/auth";
 import { ACTIVITY_TAB_KEYS, ACTIVITY_TABS, BLOCKER_LABEL, listActivities, parseTab, STATUS_LABEL, withReturn, type ActivityRow, type ActivityTab } from "@/lib/activities-api";
-import { LANGUAGES, languageLabel } from "@/lib/languages";
+import { isLanguage, languageLabel } from "@/lib/languages";
+import { LanguageChips } from "@/components/shared/LanguageChips"; // [2026-10-27]: clasificación por idioma igual que el catálogo de Cursos
 import { CEFR_LEVELS } from "@/lib/constants";
 import { ManagementHeader } from "@/components/portal/ManagementHeader";
 import { toPortalRole } from "@/components/portal/portal-role";
 import { RowActions } from "@/components/admin/RowActions";
-import { FilterSelect } from "@/components/admin/FilterSelect";
+import { FilterPanel } from "@/components/admin/FilterPanel"; // [2026-11-11]: panel común
 import { Pagination, paginate } from "@/components/shared/Pagination"; // [2026-10-23 · 4.º pase]: máx. 10 filas por página
 import { deleteActivityAction, setActivityPublishedAction } from "./actions";
 // [Página /admin/activities · 2026-10-23]: Gestión → Actividades con el MISMO diseño que Gestión → Recursos — barra (resumen + botón primario), pestañas por sección
@@ -43,7 +44,7 @@ const href = (sp: SearchParams, patch: Partial<SearchParams>) => ({
 // [matches]: filtros aplicados en el servidor (las secciones no comparten los mismos parámetros en NestJS) | Función pura
 const matches = (r: ActivityRow, sp: SearchParams) =>
   (!sp.search || `${r.title} ${r.description}`.toLowerCase().includes(sp.search.toLowerCase())) &&
-  (!sp.language || r.language === sp.language) &&
+  (!sp.language || !r.language || r.language === sp.language) && // [2026-10-28]: sin idioma = multilingüe (juegos del catálogo, poliglota) → aparece en cada idioma
   (!sp.level || (r.level ?? "").includes(sp.level)) &&
   (!sp.status || r.status === sp.status);
 
@@ -52,12 +53,13 @@ export default async function ActivitiesManagementPage(props: { searchParams: Pr
   const role = toPortalRole(user?.role ?? null);
   const tab: ActivityTab = parseTab(sp.tab);
   const def = ACTIVITY_TABS[tab];
+  const activeLanguage = isLanguage(sp.language) ? sp.language : undefined; // [2026-10-27]: idioma validado contra el SSOT (un código raro = «Todos»)
   const TabIcon = def.icon;
 
   let rows: ActivityRow[] = [];
   let loadError: string | null = null;
   try {
-    rows = (await listActivities(tab, "mine")).filter((r) => matches(r, sp));
+    rows = (await listActivities(tab, "mine")).filter((r) => matches(r, { ...sp, language: activeLanguage }));
   } catch (err) {
     loadError = err instanceof Error ? err.message : "error desconocido";
   }
@@ -70,7 +72,7 @@ export default async function ActivitiesManagementPage(props: { searchParams: Pr
 
       {/* [Barra de la pestaña]: MISMO patrón que Recursos → resumen a la izquierda y botones de alta a la derecha, centrados en vertical */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <p className="max-w-2xl text-sm text-muted-foreground">
+        <p className="max-w-2xl text-muted-foreground">
           {def.description}{" "}
           <b className="text-foreground">
             {rows.length} elemento{rows.length === 1 ? "" : "s"}
@@ -96,31 +98,22 @@ export default async function ActivitiesManagementPage(props: { searchParams: Pr
       </nav>
 
       {/* [Filtros]: GET nativo → URL compartible | cada select con etiqueta visible */}
-      {tab !== "games" && (
-        <form method="get" className="surface flex flex-wrap items-end gap-3 p-4" aria-label="Filtros de actividades">
-          <input type="hidden" name="tab" value={tab} />
-          <div className="min-w-48 flex-[2]">
-            <label htmlFor="f-search" className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Buscar
-            </label>
-            <input id="f-search" name="search" type="search" defaultValue={sp.search ?? ""} placeholder="Título o descripción…" className="control w-full" />
-          </div>
-          <FilterSelect name="language" label="Idioma" value={sp.language} all="Todos" options={LANGUAGES.map((l) => ({ value: l.value, label: l.label }))} />
-          <FilterSelect name="level" label="Nivel" value={sp.level} all="Todos" options={CEFR_LEVELS.map((l) => ({ value: l, label: l }))} />
-          <FilterSelect name="status" label="Estado" value={sp.status} all="Todos" options={Object.entries(STATUS_LABEL).map(([value, label]) => ({ value, label }))} />
-          <div className="flex flex-wrap items-center gap-2">
-            <button type="submit" className="btn btn-primary">
-              Filtrar
-            </button>
-            <Link href={href({}, { tab })} className="btn btn-ghost">
-              Limpiar
-            </Link>
-          </div>
-        </form>
-      )}
+      {/* [Panel de filtros · 2026-10-27]: MISMO panel que el catálogo de Cursos → fila de filtros y, debajo, las pestañas de idioma */}
+      {/* [2026-10-28]: visible en TODAS las pestañas (antes se ocultaba en Juegos → faltaban las pestañas de idioma con «Todos») */}
+      <FilterPanel
+        label="Filtros de actividades"
+        clearHref={href({}, { tab })}
+        hidden={{ tab, language: activeLanguage }}
+        search={{ value: sp.search, placeholder: "Título o descripción…" }}
+        selects={[
+          { name: "level", label: "Nivel", value: sp.level, all: "Todos", options: CEFR_LEVELS.map((l) => ({ value: l, label: l })) },
+          { name: "status", label: "Estado", value: sp.status, all: "Todos", options: Object.entries(STATUS_LABEL).map(([value, label]) => ({ value, label })) },
+        ]}
+        chips={<LanguageChips active={activeLanguage} hrefFor={(language) => href({ ...sp, tab }, { language, page: undefined })} allLabel="Todos" label="Idioma" />}
+      />
 
       {loadError && (
-        <p role="alert" className="rounded-lg border border-tone-danger-line bg-tone-danger-soft p-4 text-sm text-tone-danger">
+        <p role="alert" className="rounded-lg border border-tone-danger-line bg-tone-danger-soft p-4 text-tone-danger">
           No se pudo cargar la lista: {loadError}
         </p>
       )}
@@ -129,7 +122,7 @@ export default async function ActivitiesManagementPage(props: { searchParams: Pr
         // [Estado vacío]: explica qué hacer (no solo "sin datos")
         <div role="status" className="surface p-10 text-center">
           <LayoutGrid aria-hidden className="mx-auto size-10 text-tone-brand" />
-          <p className="mt-2 text-sm text-muted-foreground">No hay {def.label.toLowerCase()} con estos filtros.</p>
+          <p className="mt-2 text-muted-foreground">No hay {def.label.toLowerCase()} con estos filtros.</p>
           <Link href={{ pathname: "/admin/activities/new", query: { tab } }} className="btn btn-primary mt-4">
             <Plus aria-hidden className="size-4" /> Crear actividad
           </Link>
@@ -156,7 +149,7 @@ export default async function ActivitiesManagementPage(props: { searchParams: Pr
                         <TabIcon aria-hidden className="size-5 shrink-0" />
                         {r.title}
                       </a>
-                      {r.description && <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{r.description}</p>}
+                      {r.description && <p className="mt-0.5 line-clamp-1 type-meta text-muted-foreground">{r.description}</p>}
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1.5">
@@ -177,9 +170,9 @@ export default async function ActivitiesManagementPage(props: { searchParams: Pr
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
-                      {/* [2026-10-24 · Checklist]: requisitos que faltan para publicar (antes «Publicar» fallaba en el servidor con «Falta subir el audio») → enlace directo a completarlos */}
+                      {/* [2026-10-24 · Checklist]: requisitos que faltan para publicar (licencia y letra) → enlace directo a completarlos */}
                       {r.status !== "published" && r.blockers?.length ? (
-                        <p className="mt-1 text-[11px] leading-tight text-tone-warning">
+                        <p className="mt-1 type-meta leading-tight text-tone-warning">
                           Para publicar falta: {r.blockers.map((b) => BLOCKER_LABEL[b] ?? b).join(", ")}.{" "}
                           {r.editHref && (
                             <a href={withReturn(r.editHref, tab)} className="font-semibold underline">
@@ -191,14 +184,14 @@ export default async function ActivitiesManagementPage(props: { searchParams: Pr
                     </td>
                     <td className="px-4 py-2">
                       <RowActions
-                        hard
-                        confirm="inline" // [2026-10-24 · Sin modales]: confirmar el borrado dentro de la fila
+                        hard // [2026-10-28]: confirmación de borrado en Dialog (por defecto), IGUAL que Recursos — antes en línea dentro de la fila
                         title={r.title}
-                        viewHref={`/admin/activities/ver/${tab}/${encodeURIComponent(r.id)}`} // [2026-10-25]: «Ver» = revisión (vista previa + publicar), como en Recursos
+                        viewHref={`/admin/activities/ver/${tab}/${encodeURIComponent(r.id)}`} // [2026-10-31]: Ver · Editar · Publicar · Eliminar | abre la revisión (borrador), igual que el título; «Probar» queda en esa página
                         editHref={r.editHref ? withReturn(r.editHref, tab) : undefined}
                         // [Publicar / Despublicar · 2026-10-23]: igual que Recursos; solo en secciones con estado (no juegos ni diálogos)
-                        // [2026-10-24]: sin «Publicar» mientras falten requisitos (la celda Estado dice cuáles); «Despublicar» siempre disponible
-                        publish={def.publish && r.status && (r.status === "published" || !r.blockers?.length) ? { isPublished: r.status === "published", toggle: setActivityPublishedAction.bind(null, tab, r.id, r.status !== "published") } : undefined}
+                        // [2026-11-10]: con requisitos pendientes «Publicar» queda deshabilitado con el motivo · [Fix 2026-10-30]: «Publicar» SIEMPRE visible (antes se ocultaba si faltaban requisitos y en Música no había forma de publicar) → si falta algo, NestJS responde 400 con el motivo y RowActions lo muestra
+                        publish={def.publish && r.status ? { isPublished: r.status === "published", toggle: setActivityPublishedAction.bind(null, tab, r.id, r.status !== "published"), blocked: r.blockers?.length ? `Para publicar falta: ${r.blockers.map((b) => BLOCKER_LABEL[b] ?? b).join(", ")}` : undefined } : undefined}
+                        publishLabel={role !== "admin" ? def.teacherPublishLabel : undefined} // [2026-10-27]: docente en Música → «Enviar a revisión»
                         onDelete={def.remove ? deleteActivityAction.bind(null, tab, r.id) : undefined}
                         deleteTitle={`Eliminar «${r.title}»${def.removeNote ? ` · ${def.removeNote}` : ""}`}
                       />

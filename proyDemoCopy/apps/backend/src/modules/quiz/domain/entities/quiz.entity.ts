@@ -55,6 +55,27 @@ export class Quiz {
   @Column({ type: 'boolean', default: false, name: 'is_published' })
   isPublished!: boolean;
 
+  // [2026-11-06 · Exámenes]: practice = quiz libre · final = examen final de un curso (da su certificado) · level = examen de nivel MCER sin curso
+  @Index('IDX_quizzes_kind')
+  @Column({ type: 'varchar', length: 16, default: 'practice' })
+  kind!: 'practice' | 'final' | 'level';
+
+  @Index('IDX_quizzes_course_id')
+  @Column({ type: 'uuid', name: 'course_id', nullable: true })
+  courseId!: string | null; // Solo kind = final
+
+  @Column({ type: 'varchar', length: 2, name: 'cefr_level', nullable: true })
+  cefrLevel!: string | null; // A1–C2 (final de curso de idiomas y nivel)
+
+  @Column({ type: 'smallint', name: 'pass_score', default: 70 })
+  passScore!: number; // % mínimo para aprobar
+
+  @Column({ type: 'smallint', name: 'time_limit_minutes', default: 0 })
+  timeLimitMinutes!: number; // Tiempo TOTAL del examen · 0 = sin límite
+
+  @Column({ type: 'smallint', name: 'questions_per_attempt', default: 0 })
+  questionsPerAttempt!: number; // Preguntas al azar del banco por intento · 0 = todas
+
   // [Relación a preguntas]: cargada bajo demanda con eager false
   @OneToMany(() => Question, (q) => q.quiz, { cascade: ['insert', 'update'] })
   questions?: Relation<Question>[]; // `Relation<>`: rompe el ciclo de importación Quiz↔Question al compilar con SWC

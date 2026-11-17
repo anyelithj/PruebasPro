@@ -2,7 +2,7 @@
 import { Download, FileText } from "lucide-react"; // [2026-10-23]: iconos SVG uniformes (antes emojis)
 import { useId, useState } from "react";
 import { pdfOcrText, pdfText, OCR_LANG } from "@/lib/pdf-text"; // [DRY]: idiomas de OCR compartidos con el lector de PDF
-import { extractedToContents, IMPORTABLE_KINDS, templateCsv, templateRows, type Extracted, type Row } from "@/lib/resource-import";
+import { extractedToContents, IMPORTABLE_KINDS, onlyLanguage, templateCsv, templateRows, type Extracted, type Row } from "@/lib/resource-import";
 import type { CurriculumItemKind } from "@/types/curriculum";
 // [ImportPanel]: importa una lista de vocabulario, frases, reglas gramaticales… desde Excel/CSV, Word, PDF, texto, imágenes (OCR) o el ENLACE de una página web y la convierte en elementos editables del formulario
 // [Tecnologías]: SheetJS (xlsx/xls/csv/ods), mammoth (docx → HTML con tablas), pdf.js (PDF), Tesseract.js (OCR WebAssembly) — todas cargadas con `import()` dinámico
@@ -79,7 +79,7 @@ export interface ImportPanelProps {
   language: string;
   disabled?: boolean;
   variant?: "card" | "button"; // Tarjeta grande (elegir cómo crear) o botón compacto (añadir más)
-  onImport: (contents: Record<string, unknown>[]) => void;
+  onImport: (contents: Record<string, unknown>[], source: string) => void; // [2026-11-03]: + nombre del archivo o título de la página → tema por defecto
   topic?: string; // [2026-10-24]: tema del formulario → título de la regla si el documento no trae uno
 }
 
@@ -147,23 +147,36 @@ export function ImportPanel({ kind, language, disabled = false, variant = "butto
   const [link, setLink] = useState(""); // Enlace de una página web o de un archivo publicado
   const supported = IMPORTABLE_KINDS.has(kind);
   // [Ayuda por tipo · 2026-10-24]: una regla se lee de un documento completo; el resto, una fila/línea por elemento
-  const hint = kind === "grammar_rule" ? "Excel, CSV, Word, PDF, texto, imagen o el enlace de una página web. Un documento = una regla (título, explicación, fórmula y ejemplos «frase - traducción»)." : "Excel, CSV, Word, PDF, texto, imagen o el enlace de una página web. Una fila o línea por elemento: «palabra - traducción».";
+  // [2026-10-27 · Ejercicios]: hoja de ejercicios con preguntas numeradas, opciones «a) b) c)» y respuesta (o solucionario al final)
+  const hint =
+    kind === "grammar_rule"
+      ? "Excel, CSV, Word, PDF, texto, imagen o el enlace de una página web. Un documento = una regla (título, explicación, fórmula y ejemplos «frase - traducción»)."
+      : kind === "exercise"
+        ? "Excel, CSV, Word, PDF, texto, imagen (OCR) o el enlace de una página web. Preguntas numeradas («1. …»), opciones «a) b) c)» y «Respuesta: b» (o un solucionario al final). Revisa cada ejercicio antes de guardar."
+        : "Excel, CSV, Word, PDF, texto, imagen o el enlace de una página web. Una fila o línea por elemento: «palabra - traducción».";
 
   // [finish]: Extracted → contenidos → formulario + resumen | [Principio]: DRY (archivo y enlace)
   // [2026-10-23]: async → tras leer, completa traducción/IPA que falten antes de entregar los elementos al formulario
-  const finish = async (ex: Extracted, source: string) => {
-    const { contents, skipped } = extractedToContents(kind, ex, language, topic.trim());
+  const finish = async (raw: Extracted, source: string) => {
+    const { ex, dropped } = onlyLanguage(raw, language); // [2026-11-03]: solo el contenido del idioma elegido
+    const { contents, skipped, incomplete } = extractedToContents(kind, ex, language, topic.trim());
     if (!contents.length)
       return setMessage({
         ok: false,
         // [Mensaje por tipo]: la regla gramatical se lee de un documento entero; el resto, una fila o línea por elemento
-        text: kind === "grammar_rule" ? "No se encontró una regla: el documento debe traer el nombre de la regla, su explicación y/o ejemplos (o una tabla «regla | explicación | fórmula | ejemplo»)." : "No se encontraron elementos. Usa una fila o línea por elemento (por ejemplo «apple - manzana»).",
+        text:
+          kind === "grammar_rule"
+            ? "No se encontró una regla: el documento debe traer el nombre de la regla, su explicación y/o ejemplos (o una tabla «regla | explicación | fórmula | ejemplo»)."
+            : kind === "exercise"
+              ? "No se encontraron ejercicios: numera cada pregunta («1. …») o usa una tabla «pregunta | opciones | respuesta | explicación»."
+              : "No se encontraron elementos. Usa una fila o línea por elemento (por ejemplo «apple - manzana»).",
       });
     const filled = await autofill(kind, contents, language, (n) => setBusy(`Completando traducción y pronunciación… ${n}/${contents.length}`));
-    onImport(contents);
+    onImport(contents, source);
     // [Incompletos]: el campo obligatorio que suele faltar según el tipo (regla → explicación; resto → traducción, corrección o IPA)
-    const missing = contents.filter((c) => blank(kind === "grammar_rule" ? c.explanationEs : (c.translationEs ?? c.targetEs ?? c.correct ?? (c.ipa as { value?: string } | undefined)?.value))).length;
-    const extra = [skipped ? `${skipped} omitidos (vacíos o repetidos)` : "", filled ? `${filled} completados automáticamente (traducción/IPA)` : "", missing ? `${missing} incompletos: complétalos antes de guardar` : ""].filter(Boolean).join(" · ");
+    // [2026-10-27]: ejercicios → el lector ya cuenta los que no traen respuesta correcta (`incomplete`)
+    const missing = kind === "exercise" ? incomplete : contents.filter((c) => blank(kind === "grammar_rule" ? c.explanationEs : (c.translationEs ?? c.targetEs ?? c.correct ?? (c.ipa as { value?: string } | undefined)?.value))).length;
+    const extra = [dropped ? `${dropped} líneas en otro idioma descartadas` : "", skipped ? `${skipped} omitidos (vacíos o repetidos)` : "", filled ? `${filled} completados automáticamente (traducción/IPA)` : "", missing ? `${missing} incompletos: complétalos antes de guardar` : ""].filter(Boolean).join(" · ");
     setMessage({ ok: true, text: `Se importaron ${contents.length} elementos de «${source}».${extra ? ` ${extra}.` : ""} Revísalos abajo.` });
   };
 
@@ -231,8 +244,8 @@ export function ImportPanel({ kind, language, disabled = false, variant = "butto
 
   if (!supported) {
     return variant === "card" ? (
-      <p className="rounded-xl border border-dashed border-border p-4 text-xs text-muted-foreground">
-        <FileText aria-hidden className="inline size-4 align-[-0.125em]" /> La importación desde archivo está disponible para vocabulario, reglas gramaticales, frases, traducciones, pronunciación y errores frecuentes.
+      <p className="rounded-xl border border-dashed border-border p-4 type-meta text-muted-foreground">
+        <FileText aria-hidden className="inline size-4 align-[-0.125em]" /> La importación desde archivo está disponible para vocabulario, reglas gramaticales, frases, traducciones, pronunciación, errores frecuentes y ejercicios.
       </p>
     ) : null;
   }

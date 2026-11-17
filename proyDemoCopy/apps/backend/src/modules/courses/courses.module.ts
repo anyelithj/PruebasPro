@@ -10,8 +10,12 @@ import { CourseRepository } from './infrastructure/repositories/course.repositor
 import { ListCoursesUseCase } from './application/use-cases/list-courses.use-case';
 import { AdminListCoursesUseCase } from './application/use-cases/admin-list-courses.use-case';
 import { GetCourseUseCase } from './application/use-cases/get-course.use-case';
-import { ToggleFavoriteUseCase } from './application/use-cases/toggle-favorite.use-case';
-import { ToggleReactionUseCase } from './application/use-cases/toggle-reaction.use-case';
+import { CourseEngagementUseCase } from './application/use-cases/course-engagement.use-case'; // [Caso F]: ⭐ y 👍/❤️ (sustituye a ToggleFavorite/ToggleReaction)
+import { CourseFavorite } from './domain/entities/course-favorite.entity';
+import { CourseReaction } from './domain/entities/course-reaction.entity';
+import { COURSE_ENGAGEMENT_REPOSITORY } from './domain/interfaces/course-engagement.repository.interface';
+import { CourseEngagementRepository } from './infrastructure/repositories/course-engagement.repository';
+import { MeFavoritesController } from './presentation/me-favorites.controller';
 import { CreateCourseUseCase } from './application/use-cases/create-course.use-case';
 import { UpdateCourseUseCase } from './application/use-cases/update-course.use-case';
 import { DeleteCourseUseCase } from './application/use-cases/delete-course.use-case';
@@ -28,6 +32,7 @@ import { S3FileStorage } from './infrastructure/storage/s3-file.storage';
 import { resolve } from 'node:path';
 import { storageConfig } from '../../shared/config/storage.config';
 import { createObjectStore } from '../../shared/storage/object-store';
+import { UsersModule } from '../users/users.module'; // [2026-10-28]: USER_REPOSITORY → autoría del curso (bio + redes del docente)
 // [CoursesModule]: Bounded Context Courses | [Patrón]: Module + DI Container | [Principio]: ISP + DIP
 
 // [Wire-up Port → Adapter]: el resto del módulo depende solo del Symbol token | [Patrón]: Service Locator (Nest DI) | [Principio]: DIP
@@ -61,7 +66,13 @@ class CoursesStorageModule {}
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Course, CourseEnrollment, CourseMaterial]),
+    TypeOrmModule.forFeature([
+      Course,
+      CourseEnrollment,
+      CourseMaterial,
+      CourseFavorite,
+      CourseReaction,
+    ]),
     // [Multer a disco]: la carpeta la decide el Adapter de almacenamiento (una sola fuente de verdad) | `registerAsync` + useFactory: DI en la configuración
     MulterModule.registerAsync({
       imports: [CoursesStorageModule],
@@ -73,15 +84,24 @@ class CoursesStorageModule {}
       }),
     }),
     CoursesStorageModule,
+    UsersModule, // [2026-10-28]: exporta USER_REPOSITORY (GetCourseUseCase lee el perfil público del dueño)
   ],
-  controllers: [CoursesController, CourseMaterialsController],
+  controllers: [
+    CoursesController,
+    CourseMaterialsController,
+    MeFavoritesController,
+  ],
   providers: [
     courseRepositoryProvider,
     ListCoursesUseCase,
     AdminListCoursesUseCase,
     GetCourseUseCase,
-    ToggleFavoriteUseCase,
-    ToggleReactionUseCase,
+    CourseEngagementUseCase,
+    // [Wire-up Port → Adapter · Caso F]: los casos de uso solo ven el Symbol | [Principio]: DIP
+    {
+      provide: COURSE_ENGAGEMENT_REPOSITORY,
+      useClass: CourseEngagementRepository,
+    },
     CreateCourseUseCase,
     UpdateCourseUseCase,
     DeleteCourseUseCase,

@@ -6,6 +6,7 @@ import { USER_REGISTERED_EVENT } from '../../../../src/modules/auth/domain/event
 // [Suite RegisterUseCase]: delega el alta en CreateUserUseCase, crea sesión y emite evento
 
 describe('RegisterUseCase', () => {
+  let requestVerify: { execute: jest.Mock };
   let useCase: RegisterUseCase;
   let createUser: { execute: jest.Mock };
   let authRepo: { createSession: jest.Mock };
@@ -48,12 +49,14 @@ describe('RegisterUseCase', () => {
       hashRefresh: jest.fn(),
     };
     events = { emit: jest.fn() };
+    requestVerify = { execute: jest.fn().mockResolvedValue({ success: true }) };
 
     useCase = new RegisterUseCase(
       createUser as any,
       authRepo as any,
       tokens,
       events as any,
+      requestVerify as any,
     );
 
     createUser.execute.mockResolvedValue(createdUser);
@@ -84,6 +87,17 @@ describe('RegisterUseCase', () => {
     );
     expect(res.accessToken).toBe('acc');
     expect(res.user.isEmailVerified).toBe(false);
+    // [RF-09 · 2026-11-16]: el registro encola el correo de verificación
+    expect(requestVerify.execute).toHaveBeenCalledWith({
+      email: 'new@test.io',
+    });
+  });
+
+  it('un fallo al encolar el correo no rompe el registro', async () => {
+    requestVerify.execute.mockRejectedValue(new Error('redis down'));
+    await expect(useCase.execute(dto)).resolves.toMatchObject({
+      accessToken: 'acc',
+    });
   });
 
   // [2026-10-24]: el teléfono opcional del formulario de registro llega a CreateUserUseCase (que lo recorta y guarda null si viene vacío)

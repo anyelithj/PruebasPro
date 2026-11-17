@@ -241,11 +241,11 @@ export function AvatarCard({ storageKey, badge }: { storageKey: string; badge: s
   };
 
   return (
-    <section aria-labelledby="avatar-title" className="rounded-[14px] border border-border bg-card p-[18px] shadow-[var(--nl-shd)]">
-      <h2 id="avatar-title" className="mb-1 text-sm font-bold">
+    <section aria-labelledby="avatar-title" className="surface p-[18px]">
+      <h2 id="avatar-title" className="title-section mb-1">
         {p.avatarTitle}
       </h2>
-      <p className="mb-3 text-[11px] leading-normal text-muted-foreground">{p.avatarIntro}</p>
+      <p className="mb-3 type-meta leading-normal text-muted-foreground">{p.avatarIntro}</p>
 
       {/* [Responsive]: vista previa arriba en móvil muy estrecho, al lado desde 400px */}
       <div className="flex flex-col items-center gap-[14px] min-[400px]:flex-row min-[400px]:items-start">
@@ -285,7 +285,7 @@ export function AvatarCard({ storageKey, badge }: { storageKey: string; badge: s
         </button>
       </div>
       {/* [aria-live]: el lector de pantalla anuncia la confirmación */}
-      <p role="status" aria-live="polite" className="mt-2 min-h-4 text-[11px] font-semibold text-primary">
+      <p role="status" aria-live="polite" className="mt-2 min-h-4 type-meta font-semibold text-primary">
         {saved ? p.avatarSaved : ""}
       </p>
     </section>

@@ -19,12 +19,12 @@ export default function GlobalError({ error, reset }: ErrorProps) {
   return (
     <main className="min-h-screen grid place-items-center p-6">
       <div className="max-w-md text-center space-y-4">
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Algo salió mal</h1>
+        <h1 className="title-page">Algo salió mal</h1>
         <p className="text-muted-foreground">
           Se produjo un error inesperado. Intenta nuevamente o vuelve más tarde.
         </p>
         {error.digest && (
-          <p className="text-xs font-mono text-muted-foreground">
+          <p className="type-meta font-mono text-muted-foreground">
             ID del error: {error.digest}
           </p>
         )}

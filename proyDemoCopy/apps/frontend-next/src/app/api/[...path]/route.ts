@@ -13,4 +13,4 @@ async function handle(request: Request, { params }: Ctx): Promise<Response> {
   return forward(request, (await params).path);
 }
 
-export { handle as GET, handle as POST, handle as PATCH, handle as DELETE };
+export { handle as GET, handle as POST, handle as PUT, handle as PATCH, handle as DELETE }; // [Fix 2026-11-16]: faltaba PUT → 405 en PUT /api/books/:id/progress

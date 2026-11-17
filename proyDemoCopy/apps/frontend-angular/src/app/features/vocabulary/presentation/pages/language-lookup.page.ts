@@ -19,12 +19,13 @@ import { PronunciationButtonComponent } from '@shared/ui/molecules/pronunciation
 import { CardPageTemplate } from '@shared/ui/templates/card-page.template';
 import { VocabularyFacade } from '../../application/vocabulary.facade';
 import { VocabularyRepository } from '../../domain/vocabulary.repository.port';
-import { LookupInputSchema, VOCAB_LANGUAGES, type LookupInput, type VocabLanguage } from '../../domain/models/vocabulary';
+import { AUTO, LookupInputSchema, TEXT_KINDS, VOCAB_LANGUAGES, type LookupInput, type SourceLanguage, type TextKind, type TranslateResult, type VocabLanguage } from '../../domain/models/vocabulary';
 import { TranslationCardComponent } from '../components/translation-card.component';
 // [LanguageLookupPage · Presentación · Sprint 8.3 → rediseño 2026-10-23]: /traductor al estilo Google Translate — barra de idiomas con «intercambiar», dos paneles (original | traducción), subir CUALQUIER archivo (PDF, Word, Excel, imagen, audio/video) y, para palabras o frases cortas, la ficha con IPA UK/US y «guardar en mi vocabulario»
 // [Patrón]: Container (smart) + Facade (VocabularyFacade) + Chunking (textos largos en trozos de ≤ CHUNK caracteres) | [Principio]: SRP + DIP (puerto VocabularyRepository) + DRY (TextImportService) | [Paradigma]: Declarativo + Reactivo (signals) + async/await
 // [Deep link]: /traductor?q=umbrella&lang=en sigue funcionando (lo usan Next.js y los juegos) · [A11y]: etiquetas visibles, región viva para la traducción y el progreso, atajo Ctrl+Enter, botones con nombre accesible
 // [Responsive]: paneles apilados en móvil, lado a lado desde lg
+// [Detectar idioma · 2026-10-27]: el origen empieza en «Detectar idioma» (como Google Translate); FastAPI detecta sin LLM y la barra muestra «Detectado: Inglés»
 
 const MAX_CHARS = 5000; // Tope del texto original (≈ 10 llamadas al LLM local)
 const CHUNK = 480; // `TranslateTextDto.text` admite 500 → margen
@@ -77,14 +78,25 @@ export function chunks(text: string, size = CHUNK): string[] {
 
       <!-- [Barra de idiomas]: origen ⇄ destino (como Google Translate) | <select> nativos con etiqueta visible -->
       <div class="flex flex-wrap items-end gap-2">
-        <label class="min-w-40 flex-1 text-xs font-semibold text-muted-foreground">
-          {{ tx.from }}
-          <select class="control mt-1 w-full" [value]="source()" (change)="source.set($any($event.target).value)">
-            @for (code of languages; track code) {
-              <option [value]="code" [selected]="code === source()">{{ i18n.languageName(code) }}</option>
+        <!-- [Fix 2026-10-28]: «Detectado: Inglés» va EN LÍNEA junto al selector «Traducir de» (antes quedaba debajo y parecía pegado al texto original)
+             <label for> + id en vez de envolver: la insignia (role="status") no entra en el nombre accesible del <select> | [Responsive]: flex; en pantallas muy estrechas la insignia baja de línea -->
+        <div class="min-w-40 flex-1">
+          <label for="tr-from" class="text-xs font-semibold text-muted-foreground">{{ tx.from }}</label>
+          <div class="mt-1 flex flex-wrap items-center gap-2">
+            <select id="tr-from" class="control min-w-0 flex-1" [value]="source()" (change)="setSource($any($event.target).value)">
+              <!-- [Detectar idioma · 2026-10-27]: primera opción y seleccionada por defecto -->
+              <option [value]="auto" [selected]="source() === auto">{{ tx.detectLanguage }}</option>
+              @for (code of languages; track code) {
+                <option [value]="code" [selected]="code === source()">{{ i18n.languageName(code) }}</option>
+              }
+            </select>
+            @if (source() === auto && detected(); as d) {
+              <span role="status" class="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-tone-brand-soft px-2.5 py-1 text-xs font-semibold text-tone-brand">
+                <aula-icon name="sparkles" [size]="12" /> {{ i18n.fmt(tx.detected, { lang: i18n.languageName(d) }) }}
+              </span>
             }
-          </select>
-        </label>
+          </div>
+        </div>
         <button type="button" class="btn btn-ghost btn-sm mb-0.5" [attr.aria-label]="tx.swap" [title]="tx.swap" (click)="swap()">
           <aula-icon name="arrow-left-right" [size]="18" />
         </button>
@@ -93,6 +105,15 @@ export function chunks(text: string, size = CHUNK): string[] {
           <select class="control mt-1 w-full" [value]="target()" (change)="target.set($any($event.target).value)">
             @for (code of languages; track code) {
               <option [value]="code" [selected]="code === target()">{{ i18n.languageName(code) }}</option>
+            }
+          </select>
+        </label>
+        <!-- [Tipo de texto · 2026-11-13 · Caso C]: un título o una expresión no se traduce palabra por palabra → tres opciones -->
+        <label class="min-w-40 flex-1 text-xs font-semibold text-muted-foreground">
+          {{ tx.kind }}
+          <select class="control mt-1 w-full" [value]="kind()" (change)="kind.set($any($event.target).value)">
+            @for (k of kinds; track k) {
+              <option [value]="k" [selected]="k === kind()">{{ tx.kinds[k] }}</option>
             }
           </select>
         </label>
@@ -116,19 +137,26 @@ export function chunks(text: string, size = CHUNK): string[] {
             </div>
           }
           @if (fileName()) {
-            <p class="mb-1 inline-flex w-fit items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-[11px] font-semibold text-muted-foreground">
+            <p class="mb-1 inline-flex w-fit items-center gap-1.5 rounded-full bg-muted px-3 py-1 type-meta font-semibold text-muted-foreground">
               <aula-icon name="file-text" [size]="14" /> {{ i18n.fmt(tx.fileLoaded, { name: fileName() }) }}
             </p>
           }
           <label for="tr-source" class="sr-only">{{ tx.sourceLabel }}</label>
+          <!-- [Borrar · 2026-10-30]: ✕ grande arriba a la derecha del texto, como translate.google.com (antes una ✕ pequeña en la barra inferior) -->
+          @if (text()) {
+            <button type="button" class="absolute right-4 top-4 z-[1] grid size-10 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" [attr.aria-label]="tx.clear" [title]="tx.clear" (click)="clear()">
+              <aula-icon name="x" [size]="22" />
+            </button>
+          }
           <textarea
             id="tr-source"
-            class="min-h-56 w-full flex-1 resize-y rounded-lg bg-transparent p-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            [attr.lang]="source()"
+            class="min-h-40 w-full flex-1 resize-y rounded-lg bg-transparent p-2 pr-12 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            [attr.lang]="from()"
             [attr.maxlength]="max"
             [placeholder]="tx.sourcePlaceholder"
             [value]="text()"
             (input)="onType($any($event.target).value)"
+            (keydown.enter)="onEnter($event)"
             (keydown.control.enter)="run()"
             (keydown.meta.enter)="run()"
           ></textarea>
@@ -138,24 +166,35 @@ export function chunks(text: string, size = CHUNK): string[] {
               <input type="file" class="sr-only" [accept]="accept" [disabled]="busy()" (change)="readFile($any($event.target))" />
             </label>
             @if (text().trim()) {
-              <aula-pronunciation-button [text]="text().slice(0, 300)" [language]="source()" [label]="tx.listen" />
-              <button type="button" class="btn btn-ghost btn-sm" [attr.aria-label]="tx.clear" [title]="tx.clear" (click)="clear()">
-                <aula-icon name="x" />
-              </button>
+              <aula-pronunciation-button [text]="text().slice(0, 300)" [language]="from() ?? 'en'" [label]="tx.listen" />
             }
             <span class="ml-auto text-[11px] text-muted-foreground">{{ i18n.fmt(tx.chars, { n: text().length, max }) }}</span>
           </div>
-          <p class="mt-1 text-[11px] text-muted-foreground">{{ tx.fileHint }} · {{ tx.shortcut }}</p>
+          <p class="mt-1 type-meta text-muted-foreground">{{ tx.fileHint }} · {{ tx.shortcut }}</p>
         </section>
 
         <section class="surface flex flex-col bg-gradient-soft p-3" [attr.aria-label]="tx.targetLabel">
-          <div class="min-h-56 flex-1 whitespace-pre-wrap p-2 text-base" aria-live="polite" [attr.lang]="target()">
+          <div class="min-h-40 flex-1 whitespace-pre-wrap p-2 text-base" aria-live="polite" [attr.lang]="target()">
             @if (output()) {
               {{ output() }}
             } @else if (!busy()) {
               <span class="text-muted-foreground">{{ tx.targetEmpty }}</span>
             }
           </div>
+          <!-- [Caso C]: natural (recomendada) · cercana · literal → el estudiante ve por qué no se traduce palabra por palabra -->
+          @if (options().length) {
+            <section class="mt-2 space-y-1 border-t border-border pt-2" [attr.aria-label]="tx.optionsTitle">
+              <p class="type-meta font-semibold uppercase tracking-wide text-muted-foreground">{{ tx.optionsTitle }}</p>
+              <dl class="space-y-1 text-sm">
+                @for (o of options(); track o.tipo) {
+                  <div class="flex flex-wrap gap-x-2">
+                    <dt class="type-meta font-semibold text-muted-foreground" [class.text-tone-brand]="o.tipo === 'natural'">{{ tx.options[o.tipo] }}</dt>
+                    <dd [attr.lang]="target()" [class.font-semibold]="o.tipo === 'natural'">{{ o.texto }}</dd>
+                  </div>
+                }
+              </dl>
+            </section>
+          }
           <div class="mt-2 flex flex-wrap items-center gap-2 border-t border-border pt-2">
             @if (output()) {
               <aula-pronunciation-button [text]="output().slice(0, 300)" [language]="target()" [label]="tx.listen" />
@@ -175,35 +214,35 @@ export function chunks(text: string, size = CHUNK): string[] {
       </div>
 
       <div class="mt-3 flex flex-wrap items-center gap-3">
-        <!-- [Traducción automática · 2026-10-23 · 4.º pase]: como Google Translate, traduce al dejar de escribir (debounce) — se puede desactivar para no cargar la IA local -->
+        <!-- [Traducción automática · 2026-10-30]: DESACTIVADA por defecto → se traduce con el botón; marcarla traduce al dejar de escribir (debounce) | casilla nativa (HTML): teclado y lector de pantalla incluidos -->
         <label class="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold text-muted-foreground">
-          <input type="checkbox" class="size-4 accent-[var(--primary)]" [checked]="auto()" (change)="auto.set($any($event.target).checked)" />
+          <input type="checkbox" class="size-4 accent-[var(--primary)]" [checked]="autoTranslate()" (change)="autoTranslate.set($any($event.target).checked)" />
           {{ tx.autoTranslate }}
         </label>
-        <button aulaButton type="button" [loading]="busy()" [disabled]="!text().trim() || source() === target()" (click)="run()">
+        <button aulaButton type="button" [loading]="busy()" [disabled]="!text().trim() || from() === target()" (click)="run()">
           {{ tx.translate }}
         </button>
         @if (busy()) {
           <aula-spinner [label]="status() || tx.translating" />
         }
         @if (error()) {
-          <p role="alert" class="text-sm text-tone-danger">{{ error() }}</p>
+          <p role="alert" class="text-tone-danger">{{ error() }}</p>
         }
       </div>
 
       <!-- [Ficha corta]: palabra o frase breve en un idioma extranjero → IPA UK/US + guardar en el banco -->
       @if (facade.result.status() === 'success' && facade.result.data(); as lookup) {
-        <section class="mt-6 rounded-2xl border border-border bg-gradient-soft p-4 sm:p-6" [attr.aria-label]="tx.lookupDetailTitle">
-          <h2 class="mb-3 text-sm font-bold">{{ tx.lookupDetailTitle }}</h2>
+        <section class="mt-4 rounded-2xl border border-border bg-gradient-soft p-3" [attr.aria-label]="tx.lookupDetailTitle">
+          <h2 class="title-section mb-2">{{ tx.lookupDetailTitle }}</h2>
           <aula-translation-card [t]="tx" [lookup]="lookup" [saving]="facade.saving()" (save)="facade.saveToBank($event)" />
           @if (facade.saved(); as term) {
-            <p role="status" class="mt-3 text-sm font-semibold text-tone-brand">
+            <p role="status" class="mt-3 font-semibold text-tone-brand">
               <aula-icon name="check" /> {{ i18n.fmt(tx.saved, { term }) }}
               <a routerLink="/vocabulario" class="underline">{{ tx.openBank }}</a>
             </p>
           }
           @if (facade.saveError(); as err) {
-            <p role="alert" class="mt-3 text-sm text-tone-danger">{{ err }}</p>
+            <p role="alert" class="mt-3 text-tone-danger">{{ err }}</p>
           }
         </section>
       }
@@ -211,11 +250,11 @@ export function chunks(text: string, size = CHUNK): string[] {
       <!-- [Historial]: consultas de esta visita; volver a una no hace otra petición -->
       @if (facade.history().length > 1) {
         <section class="mt-6" [attr.aria-label]="tx.history">
-          <h2 class="mb-2 text-sm font-bold">{{ tx.history }}</h2>
+          <h2 class="title-section mb-2">{{ tx.history }}</h2>
           <ul class="flex flex-wrap gap-2">
-            @for (h of facade.history(); track h.id) {
+            @for (h of facade.history(); track h.id || h.language + '|' + h.text) {
               <li>
-                <button type="button" class="chip" [attr.aria-pressed]="facade.result.data()?.id === h.id" (click)="show(h.text, h.language)">
+                <button type="button" class="chip" [attr.aria-pressed]="facade.result.data()?.text === h.text && facade.result.data()?.language === h.language" (click)="show(h.text, h.language)">
                   {{ h.text }}
                 </button>
               </li>
@@ -239,8 +278,15 @@ export default class LanguageLookupPage {
   // `.ttf/.mp3…` (accept): el extractor del BFF decide; aquí solo se filtra el diálogo
   // [2026-10-23 · 4.º pase]: sin filtro → CUALQUIER archivo; el extractor del BFF decide (PDF, Word, PowerPoint, Excel, OpenDocument, RTF, EPUB, texto, imagen, audio/video) y explica si no puede
   protected readonly accept = '';
-  protected readonly source = signal<VocabLanguage>('en');
+  protected readonly auto = AUTO;
+  protected readonly source = signal<SourceLanguage>(AUTO); // [2026-10-27]: «Detectar idioma» por defecto
+  protected readonly detected = signal<VocabLanguage | null>(null); // Idioma que detectó FastAPI en la última traducción
+  // [from]: idioma real del original — el elegido o el detectado (null mientras «auto» no ha detectado nada) | `computed` (signals)
+  protected readonly from = computed<VocabLanguage | null>(() => (this.source() === AUTO ? this.detected() : (this.source() as VocabLanguage)));
   protected readonly target = signal<VocabLanguage>('es');
+  protected readonly kinds = TEXT_KINDS;
+  protected readonly kind = signal<TextKind>('frase'); // [Caso C]: tipo_de_texto
+  protected readonly options = signal<TranslateResult['options']>([]); // Opciones del último título/expresión
   protected readonly text = signal('');
   protected readonly output = signal('');
   protected readonly busy = signal(false);
@@ -248,10 +294,10 @@ export default class LanguageLookupPage {
   protected readonly error = signal('');
   protected readonly dragging = signal(false); // [2026-10-23 · 4.º pase]: hay un archivo arrastrándose sobre el panel
   protected readonly fileName = signal(''); // Archivo del que sale el texto original
-  protected readonly auto = signal(true); // Traducir mientras se escribe
+  protected readonly autoTranslate = signal(false); // [Fix 2026-10-30]: apagado por defecto (la traducción cuesta ~40 s de IA) | `signal` (Angular): estado reactivo
   private typingTimer?: ReturnType<typeof setTimeout>; // `ReturnType<typeof setTimeout>` (TS): vale en navegador y en Node (tests)
   // `computed` (signals): la ficha con IPA solo tiene sentido para textos cortos en un idioma extranjero
-  private readonly isShort = computed(() => this.text().trim().length > 0 && this.text().trim().length <= SHORT && this.source() !== 'es');
+  private readonly isShort = computed(() => this.text().trim().length > 0 && this.text().trim().length <= SHORT);
 
   constructor() {
     // [Deep link]: ?q= válido → rellena y traduce una vez
@@ -263,10 +309,12 @@ export default class LanguageLookupPage {
   }
 
   // [swap]: intercambia idiomas y textos (la traducción pasa a ser el original)
+  // [2026-10-27]: con «Detectar idioma» el destino pasa a ser el idioma detectado (o el opuesto al español si aún no hay detección)
   protected swap(): void {
-    const [s, t] = [this.source(), this.target()];
+    const [s, t] = [this.from() ?? (this.target() === 'es' ? 'en' : 'es'), this.target()];
     this.source.set(t);
     this.target.set(s);
+    this.detected.set(null);
     if (this.output()) {
       this.text.set(this.output());
       this.output.set('');
@@ -274,12 +322,38 @@ export default class LanguageLookupPage {
   }
 
   // [onType · 2026-10-23 · 4.º pase]: texto escrito → traducción automática a los AUTO_MS sin teclear | [Patrón]: Debounce
-  // Solo textos cortos (≤ CHUNK): uno largo se traduce por trozos con el botón para no saturar la IA local a cada tecla
+  // Solo textos cortos (≤ CHUNK): uno largo se traduce por trozos con el botón para no saturar la IA a cada tecla
   protected onType(value: string): void {
     this.text.set(value);
+    if (this.source() === AUTO && !value.trim()) this.detected.set(null);
     this.fileName.set('');
     clearTimeout(this.typingTimer);
-    if (this.auto() && value.trim() && value.trim().length <= CHUNK) this.typingTimer = setTimeout(() => void this.run(), AUTO_MS);
+    if (this.autoTranslate() && value.trim() && value.trim().length <= CHUNK) this.typingTimer = setTimeout(() => void this.run(), AUTO_MS);
+  }
+
+  // [detectNow · 2026-10-30]: Enter → «Detectado: X» SIN traducir | FastAPI detecta sin LLM (< 5 ms) | Enter sigue insertando el salto de línea (no hay preventDefault)
+  // `async/await` (ES2017) + `firstValueFrom` (RxJS): Observable → Promise | [Principio]: Fail Soft — si falla, la traducción detecta igualmente con «auto»
+  // [onEnter · 2026-11-03]: con un idioma elegido Enter no hacía nada → traduce (Shift+Enter inserta el salto de línea; `keydown.enter` de Angular no casa con modificadores)
+  protected onEnter(event: Event): void {
+    if (this.source() === AUTO) {
+      void this.detectNow();
+      return;
+    }
+    event.preventDefault();
+    void this.run();
+  }
+
+  protected async detectNow(): Promise<void> {
+    const text = this.text().trim();
+    if (this.source() !== AUTO || !text) return;
+    try {
+      const { language } = await firstValueFrom(this.repo.detect(text.slice(0, CHUNK)));
+      this.detected.set(language);
+      // Mismo idioma que el destino → se cambia el destino; si no, el botón Traducir quedaría deshabilitado (from === target)
+      if (language === this.target()) this.target.set(language === 'es' ? 'en' : 'es');
+    } catch {
+      this.detected.set(null);
+    }
   }
 
   protected onDragOver(event: DragEvent): void {
@@ -302,7 +376,14 @@ export default class LanguageLookupPage {
     URL.revokeObjectURL(url);
   }
 
+  // [setSource]: cambio manual del origen → la detección anterior deja de valer
+  protected setSource(value: SourceLanguage): void {
+    this.source.set(value);
+    this.detected.set(null);
+  }
+
   protected clear(): void {
+    this.detected.set(null);
     this.fileName.set('');
     this.text.set('');
     this.output.set('');
@@ -321,12 +402,16 @@ export default class LanguageLookupPage {
   protected async run(): Promise<void> {
     const text = this.text().trim().slice(0, MAX_CHARS);
     const tx = this.i18n.t().vocabulary;
-    if (!text || this.busy() || this.source() === this.target()) return;
+    if (!text || this.busy() || this.from() === this.target()) return;
     this.busy.set(true);
     this.error.set('');
     this.output.set('');
+    this.options.set([]);
+    // [Detectar idioma]: el 1.er trozo va con «auto»; los siguientes con el idioma ya detectado (coherencia + una sola detección)
+    let source: SourceLanguage = this.source();
+    if (source === AUTO) this.detected.set(null);
     try {
-      if (this.isShort()) void this.facade.lookup({ text, language: this.source() as LookupInput['language'] });
+      if (this.isShort() && source !== AUTO && source !== 'es') void this.facade.lookup({ text, language: source as LookupInput['language'] });
       const parts = chunks(text);
       const done: string[] = [];
       const real = parts.filter(Boolean).length;
@@ -337,10 +422,24 @@ export default class LanguageLookupPage {
           continue;
         }
         this.status.set(real > 1 ? this.i18n.fmt(tx.progress, { n: ++n, total: real }) : tx.translating);
-        done.push(await firstValueFrom(this.repo.translate(part, this.source(), this.target())));
+        // [Caso C]: el tipo solo aplica a un texto de un trozo (un título o una expresión); un documento largo se traduce como frases
+        const res = await firstValueFrom(this.repo.translate(part, source, this.target(), real === 1 ? this.kind() : 'frase'));
+        if (res.options.length) this.options.set(res.options);
+        if (source === AUTO && res.detected) {
+          source = res.detected;
+          this.detected.set(res.detected);
+          // Ficha con IPA: ahora que se conoce el idioma (la caché de NestJS indexa por idioma real, nunca por «auto»)
+          if (this.isShort() && res.detected !== 'es') void this.facade.lookup({ text, language: res.detected });
+        }
+        done.push(res.translation);
         this.output.set(done.join('\n').replace(/\n{3,}/g, '\n\n')); // Se pinta a medida que llega
       }
       this.status.set('');
+      // [Mismo idioma · 2026-10-27]: el texto ya estaba en el idioma destino → se cambia el destino y se traduce otra vez (como Google Translate)
+      if (this.source() === AUTO && this.detected() === this.target()) {
+        this.target.set(this.target() === 'es' ? 'en' : 'es');
+        queueMicrotask(() => void this.run()); // `queueMicrotask` (Web API): tras el `finally` (busy = false)
+      }
     } catch {
       this.error.set(tx.translateError);
       this.status.set('');
@@ -349,7 +448,7 @@ export default class LanguageLookupPage {
     }
   }
 
-  // [readFile]: cualquier archivo → texto (BFF /api/media/extract-text) → panel original → traducción automática
+  // [readFile]: cualquier archivo → texto (BFF /api/media/extract-text) → panel original → detecta el idioma (traducir sigue siendo con el botón)
   protected async readFile(el: HTMLInputElement): Promise<void> {
     const file = el.files?.[0];
     el.value = ''; // Permite volver a elegir el mismo archivo
@@ -374,7 +473,8 @@ export default class LanguageLookupPage {
       this.busy.set(false);
       this.status.set('');
     }
-    void this.run();
+    // [Fix 2026-10-30]: antes traducía sola → ahora solo detecta; con «Traducir mientras escribo» marcado sigue traduciendo
+    await (this.autoTranslate() ? this.run() : this.detectNow());
   }
 
   // [copy]: Clipboard API (requiere contexto seguro; en localhost lo es)

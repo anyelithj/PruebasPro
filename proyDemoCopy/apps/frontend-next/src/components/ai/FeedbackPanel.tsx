@@ -20,10 +20,10 @@ export function FeedbackPanel({ answers, questions, feedbacks }: FeedbackPanelPr
         aria-label="Retroalimentación de la IA"
         className="rounded-xl border border-tone-brand-line bg-tone-brand-soft p-5"
       >
-        <h2 className="text-lg font-bold text-tone-brand">
+        <h2 className="title-section text-tone-brand">
           Excelente desempeño
         </h2>
-        <p className="mt-1 text-sm text-tone-brand">
+        <p className="mt-1 text-tone-brand">
           No tuviste respuestas incorrectas. Sigue con quizzes de mayor dificultad para consolidar.
         </p>
       </section>
@@ -32,8 +32,8 @@ export function FeedbackPanel({ answers, questions, feedbacks }: FeedbackPanelPr
 
   return (
     <section aria-label="Retroalimentación de la IA" aria-live="polite" className="space-y-3">
-      <h2 className="text-xl font-bold tracking-tight">Retroalimentación IA</h2>
-      <p className="text-sm text-muted-foreground">
+      <h2 className="title-section">Retroalimentación IA</h2>
+      <p className="text-muted-foreground">
         Análisis pedagógico generado por el tutor IA para cada respuesta incorrecta.
       </p>
 
@@ -45,7 +45,7 @@ export function FeedbackPanel({ answers, questions, feedbacks }: FeedbackPanelPr
           return (
             <li key={answer.questionId} className="rounded-xl border bg-card p-4 shadow-sm">
               <div className="flex items-start justify-between gap-3">
-                <p className="text-sm font-semibold flex-1">
+                <p className="font-semibold flex-1">
                   {question?.text ?? `Pregunta ${answer.questionId.slice(0, 8)}`}
                 </p>
                 <span

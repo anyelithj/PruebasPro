@@ -28,7 +28,7 @@ export class PolyglotConcept {
   @Column({ type: 'varchar', length: 16, default: '' })
   emoji!: string; // Columna «imagen» de la tabla (emoji Unicode: sin licencia)
 
-  @Column({ type: 'varchar', length: 400, name: 'image_url', nullable: true })
+  @Column({ type: 'text', name: 'image_url', nullable: true }) // [2026-11-11]: enlace https o imagen adjunta (data URL)
   imageUrl!: string | null; // Imagen alternativa al emoji
 
   @Column({ type: 'varchar', length: 300, name: 'image_license', nullable: true })

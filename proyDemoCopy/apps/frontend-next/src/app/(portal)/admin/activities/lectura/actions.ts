@@ -49,12 +49,12 @@ export async function updateReadingMetaAction(id: string, patch: MetaPatch): Pro
 }
 
 // [replaceReadingTextAction]: texto completo → NestJS re-divide en frases (conserva traducción/IPA de las que no cambian)
-export async function replaceReadingTextAction(id: string, paragraphs: string[]): Promise<Result<{ pending: number }>> {
+export async function replaceReadingTextAction(id: string, paragraphs: string[]): Promise<Result<{ pending: number; enriching: boolean }>> {
   const clean = (Array.isArray(paragraphs) ? paragraphs : []).filter((p): p is string => typeof p === "string" && !!p.trim()).slice(0, MAX_PARAGRAPHS).map((p) => p.slice(0, MAX_PARAGRAPH));
   if (!clean.length) return { ok: false, message: "El texto está vacío." };
   try {
-    const res = await call<{ pending?: number }>(id, `/reading/texts/${enc(id)}`, "PATCH", { paragraphs: clean });
-    return { ok: true, pending: Number(res?.pending ?? 0) };
+    const res = await call<{ pending?: number; enriching?: boolean }>(id, `/reading/texts/${enc(id)}`, "PATCH", { paragraphs: clean });
+    return { ok: true, pending: Number(res?.pending ?? 0), enriching: Boolean(res?.enriching) }; // [2026-10-27]: `enriching` → las frases nuevas se traducen en segundo plano
   } catch (err) {
     return fail(err);
   }

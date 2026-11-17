@@ -95,3 +95,65 @@ export function safeFetch(rawUrl: string, redirects = 0): Promise<SafeFetchResul
     req.on("error", (err) => reject(err.message === "BLOCKED_ADDRESS" ? new Error("Ese enlace apunta a una red privada y no está permitido.") : err));
   });
 }
+
+// ───── [2026-11-13 · Tarea 9 · RF-139]: importador «educado» — respeta robots.txt y limita la frecuencia por sitio ─────
+// [Patrón]: Decorator (politeFetch envuelve safeFetch: misma protección anti-SSRF) + Cache-Aside (robots.txt por origen) + Throttle
+// [Principio]: SRP (reglas puras separadas de la red) + Secure by default | [Paradigma]: Funcional (robotsAllows es pura) + asíncrono
+
+const ROBOTS_AGENT = "auladeidiomas-importador"; // Nombre con el que buscamos nuestro grupo en robots.txt (además de «*»)
+const ROBOTS_TTL_MS = 60 * 60 * 1000; // robots.txt se relee como mucho cada hora por sitio
+const MIN_INTERVAL_MS = 2_000; // Mínimo entre dos descargas al MISMO sitio (también se respeta Crawl-delay si es mayor)
+const robotsCache = new Map<string, { text: string; at: number }>(); // `Map` (ES2015): origen → robots.txt | ponytail: en memoria por proceso; con varias réplicas → Redis
+const lastHit = new Map<string, number>(); // origen → instante de la última descarga
+
+// [robotsAllows]: ¿permite robots.txt leer `path`? Regla más específica (prefijo más largo) gana; a igual longitud gana Allow. Función pura.
+export function robotsAllows(robots: string, path: string, agent = ROBOTS_AGENT): { allowed: boolean; crawlDelayMs: number } {
+  type Group = { agents: string[]; rules: { allow: boolean; prefix: string }[]; delay: number };
+  const groups: Group[] = [];
+  let current: Group | null = null;
+  for (const raw of robots.split(/\r?\n/)) {
+    const line = raw.replace(/#.*/, "").trim(); // Sin comentarios
+    const [key, ...rest] = line.split(":");
+    const field = key?.trim().toLowerCase();
+    const value = rest.join(":").trim();
+    if (!field) continue;
+    if (field === "user-agent") {
+      if (!current || current.rules.length || current.delay) groups.push((current = { agents: [], rules: [], delay: 0 })); // Agentes seguidos comparten grupo
+      current.agents.push(value.toLowerCase());
+    } else if (current && (field === "allow" || field === "disallow") && value) {
+      current.rules.push({ allow: field === "allow", prefix: value.replace(/\*$/, "") });
+    } else if (current && field === "crawl-delay") {
+      current.delay = Math.max(0, Number(value) || 0) * 1000;
+    }
+  }
+  // El grupo con nuestro nombre manda; si no hay, el de «*»
+  const group = groups.find((g) => g.agents.some((a) => a !== "*" && agent.includes(a))) ?? groups.find((g) => g.agents.includes("*"));
+  if (!group) return { allowed: true, crawlDelayMs: 0 };
+  const match = group.rules.filter((r) => path.startsWith(r.prefix)).sort((a, b) => b.prefix.length - a.prefix.length || Number(b.allow) - Number(a.allow))[0];
+  return { allowed: match ? match.allow : true, crawlDelayMs: group.delay };
+}
+
+async function robotsFor(origin: string): Promise<string> {
+  const hit = robotsCache.get(origin);
+  if (hit && Date.now() - hit.at < ROBOTS_TTL_MS) return hit.text;
+  // Sin robots.txt (404, error de red) = sin restricciones; también pasa por safeFetch (anti-SSRF)
+  const text = await safeFetch(`${origin}/robots.txt`).then((r) => (r.contentType.includes("text") ? r.body.toString("utf-8") : "")).catch(() => "");
+  robotsCache.set(origin, { text, at: Date.now() });
+  return text;
+}
+
+// [politeFetch]: safeFetch + robots.txt + espera mínima entre descargas al mismo sitio | lanza Error con mensaje legible
+export async function politeFetch(rawUrl: string): Promise<SafeFetchResult> {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    throw new Error("El enlace no es una URL válida.");
+  }
+  const rules = robotsAllows(await robotsFor(url.origin), url.pathname + url.search);
+  if (!rules.allowed) throw new Error("El sitio no permite descargas automáticas de esa página (robots.txt). Copia y pega el texto o sube el archivo.");
+  const wait = (lastHit.get(url.origin) ?? 0) + Math.max(MIN_INTERVAL_MS, rules.crawlDelayMs) - Date.now();
+  if (wait > 0) await new Promise((resolve) => setTimeout(resolve, Math.min(wait, 10_000))); // Espera acotada: la petición del docente no se cuelga
+  lastHit.set(url.origin, Date.now());
+  return safeFetch(url.toString());
+}

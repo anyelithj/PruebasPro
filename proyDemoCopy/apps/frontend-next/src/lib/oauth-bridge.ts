@@ -19,7 +19,7 @@ export interface BackendAuthResponse {
   user: BackendAuthUser;
 }
 
-export type OAuthProviderId = "google" | "microsoft";
+export type OAuthProviderId = "google"; // [2026-11-16]: Microsoft retirado
 
 export interface OAuthBridgeInput {
   provider: OAuthProviderId;

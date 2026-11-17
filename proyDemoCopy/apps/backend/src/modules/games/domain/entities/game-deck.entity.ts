@@ -14,7 +14,12 @@ export interface DeckItem {
   term: string;
   translation?: string;
   emoji?: string;
+  image?: string; // [2026-11-03]: imagen (enlace https) alternativa al emoji
   category?: string;
+  // [2026-11-11 · todos los juegos]: `term` = palabra (vocabulario), tarjeta secreta (tabú, 20 preguntas…), tema (debate, historia…), frase (escucha) u objetivo (role-play)
+  words?: string; // Palabras prohibidas (tabú, palabra prohibida) o palabras clave (role-play), separadas por comas
+  question?: string; // Pregunta-respuesta rápida: la pregunta que se escucha tras la frase
+  answer?: string; // Pregunta-respuesta rápida: respuesta esperada (palabra clave)
 }
 
 @Entity({ name: 'game_decks' })

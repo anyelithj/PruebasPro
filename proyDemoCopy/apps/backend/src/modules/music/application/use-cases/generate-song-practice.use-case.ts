@@ -133,7 +133,7 @@ export class GenerateSongPracticeUseCase {
         title: `${song.title} · ${LABEL[kind].title}`,
         description: `Práctica generada de la canción «${song.title}»`,
         language: song.language,
-        level: song.level,
+        level: song.level!, // Publicada ⇒ tiene nivel (blocker «level» · RF-148)
         skill: LABEL[kind].skill,
         items,
       },

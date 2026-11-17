@@ -19,12 +19,13 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         primary: "bg-primary text-primary-foreground hover:bg-primary/90",
-        // secondary => borde visible (slate-300) + sombra leve: se reconoce como botón también en tablas, sin hover
-        secondary: "border border-slate-300 bg-background text-slate-800 shadow-sm hover:border-slate-400 hover:bg-slate-100",
+        // secondary => relleno tenue con tokens (tinte de marca en el panel): se reconoce como botón también en tablas, sin hover
+        secondary: "border border-secondary-foreground/15 bg-secondary text-secondary-foreground hover:border-secondary-foreground/30 hover:bg-secondary/70",
+        // ghost => terciaria: sin fondo hasta el hover
         ghost: "hover:bg-accent hover:text-accent-foreground",
         danger: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         // dangerOutline => acción destructiva secundaria (eliminar/archivar en una fila): visible sin gritar
-        dangerOutline: "border border-red-300 bg-background text-red-700 shadow-sm hover:border-red-400 hover:bg-red-50",
+        dangerOutline: "border border-red-300 bg-red-50 text-red-700 hover:border-red-400 hover:bg-red-100",
       },
       // icon => cuadrado de 36 px solo con ícono (acciones de fila: todas miden lo mismo, sin importar el texto)
       size: { sm: "h-9 px-3 text-sm", md: "h-9 px-4 text-sm", lg: "h-12 px-6 text-base", icon: "size-9 shrink-0 p-0" },

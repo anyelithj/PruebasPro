@@ -27,12 +27,12 @@ export interface LevelConfirmLabels {
       class="space-y-3 rounded-xl border border-border p-4"
       aria-labelledby="level-confirm-title"
     >
-      <h2 id="level-confirm-title" class="text-base font-extrabold">{{ lb.title }}</h2>
+      <h2 id="level-confirm-title" class="title-section">{{ lb.title }}</h2>
       @if (estimate(); as e) {
-        <p class="text-sm font-semibold">
+        <p class="font-semibold">
           {{ lb.estimated.replace('{level}', e.level).replace('{pct}', pct(e.confidence)) }}
         </p>
-        <p class="text-xs text-muted-foreground">
+        <p class="type-meta text-muted-foreground">
           {{ lb.method[e.method] }}{{ e.explanation ? ' · ' + e.explanation : '' }}
         </p>
         <dl class="grid grid-cols-2 gap-2 text-xs sm:grid-cols-5">
@@ -44,11 +44,11 @@ export interface LevelConfirmLabels {
           }
         </dl>
       } @else {
-        <p class="text-sm text-tone-warning"><aula-icon name="triangle-alert" /> {{ lb.unavailable }}</p>
+        <p class="text-tone-warning"><aula-icon name="triangle-alert" /> {{ lb.unavailable }}</p>
       }
-      <p class="text-xs text-muted-foreground">{{ lb.note }}</p>
+      <p class="type-meta text-muted-foreground">{{ lb.note }}</p>
       @if (confirmed()) {
-        <p class="text-sm font-semibold text-tone-brand" role="status">✓ {{ lb.confirmed }}</p>
+        <p class="font-semibold text-tone-brand" role="status">✓ {{ lb.confirmed }}</p>
       } @else {
         <div class="flex flex-wrap items-end gap-2">
           <label class="text-xs font-semibold text-muted-foreground">

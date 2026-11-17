@@ -13,8 +13,8 @@ export function Topbar({
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 py-4">
       <div className="min-w-0 flex-1">
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{title}</h1>
-        {subtitle && <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>}
+        <h1 className="title-page">{title}</h1>
+        {subtitle && <p className="mt-0.5 text-muted-foreground">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2.5">{actions}</div>}
     </div>

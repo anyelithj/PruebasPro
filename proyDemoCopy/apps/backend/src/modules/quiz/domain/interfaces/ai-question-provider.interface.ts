@@ -35,6 +35,7 @@ export interface GenerateAIQuestionsOptions {
   difficulty?: Difficulty;
   type?: QuestionType;
   language?: Language;
+  sourceText?: string; // [2026-11-03]: material importado (archivo/enlace) → preguntas basadas SOLO en él
 }
 
 // [Contrato motor]: implementado por adapters (QwenProvider, MistralProvider, futuros) | [Patrón]: Strategy (Port) | [Principio]: OCP — abierto a nuevos providers

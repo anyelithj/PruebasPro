@@ -3,10 +3,11 @@ import { IsIn, IsString, MinLength } from 'class-validator';
 // [DTO OAuthLogin]: entrada para intercambio id_token → JWT propio | [Patrón]: DTO | [Principio]: ISP
 
 export class OAuthLoginDto {
-  @ApiProperty({ enum: ['google', 'microsoft'], example: 'google' })
+  // [2026-11-16]: solo Google (Microsoft retirado) | `@IsIn` (class-validator): rechaza cualquier otro proveedor con 400
+  @ApiProperty({ enum: ['google'], example: 'google' })
   @IsString()
-  @IsIn(['google', 'microsoft'])
-  provider!: 'google' | 'microsoft';
+  @IsIn(['google'])
+  provider!: 'google';
 
   @ApiProperty({ description: 'OIDC id_token emitido por el provider' })
   @IsString()

@@ -31,7 +31,7 @@ export interface CryptoPaymentTexts {
     @let t = texts();
     <div class="space-y-4">
       <dl class="grid gap-3 text-sm sm:grid-cols-2">
-        <div><dt class="text-muted-foreground">{{ t.amount }}</dt><dd class="eeg-mono text-lg font-extrabold">{{ eth() }} ETH</dd></div>
+        <div><dt class="text-muted-foreground">{{ t.amount }}</dt><dd class="eeg-mono type-lead font-extrabold">{{ eth() }} ETH</dd></div>
         <div><dt class="text-muted-foreground">{{ t.expires }}</dt><dd><time [attr.datetime]="p.expiresAt">{{ expires() }}</time></dd></div>
         <div><dt class="text-muted-foreground">{{ t.to }}</dt><dd class="eeg-mono" [title]="p.toAddress">{{ short(p.toAddress) }}</dd></div>
         <div><dt class="text-muted-foreground">{{ t.from }}</dt><dd class="eeg-mono" [title]="p.walletAddress">{{ short(p.walletAddress) }}</dd></div>
@@ -46,7 +46,7 @@ export interface CryptoPaymentTexts {
         }
       </div>
       @if (p.txHash) {
-        <p class="text-sm">{{ t.tx }}: <a class="eeg-mono text-primary hover:underline" [href]="txUrl()" target="_blank" rel="noopener noreferrer">{{ short(p.txHash) }}</a></p>
+        <p>{{ t.tx }}: <a class="eeg-mono text-primary hover:underline" [href]="txUrl()" target="_blank" rel="noopener noreferrer">{{ short(p.txHash) }}</a></p>
       }
       @if (p.status === 'pending') {
         <button aulaButton type="button" class="w-full sm:w-auto" [loading]="sending()" (click)="pay.emit()">{{ sending() ? t.sending : t.pay(eth()) }}</button>

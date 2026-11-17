@@ -5,6 +5,7 @@ import { BookOpenText, CheckCircle2, Circle, Lock } from "lucide-react";
 import { Markdown } from "@/components/shared/Markdown";
 import { parseSyllabus } from "@/lib/syllabus";
 import { completeTopicAction } from "@/lib/purchase-actions";
+import { STATUS_PILL, statusPillStyle } from "@/components/courses/SyllabusList";
 // [CourseSyllabus · 2026-10-25]: TEMARIO del curso en su página = subtemas desplegables (definición, uso, reglas, ejemplos, videos de YouTube)
 // Bloqueado hasta iniciar el curso · cada subtema se marca «Estudiado» → cuenta en el progreso | [Patrón]: Disclosure (<details>) + Optimistic Update | [A11y]: <details>/<summary> nativos
 
@@ -15,9 +16,10 @@ interface Props {
   locked: boolean; // Sin inscripción/compra → solo los títulos
   canTrack: boolean; // Inscrito → puede marcar
   color: string;
+  lang: string; // [2026-10-30]: idioma del curso (ISO 639-1) → palabras coloreadas y diccionario, como en la lección
 }
 
-export function CourseSyllabus({ courseId, content, completed, locked, canTrack, color }: Props) {
+export function CourseSyllabus({ courseId, content, completed, locked, canTrack, color, lang }: Props) {
   const topics = parseSyllabus(content);
   const [done, setDone] = useState(() => new Set(completed));
   const [error, setError] = useState<string | null>(null);
@@ -49,13 +51,13 @@ export function CourseSyllabus({ courseId, content, completed, locked, canTrack,
   return (
     <section aria-labelledby="syllabus-title" className="rounded-2xl border border-[var(--nl-brd)] bg-[var(--nl-surf)] p-5 shadow-[var(--nl-shd)]">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 id="syllabus-title" className="flex items-center gap-2 text-sm font-semibold text-[var(--nl-txt)]">
+        <h2 id="syllabus-title" className="title-section flex items-center gap-2 text-[var(--nl-txt)]">
           <BookOpenText aria-hidden className="size-4" style={{ color }} /> Temario del curso
         </h2>
-        {!locked && <span className="text-xs text-muted-foreground">{count} de {topics.length} subtemas estudiados</span>}
+        {!locked && <span className="text-xs text-muted-foreground">{count} de {topics.length} subtemas completados</span>}
       </div>
       {locked && (
-        <p className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
+        <p className="mb-3 flex items-center gap-2 text-muted-foreground">
           <Lock aria-hidden className="size-4" /> Inicia el curso (inscríbete o cómpralo) para estudiar cada subtema.
         </p>
       )}
@@ -65,7 +67,7 @@ export function CourseSyllabus({ courseId, content, completed, locked, canTrack,
           return (
             <li key={`${i}-${t.title}`}>
               {locked ? (
-                <p className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground">
+                <p className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-muted-foreground">
                   <Lock aria-hidden className="size-3.5" /> {i + 1}. {t.title}
                 </p>
               ) : (
@@ -73,13 +75,14 @@ export function CourseSyllabus({ courseId, content, completed, locked, canTrack,
                   <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-sm font-semibold">
                     {isDone ? <CheckCircle2 aria-hidden className="size-4 text-tone-brand" /> : <Circle aria-hidden className="size-4 text-muted-foreground" />}
                     <span className="flex-1">{i + 1}. {t.title}</span>
-                    <span className="text-xs font-normal text-muted-foreground">{isDone ? "Estudiado" : "Pendiente"}</span>
+                    {/* [Fix 2026-10-31]: misma píldora y estado que Recursos y la lección */}
+                    <span className={STATUS_PILL} style={statusPillStyle(color)}>{isDone ? "✓ Completado" : "Pendiente"}</span>
                   </summary>
                   <div className="space-y-3 border-t border-border px-3 py-3">
-                    <Markdown text={t.body || "Este subtema aún no tiene explicación."} className="text-sm leading-relaxed" />
+                    <Markdown text={t.body || "Este subtema aún no tiene explicación."} lang={lang} className="text-sm leading-relaxed" />
                     {canTrack && (
                       <button type="button" className={isDone ? "btn btn-ghost btn-sm" : "btn btn-primary btn-sm"} disabled={pending} onClick={() => toggle(t.title)}>
-                        {isDone ? "Marcar como pendiente" : "✓ Marcar como estudiado"}
+                        {isDone ? "Marcar como pendiente" : "✓ Marcar como completado"}
                       </button>
                     )}
                   </div>
@@ -89,7 +92,7 @@ export function CourseSyllabus({ courseId, content, completed, locked, canTrack,
           );
         })}
       </ol>
-      {error && <p role="alert" className="mt-2 text-xs text-tone-danger">{error}</p>}
+      {error && <p role="alert" className="mt-2 type-meta text-tone-danger">{error}</p>}
     </section>
   );
 }

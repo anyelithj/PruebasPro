@@ -23,6 +23,8 @@ RUN pnpm build \
 
 # ───────────── Etapa 2: ejecución ─────────────
 FROM node:24.22.1-alpine AS runner
+# [2026-11-02]: fuente con símbolos IPA para los PDF de Lectura (render-pdf.ts → IPA_FONTS)
+RUN apk add --no-cache font-dejavu
 WORKDIR /app
 ENV NODE_ENV=production
 

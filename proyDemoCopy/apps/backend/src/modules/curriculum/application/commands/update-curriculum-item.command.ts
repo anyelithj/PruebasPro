@@ -1,3 +1,5 @@
+import { vocabularyArticleProblem } from '../../domain/content/vocabulary-article'; // [2026-11-02]: artículo obligatorio en sustantivos de/fr/pt/es
+import { CurriculumItemKind } from '../../domain/value-objects/curriculum-item-kind.vo';
 import {
   BadRequestException,
   ConflictException,
@@ -24,6 +26,7 @@ import {
   type CurriculumActor,
 } from '../curriculum-actor';
 import { resolveCatalogRefs } from '../resolve-catalog-refs';
+import { assertNoDuplicateHeadline } from '../duplicate-headline'; // [2026-10-28]: sin elementos repetidos dentro del tema
 import type { UpdateCurriculumItemDto } from '../dtos/curriculum-item.dto';
 // [Command UpdateCurriculumItem]: edición versionada con concurrencia optimista y revisión de auditoría | [Patrón]: Command Handler (CQRS) + Optimistic Locking | [Principio]: SRP + DIP | [Paradigma]: POO + async/await
 
@@ -124,8 +127,30 @@ export class UpdateCurriculumItemCommand {
       const mismatch = languageMismatch(nextLanguage, validation.content); // [Coherencia de idioma]: regla de dominio
       if (mismatch)
         throw new BadRequestException([`content.ipa.variant: ${mismatch}`]);
+      const articleError = nextKind === CurriculumItemKind.VOCABULARY ? vocabularyArticleProblem(nextLanguage, validation.content) : null;
+      if (articleError) throw new BadRequestException([`content.article: ${articleError}`]);
       changes.content = validation.content; // Guarda la versión normalizada
     }
+
+    // [Fix 2026-10-28 · Sin duplicados]: si cambia el contenido, el ámbito (idioma, nivel, tipo) o el tema, el titular no puede repetir otro elemento del tema (el propio no cuenta)
+    if (
+      changes.content !== undefined ||
+      changes.kind !== undefined ||
+      changes.language !== undefined ||
+      changes.level !== undefined ||
+      changes.topic !== undefined
+    )
+      await assertNoDuplicateHeadline(
+        this.repo,
+        {
+          language: nextLanguage,
+          level: changes.level ?? item.level,
+          kind: nextKind,
+          topic: (changes.topic ?? item.topic).trim(),
+          content: (changes.content as Record<string, unknown> | undefined) ?? item.content,
+        },
+        id,
+      );
 
     const wasApproved = item.reviewStatus === ReviewStatus.APPROVED; // Estado previo
     // `Object.assign` (ES2015): aplica los cambios sobre la entidad cargada (mutación local controlada)

@@ -7,7 +7,7 @@ export type CertificateStatus = (typeof CERTIFICATE_STATUSES)[number];
 
 export const CertificateSchema = z.object({
   id: z.string(),
-  courseId: z.string(),
+  courseId: z.string().nullable(), // [2026-11-06]: null = certificado de NIVEL (examen sin curso)
   code: z.string(),
   recipientName: z.string(),
   courseTitle: z.string(),
@@ -17,13 +17,14 @@ export const CertificateSchema = z.object({
   status: z.enum(CERTIFICATE_STATUSES),
   revokeReason: z.string().nullable(),
   issuedAt: z.string(),
+  language: z.string().nullish(), // [2026-11-13]: idioma (filtro por píldoras) · null = no se pudo deducir
 });
 export type Certificate = z.infer<typeof CertificateSchema>; // `z.infer` (Zod): tipo derivado del esquema (DRY)
 
 // [MyCertificates]: emitidos + cursos al 100 % que aún no tienen certificado (botón «Solicitar»)
 export const MyCertificatesSchema = z.object({
   items: z.array(CertificateSchema),
-  eligible: z.array(z.object({ courseId: z.string(), title: z.string() })),
+  eligible: z.array(z.object({ courseId: z.string(), title: z.string(), examPassed: z.boolean().default(true) })), // [2026-11-06]: false → enlace al examen final
 });
 export type MyCertificates = z.infer<typeof MyCertificatesSchema>;
 
@@ -55,3 +56,14 @@ export function parseLookup(raw: string): CertificateLookup | null {
   const code = v.toUpperCase();
   return CERTIFICATE_CODE.test(code) ? { kind: 'code', value: code } : null;
 }
+
+// ───── [Caso E · 2026-11-13]: comprobar el PDF en el navegador (el archivo nunca sale del equipo) ─────
+// [sha256Hex]: huella SHA-256 en hexadecimal | `crypto.subtle.digest` (Web Crypto API, contexto seguro) | Función pura respecto de los bytes
+export async function sha256Hex(data: ArrayBuffer): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  // `Uint8Array` + `padStart` (ES2017): cada byte → 2 dígitos hex
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+}
+// [sameHash]: comparación sin mayúsculas ni prefijo 0x | Función pura
+export const sameHash = (a: string, b: string): boolean => a.trim().toLowerCase().replace(/^0x/, '') === b.trim().toLowerCase().replace(/^0x/, '');
+export type PdfCheck = 'idle' | 'checking' | 'match' | 'mismatch' | 'error';

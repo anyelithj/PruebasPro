@@ -20,7 +20,7 @@ cd apps/backend
 $ cd apps/backend
 $ pnpm run start
 ---
-
+pnpm migration:run
 ## 2. Instalar dependencias de producción
 
 ```bash

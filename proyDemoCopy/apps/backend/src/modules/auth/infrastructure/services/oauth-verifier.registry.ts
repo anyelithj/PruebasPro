@@ -4,20 +4,16 @@ import type {
   IOAuthVerifierRegistry,
 } from '../../domain/interfaces/oauth-verifier.interface';
 import { GoogleOAuthVerifier } from './google-oauth.verifier';
-import { MicrosoftOAuthVerifier } from './microsoft-oauth.verifier';
 // [Adapter Registry]: lookup provider → verifier | [Patrón]: Registry + Strategy | [Principio]: OCP
+// [2026-11-16]: Microsoft retirado → solo Google; otro proveedor = nuevo verifier + una entrada en el Map
 
 @Injectable()
 export class OAuthVerifierRegistry implements IOAuthVerifierRegistry {
   private readonly map: Map<string, IOAuthVerifier>;
 
-  constructor(
-    private readonly google: GoogleOAuthVerifier,
-    private readonly microsoft: MicrosoftOAuthVerifier,
-  ) {
+  constructor(private readonly google: GoogleOAuthVerifier) {
     this.map = new Map<string, IOAuthVerifier>([
       [this.google.provider, this.google],
-      [this.microsoft.provider, this.microsoft],
     ]);
   }
 

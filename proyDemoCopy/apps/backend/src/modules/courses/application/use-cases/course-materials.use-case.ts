@@ -4,8 +4,11 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { COURSE_COMPLETED_EVENT } from '../../domain/events/course-completed.event';
 import { Repository } from 'typeorm';
 import { Course } from '../../domain/entities/course.entity';
 import { CourseEnrollment } from '../../domain/entities/course-enrollment.entity';
@@ -19,6 +22,7 @@ import {
   type FileStorage,
 } from '../../domain/interfaces/file-storage.interface';
 import type { RangedSource } from '../../../../shared/http/ranged-response';
+import { canManageCourse } from '../policies/course-ownership.policy'; // [2026-10-27]: el docente dueño gestiona el material de SUS cursos
 // [Casos de uso de materiales]: subir, listar, obtener y borrar videos/PDF de un curso | [Patrón]: Use Case + Port/Adapter (FileStorage) | [Principio]: SRP + DIP | [Paradigma]: POO + async/await
 
 // [Tipos MIME admitidos → tipo de material]: lista blanca (nunca se acepta ejecutable ni HTML) | [Seguridad] | [Patrón]: Lookup Table
@@ -112,9 +116,10 @@ export class CourseMaterialsUseCase {
     @InjectRepository(CourseEnrollment)
     private readonly enrollments: Repository<CourseEnrollment>,
     @Inject(FILE_STORAGE) private readonly storage: FileStorage,
+    @Optional() private readonly events?: EventEmitter2, // [2026-11-06]: avisa «curso completado» → Quiz genera el examen final
   ) {}
 
-  // [Control de acceso]: ADMIN siempre; resto solo si compró el curso o se inscribió (gratis) | [Seguridad]: se aplica en listar, descargar y completar (la URL del archivo no basta)
+  // [Control de acceso]: ADMIN siempre; el docente DUEÑO (2026-10-27) también; resto solo si compró el curso o se inscribió (gratis) | [Seguridad]: se aplica en listar, descargar y completar (la URL del archivo no basta)
   async assertAccess(
     courseId: string,
     viewer: MaterialViewer,
@@ -128,11 +133,43 @@ export class CourseMaterialsUseCase {
     const enrollment = await this.enrollments.findOne({
       where: { userId: viewer.id, courseId },
     });
+    // [Dueño]: el docente que creó el curso ve su material sin comprarlo | `exists` (TypeORM): EXISTS sin traer la fila
+    if (
+      !enrollment?.purchasedAt &&
+      viewer.role === Role.TEACHER &&
+      (await this.courses.exists({
+        where: { id: courseId, createdBy: viewer.id },
+      }))
+    )
+      return enrollment;
     if (!enrollment?.purchasedAt)
       throw new ForbiddenException(
         'Compra o inscríbete en el curso para ver su material',
       );
     return enrollment;
+  }
+
+  // [assertManage · 2026-10-27]: el curso existe y (con `actor`) quien pide es ADMIN o el docente dueño → si no, 404/403 | [Patrón]: Guard Clause + Policy
+  // `actor?` (TS opcional): sin actor (uso interno/tests) solo se comprueba que el curso exista, como antes
+  private async assertManage(
+    courseId: string,
+    actor?: MaterialViewer,
+  ): Promise<void> {
+    if (!actor) {
+      if (!(await this.courses.exists({ where: { id: courseId } })))
+        throw new NotFoundException(`Curso ${courseId} no encontrado`);
+      return;
+    }
+    // `select`: solo el dueño (no trae `content`, que puede ser largo)
+    const course = await this.courses.findOne({
+      where: { id: courseId },
+      select: { id: true, createdBy: true },
+    });
+    if (!course) throw new NotFoundException(`Curso ${courseId} no encontrado`);
+    if (!canManageCourse(course, actor))
+      throw new ForbiddenException(
+        'Solo puedes gestionar el material de los cursos que creaste.',
+      );
   }
 
   // [Marcar completado]: añade el material a la línea de tiempo del usuario y recalcula el progreso (0..100) | idempotente | [Patrón]: Command
@@ -180,8 +217,16 @@ export class CourseMaterialsUseCase {
     if (done) set.add(topic);
     else set.delete(topic);
     enrollment.completedTopics = topics.filter((t) => set.has(t));
-    const materials = await this.materials.count({ where: { courseId } });
-    await this.recompute(courseId, enrollment, materials, topics);
+    // [Fix 2026-10-28]: se descartan ids de recursos ya borrados (igual que en complete) → antes un recurso eliminado seguía sumando y el % no coincidía con el de Next (lib/course-progress)
+    const all = await this.materials.find({
+      where: { courseId },
+      select: { id: true },
+    });
+    const valid = new Set(all.map((m) => m.id));
+    enrollment.completedMaterialIds = (
+      enrollment.completedMaterialIds ?? []
+    ).filter((x) => valid.has(x));
+    await this.recompute(courseId, enrollment, all.length, topics);
     return {
       completedTopics: enrollment.completedTopics,
       progress: enrollment.progress,
@@ -221,11 +266,18 @@ export class CourseMaterialsUseCase {
     enrollment.progress = total
       ? Math.min(100, Math.round((done / total) * 100))
       : 0;
+    const justCompleted =
+      enrollment.progress === 100 && !enrollment.completedAt;
     enrollment.completedAt =
       enrollment.progress === 100
         ? (enrollment.completedAt ?? new Date())
         : null;
     await this.enrollments.save(enrollment);
+    if (justCompleted)
+      this.events?.emit(COURSE_COMPLETED_EVENT, {
+        userId: enrollment.userId,
+        courseId,
+      });
   }
 
   // [Listar]: orden estable (posición y fecha) — tras comprobar el acceso
@@ -245,6 +297,7 @@ export class CourseMaterialsUseCase {
     courseId: string,
     file: StoredUpload | undefined,
     title: string | undefined,
+    actor?: MaterialViewer, // [2026-10-27]: ADMIN o docente dueño
   ): Promise<CourseMaterial> {
     if (!file)
       throw new BadRequestException(
@@ -257,8 +310,7 @@ export class CourseMaterialsUseCase {
         throw new BadRequestException(
           `Tipo de archivo no permitido: ${file.mimetype}`,
         );
-      if (!(await this.courses.exists({ where: { id: courseId } })))
-        throw new NotFoundException(`Curso ${courseId} no encontrado`);
+      await this.assertManage(courseId, actor); // Dentro del try → si es 403/404 el binario ya subido también se borra (compensación)
       const position = await this.materials.count({ where: { courseId } }); // Al final de la lista
       await this.storage.commit(file.filename, mimeType); // [Sprint 6.7]: disco local (no-op) o bucket S3 (MinIO/R2)
       return await this.materials.save(
@@ -284,6 +336,7 @@ export class CourseMaterialsUseCase {
     courseId: string,
     url: string,
     title: string | undefined,
+    actor?: MaterialViewer, // [2026-10-27]: ADMIN o docente dueño
   ): Promise<CourseMaterial> {
     let parsed: URL;
     try {
@@ -293,8 +346,7 @@ export class CourseMaterialsUseCase {
     }
     if (!/^https?:$/.test(parsed.protocol))
       throw new BadRequestException('Solo se admiten enlaces http(s)');
-    if (!(await this.courses.exists({ where: { id: courseId } })))
-      throw new NotFoundException(`Curso ${courseId} no encontrado`);
+    await this.assertManage(courseId, actor);
     const position = await this.materials.count({ where: { courseId } });
     return this.materials.save(
       this.materials.create({
@@ -359,7 +411,12 @@ export class CourseMaterialsUseCase {
   }
 
   // [Borrar]: metadatos y binario
-  async remove(courseId: string, id: string): Promise<{ deleted: true }> {
+  async remove(
+    courseId: string,
+    id: string,
+    actor?: MaterialViewer, // [2026-10-27]: ADMIN o docente dueño
+  ): Promise<{ deleted: true }> {
+    await this.assertManage(courseId, actor);
     const material = await this.file(courseId, id);
     await this.materials.delete(material.id);
     if (material.storageKey) await this.storage.remove(material.storageKey); // Enlaces: sin binario

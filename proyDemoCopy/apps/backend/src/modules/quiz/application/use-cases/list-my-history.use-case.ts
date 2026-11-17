@@ -1,3 +1,4 @@
+import { isExam } from '../../domain/exam-rules';
 import { Inject, Injectable } from '@nestjs/common';
 import {
   QUIZ_REPOSITORY,
@@ -43,6 +44,11 @@ export interface MyHistoryItem {
   startedAt: string;
   completedAt?: string;
   answers: MyHistoryAnswerView[];
+  quizKind: 'practice' | 'final' | 'level';
+  courseId: string | null;
+  passScore: number;
+  percent: number | null;
+  passed: boolean | null;
 }
 
 @Injectable()
@@ -62,7 +68,8 @@ export class ListMyHistoryUseCase {
       const questionsById = new Map(
         (quiz.questions ?? []).map((q) => [q.id, q] as const),
       );
-      const totalQuestions = quiz.questions?.length ?? s.answers.length;
+      const totalQuestions = s.questionIds?.length ?? quiz.questions?.length ?? s.answers.length;
+      const hide = isExam(quiz.kind);
       const answers: MyHistoryAnswerView[] = s.answers.map(
         (a: SessionAnswer): MyHistoryAnswerView => {
           const q = questionsById.get(a.questionId);
@@ -72,13 +79,13 @@ export class ListMyHistoryUseCase {
             questionType: q?.type ?? QuestionType.MULTIPLE_CHOICE,
             options: q?.options,
             userAnswer: a.userAnswer,
-            correctAnswer: q?.correctAnswer ?? '',
+            correctAnswer: hide ? '' : (q?.correctAnswer ?? ''), // [2026-11-06]: examen → sin la respuesta (el banco se reutiliza entre intentos)
             isCorrect: a.isCorrect,
             score: a.score,
             timeTakenMs: a.timeTakenMs,
             answeredAt: a.answeredAt,
-            feedback: q?.feedback,
-            explanation: q?.explanation,
+            feedback: hide ? undefined : q?.feedback,
+            explanation: hide ? undefined : q?.explanation,
           };
         },
       );
@@ -96,6 +103,11 @@ export class ListMyHistoryUseCase {
         startedAt: s.startedAt.toISOString(),
         completedAt: s.completedAt?.toISOString(),
         answers,
+        quizKind: quiz.kind, // [2026-11-06]: practice | final | level
+        courseId: quiz.courseId,
+        passScore: quiz.passScore,
+        percent: s.percent,
+        passed: s.passed,
       });
     }
     return items;

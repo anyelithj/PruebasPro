@@ -6,6 +6,8 @@
 <script setup lang="ts">
 import { onMounted } from "vue";
 import Button from "~~/shared/ui/Button.vue";
+import TablePager from "~~/shared/ui/TablePager.vue";
+import { useLocalPage } from "~~/shared/composable/useLocalPage";
 import ActionButton from "~~/shared/ui/ActionButton.vue"; // Acción de fila solo con ícono (ancho uniforme)
 import { formatNumber } from "~~/shared/lib/format";
 import { useCacheManager, STRATEGY_OF } from "../composable/useCacheManager";
@@ -13,6 +15,7 @@ import { clearableCache } from "../lib/pwa.validator";
 
 const { caches, usage, loading, refresh, clear } = useCacheManager();
 const { locale } = useI18n();
+const rows = useLocalPage(caches);
 const mb = (bytes: number) => `${formatNumber(Math.round(bytes / 1024 / 1024), locale.value)} MB`;
 const canClear = (name: string) => clearableCache.safeParse(name).success;
 onMounted(refresh);
@@ -44,7 +47,7 @@ onMounted(refresh);
         </thead>
         <tbody class="divide-y">
           <tr v-if="!caches.length"><td colspan="4" class="px-3 py-6 text-center text-slate-500">{{ $t("pwa.cache.empty") }}</td></tr>
-          <tr v-for="item in caches" :key="item.name">
+          <tr v-for="item in rows.visible.value" :key="item.name">
             <td class="px-3 py-2 font-mono text-xs">{{ item.name }}</td>
             <td class="px-3 py-2">{{ STRATEGY_OF[item.name] ?? "Precache" }}</td>
             <td class="px-3 py-2 text-right tabular-nums">{{ item.entries }}</td>
@@ -55,5 +58,6 @@ onMounted(refresh);
         </tbody>
       </table>
     </div>
+    <TablePager :meta="rows.meta.value" @page="rows.page.value = $event" />
   </section>
 </template>

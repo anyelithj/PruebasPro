@@ -34,8 +34,8 @@ import {
     @if (entry(); as e) {
       <!-- ───── Corrección ───── -->
       <form class="space-y-3" (submit)="onPatch($event, e)" novalidate>
-        <h2 class="text-base font-bold">{{ i18n.fmt(tx.detailTitle, { term: e.term }) }}</h2>
-        <p class="text-xs text-muted-foreground">{{ tx.manualHint }}</p>
+        <h2 class="title-section">{{ i18n.fmt(tx.detailTitle, { term: e.term }) }}</h2>
+        <p class="type-meta text-muted-foreground">{{ tx.manualHint }}</p>
         <aula-form-field fieldId="entry-translation" [label]="tx.colTranslation">
           <aula-text-input inputId="entry-translation" [formField]="p.translation" />
         </aula-form-field>
@@ -75,7 +75,7 @@ import {
         (submit)="onCreate($event)"
         novalidate
       >
-        <h2 class="text-base font-bold sm:col-span-2 lg:col-span-4">{{ tx.addTitle }}</h2>
+        <h2 class="title-section sm:col-span-2 lg:col-span-4">{{ tx.addTitle }}</h2>
         <aula-form-field fieldId="entry-term" [label]="tx.term"
           ><aula-text-input inputId="entry-term" [formField]="c.term"
         /></aula-form-field>

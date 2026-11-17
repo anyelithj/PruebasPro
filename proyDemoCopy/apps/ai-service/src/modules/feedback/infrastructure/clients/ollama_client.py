@@ -7,6 +7,7 @@
 [Fallback]: si Ollama no responde, generate() retorna texto canned (no levanta excepcion para no romper UX educativa).
 """
 import logging
+import re
 
 import httpx
 
@@ -14,6 +15,8 @@ from src.shared.config.settings import get_settings
 from src.shared.exceptions.custom_errors import ModelInferenceError
 
 logger = logging.getLogger("ai-service.ollama")
+# [2026-11-05]: mensajes de llama.cpp/Ollama cuando el modelo no cabe en RAM → se prueba el siguiente modelo más pequeño
+_OOM = re.compile(r"bad_alloc|out[ -]of[ -]memory|failed to allocate|requires more system memory|not enough memory|cannot allocate", re.I)
 
 
 class OllamaClient:
@@ -24,6 +27,7 @@ class OllamaClient:
         self._url = s.ollama_url.rstrip("/")
         self._model = s.ollama_model
         self._keep_alive = s.ollama_keep_alive
+        self._fallbacks = [m.strip() for m in s.ollama_fallback_models.split(",") if m.strip() and m.strip() != s.ollama_model]
         # [Timeout corto para evitar bloqueo en UI]: si LLM tarda > 30s, fallback
         self._timeout = httpx.Timeout(timeout)
 
@@ -51,12 +55,20 @@ class OllamaClient:
         if json_mode:
             payload["format"] = "json"
 
+        # Modelo explícito (p. ej. el LLM propio) → sin respaldo; el modelo por defecto → cadena de respaldo ante falta de RAM
+        chain = [payload["model"]] if model else [payload["model"], *self._fallbacks]
         try:
             async with httpx.AsyncClient(timeout=self._timeout) as client:
-                res = await client.post(f"{self._url}/api/generate", json=payload)
-                res.raise_for_status()
-                data = res.json()
-                return str(data.get("response", "")).strip()
+                for i, name in enumerate(chain):
+                    payload["model"] = name
+                    res = await client.post(f"{self._url}/api/generate", json=payload)
+                    if res.status_code >= 500 and i + 1 < len(chain) and _OOM.search(res.text):
+                        logger.warning("Ollama sin RAM para %s; se prueba %s", name, chain[i + 1])
+                        continue
+                    res.raise_for_status()
+                    data = res.json()
+                    return str(data.get("response", "")).strip()
+                raise httpx.HTTPError("sin modelo disponible")
         except (httpx.HTTPError, httpx.TimeoutException) as exc:
             if strict:  # [Sprint 5.6]: el llamador decide el respaldo (siguiente modelo de la cadena)
                 raise ModelInferenceError(f"Ollama ({payload['model']}) no respondió: {exc}") from exc

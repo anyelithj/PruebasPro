@@ -29,14 +29,21 @@ export const READING_GENRE_LABEL: Readonly<Record<ReadingGenre, string>> =
 // [Instrucción para el LLM por género]: qué forma debe tener el texto (en inglés: los modelos pequeños siguen mejor las instrucciones en inglés) | [Patrón]: Strategy (por datos)
 export const READING_GENRE_PROMPT: Readonly<Record<ReadingGenre, string>> =
   Object.freeze({
-    [ReadingGenre.TALE]: 'a short story with a beginning, a problem and an ending',
-    [ReadingGenre.FABLE]: 'a fable with animal characters and a final moral in one sentence',
-    [ReadingGenre.ANIMALS]: 'an informative text about an animal (habitat, food, behaviour, a curious fact)',
-    [ReadingGenre.POEM]: 'a simple rhyming poem; each verse on its own line, stanzas separated by a blank line',
-    [ReadingGenre.NEWS]: 'a short news article (headline-style first sentence, who/what/where/when/why)',
-    [ReadingGenre.DIALOGUE]: 'a narrated dialogue between two characters using quotation marks',
-    [ReadingGenre.BIOGRAPHY]: 'a short biography of a real, well-known historical person (only facts you are sure about)',
-    [ReadingGenre.LEGEND]: 'a traditional-style legend that explains the origin of something',
+    [ReadingGenre.TALE]: 'a story with a beginning, a problem and an ending', // [2026-10-27]: sin «short» (tale, news, biography) → los modelos pequeños lo leían como «dos frases»
+    [ReadingGenre.FABLE]:
+      'a fable with animal characters and a final moral in one sentence',
+    [ReadingGenre.ANIMALS]:
+      'an informative text about an animal (habitat, food, behaviour, a curious fact)',
+    [ReadingGenre.POEM]:
+      'a simple rhyming poem; each verse on its own line, stanzas separated by a blank line',
+    [ReadingGenre.NEWS]:
+      'a news article (headline-style first sentence, who/what/where/when/why)',
+    [ReadingGenre.DIALOGUE]:
+      'a narrated dialogue between two characters using quotation marks',
+    [ReadingGenre.BIOGRAPHY]:
+      'a biography of a real, well-known historical person (only facts you are sure about)',
+    [ReadingGenre.LEGEND]:
+      'a traditional-style legend that explains the origin of something',
   });
 
 // [Type guard]: `value is ReadingGenre` (TS) estrecha el tipo en el llamador

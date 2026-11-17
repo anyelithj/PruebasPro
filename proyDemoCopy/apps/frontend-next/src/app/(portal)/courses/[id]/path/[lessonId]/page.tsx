@@ -36,17 +36,18 @@ export default async function LessonPage(props: PageProps) {
       </nav>
 
       <header className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-tone-brand">
+        <p className="type-meta font-semibold uppercase tracking-wide text-tone-brand">
           Lección {position.index} de {position.total}
           {lesson.completed && " · ✓ Completada"}
         </p>
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{lesson.title}</h1>
-        {lesson.topic && <p className="text-sm text-muted-foreground">Tema: {lesson.topic}</p>}
+        <h1 className="title-page">{lesson.title}</h1>
+        {lesson.topic && <p className="text-muted-foreground">Tema: {lesson.topic}</p>}
         {/* [Sprint 7.14]: foro de la lección (pantalla Angular) → <a> con navegación completa, como los ítems `hard` del menú */}
         <a href={`/foros/leccion/${lesson.id}`} className="inline-block text-sm font-semibold text-primary hover:underline">
           <MessageCircle aria-hidden className="inline size-4 align-[-0.125em]" /> Foro de esta lección
         </a>
-        <div role="progressbar" aria-label="Avance en el curso" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} className="h-1.5 overflow-hidden rounded-full bg-muted">
+        {/* [Fix 2026-10-28]: esta barra es la POSICIÓN en la ruta (lección X de Y), no el avance completado → se rotula como tal para no confundirla con el progreso real */}
+        <div role="progressbar" aria-label="Posición en la ruta" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-valuetext={`Lección ${position.index} de ${position.total}`} className="h-1.5 overflow-hidden rounded-full bg-muted">
           <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
         </div>
       </header>
@@ -56,7 +57,7 @@ export default async function LessonPage(props: PageProps) {
         <ul className="space-y-3">
           {items.map((it) => (
             <li key={it.id} className="surface p-4">
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="mb-2 type-meta font-semibold uppercase tracking-wide text-muted-foreground">
                 <KindIcon kind={it.kind} /> {KIND_META[it.kind].label}
               </p>
               <ResourcePreview kind={it.kind} content={it.content} language={it.language} />
@@ -64,7 +65,7 @@ export default async function LessonPage(props: PageProps) {
           ))}
         </ul>
       ) : (
-        <p className="surface p-5 text-sm text-muted-foreground">Esta lección todavía no tiene contenido publicado.</p>
+        <p className="surface p-5 text-muted-foreground">Esta lección todavía no tiene contenido publicado.</p>
       )}
 
       {/* [Navegación de la línea de tiempo]: anterior · completar y continuar · siguiente */}

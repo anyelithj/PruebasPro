@@ -1,6 +1,6 @@
 import { CATEGORIES, categoryLabel } from "@/lib/categories";
 import type { Difficulty } from "@/types/quiz";
-import { ANGULAR_PREFIXES } from "@/config/angular"; // [Remoto Angular]: sus pantallas también exigen sesión
+import { ANGULAR_PREFIXES, ANGULAR_PUBLIC_PREFIXES } from "@/config/angular"; // [Remoto Angular]: sus pantallas también exigen sesión (salvo las públicas)
 // [Constantes globales]: rutas, cookies, tokens | [Patrón]: Constants Module | [Principio]: SSOT | [Paradigma]: Funcional
 
 // [Rutas del portal]: las protegidas por proxy
@@ -29,6 +29,14 @@ export const PORTAL_PREFIXES = [
   "/courses", // [Fix]: /courses no estaba protegido → sin sesión el SSR fallaba en vez de redirigir a /login
   ...ANGULAR_PREFIXES, // [Angular 22]: /tutor, /redaccion, /estudio, /notificaciones, /reportes (rewrites hacia :9100)
 ] as const;
+
+// [underPrefix]: ruta exacta o subruta («/certificados/verificar» sí cubre «/certificados/verificar/AULA-…», no «/certificados-x») | Función pura
+const underPrefix = (pathname: string, prefix: string): boolean => pathname === prefix || pathname.startsWith(`${prefix}/`);
+
+// [isProtectedPath · Caso E · 2026-11-13]: ¿la ruta exige sesión? Las públicas GANAN a las protegidas (la verificación vive dentro de /certificados)
+// SSOT para proxy.ts y auth.config.ts (antes cada uno hacía su propio `startsWith`) | Función pura
+export const isProtectedPath = (pathname: string): boolean =>
+  !ANGULAR_PUBLIC_PREFIXES.some((p) => underPrefix(pathname, p)) && PORTAL_PREFIXES.some((p) => pathname.startsWith(p));
 
 // [Rutas auth]: públicas
 export const AUTH_ROUTES = {

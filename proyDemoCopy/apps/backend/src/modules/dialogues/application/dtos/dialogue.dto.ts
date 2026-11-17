@@ -22,6 +22,10 @@ import { Language } from '../../../../shared/domain/language.vo';
 import { LicenseBody } from '../../../music/application/dtos/song.dto';
 // [DTOs Dialogues · Sprints 9.3/9.11–9.13]: contratos de entrada de temas, diálogos, turnos y conversaciones con el avatar — validados en la frontera | [Patrón]: DTO + Validation (class-validator) | [Principio]: Fail Fast + DRY (LicenseBody de Music) | [Paradigma]: Declarativo (decoradores)
 
+// [DIALOGUE_ORIGINS · 2026-10-27]: de dónde sale el texto del diálogo | `as const` (TS): tupla de literales → tipo derivado sin repetir la lista
+export const DIALOGUE_ORIGINS = ['ai', 'own', 'import'] as const;
+export type DialogueOrigin = (typeof DIALOGUE_ORIGINS)[number];
+
 export class TopicBody {
   @IsString() @MinLength(2) @MaxLength(120) title!: string;
   @IsOptional() @IsString() @MaxLength(16) emoji?: string;
@@ -79,7 +83,27 @@ export class CreateDialogueBody {
   @ValidateNested({ each: true })
   @Type(() => ScriptTurnBody)
   turns!: ScriptTurnBody[];
-  @ValidateNested() @Type(() => LicenseBody) license!: LicenseBody;
+  // [Origen · 2026-10-27]: «ai» (generado con la IA) · «own» (escrito por el docente) · «import» (texto de terceros: archivo, enlace, OCR, audio)
+  // Solo lo importado exige declarar la licencia (titular + confirmación); en lo propio o generado la pone el servidor | `@IsIn` (class-validator)
+  @IsOptional() @IsIn(DIALOGUE_ORIGINS) origin?: DialogueOrigin;
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => LicenseBody)
+  license?: LicenseBody; // [2026-10-27]: opcional (antes obligatoria también con IA)
+  @IsOptional() @IsEnum(CefrLevel) level?: CefrLevel; // [2026-10-27]: nivel elegido en «Crear actividad» → se puede publicar aunque el clasificador no responda
+}
+
+// [UpdateDialogueBody · 2026-10-27]: «Editar» de Gestión → Actividades → Diálogos (página de Next.js) — título, hablantes y nivel
+export class UpdateDialogueBody {
+  @IsOptional() @IsString() @MinLength(2) @MaxLength(160) title?: string;
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(2)
+  @ArrayMaxSize(2)
+  @IsString({ each: true })
+  @MaxLength(40, { each: true })
+  speakers?: string[];
+  @IsOptional() @IsEnum(CefrLevel) level?: CefrLevel;
 }
 
 export class ConfirmLevelBody {
@@ -109,4 +133,6 @@ export class StartSessionBody {
 
 export class UserTurnBody {
   @IsString() @MinLength(1) @MaxLength(600) text!: string; // Lo que dijo el usuario (transcrito por /speech/transcribe) o lo que escribió
+  // [2026-11-13 · Anexo A «origen»]: voz → una palabra sin sentido es un posible error de dictado (no falta del estudiante)
+  @IsOptional() @IsIn(['voz', 'escrito']) origin?: 'voz' | 'escrito';
 }

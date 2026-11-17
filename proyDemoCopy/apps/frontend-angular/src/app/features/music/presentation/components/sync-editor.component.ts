@@ -59,7 +59,7 @@ export interface SyncLabels {
         [(value)]="mode"
       />
       @if (mode() === 'manual') {
-        <p class="text-sm text-muted-foreground">{{ lb.help }}</p>
+        <p class="text-muted-foreground">{{ lb.help }}</p>
       }
       <audio #player class="w-full" controls preload="metadata" [src]="audioUrl()"></audio>
       <div class="flex flex-wrap gap-2">
@@ -82,12 +82,12 @@ export interface SyncLabels {
           </button>
         }
       </div>
-      <p class="text-xs font-semibold" aria-live="polite">{{ progress() }}</p>
+      <p class="type-meta font-semibold" aria-live="polite">{{ progress() }}</p>
       @if (fromProposal()) {
-        <p class="rounded-lg bg-tone-info-soft p-2 text-xs text-tone-info">ℹ {{ lb.proposed }}</p>
+        <p class="rounded-lg bg-tone-info-soft p-2 type-meta text-tone-info">ℹ {{ lb.proposed }}</p>
       }
       <ol
-        class="max-h-80 divide-y divide-border overflow-y-auto rounded-xl border border-border text-sm"
+        class="max-h-80 divide-y divide-border overflow-y-auto rounded-xl border border-border"
       >
         @for (l of lines(); track l.id; let i = $index) {
           <li class="flex items-center gap-3 p-2" [class.bg-tone-brand-soft]="i === next()">
@@ -110,14 +110,17 @@ export interface SyncLabels {
           </li>
         }
       </ol>
-      <button
-        type="button"
-        class="btn btn-primary"
-        [disabled]="next() === 0 || busy()"
-        (click)="emitSave()"
-      >
-        <aula-icon name="save" /> {{ lb.save }}
-      </button>
+      <!-- [2026-11-13]: «Guardar» sin icono y a la derecha -->
+      <div class="flex justify-end">
+        <button
+          type="button"
+          class="btn btn-primary"
+          [disabled]="next() === 0 || busy()"
+          (click)="emitSave()"
+        >
+          {{ lb.save }}
+        </button>
+      </div>
     </div>
   `,
 })

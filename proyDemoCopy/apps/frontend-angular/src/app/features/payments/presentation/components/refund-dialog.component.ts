@@ -29,7 +29,7 @@ export interface RefundTexts {
     @let tx = texts();
     <dialog #dlg class="w-[min(28rem,calc(100vw-2rem))] rounded-2xl border border-border bg-card p-0 text-foreground shadow-xl backdrop:bg-slate-900/50" aria-labelledby="refund-title" (close)="closed.emit()">
       <form class="space-y-4 p-5" (submit)="onSubmit($event)" novalidate>
-        <h2 id="refund-title" class="text-lg font-bold">{{ tx.title }}</h2>
+        <h2 id="refund-title" class="title-section">{{ tx.title }}</h2>
         <aula-form-field fieldId="refund-amount" [label]="tx.amount" [hint]="tx.hint" [error]="amountError()">
           <input id="refund-amount" type="number" inputmode="decimal" step="0.01" class="control w-full" [formField]="f.amount" [attr.aria-describedby]="amountError() ? 'refund-amount-error' : 'refund-amount-hint'" />
         </aula-form-field>

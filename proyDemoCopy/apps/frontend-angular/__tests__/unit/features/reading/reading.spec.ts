@@ -6,7 +6,7 @@ import { ReadingFacade } from '@features/reading/application/reading.facade';
 import { ReadingRepository } from '@features/reading/domain/reading.repository.port';
 import {
   estimateMs,
-  ipaWords,
+  mergeLinguistics,
   paragraphs,
   ReadingDetailSchema,
   readingMinutes,
@@ -39,12 +39,6 @@ describe('modelo de lectura', () => {
     expect(wordAtProgress(t, 0)).toBe(0);
     expect(wordAtProgress(t, 0.5)).toBe(1); // La palabra larga ocupa la mayor parte
     expect(wordAtProgress(t, 1)).toBe(2);
-  });
-
-  it('IPA palabra a palabra solo si coincide el recuento', () => {
-    const t = tokenize('The fox runs.');
-    expect(ipaWords('/ðə fɒks rʌnz/', t)).toEqual(['ðə', 'fɒks', 'rʌnz']);
-    expect(ipaWords('ðəfɒks rʌnz', t)).toBeNull();
   });
 
   it('estimación, minutos y párrafos', () => {
@@ -97,6 +91,8 @@ describe('ReadAloudPlayer', () => {
   it('boundary marca la palabra exacta', () => {
     const { player, calls } = setup();
     player.play(1);
+    calls[0]!.hooks.boundary!(0);
+    expect(player.sync()).toBe('estimate'); // [2026-10-31]: un solo evento no basta: algunas voces solo avisan al empezar
     calls[0]!.hooks.boundary!(5); // «cats»
     expect(player.word()).toBe(1);
     expect(player.sync()).toBe('boundary');
@@ -134,5 +130,47 @@ describe('ReadingFacade · marcador', () => {
     await expect(facade.saveProgress('t', { sentence: 2, word: 1, finished: false })).resolves.toBe(true);
     expect(saveProgress).toHaveBeenCalledTimes(1);
     await expect(facade.saveProgress('t', { sentence: 3, word: 0, finished: false })).resolves.toBe(false);
+  });
+});
+
+// [2026-10-28]: traducciones que NestJS completa en segundo plano → el lector sondea y las fusiona sin reiniciar la lectura
+describe('ReadingFacade · traducciones en segundo plano', () => {
+  const sentence = (position: number, translation: string | null) => ({ id: `s${position}`, paragraph: 0, position, text: `S${position}.`, translation, ipa: '', ipaUs: null });
+
+  it('mergeLinguistics rellena por posición y nunca borra lo que había', () => {
+    const merged = mergeLinguistics([sentence(0, 'Uno.'), sentence(1, null)], [sentence(0, null), sentence(1, 'Dos.')]);
+    expect(merged.map((s) => s.translation)).toEqual(['Uno.', 'Dos.']);
+  });
+
+  it('con enriching=true sondea hasta tener las traducciones y luego para', async () => {
+    jest.useFakeTimers();
+    const base = { id: 't', title: 'T', language: 'en', level: 'A1', genre: 'tale', topic: null, summary: null, status: 'published', sourceRef: null, sentenceCount: 1, wordCount: 1, editable: false, progress: null };
+    const get = jest
+      .fn()
+      .mockReturnValueOnce(of({ ...base, sentences: [sentence(0, null)], pending: 1, enriching: true }))
+      .mockReturnValueOnce(of({ ...base, sentences: [sentence(0, 'Hola.')], pending: 0, enriching: false }));
+    TestBed.configureTestingModule({ providers: [ReadingFacade, { provide: ReadingRepository, useValue: { get } }] });
+    const facade = TestBed.inject(ReadingFacade);
+    await facade.loadText('t');
+    expect(facade.translating()).toBe(true);
+    await jest.advanceTimersByTimeAsync(5_000);
+    expect(facade.text.data()?.sentences[0]?.translation).toBe('Hola.');
+    expect(facade.translating()).toBe(false);
+    await jest.advanceTimersByTimeAsync(20_000);
+    expect(get).toHaveBeenCalledTimes(2);
+    jest.useRealTimers();
+  });
+});
+
+// [2026-11-06]: con IPA visible cada palabra lleva SU IPA debajo (uniforme en todas las frases)
+import { wordIpa } from '../../../../src/app/features/reading/domain/models/reading';
+describe('wordIpa', () => {
+  it('una IPA por palabra; si espeak une dos palabras, la segunda queda vacía', () => {
+    const text = 'Once upon a time, there was a princess.';
+    const ipa = 'wˈʌns əpˌɒn ɐ tˈaɪm ðeəwˌɒz ɐ pɹˈɪnsɛs';
+    expect(wordIpa(tokenize(text), ipa)).toEqual(['wˈʌns', 'əpˌɒn', 'ɐ', 'tˈaɪm', 'ðeəwˌɒz', '', 'ɐ', 'pɹˈɪnsɛs']);
+  });
+  it('sin IPA: trozos vacíos', () => {
+    expect(wordIpa(tokenize('The beast.'), '')).toEqual(['', '']);
   });
 });

@@ -214,12 +214,12 @@ export default async function StudentHistoryPage(props: {
 
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
+          <h1 className="title-page">
             {student
               ? `${student.firstName} ${student.lastName}`
               : "Historial del estudiante"}
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-muted-foreground">
             {student ? student.email : "Seguimiento del estudiante"}
           </p>
         </div>
@@ -240,21 +240,21 @@ export default async function StudentHistoryPage(props: {
         className="grid gap-4 sm:grid-cols-4"
       >
         <article className="rounded-xl border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Exámenes completados</p>
+          <p className="type-meta text-muted-foreground">Exámenes completados</p>
           <p className="mt-1 text-2xl font-extrabold">{completed.length}</p>
         </article>
         <article className="rounded-xl border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Puntaje total</p>
+          <p className="type-meta text-muted-foreground">Puntaje total</p>
           <p className="mt-1 text-2xl font-extrabold">{totalScore.toFixed(0)}</p>
         </article>
         <article className="rounded-xl border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Respuestas correctas</p>
+          <p className="type-meta text-muted-foreground">Respuestas correctas</p>
           <p className="mt-1 text-2xl font-extrabold">
             {totalCorrect} / {totalQuestions}
           </p>
         </article>
         <article className="rounded-xl border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Precisión global</p>
+          <p className="type-meta text-muted-foreground">Precisión global</p>
           <p className="mt-1 text-2xl font-extrabold">
             {(overallAccuracy * 100).toFixed(1)}%
           </p>
@@ -266,19 +266,19 @@ export default async function StudentHistoryPage(props: {
         <>
           <section className="grid gap-4 sm:grid-cols-3" aria-label="Métricas adicionales">
             <article className="rounded-xl border bg-card p-4">
-              <p className="text-xs text-muted-foreground">Mejor puntaje (examen)</p>
+              <p className="type-meta text-muted-foreground">Mejor puntaje (examen)</p>
               <p className="mt-1 text-2xl font-extrabold">{bestScore}%</p>
             </article>
             <article className="rounded-xl border bg-card p-4">
-              <p className="text-xs text-muted-foreground">Tiempo medio / pregunta</p>
+              <p className="type-meta text-muted-foreground">Tiempo medio / pregunta</p>
               <p className="mt-1 text-2xl font-extrabold">
                 {(avgTimeMs / 1000).toFixed(1)}
                 <span className="text-base text-muted-foreground">s</span>
               </p>
             </article>
             <article className="rounded-xl border bg-card p-4">
-              <p className="text-xs text-muted-foreground">Competencia más débil</p>
-              <p className="mt-1 text-lg font-extrabold">
+              <p className="type-meta text-muted-foreground">Competencia más débil</p>
+              <p className="mt-1 type-lead font-extrabold">
                 {weakest ? categoryLabel(weakest.key) : "—"}
                 {weakest && (
                   <span className="ml-1 text-sm text-tone-warning">
@@ -292,7 +292,7 @@ export default async function StudentHistoryPage(props: {
           <section className="grid gap-6 lg:grid-cols-2">
             {/* [Precisión por materia] */}
             <div className="rounded-xl border bg-card p-5">
-              <h2 className="text-lg font-bold mb-3">Precisión por competencia</h2>
+              <h2 className="title-section mb-3">Precisión por competencia</h2>
               <div className="flex flex-col gap-3">
                 {byCategory.map((c) => {
                   const pct = Math.round(c.accuracy * 100);
@@ -318,7 +318,7 @@ export default async function StudentHistoryPage(props: {
 
             {/* [Precisión por dificultad] */}
             <div className="rounded-xl border bg-card p-5">
-              <h2 className="text-lg font-bold mb-3">Precisión por dificultad</h2>
+              <h2 className="title-section mb-3">Precisión por dificultad</h2>
               <div className="flex flex-col gap-3">
                 {byDifficulty.map((d) => {
                   const pct = Math.round(d.accuracy * 100);
@@ -346,7 +346,7 @@ export default async function StudentHistoryPage(props: {
           <section className="grid gap-6 lg:grid-cols-2">
             {/* [Precisión por tipo de pregunta] */}
             <div className="rounded-xl border bg-card p-5">
-              <h2 className="text-lg font-bold mb-3">Precisión por tipo de pregunta</h2>
+              <h2 className="title-section mb-3">Precisión por tipo de pregunta</h2>
               <div className="flex flex-col gap-3">
                 {byType.map((t) => {
                   const pct = Math.round(t.accuracy * 100);
@@ -372,9 +372,9 @@ export default async function StudentHistoryPage(props: {
 
             {/* [Tendencia de precisión por examen — sparkline en barras] */}
             <div className="rounded-xl border bg-card p-5">
-              <h2 className="text-lg font-bold mb-3">Evolución por examen</h2>
+              <h2 className="title-section mb-3">Evolución por examen</h2>
               {trend.length === 0 ? (
-                <p className="py-6 text-center text-sm text-muted-foreground">
+                <p className="py-6 text-center text-muted-foreground">
                   Sin exámenes completados.
                 </p>
               ) : (
@@ -399,8 +399,8 @@ export default async function StudentHistoryPage(props: {
           {/* [Recomendaciones que el sistema le hizo al estudiante] */}
           {recommendations.length > 0 && (
             <section className="rounded-xl border bg-card p-5">
-              <h2 className="text-lg font-bold mb-1">Recomendaciones del sistema al estudiante</h2>
-              <p className="text-xs text-muted-foreground mb-3">
+              <h2 className="title-section mb-1">Recomendaciones del sistema al estudiante</h2>
+              <p className="type-meta text-muted-foreground mb-3">
                 Áreas sugeridas a reforzar, derivadas de su menor precisión por competencia.
               </p>
               <div className="flex flex-col gap-2">
@@ -411,7 +411,7 @@ export default async function StudentHistoryPage(props: {
                   >
                     <div>
                       <b className="text-sm">Reforzar {categoryLabel(r.key)}</b>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="type-meta text-muted-foreground">
                         Precisión actual {Math.round(r.accuracy * 100)}% ({r.correct}/{r.total} correctas).
                       </p>
                     </div>
@@ -427,25 +427,25 @@ export default async function StudentHistoryPage(props: {
           {/* [Feedback pedagógico entregado al estudiante en preguntas falladas] */}
           {issuedFeedbacks.length > 0 && (
             <section className="rounded-xl border bg-card p-5">
-              <h2 className="text-lg font-bold mb-1">Feedback entregado por la IA</h2>
-              <p className="text-xs text-muted-foreground mb-3">
+              <h2 className="title-section mb-1">Feedback entregado por la IA</h2>
+              <p className="type-meta text-muted-foreground mb-3">
                 Retroalimentación que recibió el estudiante en las preguntas falladas.
               </p>
               <ul className="space-y-2">
                 {issuedFeedbacks.map((f, i) => (
-                  <li key={f.questionId + i} className="rounded-lg border p-3 text-sm">
+                  <li key={f.questionId + i} className="rounded-lg border p-3">
                     <p className="font-medium">{f.questionText}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="type-meta text-muted-foreground mt-0.5">
                       {f.quiz} · Respondió: {f.userAnswer || "(vacía)"} · Correcta: {f.correctAnswer}
                     </p>
                     {f.feedback && (
-                      <p className="mt-1.5 rounded-md bg-primary/5 px-2 py-1 text-xs">
+                      <p className="mt-1.5 rounded-md bg-primary/5 px-2 py-1 type-meta">
                         <span className="font-semibold">Feedback: </span>
                         {f.feedback}
                       </p>
                     )}
                     {f.explanation && (
-                      <p className="mt-1 rounded-md bg-muted/40 px-2 py-1 text-xs">
+                      <p className="mt-1 rounded-md bg-muted/40 px-2 py-1 type-meta">
                         <span className="font-semibold">Explicación: </span>
                         {f.explanation}
                       </p>
@@ -472,10 +472,10 @@ export default async function StudentHistoryPage(props: {
               <header className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-bold">{item.quizTitle}</h2>
+                    <h2 className="title-section">{item.quizTitle}</h2>
                     <DifficultyBadge difficulty={item.quizDifficulty} />
                   </div>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
+                  <p className="mt-0.5 type-meta text-muted-foreground">
                     {categoryLabel(item.quizCategory)} ·{" "}
                     {DIFFICULTY_LABEL[item.quizDifficulty]} · Iniciado{" "}
                     {fmtDate(item.startedAt)} · Finalizado{" "}
@@ -538,7 +538,7 @@ export default async function StudentHistoryPage(props: {
                       aria-label={`Pregunta ${idx + 1}`}
                     >
                       <div className="flex items-start justify-between gap-3">
-                        <p className="text-sm font-medium">
+                        <p className="font-medium">
                           {idx + 1}. {a.questionText}
                         </p>
                         <span
@@ -568,11 +568,11 @@ export default async function StudentHistoryPage(props: {
                         </div>
                       </dl>
                       {/* [Explicación + feedback por pregunta]: siempre visibles para el docente | [Principio]: Transparencia académica */}
-                      <p className="rounded-md bg-muted/40 px-3 py-2 text-xs">
+                      <p className="rounded-md bg-muted/40 px-3 py-2 type-meta">
                         <span className="font-semibold">Explicación: </span>
                         {a.explanation || "Sin explicación registrada."}
                       </p>
-                      <p className="rounded-md bg-primary/5 px-3 py-2 text-xs">
+                      <p className="rounded-md bg-primary/5 px-3 py-2 type-meta">
                         <span className="font-semibold">Feedback pedagógico: </span>
                         {a.feedback || "Sin feedback registrado."}
                       </p>

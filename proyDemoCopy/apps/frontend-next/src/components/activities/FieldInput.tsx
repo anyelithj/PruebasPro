@@ -1,5 +1,6 @@
 "use client"; // [Next.js]: Client Component → campo controlado (estado en el formulario padre)
 import type { FieldDef } from "@/lib/activity-kinds";
+import { EmojiPicker } from "@/components/curriculum/EmojiPicker"; // [2026-10-30]: mismo selector que vocabulario
 import { cn } from "@/lib/utils";
 // [FieldInput · 2026-10-24]: pinta UN campo declarado en la estrategia del tipo (texto, área, select, enlace o casilla) → el formulario de «Crear actividad» no conoce los tipos
 // [Patrón]: Presentational + Factory por `field.type` | [Principio]: OCP (tipo nuevo de campo = una rama) + DRY | [A11y]: <label> asociado por `id`, `aria-describedby` para la ayuda, `*` visual de obligatorio
@@ -48,12 +49,17 @@ export function FieldInput({ id, field, value, onChange, invalid = false }: Fiel
       ) : field.type === "textarea" ? (
         // `field-sizing` no es universal → filas fijas y redimensionable en vertical
         <textarea {...common} rows={3} maxLength={field.max} placeholder={field.placeholder} value={value} onChange={(e) => onChange(e.target.value)} className="control w-full resize-y" />
+      ) : field.type === "emoji" ? (
+        <div className="flex items-center gap-2">
+          <input {...common} type="text" maxLength={field.max} value={value} onChange={(e) => onChange(e.target.value)} autoComplete="off" />
+          <EmojiPicker value={value} onSelect={onChange} />
+        </div>
       ) : (
         // `type="url"` + `inputMode`: teclado de enlaces en móvil y validación nativa
         <input {...common} type={field.type === "url" ? "url" : "text"} inputMode={field.type === "url" ? "url" : undefined} maxLength={field.max} placeholder={field.placeholder} value={value} onChange={(e) => onChange(e.target.value)} autoComplete="off" />
       )}
       {field.hint && (
-        <p id={hintId} className="mt-1 text-[11px] text-muted-foreground">
+        <p id={hintId} className="mt-1 type-meta text-muted-foreground">
           {field.hint}
         </p>
       )}

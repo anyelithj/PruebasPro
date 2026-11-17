@@ -1,11 +1,12 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { CdkDropList, type CdkDragDrop } from '@angular/cdk/drag-drop';
+import { SayComponent } from '@features/vocabulary/presentation/components/say.component'; // [2026-10-28]: IPA + traducción + sonido de la palabra colocada
 // [CategoryBucketComponent · Presentacional · Sprint 8.8]: grupo de destino de «clasificación rápida» con CDK DragDrop + alternativa por teclado (botón «a este grupo») | [Patrón]: Presentational Component + Observer (`dropped`) | [Principio]: SRP + accesibilidad primero (WCAG 2.5.7: arrastrar NUNCA es la única forma) | [Paradigma]: Declarativo
 // [Tecnología]: @angular/cdk/drag-drop (`cdkDropList` conectado por id con la lista de palabras de la página)
 
 @Component({
   selector: 'aula-category-bucket',
-  imports: [CdkDropList],
+  imports: [CdkDropList, SayComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
@@ -18,7 +19,7 @@ import { CdkDropList, type CdkDragDrop } from '@angular/cdk/drag-drop';
       [attr.aria-label]="name()"
     >
       <header class="flex items-center justify-between gap-2">
-        <h3 class="text-sm font-extrabold uppercase tracking-wide" [attr.lang]="language()">
+        <h3 class="title-overline" [attr.lang]="language()">
           {{ name() }}
         </h3>
         <!-- [Teclado]: con una palabra elegida, este botón la envía aquí (sin arrastrar) -->
@@ -28,20 +29,22 @@ import { CdkDropList, type CdkDragDrop } from '@angular/cdk/drag-drop';
           </button>
         }
       </header>
-      <ul class="flex flex-wrap gap-1.5">
+      <ul class="flex flex-col gap-1.5">
         @for (w of placed(); track w.term) {
           <li
-            class="badge text-xs"
+            class="rounded-lg px-2 py-1 type-meta font-semibold"
             [class]="
               w.ok ? 'bg-tone-brand-soft text-tone-brand' : 'bg-tone-danger-soft text-tone-danger'
             "
             [attr.lang]="language()"
           >
             {{ w.ok ? '✓' : '✗' }} {{ w.term }}
+            <!-- [2026-10-28]: ya colocada → se puede oír, con su IPA y traducción -->
+            <aula-say class="font-normal" [text]="w.term" [language]="language()" />
           </li>
         }
       </ul>
-      <p class="mt-auto text-center text-xs text-muted-foreground" aria-hidden="true">
+      <p class="mt-auto text-center type-meta text-muted-foreground" aria-hidden="true">
         {{ dropLabel() }}
       </p>
     </section>

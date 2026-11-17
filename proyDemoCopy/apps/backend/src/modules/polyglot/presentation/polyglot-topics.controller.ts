@@ -60,7 +60,7 @@ export class PolyglotTopicsController {
     return this.topics.create(u.sub, {
       ...body,
       language: null,
-      levels: [],
+      levels: body.levels ?? [],
       status: 'draft',
     });
   }

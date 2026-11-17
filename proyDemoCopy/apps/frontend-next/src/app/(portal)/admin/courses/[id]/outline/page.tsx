@@ -30,8 +30,8 @@ export default async function CourseOutlinePage(props: { params: Promise<{ id: s
       <BackLink href="/admin/courses" memo="courses">Volver a cursos</BackLink>
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Estructura del curso</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className="title-page">Estructura del curso</h1>
+          <p className="mt-1 text-muted-foreground">
             {course.title} · organiza niveles, módulos, unidades y lecciones. Al guardar se reutilizan los recursos que ya existen (mismo idioma, nivel, tipo y
             tema); solo las lecciones vacías se pueden generar con IA.
           </p>

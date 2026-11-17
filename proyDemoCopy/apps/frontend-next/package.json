@@ -7,12 +7,15 @@
     "dev": "next dev -p 9000",
     "build": "next build",
     "start": "next start -p 9000",
+    "start:fast": "next build && next start -p 9000",
     "lint": "eslint",
     "test": "jest __tests__/unit",
     "test:unit": "jest __tests__/unit",
     "test:coverage": "jest __tests__/unit --coverage",
     "test:e2e": "playwright test",
-    "api:types": "openapi-typescript http://localhost:4000/api/v1/docs-json -o ../../packages/api-client/generated.ts"
+    "api:types": "openapi-typescript http://localhost:4000/api/v1/docs-json -o ../../packages/api-client/generated.ts",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build -o storybook-static"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -52,6 +55,9 @@
     "@lhci/cli": "^0.15.1",
     "@next/bundle-analyzer": "16.4.1",
     "@playwright/test": "^1.60.0",
+    "@storybook/addon-a11y": "10.6.5",
+    "@storybook/addon-docs": "10.6.5",
+    "@storybook/nextjs-vite": "10.6.5",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -74,8 +80,10 @@
     "playwright": "^1.60.0",
     "prettier": "^3.8.3",
     "prettier-plugin-tailwindcss": "^0.8.0",
+    "storybook": "10.6.5",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite": "^8.3.5"
   },
   "engines": {
     "node": "^24.22.1"

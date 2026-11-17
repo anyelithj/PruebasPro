@@ -131,3 +131,53 @@ export function curatedTopics(kind: CurriculumItemKind, language: Language, leve
       return [{ label: "📋 Tareas de expresión", topics: TASKS[level] }];
   }
 }
+
+// ───── [Nivel según el tema · 2026-11-09]: el nivel MCER se ASIGNA y se EVALÚA a partir del tema elegido (Cursos, Contenido/Recursos y Actividades) ─────
+const LEVELS: ReadonlyArray<CefrLevel> = ["A1", "A2", "B1", "B2", "C1", "C2"];
+const fold = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").trim().toLowerCase();
+
+// [topicLevel]: nivel del catálogo donde aparece el tema (vocabulario, frases, gramática del idioma o tareas) · null = tema libre o sin nivel (fonemas)
+export function topicLevel(topic: string, language: Language | ""): CefrLevel | null {
+  const t = fold(topic);
+  if (!t) return null;
+  const grammar = GRAMMAR[(language || "en") as Language];
+  return LEVELS.find((l) => [VOCABULARY[l], PHRASES[l], grammar[l], TASKS[l]].some((list) => list.some((x) => fold(x) === t))) ?? null;
+}
+
+// [textLevel · 2026-11-16]: nivel del tema del catálogo CONTENIDO en un texto libre (título de examen «Examen de presente simple»)
+// Sin artículo inicial ni paréntesis; gana el tema más largo (más específico) · null si ninguno aparece
+const words = (s: string) => ` ${fold(s).replace(/\([^)]*\)/g, " ").replace(/[^\p{L}\p{N}]+/gu, " ").trim()} `;
+export function textLevel(text: string, language: Language | ""): CefrLevel | null {
+  const t = words(text);
+  const grammar = GRAMMAR[(language || "en") as Language];
+  let best: { level: CefrLevel; len: number } | null = null;
+  for (const l of LEVELS)
+    for (const x of [VOCABULARY[l], PHRASES[l], grammar[l], TASKS[l]].flat()) {
+      const k = words(x).replace(/^ (el|la|los|las|un|una|unos|unas) /, " ");
+      if (k.length > 5 && t.includes(k) && (!best || k.length > best.len)) best = { level: l, len: k.length };
+    }
+  return best?.level ?? null;
+}
+
+// [curatedTopicsAllLevels]: primero los temas del nivel elegido y luego los de los demás niveles (etiquetados «B1 · Gramática»)
+// → se puede elegir el tema antes que el nivel; al elegirlo, el nivel se ajusta solo | sin repetir temas (los fonemas IPA no dependen del nivel)
+export function curatedTopicsAllLevels(kind: CurriculumItemKind, language: Language, level: CefrLevel | ""): TopicGroup[] {
+  const seen = new Set<string>();
+  const order = level ? [level, ...LEVELS.filter((l) => l !== level)] : LEVELS;
+  return order.flatMap((l) =>
+    curatedTopics(kind, language, l)
+      .map((g) => ({ label: g.label.startsWith("IPA") ? g.label : `${l} · ${g.label}`, topics: g.topics.filter((x) => !seen.has(x) && (seen.add(x), true)) }))
+      .filter((g) => g.topics.length),
+  );
+}
+
+// [syllabusLevel]: nivel predominante de una lista de subtemas (temario de un curso) · null si ninguno es del catálogo
+export function syllabusLevel(topics: ReadonlyArray<string>, language: Language | ""): { level: CefrLevel; matched: number } | null {
+  const count = new Map<CefrLevel, number>();
+  for (const t of topics) {
+    const l = topicLevel(t, language);
+    if (l) count.set(l, (count.get(l) ?? 0) + 1);
+  }
+  const best = [...count].sort((a, b) => b[1] - a[1] || LEVELS.indexOf(b[0]) - LEVELS.indexOf(a[0]))[0]; // Empate → el nivel más alto (lo más difícil manda)
+  return best ? { level: best[0], matched: best[1] } : null;
+}

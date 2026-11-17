@@ -1,0 +1,13 @@
+node_modules
+dist
+.env
+.env.local
+.firebase
+*.log
+storybook-static
+coverage
+cypress/screenshots
+cypress/videos
+# Claves de servicio de Firebase (dan acceso total a la base de datos: nunca se suben)
+*-firebase-adminsdk-*.json
+serviceAccount*.json

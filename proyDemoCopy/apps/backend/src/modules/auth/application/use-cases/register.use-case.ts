@@ -12,6 +12,7 @@ import {
 } from '../../domain/events/user-registered.event';
 import { RegisterDto } from '../dtos/register.dto';
 import type { AuthResponseDto } from '../dtos/auth-response.dto';
+import { RequestVerifyEmailUseCase } from './request-verify-email.use-case';
 // [Use Case Register]: alta pública = CreateUserUseCase (Users) + sesión + emisión tokens | [Patrón]: Command + Use Case | [Principio]: SRP + DIP | [Paradigma]: POO
 
 @Injectable()
@@ -28,6 +29,8 @@ export class RegisterUseCase {
     @Inject(TOKEN_SERVICE) private readonly tokens: ITokenService,
     // [EventEmitter2]: bus in-memory para Domain Events | [Patrón]: Observer
     private readonly events: EventEmitter2,
+    // [RF-01 → RF-09 · 2026-11-16]: correo de bienvenida/verificación al registrarse (antes nadie lo enviaba) | [Principio]: DRY (mismo caso de uso que «reenviar verificación»)
+    private readonly requestVerify: RequestVerifyEmailUseCase,
   ) {}
 
   // [execute]: punto único de entrada del Use Case | [Principio]: SRP
@@ -70,6 +73,13 @@ export class RegisterUseCase {
     );
 
     this.logger.log(`User registered: ${user.email} (${user.id})`);
+
+    // [Correo de verificación]: Fire-and-Forget → `void` (TS/JS) descarta la Promise; la bandeja de salida (EmailOutbox + Bull) reintenta el SMTP | `.catch`: un fallo NO tumba el registro ya hecho | [Patrón]: Fire-and-Forget
+    void this.requestVerify
+      .execute({ email: user.email })
+      .catch((err: Error) =>
+        this.logger.error(`Verification email not queued: ${err.message}`),
+      );
 
     // [Respuesta]: tokens + perfil mínimo (sin passwordHash)
     return {

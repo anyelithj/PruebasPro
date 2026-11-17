@@ -14,7 +14,7 @@ export const imageProblem = (c: {
   imageUrl?: string | null;
   imageLicense?: string | null;
 }): string | null =>
-  c.imageUrl && !c.imageLicense?.trim()
+  c.imageUrl?.startsWith('https://') && !c.imageLicense?.trim() // [2026-11-11]: la imagen ADJUNTA por el docente (data URL, como en Recursos) no la exige; un enlace externo sí
     ? 'Indica la licencia de la imagen (autor, fuente y licencia)'
     : null;
 

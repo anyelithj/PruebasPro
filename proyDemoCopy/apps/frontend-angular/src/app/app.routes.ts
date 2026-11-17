@@ -51,11 +51,9 @@ export const routes: Routes = [
     loadChildren: () =>
       import('@features/certificates/certificates.routes').then((m) => m.CERTIFICATES_ROUTES),
   },
-  {
-    path: 'verificar',
-    loadChildren: () =>
-      import('@features/certificates/certificates.routes').then((m) => m.VERIFY_ROUTES),
-  },
+  // [Caso E · 2026-11-13]: ruta anterior del QR → la única pública (/certificados/verificar); Next.js ya redirige con 308, esto cubre la navegación interna
+  { path: 'verificar', pathMatch: 'full', redirectTo: 'certificados/verificar' },
+  { path: 'verificar/:code', redirectTo: 'certificados/verificar/:code' },
   // [Sprint 7.11]: Centro de ayuda — FAQ pública, manual por rol y Agente Guía
   // [Sprint 7.14]: foros por lección
   {
@@ -112,5 +110,6 @@ export const routes: Routes = [
     loadChildren: () => import('@features/reading/reading.routes').then((m) => m.READING_ROUTES),
   },
   { path: '', pathMatch: 'full', redirectTo: 'tutor' },
-  { path: '**', redirectTo: 'tutor' }, // Ruta desconocida dentro del remoto → pantalla principal
+  // [2026-11-16]: ruta desconocida → página 404 (antes redirigía a /tutor sin avisar)
+  { path: '**', title: 'Página no encontrada', loadComponent: () => import('@core/layout/not-found.page') },
 ];

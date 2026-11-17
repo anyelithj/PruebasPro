@@ -95,7 +95,7 @@ interface Row {
         ]"
         [(value)]="mode"
       />
-      <p class="text-xs text-muted-foreground"><span class="req" aria-hidden="true">*</span> {{ lb.required }}</p>
+      <p class="type-meta text-muted-foreground"><span class="req" aria-hidden="true">*</span> {{ lb.required }}</p>
 
       <div class="grid gap-3 sm:grid-cols-3">
         <!-- [2026-10-20]: con URL o IA el título, los hablantes y los turnos los rellena el borrador → no se muestran vacíos/«a mano» antes de leerlo -->
@@ -191,11 +191,11 @@ interface Row {
           </div>
         }
       }
-      <p class="text-xs font-semibold text-tone-brand" aria-live="polite">
+      <p class="type-meta font-semibold text-tone-brand" aria-live="polite">
         {{ busy() && mode() !== 'manual' ? lb.drafting : drafted() ? lb.draftReady : '' }}
       </p>
       @if (drafted() === 'llm') {
-        <p class="rounded-lg bg-tone-warning-soft p-2 text-xs font-semibold text-tone-warning"><aula-icon name="triangle-alert" /> {{ lb.aiReview }}</p>
+        <p class="rounded-lg bg-tone-warning-soft p-2 type-meta font-semibold text-tone-warning"><aula-icon name="triangle-alert" /> {{ lb.aiReview }}</p>
       }
 
       @if (showDetails()) {
@@ -226,7 +226,7 @@ interface Row {
 
       <aula-license-declaration [(value)]="license" [labels]="licenseLabels()" />
       @if (!bothSpeakers()) {
-        <p class="text-xs font-semibold text-tone-warning"><aula-icon name="triangle-alert" /> {{ lb.minTurns }}</p>
+        <p class="type-meta font-semibold text-tone-warning"><aula-icon name="triangle-alert" /> {{ lb.minTurns }}</p>
       }
       <button type="submit" class="btn btn-primary" [disabled]="busy()"><aula-icon name="save" /> {{ lb.save }}</button>
     </form>

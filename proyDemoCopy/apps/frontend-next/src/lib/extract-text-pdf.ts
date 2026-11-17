@@ -1,6 +1,6 @@
 // [Solo servidor]: pdf.js (build legacy de Node) + Tesseract.js + zlib → nunca se empaqueta para el navegador (lo importa lib/extract-text, que usan las Route Handlers)
 import { crc32, deflateSync } from "node:zlib"; // [Node 22.2+]: `crc32` y `deflateSync` → codificar PNG sin dependencias
-import { OCR_LANG, OCR_MAX_PAGES, pdfItemsToText, type PdfTextItem } from "@/lib/pdf-text-core"; // [DRY]: misma reconstrucción de líneas que el navegador
+import { OCR_LANG, OCR_MAX_PAGES, pdfItemsToText, stripPageFurniture, type PdfTextItem } from "@/lib/pdf-text-core"; // [DRY]: misma reconstrucción de líneas que el navegador
 // [extract-text-pdf · 2026-10-24]: PDF → texto en el SERVIDOR con dos estrategias:
 //   1) capa de texto de pdf.js con líneas por POSICIÓN (pdfItemsToText) — antes se pegaba `str` y se cortaba solo con `hasEOL`
 //   2) OCR de respaldo para páginas ESCANEADAS (sin capa de texto): se extraen las imágenes de la página y Tesseract.js las reconoce
@@ -146,5 +146,5 @@ export async function pdfToText(data: Uint8Array, language: string): Promise<str
     if (ocr) await (await ocr).terminate().catch(() => undefined); // Libera el OCR aunque falle una página
     void task.destroy(); // Libera la memoria de pdf.js
   }
-  return pages.join("\n\n");
+  return stripPageFurniture(pages.join("\n\n")); // [2026-11-16]: sin pies/encabezados de página → el Markdown importado sale limpio
 }

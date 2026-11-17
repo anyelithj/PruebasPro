@@ -30,15 +30,15 @@ export interface ContentsLabels {
     @let lb = labels();
     <section class="space-y-3 rounded-xl border border-border p-4" [attr.aria-label]="lb.title">
       <div>
-        <h3 class="text-sm font-bold"><aula-icon name="package" /> {{ lb.title }}</h3>
+        <h3 class="title-card"><aula-icon name="package" /> {{ lb.title }}</h3>
         @if (editable()) {
-          <p class="text-xs text-muted-foreground">{{ lb.hint }}</p>
+          <p class="type-meta text-muted-foreground">{{ lb.hint }}</p>
         }
       </div>
       @if (list().length) {
         <ul class="grid gap-2 sm:grid-cols-2">
           @for (c of list(); track $index) {
-            <li class="flex items-center gap-2 rounded-lg bg-muted p-2 text-sm">
+            <li class="flex items-center gap-2 rounded-lg bg-muted p-2">
               <aula-icon [name]="icon[c.kind]" [size]="18" />
               <a [href]="c.href" class="min-w-0 flex-1 font-semibold text-primary hover:underline">
                 <span class="block truncate">{{ c.label }}</span>
@@ -51,7 +51,7 @@ export interface ContentsLabels {
           }
         </ul>
       } @else {
-        <p class="text-xs text-muted-foreground">{{ lb.empty }}</p>
+        <p class="type-meta text-muted-foreground">{{ lb.empty }}</p>
       }
 
       @if (editable()) {

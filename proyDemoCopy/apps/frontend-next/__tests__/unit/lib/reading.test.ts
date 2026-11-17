@@ -44,8 +44,18 @@ describe("estrategia «Lectura»", () => {
   it("la IA envía género, nivel y longitud (según el nivel) y devuelve párrafos para revisar", async () => {
     const post = jest.fn(async () => ({ title: "The Fox", summary: "Un zorro.", paragraphs: ["P1.", "P2."] }));
     const res = await reading.ai.run({ topic: "A fox", count: 1, meta: { genre: "fable", length: "350" } }, ctx, { post } as unknown as ApiPort);
-    expect(post).toHaveBeenCalledWith("/reading/texts/draft", expect.objectContaining({ genre: "fable", level: "A2", words: 180, topic: "A fox" }));
+    expect(post).toHaveBeenCalledWith("/reading/texts/draft", expect.objectContaining({ genre: "fable", level: "A2", words: 300, topic: "A fox" }));
     expect(res).toMatchObject({ kind: "draft", draft: { title: "The Fox", entries: [{ text: "P1." }, { text: "P2." }], meta: { summary: "Un zorro." } } });
+  });
+  it("[RF-148] sin nivel: lectura se guarda sin «level» (NestJS lo estima); práctica exige nivel", async () => {
+    const draft = { ...emptyDraft("reading"), title: "Fox", entries: [{ text: "The fox runs." }] };
+    const noLevel = { ...ctx, level: "" };
+    expect(validateDraft("reading", draft, noLevel)).toEqual([]);
+    const post = jest.fn(async () => ({ id: "r1" }));
+    await reading.persist(draft, noLevel, { post } as unknown as ApiPort);
+    expect(post).toHaveBeenCalledWith("/reading/texts", expect.not.objectContaining({ level: expect.anything() }));
+    const practice = { ...emptyDraft("practice"), title: "Colores" };
+    expect(validateDraft("practice", practice, noLevel).join(" ")).toMatch(/Falta el nivel/);
   });
   it("valida texto y género; guarda con un POST y avisa de frases pendientes", async () => {
     const empty = { ...emptyDraft("reading"), title: "Fox" };
@@ -57,5 +67,12 @@ describe("estrategia «Lectura»", () => {
     expect(post).toHaveBeenCalledWith("/reading/texts", expect.objectContaining({ title: "Fox", genre: "tale", paragraphs: ["The fox runs."] }));
     expect(res.id).toBe("r1");
     expect(res.warnings[0]).toMatch(/2 frase/);
+  });
+  // [2026-10-27]: NestJS guarda al instante y traduce en segundo plano → aviso informativo, no «complétalas a mano»
+  it("con `enriching` avisa de que la IPA/traducción se generan en segundo plano", async () => {
+    const draft = { ...emptyDraft("reading"), title: "Fox", entries: [{ text: "The fox runs." }] };
+    const post = jest.fn(async () => ({ id: "r1", pending: 3, enriching: true }));
+    const res = await reading.persist(draft, ctx, { post } as unknown as ApiPort);
+    expect(res.warnings).toEqual([expect.stringMatching(/segundo plano/)]);
   });
 });

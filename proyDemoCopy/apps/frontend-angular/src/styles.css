@@ -3,6 +3,8 @@
    ponytail: import relativo al shell Next.js; si los tokens se mueven a packages/ui-tokens, cambiar solo esta línea */
 @import '../../frontend-next/src/app/globals.css';
 
+/* [Tipografía uniforme · 2026-10-28]: la escala (--ff-*, --fs-*, --fw-*, --lh-*), los h1–h6/label/th/td de @layer base y las utilidades title-* / type-* llegan con el import de arriba
+   (globals.css → @aula/ui-tokens/typography.css) → las pantallas Angular y las de Next.js comparten exactamente los mismos títulos y párrafos | [Principio]: SSOT */
 /* [Tipografía]: Next.js define --font-inter con next/font; en las pantallas Angular no existe → sin esto toda la declaración font-family cae a serif
    `:where(:root)` (especificidad 0): dentro de Next.js gana su variable real (Inter auto-alojada) · aquí usa Inter si está instalada o Segoe UI/system-ui */
 :where(:root) {

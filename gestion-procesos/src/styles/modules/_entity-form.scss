@@ -1,0 +1,27 @@
+// SMACSS · MODULE — entity-form: formularios de crear / editar / ver detalle (mismos campos).
+.entity-form {
+  &__fields {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+  }
+
+  // Modo «view»: los campos bloqueados se ven como datos legibles, no como controles apagados.
+  &--view {
+    .form-control:disabled,
+    .form-select:disabled {
+      background-color: transparent;
+      color: var(--ink);
+      opacity: 1;
+      border-color: var(--line);
+    }
+    .form-select:disabled:not([multiple]) {
+      background-image: none;
+    }
+    .form-check-input:disabled ~ .form-check-label {
+      color: var(--ink);
+      opacity: 1;
+    }
+  }
+}

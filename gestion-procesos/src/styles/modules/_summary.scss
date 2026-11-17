@@ -1,0 +1,30 @@
+// SMACSS · MODULE — summary: tira de indicadores (KPI).
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  margin: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  > div {
+    padding: var(--space) var(--pad-card);
+    border-right: 1px solid var(--line);
+    &:last-child {
+      border-right: 0;
+    }
+  }
+  dt {
+    font-weight: 400;
+    color: var(--muted);
+    font-size: var(--fs-sm);
+  }
+  dd {
+    margin: 0;
+    font-size: 1.75rem;
+    line-height: 1.2;
+    font-weight: 700;
+    color: var(--petrol);
+  }
+}

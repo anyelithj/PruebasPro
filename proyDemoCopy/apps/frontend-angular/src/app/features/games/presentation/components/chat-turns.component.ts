@@ -32,17 +32,17 @@ import type { ChatTurn } from '../../application/game-agent.facade';
                 : 'rounded-bl-sm border border-border bg-card'
             "
           >
-            <p class="text-[11px] font-bold uppercase tracking-wide opacity-80">
+            <p class="type-meta font-bold uppercase tracking-wide opacity-80">
               {{ t.who === 'user' ? youLabel() : agentLabel() }}
             </p>
             <p class="whitespace-pre-line" [attr.lang]="language()">{{ t.text }}</p>
             @if (t.flag === 'violation') {
-              <p class="mt-1 text-xs font-semibold text-tone-danger"><aula-icon name="triangle-alert" /> {{ violationLabel() }}</p>
+              <p class="mt-1 type-meta font-semibold text-tone-danger"><aula-icon name="triangle-alert" /> {{ violationLabel() }}</p>
             } @else if (t.flag === 'solved') {
-              <p class="mt-1 text-xs font-semibold text-tone-brand"><aula-icon name="trophy" /> {{ solvedLabel() }}</p>
+              <p class="mt-1 type-meta font-semibold text-tone-brand"><aula-icon name="trophy" /> {{ solvedLabel() }}</p>
             }
             @if (t.who === 'agent' && note(t); as n) {
-              <p class="mt-1 text-xs text-muted-foreground"><aula-icon name="lightbulb" /> {{ n }}</p>
+              <p class="mt-1 type-meta text-muted-foreground"><aula-icon name="lightbulb" /> {{ n }}</p>
             }
           </div>
         </li>
@@ -50,7 +50,7 @@ import type { ChatTurn } from '../../application/game-agent.facade';
       @if (thinking()) {
         <li class="flex">
           <p
-            class="rounded-2xl border border-border bg-card px-3 py-2 text-sm text-muted-foreground motion-safe:animate-pulse"
+            class="rounded-2xl border border-border bg-card px-3 py-2 text-muted-foreground motion-safe:animate-pulse"
           >
             {{ thinkingLabel() }}
           </p>

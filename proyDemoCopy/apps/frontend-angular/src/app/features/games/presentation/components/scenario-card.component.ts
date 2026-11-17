@@ -23,7 +23,7 @@ import type { Scenario } from '../../domain/models/games';
       </span>
       <span class="text-base font-bold">{{ s.title }}</span>
       <span class="text-xs text-muted-foreground">{{ roleLabel() }}</span>
-      <ul class="mt-1 list-inside list-disc text-sm text-muted-foreground">
+      <ul class="mt-1 list-inside list-disc text-muted-foreground">
         @for (o of s.objectives; track o.id) {
           <li>{{ o.text }}</li>
         }

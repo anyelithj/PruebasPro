@@ -70,7 +70,7 @@ const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn("text-lg font-semibold leading-none tracking-tight", className)}
+    className={cn("title-section", className)} /* [Tipografía uniforme · 2026-10-28]: título de diálogo = título de sección de la escala (@aula/ui-tokens) */
     {...props}
   />
 ));

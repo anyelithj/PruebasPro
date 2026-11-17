@@ -15,8 +15,8 @@ export function ChangePasswordForm() {
   const errors = state.fieldErrors ?? {};
 
   return (
-    <section aria-labelledby="password-title" className="w-full rounded-[14px] border border-border bg-card p-[18px] shadow-[var(--nl-shd)]">
-      <h2 id="password-title" className="mb-3 text-sm font-bold">
+    <section aria-labelledby="password-title" className="w-full surface p-[18px]">
+      <h2 id="password-title" className="title-section mb-3">
         {p.passwordTitle}
       </h2>
       {/* `action` (React 19): tras cada envío React limpia el form → las contraseñas no quedan a la vista */}

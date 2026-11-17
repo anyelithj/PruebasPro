@@ -66,7 +66,7 @@ export class CertificatePdfRenderer implements CertificateRendererPort {
     const level = d.cefrLevel && isCefrLevel(d.cefrLevel) ? d.cefrLevel : null;
     const doc: TDocumentDefinitions = {
       info: {
-        title: `Certificado ${d.code} — Aula de Idiomas`,
+        title: `Certificado ${d.code} — ${d.template?.institution || 'Aula de Idiomas'}`,
         subject: d.courseTitle,
       }, // Metadatos (accesibilidad)
       pageSize: 'A4',
@@ -105,7 +105,7 @@ export class CertificatePdfRenderer implements CertificateRendererPort {
       }),
       header: {
         columns: [
-          { text: 'AULA DE IDIOMAS', style: 'brand' },
+          { text: (d.template?.institution || 'AULA DE IDIOMAS').toUpperCase(), style: 'brand' },
           {
             text: level ? `NIVEL ${level} · MCER` : 'CERTIFICADO DE CURSO',
             style: 'brand',
@@ -131,11 +131,20 @@ export class CertificatePdfRenderer implements CertificateRendererPort {
               margin: [0, SEAL_Y - TOP - 7, 0, 33],
               color: deep,
             },
-        { text: 'Certificado de finalización', style: 'title' },
+        { text: d.kind === 'level' ? 'Certificado de nivel' : 'Certificado de finalización', style: 'title' },
         { text: 'Se certifica que', style: 'muted' },
         { text: d.recipientName, style: 'name' },
-        { text: 'completó satisfactoriamente el curso', style: 'muted' },
-        { text: d.courseTitle, style: 'course', color: deep },
+        {
+          text:
+            d.kind === 'level'
+              ? 'aprobó el examen de nivel'
+              : 'completó satisfactoriamente el curso',
+          style: 'muted',
+        },
+        { text: d.kind === 'level' ? d.courseTitle.replace(/^Examen de nivel · /, '') : d.courseTitle, style: 'course', color: deep },
+        ...(d.examScore != null
+          ? [{ text: `${d.kind === 'level' ? 'Examen aprobado' : 'Examen final aprobado'} con ${d.examScore} %`, style: 'muted' }]
+          : []),
         {
           canvas: [
             {
@@ -179,8 +188,20 @@ export class CertificatePdfRenderer implements CertificateRendererPort {
                   style: 'label',
                   margin: [0, 8, 0, 0],
                 },
+                ...(d.template?.legalText ? [{ text: d.template.legalText, style: 'label', margin: [0, 4, 0, 0] as [number, number, number, number] }] : []),
               ],
             },
+            // [Firma autorizada · 2026-11-09]: nombre y cargo de la plantilla (Gestión → Certificados)
+            ...(d.template?.signerName
+              ? [{
+                  width: 170,
+                  stack: [
+                    { canvas: [{ type: 'line' as const, x1: 0, y1: 0, x2: 160, y2: 0, lineWidth: 0.6, lineColor: deep }], margin: [0, 40, 0, 4] as [number, number, number, number] },
+                    { text: d.template.signerName, style: 'value', alignment: 'center' as const },
+                    ...(d.template.signerTitle ? [{ text: d.template.signerTitle, style: 'label', alignment: 'center' as const }] : []),
+                  ],
+                }]
+              : []),
             { width: 110, svg: qrSvg, fit: [104, 104] }, // QR de la librería qrcode (color del nivel),
           ],
         },

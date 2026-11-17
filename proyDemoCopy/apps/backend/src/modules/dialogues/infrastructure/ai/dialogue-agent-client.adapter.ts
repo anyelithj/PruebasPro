@@ -4,6 +4,7 @@ import type {
   AvatarTurn,
   DialogueAgentPort,
   DialogueContextDto,
+  DialogueHistoryTurn,
 } from '../../domain/interfaces/dialogue-agent.interface';
 // [Adapter DialogueAgentClient · Sprints 9.3/9.6]: implementa DialogueAgentPort con el cliente ÚNICO del Assistant de FastAPI (persona «dialogue») | [Patrón]: Adapter | [Principio]: DIP + DRY (no crea otro cliente HTTP) | [Paradigma]: POO
 
@@ -18,6 +19,7 @@ export class DialogueAgentClient implements DialogueAgentPort {
       language: string;
       level: string;
       dialogue: DialogueContextDto;
+      history?: ReadonlyArray<DialogueHistoryTurn>; // [Tarea 1]: se reenvía tal cual; el recorte a N turnos vive en el cliente
     },
     token: string,
   ): Promise<AvatarTurn> {
@@ -35,7 +37,9 @@ export class DialogueAgentClient implements DialogueAgentPort {
       translation:
         typeof state.translation === 'string' ? state.translation : null,
       learnerTranslation:
-        typeof state.learner_translation === 'string' ? state.learner_translation : null,
+        typeof state.learner_translation === 'string'
+          ? state.learner_translation
+          : null,
       vocabularyUsed: Array.isArray(state.vocabulary_used)
         ? (state.vocabulary_used as string[])
         : [],

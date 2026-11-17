@@ -8,10 +8,11 @@ import { FormFieldComponent } from '@shared/ui/molecules/form-field/form-field.c
 import { LevelTintDirective } from '@shared/ui/atoms/level-tint/level-tint.directive';
 import { CardPageTemplate } from '@shared/ui/templates/card-page.template';
 import { RouterLink } from '@angular/router';
+import { sameHash, sha256Hex, type PdfCheck } from '../../domain/models/certificates';
 import { BackLinkComponent } from '@shared/ui/atoms/back-link/back-link.component'; // [2026-10-24]: «Volver a certificados» uniforme
 import { SessionService } from '@core/auth/session.service';
 import { CertificatesFacade } from '../../application/certificates.facade';
-// [CertificateVerifyPage · Presentación]: /verificar y /verificar/:code — verificación PÚBLICA por código (AULA-XXXX-XXXX) o por hash de la transacción de Sepolia (RF-93); el resultado se pinta como diploma con el color de su nivel MCER | [Patrón]: Container + Máquina de estados | [Principio]: SRP + DIP (fachada) + Fail Fast (formato validado antes de llamar) | [Paradigma]: Declarativo + Reactivo
+// [CertificateVerifyPage · Presentación]: /certificados/verificar y /certificados/verificar/:code (Caso E: ruta única del QR) — verificación PÚBLICA por código (AULA-XXXX-XXXX) o por hash de la transacción de Sepolia (RF-93); el resultado se pinta como diploma con el color de su nivel MCER | [Patrón]: Container + Máquina de estados | [Principio]: SRP + DIP (fachada) + Fail Fast (formato validado antes de llamar) | [Paradigma]: Declarativo + Reactivo
 // [Sin sesión]: ruta en ANGULAR_PUBLIC_PREFIXES de Next.js; AppComponent la pinta sin sidebar para visitantes · [A11y]: resultado en role="status", errores en role="alert", veredicto con icono + texto
 
 @Component({
@@ -66,7 +67,7 @@ import { CertificatesFacade } from '../../application/certificates.facade';
             <aula-spinner [label]="t.checking" />
           }
           @case ('error') {
-            <p role="alert" class="text-sm text-tone-danger">{{ facade.verification.error() }}</p>
+            <p role="alert" class="text-tone-danger">{{ facade.verification.error() }}</p>
           }
           @case ('success') {
             @let r = facade.verification.data()!;
@@ -92,27 +93,27 @@ import { CertificatesFacade } from '../../application/certificates.facade';
                 >
                   {{ r.cefrLevel ?? '★' }}
                 </div>
-                <p class="text-[10px] font-extrabold tracking-[0.2em] text-(--lvl) uppercase">
+                <p class="type-meta font-extrabold tracking-[0.2em] text-(--lvl) uppercase">
                   Aula de Idiomas · {{ r.cefrLevel ? t.level + ' ' + r.cefrLevel : t.general }}
                 </p>
-                <p class="mt-3 text-xs text-white/60">{{ t.certifies }}</p>
+                <p class="mt-3 type-meta text-white/60">{{ t.certifies }}</p>
                 <p class="mt-1 text-2xl font-extrabold">{{ r.recipientName }}</p>
-                <p class="mt-1 text-xs text-white/60">{{ t.completed }}</p>
-                <h2 id="cert-result" class="mt-1 text-lg leading-snug font-bold text-(--lvl)">
+                <p class="mt-1 type-meta text-white/60">{{ t.completed }}</p>
+                <h2 id="cert-result" class="title-section mt-1 text-(--lvl)">
                   {{ r.courseTitle }}
                 </h2>
                 <hr class="my-5 border-white/10" />
                 <div class="flex items-center justify-center gap-6">
                   <div>
-                    <p class="eeg-mono text-sm font-bold">{{ r.code }}</p>
-                    <p class="text-[10px] text-white/50">{{ t.code }}</p>
+                    <p class="eeg-mono font-bold">{{ r.code }}</p>
+                    <p class="type-meta text-white/50">{{ t.code }}</p>
                   </div>
                   <span class="h-9 w-px bg-white/20" aria-hidden="true"></span>
                   <div>
-                    <p class="eeg-mono text-sm font-bold">
+                    <p class="eeg-mono font-bold">
                       <time [attr.datetime]="r.issuedAt">{{ date(r.issuedAt) }}</time>
                     </p>
-                    <p class="text-[10px] text-white/50">{{ t.date }}</p>
+                    <p class="type-meta text-white/50">{{ t.date }}</p>
                   </div>
                 </div>
                 <!-- [QR]: marco en el color del nivel (como el diploma de NeuroLearning) · SVG de NestJS con la librería qrcode -->
@@ -187,6 +188,25 @@ import { CertificatesFacade } from '../../application/certificates.facade';
                 } @else {
                   <p class="text-muted-foreground">{{ t.notAnchored }}</p>
                 }
+                <!-- [Caso E · 2026-11-13]: recalcular la huella del PDF EN EL NAVEGADOR y compararla con la registrada (y anclada en Sepolia) -->
+                <section class="space-y-1.5 border-t border-border pt-3" [attr.aria-label]="t.pdfCheckTitle">
+                  <p class="font-semibold">{{ t.pdfCheckTitle }}</p>
+                  <p class="type-meta text-muted-foreground">{{ t.pdfCheckHint }}</p>
+                  <label class="btn btn-outline btn-sm w-full cursor-pointer has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring">
+                    {{ t.pdfChoose }}
+                    <input type="file" accept="application/pdf" class="sr-only" (change)="checkPdf($any($event.target), r.pdfSha256)" />
+                  </label>
+                  <p aria-live="polite" class="type-meta font-semibold"
+                     [class.text-tone-success]="pdfCheck() === 'match'"
+                     [class.text-tone-danger]="pdfCheck() === 'mismatch' || pdfCheck() === 'error'">
+                    @switch (pdfCheck()) {
+                      @case ('checking') { {{ t.pdfChecking }} }
+                      @case ('match') { {{ t.pdfMatch }} }
+                      @case ('mismatch') { {{ t.pdfMismatch }} }
+                      @case ('error') { {{ t.pdfError }} }
+                    }
+                  </p>
+                </section>
               </aside>
             </section>
           }
@@ -199,10 +219,11 @@ export default class CertificateVerifyPage {
   protected readonly i18n = inject(I18nService);
   protected readonly facade = inject(CertificatesFacade);
   protected readonly session = inject(SessionService); // `isAuthenticated` (signal computed)
-  readonly code = input<string>(); // /verificar/:code (withComponentInputBinding) · el QR del PDF llega aquí
+  readonly code = input<string>(); // /certificados/verificar/:code (withComponentInputBinding) · el QR del PDF llega aquí
   protected readonly query = signal('');
   protected readonly explorer = explorerTxUrl;
   protected readonly copied = signal(false);
+  protected readonly pdfCheck = signal<PdfCheck>('idle'); // [Caso E]: resultado de comprobar el PDF subido
   // [Escuadras]: 4 esquinas del diploma (posición + bordes que se dibujan)
   protected readonly corners = [
     'top-3 left-3 border-t-2 border-l-2',
@@ -234,6 +255,19 @@ export default class CertificateVerifyPage {
       },
       () => undefined,
     );
+  }
+
+  // [checkPdf]: lee el PDF elegido (`File.arrayBuffer`, Web API), calcula su SHA-256 y lo compara con el registrado | nada se sube al servidor
+  protected async checkPdf(input: HTMLInputElement, expected: string): Promise<void> {
+    const file = input.files?.[0];
+    input.value = ''; // Permite volver a elegir el mismo archivo
+    if (!file) return;
+    this.pdfCheck.set('checking');
+    try {
+      this.pdfCheck.set(sameHash(await sha256Hex(await file.arrayBuffer()), expected) ? 'match' : 'mismatch');
+    } catch {
+      this.pdfCheck.set('error');
+    }
   }
 
   protected date(iso: string): string {

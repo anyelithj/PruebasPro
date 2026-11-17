@@ -6,7 +6,7 @@ import { getDictionary, type Locale } from "@aula/shared-i18n";
 export function PolyglotNavLink({ locale }: { locale: Locale }) {
   const t = getDictionary(locale).resources;
   return (
-    <a href="/poliglota" className="btn btn-outline" aria-describedby="polyglot-hint"> {/* [2026-10-19]: `btn` (40 px) igual que «Filtrar» → misma altura y alineación en la barra */}
+    <a href="/poliglota" className="chip" aria-describedby="polyglot-hint"> {/* [2026-11-11]: MISMO chip que Inglés, Francés, Ruso… (antes un botón aparte) */}
       <Globe aria-hidden className="inline size-4 align-[-0.125em]" /> {t.polyglot}
       <span id="polyglot-hint" className="sr-only">
         {t.polyglotHint}

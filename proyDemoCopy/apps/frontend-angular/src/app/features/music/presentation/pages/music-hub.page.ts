@@ -8,7 +8,8 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { CEFR_LEVELS, LANGUAGES } from '@aula/shared-schemas';
+import { CEFR_LEVELS } from '@aula/shared-schemas';
+import { FilterPanelComponent } from '@shared/ui/molecules/filter-panel/filter-panel.component'; // [2026-11-11]: panel común
 import { SessionService } from '@core/auth/session.service';
 import { I18nService } from '@core/i18n/i18n.service';
 import { SpinnerComponent } from '@shared/ui/atoms/spinner/spinner.component';
@@ -22,7 +23,7 @@ import { SongCardComponent } from '../components/song-card.component';
 
 @Component({
   selector: 'aula-music-hub-page',
-  imports: [IconComponent, ActivitySectionsComponent, 
+  imports: [IconComponent, ActivitySectionsComponent, FilterPanelComponent,
     CardPageTemplate,
     SpinnerComponent,
     CollectionCardComponent,
@@ -34,37 +35,12 @@ import { SongCardComponent } from '../components/song-card.component';
     <!-- [2026-10-23 · 4.º pase]: mismo encabezado que Recursos → título «Actividades», la sección en el subtítulo y en la pill activa; sin caja (bare) -->
     <aula-card-page [heading]="i18n.t().common.activitySections.title" [subtitle]="tx.title + ' · ' + tx.subtitle" [bare]="true">
       <aula-activity-sections pageNav />
-      <div class="mb-6 grid gap-3 rounded-xl bg-muted p-3 sm:grid-cols-2">
-        <label class="text-xs font-semibold text-muted-foreground">
-          {{ tx.language }}
-          <select
-            class="control mt-1 w-full bg-card"
-            [value]="language()"
-            (change)="language.set($any($event.target).value)"
-          >
-            @for (code of languages; track code) {
-              <option [value]="code">{{ i18n.languageName(code) }}</option>
-            }
-          </select>
-        </label>
-        <label class="text-xs font-semibold text-muted-foreground">
-          {{ tx.level }}
-          <select
-            class="control mt-1 w-full bg-card"
-            [value]="level()"
-            (change)="level.set($any($event.target).value)"
-          >
-            <option value="">{{ tx.anyLevel }}</option>
-            @for (l of levels; track l) {
-              <option [value]="l">{{ l }}</option>
-            }
-          </select>
-        </label>
-      </div>
+      <!-- [2026-11-11]: MISMO panel de filtros que Gestión → Actividades (Buscar · Nivel · Filtrar · Limpiar + idiomas) · idioma y nivel recargan al instante -->
+      <aula-filter-panel [(search)]="search" [(level)]="level" [(language)]="language" />
 
       <section class="mb-8" aria-labelledby="music-collections">
         <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 id="music-collections" class="text-lg font-extrabold tracking-tight">
+          <h2 id="music-collections" class="title-section">
             {{ tx.collections }}
           </h2>
           @if (staff()) {
@@ -122,18 +98,18 @@ import { SongCardComponent } from '../components/song-card.component';
             <aula-spinner [label]="i18n.t().common.loading" />
           }
           @case ('error') {
-            <p role="alert" class="text-sm text-tone-danger">{{ music.collections.error() }}</p>
+            <p role="alert" class="text-tone-danger">{{ music.collections.error() }}</p>
           }
           @case ('empty') {
             <p
-              class="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground"
+              class="rounded-xl border border-dashed border-border p-4 text-center text-muted-foreground"
             >
               {{ tx.noCollections }}
             </p>
           }
           @case ('success') {
             <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              @for (c of music.collections.data(); track c.id) {
+              @for (c of collectionsShown(); track c.id) {
                 <li>
                   <aula-collection-card
                     [id]="c.id"
@@ -153,12 +129,13 @@ import { SongCardComponent } from '../components/song-card.component';
       </section>
 
       <section class="mb-8" aria-labelledby="music-songs">
-        <h2 id="music-songs" class="mb-3 text-lg font-extrabold tracking-tight">
+        <h2 id="music-songs" class="title-section mb-3">
           <aula-icon name="music" /> {{ i18n.t().music.title }}
         </h2>
         @if (music.songs.status() === 'success') {
-          <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            @for (s of music.songs.data(); track s.id) {
+          <!-- [2026-11-06]: tarjetas de ancho mínimo 300 px (igual que Cursos) en vez de 3 columnas fijas -->
+          <ul class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,300px),1fr))] gap-4">
+            @for (s of songsShown(); track s.id) {
               <li>
                 <aula-song-card
                   [title]="s.title"
@@ -174,7 +151,7 @@ import { SongCardComponent } from '../components/song-card.component';
           </ul>
         } @else if (music.songs.status() === 'empty') {
           <p
-            class="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground"
+            class="rounded-xl border border-dashed border-border p-4 text-center text-muted-foreground"
           >
             {{ tx.noSongs }}
           </p>
@@ -189,10 +166,13 @@ export default class MusicHubPage {
   protected readonly i18n = inject(I18nService);
   protected readonly music = inject(MusicFacade);
   private readonly session = inject(SessionService);
-  protected readonly languages = LANGUAGES;
   protected readonly levels = CEFR_LEVELS;
-  protected readonly language = signal<string>('en');
+  protected readonly language = signal<string>(''); // '' = todos
   protected readonly level = signal('');
+  protected readonly search = signal(''); // [2026-11-11]: por título, artista o tema (en el navegador)
+  private readonly match = (text: string) => !this.search().trim() || text.toLowerCase().includes(this.search().trim().toLowerCase());
+  protected readonly collectionsShown = computed(() => (this.music.collections.data() ?? []).filter((c) => this.match(`${c.title} ${c.theme ?? ''} ${c.description ?? ''}`)));
+  protected readonly songsShown = computed(() => (this.music.songs.data() ?? []).filter((x) => this.match(`${x.title} ${x.artist ?? ''}`)));
   protected readonly creating = signal(false);
   protected readonly newTitle = signal('');
   protected readonly newTheme = signal('');
@@ -201,7 +181,7 @@ export default class MusicHubPage {
   constructor() {
     // [Filtros]: idioma o nivel nuevos → se recargan colecciones y canciones publicadas
     effect(() => {
-      const f = { language: this.language(), level: this.level() || undefined };
+      const f = { language: this.language() || undefined, level: this.level() || undefined };
       void this.music.loadCollections(f);
       void this.music.loadSongs(f);
     });
@@ -218,7 +198,7 @@ export default class MusicHubPage {
     const ok = await this.music.createCollection({
       title: this.newTitle().trim(),
       theme: this.newTheme().trim() || undefined,
-      language: this.language(),
+      language: this.language() || 'en', // Con «Todos» una colección nueva necesita un idioma: inglés por defecto (como antes)
       level: this.level() || undefined,
     });
     if (ok) {

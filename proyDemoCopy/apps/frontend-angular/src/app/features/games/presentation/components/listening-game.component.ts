@@ -13,6 +13,7 @@ import { AudioPlayerComponent } from './audio-player.component';
 import { GameShellComponent } from './game-shell.component';
 import { GapFillComponent } from './gap-fill.component';
 import { PromptCardComponent } from './prompt-card.component';
+import { SayComponent } from '@features/vocabulary/presentation/components/say.component'; // [2026-10-28]: IPA + traducción + sonido (IPA_TEXT_PROVIDERS en games.routes)
 // [ListeningGameComponent · Presentación · Sprint 8.10]: comprensión y fluidez con la voz del navegador — shadowing (repetir grabando), dictado parcial (palabra que falta), escucha y reformula, pregunta-respuesta rápida | [Patrón]: Strategy por modo (qué se muestra y cómo se responde) + State Machine (escuchando → respondido → siguiente) | [Principio]: DRY (cuatro juegos, un flujo) + OCP | [Paradigma]: Declarativo + Reactivo
 // [Material]: frases propias del proyecto (CC BY 4.0) leídas por SpeechSynthesis → sin audio ni video con derechos de terceros (Sprint 8.17)
 // [A11y]: el texto se puede ver tras responder (o siempre en shadowing y dictado), feedback en role="status", reloj de respuesta en pregunta rápida
@@ -28,6 +29,7 @@ export type ListeningMode = 'shadowing' | 'partial_dictation' | 'listen_reformul
     GapFillComponent,
     AnswerTimerComponent,
     VoiceRecorderComponent,
+    SayComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' }, // Elemento anfitrión en bloque → respeta márgenes y space-y del contenedor
@@ -52,8 +54,12 @@ export type ListeningMode = 'shadowing' | 'partial_dictation' | 'listen_reformul
               [slowLabel]="tx.listenSlow"
             />
           </aula-prompt-card>
+          <!-- [2026-10-28]: con la frase a la vista (shadowing, o tras responder) → su IPA y traducción · el sonido ya lo da el reproductor de arriba -->
+          @if (mode() === 'shadowing' || verdict()) {
+            <aula-say [text]="l.text" [language]="language" [withButton]="false" />
+          }
           @if (mode() === 'quick_qa' && l.question) {
-            <p class="rounded-xl border border-tone-brand-line bg-tone-brand-soft px-4 py-3 text-base font-bold text-tone-brand" [attr.lang]="language">
+            <p class="rounded-xl border border-tone-brand-line bg-tone-brand-soft px-4 py-3 font-bold text-tone-brand" [attr.lang]="language">
               <aula-icon name="circle-help" /> {{ l.question }}
             </p>
           }
@@ -66,10 +72,10 @@ export type ListeningMode = 'shadowing' | 'partial_dictation' | 'listen_reformul
               (recorded)="repeat($event)"
             />
             @if (speech.transcribing()) {
-              <p role="status" class="text-sm text-muted-foreground">{{ tx.transcribing }}</p>
+              <p role="status" class="text-muted-foreground">{{ tx.transcribing }}</p>
             }
             @if (speech.error(); as err) {
-              <p role="alert" class="text-sm text-tone-danger">{{ err }}</p>
+              <p role="alert" class="text-tone-danger">{{ err }}</p>
             }
             @if (verdict(); as v) {
               <div

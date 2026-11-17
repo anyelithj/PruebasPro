@@ -9,6 +9,7 @@ import {
   inTargetLanguage,
   strictLine,
 } from '../../../../shared/domain/target-language';
+import { parseJsonLoose } from '../../../../shared/domain/llm-json'; // [Fix 2026-10-28]: lectura tolerante compartida (DRY con Práctica)
 // [UseCase DraftDialogue · 2026-10-19]: BORRADOR de diálogo para el formulario de subida — desde el texto de una página (modo URL; Next.js la descarga con safeFetch) o generado por la IA (modo IA); no guarda nada: el docente revisa y guarda | [Patrón]: Use Case (Query) + Strategy (texto | IA) + Adapter (OllamaClient compartido) | [Principio]: determinístico primero (las líneas «Nombre: texto» se leen sin LLM) + SRP + revisión humana | [Paradigma]: POO + funcional (parseScript pura)
 
 export interface DraftTurn {
@@ -33,6 +34,16 @@ export interface DraftRequest {
 }
 
 const MAX_TURNS = 40;
+// [Presupuesto de tiempo · Fix 2026-10-28]: un borrador tardó 99 s (dos inferencias encadenadas: la normal + el reintento por idioma, cada una sin plazo propio y
+// con salida de 1200 tokens) → plazo por intento + total; el reintento solo empieza si cabe | [Patrón]: Deadline + Retry acotado | [Principio]: Fail Fast con mensaje claro
+// [Fix 2026-10-30]: 75 s/120 s eran demasiado cortos → en vivo, 16 turnos con qwen2.5:3b en CPU tardan 76–110 s y respondían 504 | mismo orden que COURSE_DRAFT_TIMEOUT_MS (< 300 s de Node)
+export const DIALOGUE_ATTEMPT_MS = 150_000;
+export const DIALOGUE_BUDGET_MS = 200_000;
+const MIN_RETRY_WINDOW_MS = 30_000; // Con menos margen se devuelve el primer borrador (el docente lo revisa igualmente) en vez de fallar
+// [tokensFor]: salida proporcional a los turnos (~60 tokens por turno corto + JSON; chino y ruso gastan más) en vez de 1200 fijos → inferencia en CPU bastante más corta | Función pura
+export const tokensFor = (turns: number): number =>
+  Math.min(1200, 160 + 60 * turns);
+
 // [Línea de guion]: «Ana: Hello!» · «- TOM: Hi» · «A) Hi» (nombre corto con mayúscula inicial y dos puntos)
 const SCRIPT_LINE =
   /^\s*[-–•]?\s*([\p{Lu}][\p{L}\p{M} .'-]{0,30}?)\s*[:)]\s+(.{1,600})$/u;
@@ -85,9 +96,27 @@ export class DraftDialogueUseCase {
       if (script) return { title, ...script, source: 'script' };
     }
     // [2026-10-25]: respuesta en español → un reintento con orden estricta de idioma
+    // [Fix 2026-10-28]: el reintento respeta el plazo total → sin margen se devuelve el primer borrador (para revisar) en vez de esperar otra inferencia
+    const deadline = Date.now() + DIALOGUE_BUDGET_MS; // `Date.now()` (JS): plazo absoluto de la petición
+    let first: DialogueDraft | null = null;
     return inTargetLanguage(
       req.language,
-      (strict) => this.generate(req, title, strict),
+      async (strict) => {
+        const left = deadline - Date.now();
+        if (strict && first && left < MIN_RETRY_WINDOW_MS) return first;
+        // [Fix 2026-10-30 · Fail Soft]: si falla el REINTENTO se conserva el primer borrador (antes un 504 lo tiraba) | `.catch` (Promise) + `throw`: sin borrador previo, el error sigue su curso
+        const draft = await this.generate(
+          req,
+          title,
+          strict,
+          Math.min(DIALOGUE_ATTEMPT_MS, left),
+        ).catch((err: unknown) => {
+          if (first) return first;
+          throw err;
+        });
+        first ??= draft; // `??=` (ES2021): solo guarda el primero
+        return draft;
+      },
       (d) => d.turns.map((t) => t.text).join(' '),
     );
   }
@@ -96,6 +125,7 @@ export class DraftDialogueUseCase {
     req: DraftRequest,
     title: string,
     strict: boolean,
+    timeoutMs: number, // [Fix 2026-10-28]: plazo de ESTA inferencia (OllamaClient → 504 «La IA tardó demasiado…»)
   ): Promise<DialogueDraft> {
     const speakers = this.speakers(req.speakers);
     const lang = LANGUAGE_NAME_EN[req.language];
@@ -119,16 +149,25 @@ export class DraftDialogueUseCase {
     const res = await this.ollama.generate({
       model: this.model,
       prompt,
-      options: { temperature: 0.5, num_predict: 1200, num_ctx: 8192 },
+      options: {
+        temperature: 0.5,
+        num_predict: req.mode === 'text' ? 1200 : tokensFor(count), // Extraer de una página puede traer hasta MAX_TURNS turnos
+        // [Fix 2026-10-30]: el prompt de IA es corto → 4096 (= OLLAMA_NUM_CTX); un num_ctx distinto obliga a Ollama a RECARGAR el modelo en cada petición | el de una página sí necesita 8192
+        num_ctx: req.mode === 'text' ? 8192 : 4096,
+      },
+      timeoutMs,
     });
-    let raw: { title?: unknown; speakers?: unknown; turns?: unknown };
-    try {
-      raw = JSON.parse(res.response ?? '{}') as typeof raw;
-    } catch {
+    // [Fix 2026-10-28]: lectura tolerante (JSON envuelto en texto) antes de rendirse
+    const parsed = parseJsonLoose(res.response ?? '{}');
+    if (!parsed || typeof parsed !== 'object')
       throw new ServiceUnavailableException(
-        'La IA devolvió un borrador inválido. Intenta de nuevo.',
+        'La IA devolvió un borrador inválido (sin JSON legible). Intenta de nuevo o escribe el diálogo a mano.',
       );
-    }
+    const raw = parsed as {
+      title?: unknown;
+      speakers?: unknown;
+      turns?: unknown;
+    };
     // [Filtro]: solo turnos con hablante A/B y texto → el dominio decide, no el LLM
     const turns = (Array.isArray(raw.turns) ? raw.turns : [])
       .map((t) => t as Partial<DraftTurn>)

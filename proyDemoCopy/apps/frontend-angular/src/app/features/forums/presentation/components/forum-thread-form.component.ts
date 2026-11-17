@@ -15,7 +15,7 @@ import { ThreadInputSchema, type ThreadInput } from '../../domain/models/forums'
   template: `
     @let tx = t();
     <form class="space-y-3 rounded-xl border border-border p-4" (submit)="onSubmit($event)" novalidate>
-      <h2 class="text-base font-bold">{{ tx.newThread }}</h2>
+      <h2 class="title-section">{{ tx.newThread }}</h2>
       <aula-form-field #ti fieldId="thread-title" [label]="tx.threadTitle" [error]="err('title')">
         <aula-text-input inputId="thread-title" [formField]="f.title" [describedBy]="ti.describedBy()" />
       </aula-form-field>

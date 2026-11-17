@@ -561,6 +561,9 @@ cd "/c/Users/angui/Documents/eCommerce Web3-Portafolio/ecommerce-web3-enterprise
 source .venv/Scripts/activate                  # activa el venv (una vez por terminal; PowerShell: .venv\Scripts\Activate.ps1)
 alembic upgrade head                           # CREA las tablas del motor IA (esquema "ml" de PostgreSQL)
 uvicorn app.main:app --reload --port 8000      # ENCIENDE la API de IA en http://localhost:8000 (docs: /docs)
+python -m poetry run uvicorn app.main:app --reload --port 8000
+source "$(python -m poetry env info -p | sed 's#\\#/#g')/Scripts/activate"
+uvicorn app.main:app --reload --port 8000
 ```
 
 Primera vez, o tras cambiar `pyproject.toml`/`uv.lock` (crea/actualiza `.venv` según `uv.lock`; tarda):

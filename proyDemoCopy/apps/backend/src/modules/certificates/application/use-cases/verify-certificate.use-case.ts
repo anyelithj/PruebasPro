@@ -9,8 +9,12 @@ import {
 } from '../../../courses/domain/interfaces/course.repository.interface';
 import { VerifyCertificateHashUseCase } from '../../../web3/application/use-cases/verify-certificate-hash.use-case';
 import { Certificate } from '../../domain/entities/certificate.entity';
+import {
+  COURSE_GROUP_LANGUAGE,
+  type CourseGroup,
+} from '../../../courses/domain/value-objects/course-category.vo';
 import { certificateQrSvg } from '../../infrastructure/pdf/certificate-qr';
-import { CERTIFICATES_STORE, verifyUrlFor } from './issue-certificate.use-case';
+import { CERTIFICATES_STORE, qrTarget } from './issue-certificate.use-case';
 // [UseCases VerifyCertificate + ListMyCertificates + GetCertificatePdf · Sprints 2.7/7.8 · RF-32 · RF-93]: verificación PÚBLICA por código o por hash de transacción (compara en Sepolia el hash anclado con el del PDF), lista del dueño y descarga del PDF | [Patrón]: Query (CQRS ligero) + DTO público (sin datos sensibles) | [Principio]: SRP + DRY (lectura on-chain de Web3) + mínimo privilegio | [Paradigma]: POO + async/await
 
 // [Vista pública]: lo que cualquiera puede ver al verificar (sin email, ids internos ni ruta del archivo)
@@ -59,14 +63,14 @@ export class VerifyCertificateUseCase {
     return this.toPublic(cert);
   }
 
-  // [qrSvg · Sprint 7.8]: QR público (SVG) que lleva a /verificar/:code, con el color del nivel → tarjetas y diploma de Angular
+  // [qrSvg · Sprint 7.8 → Caso E]: QR público (SVG) que lleva a /certificados/verificar/:code (o a la URL fijada al emitir), con el color del nivel → tarjetas y diploma de Angular
   async qrSvg(code: string): Promise<string> {
     const cert = await this.certificates.findOneBy({
       code: code.trim().toUpperCase(),
     });
     if (!cert)
       throw new NotFoundException('No existe un certificado con ese código');
-    return certificateQrSvg(verifyUrlFor(cert.code), cert.cefrLevel);
+    return certificateQrSvg(qrTarget(cert), cert.cefrLevel); // [Caso E]: la MISMA URL que lleva el QR del PDF
   }
 
   // [toPublic]: si está anclado, la cadena manda — un PDF alterado o una transacción ajena dan `onchainValid: false`
@@ -97,6 +101,19 @@ export class VerifyCertificateUseCase {
   }
 }
 
+// [languageFromTitle]: «Examen de nivel · Inglés A1» → 'en' | Pura
+const TITLE_LANGUAGE: ReadonlyArray<[RegExp, string]> = [
+  [/ingl[eé]s|english/i, 'en'],
+  [/franc[eé]s|french/i, 'fr'],
+  [/alem[aá]n|german/i, 'de'],
+  [/portugu[eé]s|portuguese/i, 'pt'],
+  [/chino|mandar[ií]n|chinese/i, 'zh'],
+  [/ruso|russian/i, 'ru'],
+  [/espa[nñ]ol|spanish/i, 'es'],
+];
+const languageFromTitle = (title: string): string | null =>
+  TITLE_LANGUAGE.find(([re]) => re.test(title))?.[1] ?? null;
+
 @Injectable()
 export class ListMyCertificatesUseCase {
   constructor(
@@ -107,8 +124,8 @@ export class ListMyCertificatesUseCase {
 
   // [items + eligible]: certificados emitidos y cursos al 100 % que aún no lo tienen (botón «Solicitar» en Angular)
   async execute(userId: string): Promise<{
-    items: Certificate[];
-    eligible: { courseId: string; title: string }[];
+    items: (Certificate & { language: string | null })[];
+    eligible: { courseId: string; title: string; examPassed: boolean }[];
   }> {
     const [items, enrollments] = await Promise.all([
       this.certificates.find({
@@ -125,14 +142,45 @@ export class ListMyCertificatesUseCase {
     const courses = await Promise.all(
       ready.map((e) => this.courses.findById(e.courseId)),
     );
+    // [2026-11-06]: el certificado exige el examen final aprobado → `examPassed` false = la UI enlaza al examen en vez de «Solicitar»
+    const passed: Array<{ courseId: string }> = ready.length
+      ? await this.certificates.query(
+          `SELECT DISTINCT q.course_id AS "courseId" FROM quiz_sessions s JOIN quizzes q ON q.id = s.quiz_id
+           WHERE s.user_id = $1 AND s.passed = true AND q.kind = 'final' AND q.course_id = ANY($2)`,
+          [userId, ready.map((e) => e.courseId)],
+        )
+      : [];
+    const ok = new Set(passed.map((r) => r.courseId));
     const eligible = ready.map((e, i) => ({
       courseId: e.courseId,
       title: courses[i]?.title ?? e.courseId,
+      examPassed: ok.has(e.courseId),
     }));
-    return { items, eligible };
+    // [Idioma · 2026-11-13]: filtro por idioma en «Mis certificados» → idioma del grupo del curso; certificado de nivel → por el nombre del idioma en su título
+    // ponytail: detección por título en los de nivel (no guardan idioma); columna `language` en certificates si hiciera falta exactitud
+    const courseIds = items
+      .map((c) => c.courseId)
+      .filter((id): id is string => !!id);
+    const groups: Array<{ id: string; group: string }> = courseIds.length
+      ? await this.certificates.query(
+          `SELECT id, category_group::text AS "group" FROM courses WHERE id = ANY($1)`,
+          [courseIds],
+        )
+      : [];
+    const groupOf = new Map(groups.map((g) => [g.id, g.group]));
+    const withLanguage = items.map((c) =>
+      Object.assign(c, {
+        language: c.courseId
+          ? (COURSE_GROUP_LANGUAGE[groupOf.get(c.courseId) as CourseGroup] ??
+            null)
+          : languageFromTitle(c.courseTitle),
+      }),
+    );
+    return { items: withLanguage, eligible };
   }
 }
 
+// [ListIssuedCertificates · 2026-11-06]: Gestión → Certificados — últimos emitidos (búsqueda por código, nombre o curso) | ADMIN: todos · docente: los de sus cursos
 @Injectable()
 export class GetCertificatePdfUseCase {
   constructor(
@@ -143,10 +191,12 @@ export class GetCertificatePdfUseCase {
 
   // [Solo el dueño]: el PDF lleva su nombre → no se sirve a terceros (ellos verifican por código)
   async execute(
-    userId: string,
+    userId: string | null, // null = personal autorizado (el controlador ya validó el alcance)
     id: string,
   ): Promise<{ filename: string; source: RangedSource }> {
-    const c = await this.certificates.findOneBy({ id, userId });
+    const c = await this.certificates.findOneBy(
+      userId ? { id, userId } : { id },
+    );
     if (!c) throw new NotFoundException('Certificado no encontrado');
     const filename = `certificado-${c.code}.pdf`;
     const key = c.objectKey;

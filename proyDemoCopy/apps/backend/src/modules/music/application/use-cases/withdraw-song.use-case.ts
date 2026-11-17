@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import type { ObjectStore } from '../../../../shared/storage/object-store';
+import { SongLine } from '../../domain/entities/song-line.entity';
 import { Song } from '../../domain/entities/song.entity';
 import { type MusicActor, SongAccess } from './get-song.use-case';
 import { MUSIC_STORE } from './upload-song-audio.use-case';
@@ -18,6 +19,12 @@ export class WithdrawSongUseCase {
   async execute(actor: MusicActor, id: string): Promise<void> {
     const song = await this.access.editable(actor, id);
     if (song.audioKey) await this.store.remove(song.audioKey);
+    // [2026-11-06 · Borrado completo]: borrador nunca publicado → se borra DE VERDAD (canción + versos) · publicada/en revisión → borrado lógico (historial y prácticas)
+    if (song.status === 'draft' || song.status === 'rejected') {
+      await this.songs.manager.delete(SongLine, { songId: id });
+      await this.songs.delete({ id });
+      return;
+    }
     Object.assign(song, {
       withdrawnAt: new Date(),
       audioKey: null,

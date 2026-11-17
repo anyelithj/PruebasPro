@@ -43,7 +43,7 @@ export class ReadingHttpRepository extends ReadingRepository {
   }
 
   // [exportUrl]: enlace directo (`<a download>`): el navegador descarga con la cookie de sesión (mismo origen)
-  exportUrl(id: string, format: 'pdf' | 'txt', include: ReadonlyArray<'translation' | 'ipa'>): string {
+  exportUrl(id: string, format: 'pdf' | 'docx', include: ReadonlyArray<'translation' | 'ipa'>): string {
     const q = new URLSearchParams({ format, ...(include.length ? { include: include.join(',') } : {}) });
     return `${this.base}/${this.id(id)}/export?${q}`;
   }

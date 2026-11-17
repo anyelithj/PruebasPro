@@ -8,6 +8,7 @@ import { IsNull, Repository } from 'typeorm';
 import { Song } from '../../domain/entities/song.entity';
 import { SongLine } from '../../domain/entities/song-line.entity';
 import { songBlockers } from '../../domain/song-readiness';
+import { CaptionTimings } from './caption-timings.service';
 // [UseCases SongAccess + GetSong · Sprint 9.2 · RF-117/RF-119]: carga una canción según el rol (borradores solo para su autor o ADMIN) y la devuelve con sus líneas, IPA, traducción y tiempos | [Patrón]: Query + Guard reutilizable | [Principio]: SRP + mínimo privilegio + DRY | [Paradigma]: POO
 
 export interface MusicActor {
@@ -51,15 +52,22 @@ export class GetSongUseCase {
   constructor(
     private readonly access: SongAccess,
     @InjectRepository(SongLine) private readonly lines: Repository<SongLine>,
+    private readonly captions: CaptionTimings, // [2026-11-06]: tiempos reales desde los subtítulos de YouTube
   ) {}
 
   async execute(actor: MusicActor, id: string) {
     const song = await this.access.readable(actor, id);
-    const lines = await this.lines.find({
-      where: { songId: id },
-      order: { position: 'ASC' },
-    });
+    const lines = await this.captions.fill(
+      song,
+      await this.lines.find({ where: { songId: id }, order: { position: 'ASC' } }),
+    );
     const editable = this.access.canEdit(actor, song);
+    // [2026-11-10]: canciones antiguas sin glosa guardada → si el título es un verso, su IPA y traducción (gratis, sin IA)
+    if (!song.titleIpa) {
+      const key = (t: string) => t.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+      const same = lines.find((l) => key(l.text) === key(song.title) && l.ipa);
+      if (same) Object.assign(song, { titleIpa: same.ipa, titleTranslation: song.titleTranslation || (same.translation ?? '') });
+    }
     // [2026-10-24 · blockers]: solo quien edita ve qué falta para publicar (checklist del asistente)
     return { ...song, lines, editable, ...(editable ? { blockers: songBlockers(song, lines.length) } : {}) };
   }

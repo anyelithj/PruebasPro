@@ -5,6 +5,9 @@ import type { MarkedWord, MarkInput, WordLookup, WordQuery, WordStatus } from '.
 
 export abstract class DictionaryRepository {
   abstract lookup(q: WordQuery): Observable<WordLookup>;
+  abstract ipa(q: Pick<WordQuery, 'language' | 'word'>): Observable<{ ipa: string | null; ipa_us: string | null }>; // [2026-10-31]: sin LLM → al instante
+  // [translate · 2026-11-09]: frase completa (títulos de varias palabras); opcional → los dobles de prueba no lo necesitan
+  translate?(text: string, source: string, target: string): Observable<{ translation: string }>;
   abstract listMarked(language: string): Observable<MarkedWord[]>;
   abstract mark(input: MarkInput): Observable<MarkedWord>;
   abstract setStatus(id: string, status: WordStatus): Observable<MarkedWord>;

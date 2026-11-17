@@ -1,12 +1,17 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useSelector } from "react-redux";
+import type { RootState } from "@/store";
 import { useQuiz } from "@/hooks/useQuiz";
 import { TimerBar } from "@/components/quiz/TimerBar";
 import { QuestionCard } from "@/components/quiz/QuestionCard";
 import { QuizProgress } from "@/components/quiz/QuizProgress";
-import type { Quiz } from "@/types/quiz";
+import { isExamKind, type Quiz } from "@/types/quiz";
+import { ExamClock } from "@/components/quiz/ExamClock";
 // [QuizPlayClient]: orquesta el juego en cliente (Redux + timers) | [Patron]: Container | [Principio]: SRP | [Paradigma]: Funcional + Reactivo
+
+const elapsedSince = (start: number): number => Date.now() - start; // Solo en manejadores de eventos (fuera del render)
 
 export function QuizPlayClient({ quiz }: { quiz: Quiz }) {
   const router = useRouter();
@@ -27,6 +32,8 @@ export function QuizPlayClient({ quiz }: { quiz: Quiz }) {
   // [Inicio de la pregunta]: `useRef` (React) y no estado → solo se lee al responder; cambiarlo no debe re-renderizar | [Principio]: KISS
   const questionStartRef = useRef(0);
   const startedRef = useRef(false);
+  const exam = isExamKind(quiz.kind); // [2026-11-06]: examen final/de nivel → reloj TOTAL, sin resultado por pregunta, avance automático
+  const session = useSelector((s: RootState) => s.quiz.session);
 
   // [Hidratar + iniciar sesion]: una sola vez al montar | [Patron]: Effect
   useEffect(() => {
@@ -69,13 +76,14 @@ export function QuizPlayClient({ quiz }: { quiz: Quiz }) {
 
   const handleSubmit = async () => {
     if (!selectedAnswer) return;
-    const timeTakenMs = Date.now() - questionStartRef.current;
+    const timeTakenMs = elapsedSince(questionStartRef.current);
     const ok = await submit({
       questionId: currentQuestion.id,
       userAnswer: selectedAnswer,
       timeTakenMs,
     });
     if (!ok) return;
+    if (exam) await handleNext(); // Examen: sin «Correcto/Incorrecto» (el banco se reutiliza entre intentos)
   };
 
   const handleExpire = () => {
@@ -98,17 +106,23 @@ export function QuizPlayClient({ quiz }: { quiz: Quiz }) {
     }
   };
 
-  const hasAnswered = lastResult !== null;
+  const hasAnswered = lastResult !== null && !exam;
+  const deadline =
+    exam && session && quiz.timeLimitMinutes ? new Date(session.startedAt).getTime() + quiz.timeLimitMinutes * 60_000 : null;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="space-y-6"> {/* [2026-11-11]: ancho del portal (lo pone la página) */}
       <QuizProgress current={progress.current} total={progress.total} />
-      <TimerBar
-        key={currentQuestion.id}
-        seconds={timeLimit}
-        onExpire={handleExpire}
-        isPaused={phase === "paused" || hasAnswered}
-      />
+      {exam ? (
+        deadline && <ExamClock deadline={deadline} onExpire={() => void end(false)} />
+      ) : (
+        <TimerBar
+          key={currentQuestion.id}
+          seconds={timeLimit}
+          onExpire={handleExpire}
+          isPaused={phase === "paused" || hasAnswered}
+        />
+      )}
       <QuestionCard
         question={currentQuestion}
         selectedAnswer={selectedAnswer}
@@ -140,7 +154,7 @@ export function QuizPlayClient({ quiz }: { quiz: Quiz }) {
             disabled={!selectedAnswer || phase === "submitting"}
             className="btn btn-primary btn-lg"
           >
-            {phase === "submitting" ? "Enviando..." : "Responder"}
+            {phase === "submitting" ? "Enviando..." : exam ? (progress.current >= progress.total ? "Responder y terminar" : "Responder y seguir →") : "Responder"}
           </button>
         ) : (
           <button

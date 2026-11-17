@@ -30,6 +30,8 @@ function repo(rows: Certificate[] = []) {
       if (!rows.includes(x)) rows.push(x);
       return x;
     }),
+    // [2026-11-06]: examen final aprobado (consulta a quiz_sessions) → por defecto aprobado con 85 %
+    query: jest.fn(async (): Promise<unknown[]> => [{ quizId: 'qz1', percent: 85 }]),
     update: jest.fn(
       async (w: Partial<Certificate>, patch: Partial<Certificate>) => {
         rows.filter((r) => match(r, w)).forEach((r) => Object.assign(r, patch));
@@ -43,6 +45,7 @@ const enrollment = (progress: number) => ({
   courseId: 'k1',
   progress,
   purchasedAt: new Date(),
+  closureApprovedAt: new Date(), // [2026-11-09 · RF-32]: el docente ya validó el cierre académico
 });
 
 function setup(progress = 100) {
@@ -81,6 +84,30 @@ describe('IssueCertificateUseCase', () => {
   it('rechaza un curso sin terminar', async () => {
     const { issue } = setup(80);
     await expect(issue.execute('u1', 'k1')).rejects.toThrow(/100 %/);
+  });
+
+  it('rechaza sin el examen final aprobado (2026-11-06)', async () => {
+    const { issue, certificates } = setup();
+    certificates.query.mockResolvedValueOnce([]);
+    await expect(issue.execute('u1', 'k1')).rejects.toThrow(/examen final/);
+  });
+
+  it('rechaza si el docente no validó el cierre académico (2026-11-09)', async () => {
+    const { issue, courses } = setup();
+    courses.getEnrollment.mockResolvedValueOnce({ ...enrollment(100), closureApprovedAt: null } as never);
+    await expect(issue.execute('u1', 'k1')).rejects.toThrow(/cierre académico/);
+  });
+
+  it('guarda la nota del examen final y el examen que lo otorgó', async () => {
+    const { issue } = setup();
+    const cert = await issue.execute('u1', 'k1');
+    expect(cert).toMatchObject({ quizId: 'qz1', examScore: 85 });
+  });
+
+  it('aprobar el examen emite el certificado solo (evento quiz.exam-passed)', async () => {
+    const { issue, certificates } = setup();
+    await issue.onExamPassed({ userId: 'u1', quizId: 'qz1', courseId: 'k1', percent: 85 });
+    expect(certificates.rows).toHaveLength(1);
   });
 
   it('emite un PDF real, guarda su huella, lo encola para anclar y es idempotente', async () => {
@@ -176,7 +203,7 @@ describe('ListMyCertificatesUseCase', () => {
       courses as never,
     );
     expect((await list.execute('u1')).eligible).toEqual([
-      { courseId: 'k1', title: 'Inglés A1' },
+      { courseId: 'k1', title: 'Inglés A1', examPassed: false }, // Sin examen final aprobado → la UI enlaza al examen
     ]);
     await issue.execute('u1', 'k1');
     expect(await list.execute('u1')).toMatchObject({

@@ -17,10 +17,14 @@ import type {
   Song,
   SongDetail,
   SongFilter,
-  SongInput,
+  SongInput, SongPatch,
   SongPracticeKind,
 } from '../domain/models/music';
 // [MusicFacade · Aplicación · Sprints 9.8–9.10]: casos de uso de colecciones, canciones, subida (licencia → audio → letra → tiempos), revisión del ADMIN y prácticas | [Patrón]: Facade + State Machine (AsyncState por lista) + Command (`act`) | [Principio]: SRP (las páginas solo pintan) + DIP (puerto del dominio) | [Paradigma]: Reactivo (signals) + async/await
+
+// [EnrichResult · 2026-10-27]: lo que la página necesita para su aviso — `unavailable` distingue «IA caída» de «faltan algunos versos»
+export type EnrichResult = Pick<LyricsLoad, 'enriched' | 'missing' | 'unavailable'>;
+const MAX_ENRICH_ROUNDS = 25; // ≥ 400 versos (MAX_LINES de NestJS) / 20 por trozo → nunca un bucle infinito
 
 @Injectable()
 export class MusicFacade {
@@ -37,6 +41,8 @@ export class MusicFacade {
   // [pendingLyrics · 2026-10-24]: letra generada con IA que aún no se guardó (la fachada vive en la ruta padre → sobrevive al paso /subir → /subir/:id)
   readonly pendingLyrics = signal('');
   readonly actionError = signal<string | null>(null);
+  // [enrichProgress · 2026-10-27]: versos con IPA y traducción / total mientras se encadenan tandas (null = sin proceso en curso)
+  readonly enrichProgress = signal<{ done: number; total: number; since: number } | null>(null); // [2026-11-05]: `since` → tiempo transcurrido visible
   // [linkRules · 2026-10-24]: dominios de letras/streaming para validar el enlace del audio en el cliente (se piden una vez por fachada)
   readonly linkRules = signal<MediaLinkRules>(NO_LINK_RULES);
   private linkRulesRequested = false;
@@ -107,6 +113,12 @@ export class MusicFacade {
     return this.act(this.repo.createSong(input));
   }
 
+  async updateSong(id: string, patch: SongPatch): Promise<boolean> {
+    const ok = !!(await this.act(this.repo.updateSong(id, patch)));
+    if (ok) await this.loadSong(id);
+    return ok;
+  }
+
   async uploadAudio(id: string, file: Blob): Promise<boolean> {
     const ok = !!(await this.act(this.repo.uploadAudio(id, file)));
     if (ok) await this.loadSong(id);
@@ -131,19 +143,45 @@ export class MusicFacade {
     }
   }
 
-  // [loadLyrics]: { enriched, missing } — missing > 0 = versos guardados sin IPA o sin traducción (se puede reintentar) · null = error visible
+  // [loadLyrics]: { enriched, missing, unavailable } — missing > 0 = versos guardados sin IPA o sin traducción (se puede reintentar) · null = error visible
   // `auto` (2026-10-19): false = modo manual (líneas sin IPA ni traducción para escribirlas a mano)
-  async loadLyrics(id: string, lyrics: string, auto = true): Promise<Pick<LyricsLoad, 'enriched' | 'missing'> | null> {
+  // [2026-10-27 · Bug «No se pudo contactar con el servidor»]: NestJS responde por TANDAS acotadas en tiempo (`more: true` = quedan versos) → aquí se encadenan con /lines/enrich mostrando el progreso, en vez de una sola petición que superaba el timeout del BFF
+  async loadLyrics(id: string, lyrics: string, auto = true): Promise<EnrichResult | null> {
+    // [Fix 2026-11-05]: el aviso de progreso aparece YA en la primera tanda (antes solo desde la segunda → minutos sin saber si algo pasaba)
+    if (auto) this.enrichProgress.set({ done: 0, total: lyrics.split('\n').filter((l) => l.trim()).length, since: Date.now() });
     const r = await this.act(this.repo.loadLyrics(id, lyrics, auto));
-    if (r) await this.loadSong(id);
-    return r ? { enriched: r.enriched, missing: r.missing } : null;
+    if (!r) this.enrichProgress.set(null);
+    return r ? this.continueEnrich(id, r) : null;
+  }
+
+  // [loadManualLyrics · 2026-11-06]: versos SIN IA (auto = false) → las líneas nuevas con su id para pegarles el IPA y la traducción manuales
+  async loadManualLyrics(id: string, lyrics: string): Promise<LyricsLoad['lines'] | null> {
+    return (await this.act(this.repo.loadLyrics(id, lyrics, false)))?.lines ?? null;
   }
 
   // [retryEnrich · 2026-10-24]: vuelve a pedir IPA y traducción SOLO de los versos que faltan (idempotente)
-  async retryEnrich(id: string): Promise<Pick<LyricsLoad, 'enriched' | 'missing'> | null> {
+  async retryEnrich(id: string): Promise<EnrichResult | null> {
+    const lines = this.song.data()?.lines ?? [];
+    const since = this.enrichProgress()?.since ?? Date.now();
+    this.enrichProgress.set({ done: lines.filter((l) => l.ipa && l.translation).length, total: lines.length, since });
     const r = await this.act(this.repo.reEnrich(id));
-    if (r) await this.loadSong(id);
-    return r ? { enriched: r.enriched, missing: r.missing } : null;
+    if (!r) this.enrichProgress.set(null);
+    return r ? this.continueEnrich(id, r) : null;
+  }
+
+  // [continueEnrich · 2026-10-27]: mientras NestJS diga `more` (y la IA responda) pide la siguiente tanda; `enrichProgress` alimenta el aviso «n de N versos» | [Patrón]: Continuation + Circuit Breaker simple (MAX_ENRICH_ROUNDS y `unavailable` cortan el bucle)
+  private async continueEnrich(id: string, first: LyricsLoad): Promise<EnrichResult> {
+    let r: LyricsLoad | null = first;
+    let last = first;
+    for (let round = 0; r?.more && !r.unavailable && round < MAX_ENRICH_ROUNDS; round++) {
+      this.enrichProgress.set({ done: r.lines.length - r.missing, total: r.lines.length, since: this.enrichProgress()?.since ?? Date.now() });
+      last = r;
+      r = await this.act(this.repo.reEnrich(id)); // null = error ya visible en `actionError` (p. ej. 504) → se sale con lo último conocido
+    }
+    this.enrichProgress.set(null);
+    const end = r ?? last;
+    await this.loadSong(id);
+    return { enriched: end.enriched, missing: end.missing, unavailable: end.unavailable };
   }
 
   // [draftLyrics · 2026-10-24]: letra ORIGINAL con IA (idioma, nivel y tema) → el docente la revisa antes de guardarla
@@ -176,6 +214,13 @@ export class MusicFacade {
   async review(id: string, decision: 'published' | 'rejected', note?: string): Promise<boolean> {
     const r = await this.act(this.repo.changeStatus(id, decision, note));
     if (r) this.reviewQueue.set((this.reviewQueue.data() ?? []).filter((s) => s.id !== id));
+    return !!r;
+  }
+
+  // [setPublished · 2026-10-27]: interruptor Publicar (ADMIN; NestJS exige licencia, audio y letra) / Despublicar (autor o ADMIN → vuelve a borrador y los estudiantes dejan de verla)
+  async setPublished(id: string, publish: boolean): Promise<boolean> {
+    const r = await this.act(this.repo.changeStatus(id, publish ? 'published' : 'draft'));
+    if (r) await this.loadSong(id);
     return !!r;
   }
 

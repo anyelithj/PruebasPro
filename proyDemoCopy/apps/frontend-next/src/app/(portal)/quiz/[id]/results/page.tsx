@@ -9,6 +9,7 @@ import { ScoreDisplay } from "@/components/quiz/ScoreDisplay";
 import { FeedbackPanel } from "@/components/ai/FeedbackPanel";
 import { WeaknessChart, type WeakTopicDatum } from "@/components/ai/WeaknessChart";
 import { labelCategory, labelDifficulty } from "@/lib/constants";
+import { isExamKind } from "@/types/quiz";
 // [QuizResultsPage]: integra ScoreDisplay + FeedbackPanel + WeaknessChart | [Patron]: Container | [Principio]: SRP | [Paradigma]: Funcional + Reactivo
 // [Nota Sprint 2.3]: lectura del store en cliente. Si user refresca, no hay resultado en memoria — redirige a /dashboard.
 
@@ -72,12 +73,38 @@ export default function QuizResultsPage() {
   }, [session, quiz]);
 
   if (!session || !quiz) return null;
+  const exam = isExamKind(quiz.kind); // [2026-11-06]: examen final/de nivel → aprobado o no + siguiente paso (sin respuestas correctas)
+  const examHref = quiz.kind === "final" && quiz.courseId ? `/quiz/examen/curso/${quiz.courseId}` : `/quiz/examen/nivel?language=${quiz.language ?? "en"}&level=${quiz.cefrLevel ?? "A1"}`;
 
   return (
     <div className="w-full space-y-5 py-4">
       <header className="text-center">
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Resultados — {quiz.title}</h1>
+        <h1 className="title-page">Resultados — {quiz.title}</h1>
       </header>
+
+      {exam && (
+        <section
+          role="status"
+          className={`space-y-2 rounded-2xl border p-5 text-center ${session.passed ? "border-success/40 bg-success/10" : "border-danger/40 bg-danger/10"}`}
+        >
+          <p className="text-5xl font-extrabold">{session.percent ?? 0} %</p>
+          <p className={`text-lg font-bold ${session.passed ? "text-success" : "text-danger"}`}>
+            {session.passed ? "¡Aprobado! Tu certificado ya se está emitiendo." : `No aprobado · necesitas ${quiz.passScore ?? 70} %`}
+          </p>
+          <p className="type-meta text-muted-foreground">
+            {session.passed
+              ? "Lo encontrarás en Mis certificados en unos segundos."
+              : "Repasa los temas del curso y vuelve a intentarlo cuando se abra tu próximo intento."}
+          </p>
+          <div className="flex flex-wrap justify-center gap-3 pt-1">
+            {session.passed ? (
+              <a href="/certificados" className="btn btn-primary">Ver mis certificados</a>
+            ) : (
+              <Link href={examHref} className="btn btn-primary">Ver intentos</Link>
+            )}
+          </div>
+        </section>
+      )}
 
       <ScoreDisplay
         points={session.totalScore}
@@ -85,11 +112,13 @@ export default function QuizResultsPage() {
         totalQuestions={quiz.questions?.length ?? 0}
       />
 
-      <FeedbackPanel
-        answers={session.answers}
-        questions={quiz.questions ?? []}
-        feedbacks={feedbacks}
-      />
+      {!exam && (
+        <FeedbackPanel
+          answers={session.answers}
+          questions={quiz.questions ?? []}
+          feedbacks={feedbacks}
+        />
+      )}
 
       <WeaknessChart
         weakTopics={weakTopics}
@@ -97,7 +126,7 @@ export default function QuizResultsPage() {
         threshold={THRESHOLD}
       />
 
-      <div className="flex flex-wrap gap-3 justify-center">
+      {!exam && <div className="flex flex-wrap gap-3 justify-center">
         <Link
           href={`/quiz/${quiz.id}`}
           className="btn btn-outline"
@@ -110,7 +139,7 @@ export default function QuizResultsPage() {
         >
           Otros quizzes
         </Link>
-      </div>
+      </div>}
     </div>
   );
 }

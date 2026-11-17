@@ -18,16 +18,16 @@ import { ConnectWalletComponent, type ConnectWalletTexts } from '../components/c
   template: `
     @let t = i18n.t().web3;
     <aula-card-page [heading]="t.walletTitle" [subtitle]="t.walletSubtitle">
-      <p class="mb-4 text-xs text-muted-foreground">{{ t.network }}</p>
+      <p class="mb-4 type-meta text-muted-foreground">{{ t.network }}</p>
       @if (facade.actionError(); as err) {
-        <p role="alert" class="mb-3 text-sm text-tone-danger">{{ err }}</p>
+        <p role="alert" class="mb-3 text-tone-danger">{{ err }}</p>
       }
       @if (facade.account(); as acc) {
-        <p class="mb-3 text-sm" role="status">{{ i18n.fmt(t.connectedAs, { address: short(acc) }) }}</p>
+        <p class="mb-3" role="status">{{ i18n.fmt(t.connectedAs, { address: short(acc) }) }}</p>
       }
       @if (selected(); as w) {
         <section aria-labelledby="wallet-detail" class="mb-4 space-y-1 rounded-xl border border-border bg-muted/40 p-4 text-sm">
-          <h2 id="wallet-detail" class="font-bold">{{ t.detail }}</h2>
+          <h2 id="wallet-detail" class="title-section">{{ t.detail }}</h2>
           <p class="eeg-mono break-all">{{ w.address }}</p>
           <p>{{ t.since }}: <time [attr.datetime]="w.linkedAt">{{ date(w.linkedAt) }}</time></p>
           <a class="text-primary hover:underline" [href]="explorer(w.address)" target="_blank" rel="noopener noreferrer">{{ t.explorer }}</a>
@@ -35,7 +35,7 @@ import { ConnectWalletComponent, type ConnectWalletTexts } from '../components/c
       }
       <aula-connect-wallet [wallets]="facade.discovered()" [busy]="facade.linking()" [texts]="connectTexts()" (picked)="facade.connectAndLink($event)" (rediscover)="facade.rediscover()" />
 
-      <h2 class="mb-2 mt-6 text-base font-bold">{{ t.linked }}</h2>
+      <h2 class="title-section mb-2 mt-6">{{ t.linked }}</h2>
       @switch (facade.wallets.status()) {
         @case ('loading') {
           <aula-spinner [label]="i18n.t().common.loading" />

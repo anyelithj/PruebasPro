@@ -1,10 +1,12 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import type { VocabItem } from '../../domain/models/games';
+import { IpaTextElement } from '@features/vocabulary/presentation/components/ipa-text.element'; // [2026-10-28]: IPA (+ traducción) calculada con la caché compartida de la ruta
 // [BingoBoardComponent · Presentacional · Sprint 8.8]: tablero de palabras — escuchar la palabra y localizarla | [Patrón]: Presentational Component | [Principio]: SRP (qué palabra suena y si acertó lo decide la página) | [Paradigma]: Declarativo
 // [A11y]: casillas = <button> con la palabra; marcadas con ✓ en texto y `aria-pressed` · grilla responsive 2→3→4 columnas
 
 @Component({
   selector: 'aula-bingo-board',
+  imports: [IpaTextElement],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' }, // Elemento anfitrión en bloque → respeta márgenes y space-y del contenedor
   template: `
@@ -32,6 +34,13 @@ import type { VocabItem } from '../../domain/models/games';
             <span aria-hidden="true">✓ </span>
           }
           {{ it.term }}
+          <!-- [2026-10-28]: IPA + traducción (la guardada o la calculada) · sin botón de sonido: el juego «canta» la palabra y un <button> no puede contener otro -->
+          <span class="mt-1 block text-xs font-normal">
+            <aula-ipa-text-element [text]="it.term" [language]="language()" ipaOnly="true" [withTranslation]="it.translation ? 'false' : 'true'" />
+            @if (it.translation) {
+              <span class="block text-muted-foreground" lang="es">{{ it.translation }}</span>
+            }
+          </span>
         </button>
       }
     </div>

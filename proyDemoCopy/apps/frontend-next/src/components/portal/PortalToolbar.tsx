@@ -1,5 +1,5 @@
 "use client"; // [Next.js]: Client Component → selección de tema/idioma
-import { ChevronDown, Check } from "lucide-react"; // [lucide-react]: iconos SVG tree-shakeables
+import { ChevronDown, Check, Search } from "lucide-react"; // [lucide-react]: iconos SVG tree-shakeables
 import { cn } from "@/lib/utils";
 import { THEMES, THEME_META, type ThemeKey } from "@aula/ui-tokens/tailwind-preset";
 import { LOCALES, type Locale } from "@aula/shared-i18n";
@@ -71,6 +71,21 @@ function ThemeDot({ theme }: { theme: ThemeKey }) {
 }
 
 // `themes` (prop): subconjunto permitido (las páginas públicas pasan solo Claro/Oscuro) | por defecto los 6
+// [TopbarSearch · 2026-10-30]: MISMO buscador en el portal, la landing y login/registro (antes solo en el portal) → una sola aplicación | `className`: cada barra decide dónde colocarlo | [Principio]: DRY
+// `<form method="get" action="/courses">` nativo: funciona sin JS y deja la búsqueda en la URL
+export function TopbarSearch({ className }: { className?: string }) {
+  const { t } = usePreferences();
+  return (
+    <form action="/courses" method="get" role="search" className={cn("relative min-w-0", className)}>
+      <label htmlFor="topbar-search" className="sr-only">
+        {t.topbar.searchLabel}
+      </label>
+      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+      <input id="topbar-search" name="search" type="search" placeholder={t.topbar.search} className="control h-9 min-h-9 w-full rounded-full py-0 pl-9" /* [2026-11-06]: 36 px = misma altura que los menús y botones de la barra */ />
+    </form>
+  );
+}
+
 export function ThemeMenu({ themes = THEMES }: { themes?: ReadonlyArray<ThemeKey> }) {
   const { t, theme, setTheme } = usePreferences();
   return (

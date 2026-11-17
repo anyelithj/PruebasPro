@@ -22,6 +22,10 @@ export class PolyglotTerm {
   @Column({ type: 'varchar', length: 300, name: 'ipa_us', nullable: true })
   ipaUs!: string | null; // Solo inglés (interruptor UK/US)
 
+  // [2026-11-16 · Regla obligatoria de vocabulario]: plural y género / contable / clasificador + pinyin («pl. die Tische · masculino») · '' = frase o sin datos
+  @Column({ type: 'varchar', length: 160, default: '' })
+  grammar!: string;
+
   @Column({ type: 'boolean', default: false })
   reviewed!: boolean; // Corregido o confirmado por un docente
 

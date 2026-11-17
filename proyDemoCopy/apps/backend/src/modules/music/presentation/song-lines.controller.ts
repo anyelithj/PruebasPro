@@ -60,7 +60,7 @@ export class SongLinesController {
       'Leer la letra de una página pública (Genius, Letras, AZLyrics…) — no guarda nada',
   })
   readFromUrl(@Body() body: LyricsUrlBody) {
-    return this.fromUrl.execute(body.url);
+    return this.fromUrl.execute(body.url, body.language);
   }
 
   // [GET /music/link-rules · 2026-10-24]: dominios de letras y de streaming (SSOT: domain/media-links.ts) → el asistente valida el enlace del audio ANTES de enviarlo
@@ -108,8 +108,9 @@ export class SongLinesController {
     @Headers('authorization') auth: string,
   ) {
     // [2026-10-24]: mismo contrato que la carga ({ lines, enriched, missing }) → la UI reintenta solo lo que falta
-    const { lines, missing } = await this.enrich.run(actorOf(u), id, bearer(auth));
-    return { lines, enriched: missing === 0, missing };
+    // [2026-10-27]: + `more` / `unavailable` → la UI encadena tandas acotadas en tiempo (ninguna supera el timeout del BFF) y distingue «IA caída»
+    const { lines, missing, more, unavailable } = await this.enrich.run(actorOf(u), id, bearer(auth));
+    return { lines, enriched: missing === 0, missing, more, unavailable };
   }
 
   @Post('songs/:id/lines/align')

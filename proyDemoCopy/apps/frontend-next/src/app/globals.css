@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "../../../../packages/ui-tokens/motion.css"; /* [Sprint 7.1]: @aula/ui-tokens — movimiento reducido compartido con Angular */
+@import "../../../../packages/ui-tokens/typography.css"; /* [Tipografía uniforme · 2026-10-28]: @aula/ui-tokens — escala tipográfica única (--ff-*, --fs-*, --fw-*, --lh-*) compartida con Angular | [Principio]: SSOT */
 /* `@source` (Tailwind v4): escanea también las plantillas Angular → los Angular Elements (<aula-campana>, <aula-exportar>…) usan las utilidades de ESTA hoja
    [Bug corregido]: antes Next cargaba además /ng/styles.css (segundo Tailwind completo, inyectado después) y su `.sm:grid-cols-2` pisaba `lg:grid-cols-4` → grids del portal en 2 columnas | [Principio]: SSOT (una sola hoja de utilidades por página) */
 @source "../../../frontend-angular/src/app";
@@ -51,10 +52,13 @@
   --color-tone-info: var(--tone-info);
   --color-tone-info-soft: var(--tone-info-soft);
   --color-tone-info-line: var(--tone-info-line);
+  /* [2026-11-06]: verde SOLO para «bien dicho / corrección» (palabras correctas y texto corregido); la marca sigue sin verdes */
+  --color-tone-success: var(--tone-success);
+  --color-tone-success-soft: var(--tone-success-soft);
 
-  /* [Tipografía]: Inter para body + headings | [Patrón]: Type Scale */
-  --font-sans: var(--font-inter), "Segoe UI", system-ui, -apple-system, sans-serif;
-  --font-heading: var(--font-inter), system-ui, sans-serif;
+  /* [Tipografía]: las utilidades `font-sans` y `font-heading` de Tailwind leen las familias de @aula/ui-tokens/typography.css | [Patrón]: Type Scale | [Principio]: SSOT (antes la familia estaba duplicada aquí) */
+  --font-sans: var(--ff-body);
+  --font-heading: var(--ff-heading);
 
   /* [Radios]: 12 / 20 — match Demohtml */
   --radius-sm: 6px;
@@ -131,6 +135,8 @@
   --tone-info: color-mix(in oklab, #0284c7 72%, var(--nl-txt));
   --tone-info-soft: color-mix(in oklab, #0ea5e9 14%, var(--nl-surf));
   --tone-info-line: color-mix(in oklab, #0ea5e9 45%, var(--nl-surf));
+  --tone-success: color-mix(in oklab, #16a34a 78%, var(--nl-txt));
+  --tone-success-soft: color-mix(in oklab, #22c55e 14%, var(--nl-surf));
 }
 
 /* [Tema Oscuro] */
@@ -204,12 +210,15 @@
   }
   html, body {
     @apply bg-background text-foreground;
-    font-family: var(--font-sans);
-    line-height: 1.55;
+    font-family: var(--ff-body); /* [Tipografía uniforme]: familia de texto de @aula/ui-tokens */
+    line-height: var(--lh-body);
     -webkit-font-smoothing: antialiased;
-    font-size: 15px;
     transition: background-color 0.3s, color 0.3s; /* [UX]: cambio de tema suave (igual a NeuroLearning) */
   }
+  /* [Tamaño raíz accesible]: 93.75 % = 15 px con el ajuste por defecto, pero ESCALA si el usuario agranda la letra del navegador (antes `15px` fijo lo ignoraba) | [A11y]: WCAG 1.4.4 «Cambio de tamaño del texto» */
+  html { font-size: 93.75%; }
+  /* [Cuerpo de texto]: <body> fija el tamaño de párrafo → p, li, td… lo heredan; un contenedor con `.type-meta` sigue pudiendo achicar a sus hijos (herencia CSS) */
+  body { font-size: var(--fs-body); font-weight: var(--fw-body); }
   a {
     color: var(--primary);
     text-decoration: none;
@@ -224,13 +233,31 @@
   }
   /* [Reduce motion]: respeta preferencia usuario | [WCAG 2.3.3] */
   /* [Movimiento reducido]: vive en packages/ui-tokens/motion.css (importado arriba) → mismo comportamiento en Next.js y Angular (RF-70) */
-  /* [Escala tipográfica]: títulos con interletrado ajustado y saltos de línea equilibrados (`text-wrap: balance`, CSS Text 4) → sin palabras huérfanas en hero y cabeceras | [UX]: jerarquía visual */
-  h1, h2, h3 {
-    letter-spacing: -0.015em;
+  /* [Escala tipográfica · 2026-10-28]: TODOS los títulos del portal (Next.js y Angular) salen de los tokens de @aula/ui-tokens/typography.css
+     [Tecnología]: `@layer base` (Tailwind v4) → reemplaza el reset de preflight (que deja h1–h6 con el tamaño del texto) y pierde frente a cualquier utilidad, así que un caso especial sigue pudiendo cambiarse con una clase
+     [Patrón]: Type Scale (un tamaño por nivel) | [Principio]: DRY (sin text-2xl/font-bold repetidos en cada componente) | [UX]: jerarquía visual coherente
+     `text-wrap: balance` (CSS Text 4): reparte las palabras entre líneas → sin palabras huérfanas en cabeceras */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--ff-heading);
+    font-weight: var(--fw-heading);
+    line-height: var(--lh-heading);
+    letter-spacing: var(--ls-heading);
     text-wrap: balance;
   }
-  /* [Párrafos]: `pretty` evita una última línea de una sola palabra (mejora progresiva: navegadores sin soporte lo ignoran) */
+  h1 { font-size: var(--fs-h1); font-weight: var(--fw-display); } /* Título de página */
+  h2 { font-size: var(--fs-h2); } /* Título de sección */
+  h3 { font-size: var(--fs-h3); } /* Título de tarjeta */
+  h4, h5, h6 { font-size: var(--fs-h4); } /* Subtítulos menores */
+  /* [Párrafos y listas]: interlineado cómodo de lectura (WCAG 1.4.12) | `text-wrap: pretty` evita una última línea de una sola palabra (mejora progresiva) */
+  p, li, dd, blockquote { line-height: var(--lh-body); }
   p { text-wrap: pretty; }
+  /* [Etiquetas de formulario]: mismo tamaño y peso en Next.js y Angular (las utilidades del componente pueden seguir ajustándolo) */
+  label { font-size: var(--fs-label); font-weight: var(--fw-label); line-height: var(--lh-tight); }
+  /* [Texto secundario]: <small> = metadatos (fechas, ayudas) | `font-size` en rem y no `smaller` → mismo tamaño esté donde esté */
+  small { font-size: var(--fs-meta); line-height: var(--lh-tight); }
+  /* [Tablas]: cabecera = rótulo en peso 600 y tamaño meta; celdas = tamaño de etiqueta (tablas densas pero legibles) | [Principio]: DRY (una regla para las ~20 tablas del portal) */
+  th { font-size: var(--fs-meta); font-weight: var(--fw-label); line-height: var(--lh-tight); }
+  td { font-size: var(--fs-label); line-height: var(--lh-tight); }
   /* [Angular Elements]: los custom elements son `display: inline` por defecto → no generan caja y respetan el layout del shell (Next.js y Angular importan esta hoja) */
   aula-exportar, aula-campana { display: contents; }
 }
@@ -257,9 +284,10 @@
   @apply active:translate-y-0 active:scale-[0.98]; /* [Microinteracción]: «presión» al hacer clic (feedback táctil); motion.css la anula con movimiento reducido */
   height: var(--btn-h, 2.5rem);
   padding-inline: var(--btn-px, 1.25rem);
-  font-size: var(--btn-fs, 0.875rem);
+  font-size: var(--btn-fs, var(--fs-label)); /* [Tipografía uniforme]: tamaño de etiqueta de la escala (typography.css) */
+  font-family: var(--ff-body);
 }
-@utility btn-sm { --btn-h: 2rem; --btn-px: 0.875rem; --btn-fs: 0.75rem; }
+@utility btn-sm { --btn-h: 2rem; --btn-px: 0.875rem; --btn-fs: var(--fs-caption); }
 @utility btn-lg { --btn-h: 2.75rem; --btn-px: 1.5rem; }
 /* [Variantes de botón]: primaria (morado sólido), contorno, fantasma y peligro */
 @utility btn-primary {
@@ -275,7 +303,8 @@
 
 /* [Campo de formulario]: input, select, textarea y buscadores comparten forma y tono (sin ancho: lo decide quien lo usa) */
 @utility control {
-  @apply min-h-10 rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground transition-colors placeholder:text-muted-foreground;
+  @apply min-h-10 rounded-lg border border-border bg-muted px-3 py-2 text-foreground transition-colors placeholder:text-muted-foreground;
+  font-size: var(--fs-label); /* [Tipografía uniforme]: mismo tamaño que <label> (antes `text-sm`, mismo valor) */
   @apply focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40;
   @apply disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-destructive;
 }
@@ -304,8 +333,9 @@ form[data-tried] .control[aria-invalid="true"] {
 
 /* [Chip de filtro]: pill; activo con aria-pressed="true" o aria-current="page" → degradado de marca (estado accesible = estado visual) */
 @utility chip {
-  @apply inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-border bg-transparent px-4 py-1.5 text-xs font-semibold whitespace-nowrap text-muted-foreground no-underline transition-all hover:border-primary hover:text-primary;
+  @apply inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-border bg-transparent px-4 py-1.5 font-semibold whitespace-nowrap text-muted-foreground no-underline transition-all hover:border-primary hover:text-primary;
   @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  font-size: var(--fs-caption); /* [Tipografía uniforme]: chips e insignias comparten tamaño (antes text-xs / 11px) */
   &[aria-pressed="true"], &[aria-current="page"] {
     background: var(--gradient-brand);
     border-color: transparent;
@@ -315,10 +345,35 @@ form[data-tried] .control[aria-invalid="true"] {
 }
 
 /* [Insignia]: pill pequeña; el color lo ponen los tonos (bg-tone-*-soft text-tone-*) */
-@utility badge { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold whitespace-nowrap; }
+@utility badge {
+  @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-semibold whitespace-nowrap;
+  font-size: var(--fs-caption); /* [Tipografía uniforme]: token de la escala (antes text-[11px] fijo en px) */
+  line-height: var(--lh-tight);
+}
 
-/* [Tarjeta de superficie]: igual a NLCard del original (radio 14, borde y sombra del tema) */
+/* [Tarjeta de superficie]: igual a NLCard del original (radio 14, borde y sombra del tema) | sus <h2>/<h3> NO llevan tamaño propio: siguen la escala de @layer base (mismo título dentro y fuera de una tarjeta) */
 @utility surface { @apply rounded-[14px] border border-border bg-card shadow-[var(--nl-shd)] transition-[border-color,box-shadow,transform] duration-200; }
+/* [Variantes de tarjeta · 2026-11-13]: MISMA base (radio 14, borde, fondo y sombra) y cambia solo el comportamiento según la función | [Patrón]: Design System (variantes) | [Principio]: DRY + SSOT
+   surface-interactive = tarjeta navegable (catálogo: cursos, fonemas) → se eleva al pasar el ratón y muestra el foco del teclado
+   surface-item        = elemento editable de un formulario (filas de actividades, elementos de un tema, subtemas) → padding fijo y min-w-0 para no desbordar la rejilla */
+@utility surface-interactive { @apply surface overflow-hidden hover:-translate-y-[3px] hover:border-primary hover:shadow-[0_8px_30px_var(--card-glow,rgba(139,92,246,0.18))] focus-within:ring-2 focus-within:ring-ring; }
+@utility surface-item { @apply surface min-w-0 p-4; }
+/* ─────────────── Utilidades de tipografía semántica · 2026-10-28 ───────────────
+   [Tema]: el ROL visual de un texto cuando no coincide con su etiqueta (p. ej. un <p> que hace de título de tarjeta o un <h2> en un diálogo)
+   [Tecnología]: `@utility` (Tailwind v4) → capa utilities, admiten variantes (`md:title-page`) y @apply | [Patrón]: Type Scale | [Principio]: DRY + SSOT
+   [Nombres]: `title-*` y `type-*` (y no `text-*`) porque tailwind-merge (`cn()`) trata un `text-algo` desconocido como color y lo borraría junto a `text-muted-foreground` */
+@utility title-display { font-family: var(--ff-heading); font-size: var(--fs-display); font-weight: var(--fw-display); line-height: var(--lh-display); letter-spacing: var(--ls-display); }
+@utility title-page { font-family: var(--ff-heading); font-size: var(--fs-h1); font-weight: var(--fw-display); line-height: var(--lh-heading); letter-spacing: var(--ls-heading); }
+@utility title-section { font-family: var(--ff-heading); font-size: var(--fs-h2); font-weight: var(--fw-heading); line-height: var(--lh-heading); letter-spacing: var(--ls-heading); }
+@utility title-card { font-family: var(--ff-heading); font-size: var(--fs-h3); font-weight: var(--fw-heading); line-height: var(--lh-heading); letter-spacing: var(--ls-heading); }
+/* [Rótulo en mayúsculas («overline»)]: encabeza grupos de listas/tablas; `text-transform` en CSS y no en el texto → lectores de pantalla leen la palabra normal */
+@utility title-overline { font-family: var(--ff-heading); font-size: var(--fs-overline); font-weight: var(--fw-heading); line-height: var(--lh-tight); letter-spacing: var(--ls-overline); text-transform: uppercase; }
+@utility type-lead { font-size: var(--fs-lead); line-height: var(--lh-body); }
+@utility type-body { font-size: var(--fs-body); line-height: var(--lh-body); }
+@utility type-label { font-size: var(--fs-label); font-weight: var(--fw-label); line-height: var(--lh-tight); }
+@utility type-meta { font-size: var(--fs-meta); line-height: var(--lh-tight); }
+@utility type-caption { font-size: var(--fs-caption); line-height: var(--lh-tight); }
+
 /* [Animación de entrada de sección]: igual a NeuroLearning; se anula con prefers-reduced-motion (regla base) */
 @utility fade-in { animation: nl-fade-in 0.3s ease both; }
 /* [Tipografía monoespaciada para cifras]: precios y métricas alineados */
@@ -383,8 +438,9 @@ form[data-tried] .control[aria-invalid="true"] {
   color: var(--toast-c);
   background: color-mix(in oklab, var(--toast-c) 14%, transparent);
 }
-.toast-title { display: block; font-size: 0.875rem; font-weight: 700; color: var(--toast-c); }
-.toast-msg { display: block; margin-top: 0.125rem; font-size: 0.8125rem; color: var(--muted-foreground); }
+/* [Tipografía uniforme]: título del aviso = etiqueta en peso de título; mensaje = texto meta (tokens de typography.css, mismos valores que antes) */
+.toast-title { display: block; font-family: var(--ff-heading); font-size: var(--fs-label); font-weight: var(--fw-heading); line-height: var(--lh-tight); color: var(--toast-c); }
+.toast-msg { display: block; margin-top: 0.125rem; font-size: var(--fs-meta); line-height: var(--lh-tight); color: var(--muted-foreground); }
 .toast-close { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 0.5rem; color: var(--muted-foreground); }
 .toast-close:hover { background: var(--muted); color: var(--foreground); }
 .toast-bar { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: var(--toast-c); transform-origin: left; }
@@ -405,4 +461,15 @@ form[data-tried] .control[aria-invalid="true"] {
 @keyframes nav-progress {
   from { transform: translateX(-100%); }
   to { transform: translateX(300%); }
+}
+
+/* [Marcadores de lectura · 2026-11-16]: CSS Custom Highlight API (temario del curso) → frase que suena (fondo suave) y palabra que se pronuncia
+   (amarillo + subrayado: no depende solo del color · WCAG 1.4.1) | los rangos los pone LessonSyllabus con `CSS.highlights` */
+::highlight(reading-sentence) {
+  background-color: color-mix(in oklab, var(--primary) 16%, transparent);
+}
+::highlight(reading-word) {
+  background-color: rgb(252 211 77 / 0.8);
+  color: var(--foreground);
+  text-decoration: underline 2px;
 }

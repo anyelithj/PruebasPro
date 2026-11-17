@@ -43,10 +43,10 @@ import { GrammarFacade } from '../../application/grammar.facade';
           <aula-spinner [label]="i18n.t().common.loading" />
         }
         @case ('error') {
-          <p role="alert" class="text-sm text-tone-danger">{{ g.topics.error() }}</p>
+          <p role="alert" class="text-tone-danger">{{ g.topics.error() }}</p>
         }
         @case ('empty') {
-          <p class="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">{{ tx.empty }}</p>
+          <p class="rounded-xl border border-dashed border-border p-6 text-center text-muted-foreground">{{ tx.empty }}</p>
         }
         @case ('success') {
           <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -48,7 +48,7 @@ const STATUS_UI: Record<ReportStatus, { tone: BadgeTone; icon: IconName }> = {
       </ng-container>
 
       @if (facade.actionError(); as err) {
-        <p role="alert" class="mb-3 text-sm text-tone-danger">{{ err }}</p>
+        <p role="alert" class="mb-3 text-tone-danger">{{ err }}</p>
       }
 
       @switch (facade.exports.status()) {

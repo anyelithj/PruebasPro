@@ -41,11 +41,15 @@ export class CreateSongBody {
   @IsString() @MinLength(2) @MaxLength(160) title!: string;
   @IsOptional() @IsString() @MaxLength(160) artist?: string;
   @IsEnum(Language) language!: Language;
-  @IsEnum(CefrLevel) level!: CefrLevel;
+  @IsOptional() @IsEnum(CefrLevel) level?: CefrLevel; // [2026-11-16 · RF-148]: sin nivel → se estima de la letra al cargarla
   @ValidateNested() @Type(() => LicenseBody) license!: LicenseBody;
 }
 
-export class UpdateSongBody extends PartialType(CreateSongBody) {}
+// [2026-11-10 · Editar canción]: todo lo del alta + la glosa del título (IPA y traducción escritas a mano)
+export class UpdateSongBody extends PartialType(CreateSongBody) {
+  @IsOptional() @IsString() @MaxLength(300) titleIpa?: string;
+  @IsOptional() @IsString() @MaxLength(300) titleTranslation?: string;
+}
 
 export class SongStatusBody {
   @IsIn(SONG_STATUSES) status!: SongStatus;
@@ -61,6 +65,7 @@ export class LyricsBody {
 // [2026-10-24 · Letra desde un enlace]: página pública con la letra (NestJS la descarga como navegador, con protección SSRF)
 export class LyricsUrlBody {
   @IsUrl({ protocols: ['http', 'https'], require_protocol: true }) @MaxLength(2000) url!: string;
+  @IsOptional() @IsString() @MaxLength(10) language?: string; // [2026-11-04]: idioma de la canción → subtítulos de YouTube en ese idioma
 }
 
 // [2026-10-24 · Letra con IA]: idioma, nivel y tema de la canción didáctica (el docente revisa el borrador antes de guardarlo)
@@ -69,6 +74,8 @@ export class LyricsDraftBody {
   @IsEnum(CefrLevel) level!: CefrLevel;
   @IsString() @MinLength(3) @MaxLength(200) topic!: string;
   @IsOptional() @IsString() @MaxLength(160) title?: string;
+  // [2026-10-27]: autor o intérprete como referencia de estilo (la IA escribe una letra ORIGINAL, no la real) | mismo límite que `artist` de la canción
+  @IsOptional() @IsString() @MaxLength(160) artist?: string;
 }
 
 export class LinePatchBody {

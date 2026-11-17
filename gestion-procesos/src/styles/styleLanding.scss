@@ -1,0 +1,102 @@
+// MODULE — landing
+.landing {
+  background: var(--ink);
+  color: #fff;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  &__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  &__brand {
+    font-weight: 700;
+    font-size: 1.15rem;
+  }
+  &__hero {
+    display: grid;
+    gap: 2.5rem;
+    padding: 3rem 1.5rem 4rem;
+    max-width: 72rem;
+    margin: 0 auto;
+    width: 100%;
+    align-items: center;
+    @media (min-width: 992px) {
+      grid-template-columns: 1.1fr 1fr;
+      padding-top: 5rem;
+    }
+  }
+  &__hero-text h1 {
+    font-size: clamp(2rem, 5vw, 3.25rem);
+    line-height: 1.1;
+    margin-bottom: 1rem;
+  }
+  &__hero-text p {
+    font-size: 1.15rem;
+    color: #c3d3de;
+    max-width: 34rem;
+    margin-bottom: 1.5rem;
+  }
+  &__board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    background: #1d3445;
+    padding: 1rem;
+    border-radius: 1rem;
+  }
+  &__col {
+    display: grid;
+    gap: 0.5rem;
+    align-content: start;
+    strong {
+      font-size: 0.8rem;
+      color: #9fb6c5;
+    }
+  }
+  &__card {
+    background: #f3f6f8;
+    color: var(--ink);
+    border-radius: 0.5rem;
+    padding: 0.6rem;
+    font-size: 0.8rem;
+    border-left: 4px solid var(--amber);
+  }
+  &__features {
+    background: #f3f6f8;
+    color: var(--ink);
+    padding: 3rem 1.5rem;
+    flex: 1;
+    > h2,
+    > dl {
+      max-width: 72rem;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    dl {
+      display: grid;
+      gap: 1.5rem;
+      grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+      margin-top: 1.5rem;
+    }
+    dt {
+      font-weight: 700;
+      border-top: 3px solid var(--petrol);
+      padding-top: 0.6rem;
+    }
+    dd {
+      margin: 0.25rem 0 0;
+      color: #3c4d59;
+    }
+  }
+  &__footer {
+    padding: 1.25rem 1.5rem;
+    text-align: center;
+    color: #9fb6c5;
+    background: var(--ink);
+  }
+}

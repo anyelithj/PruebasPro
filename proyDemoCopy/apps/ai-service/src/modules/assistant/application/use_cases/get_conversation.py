@@ -4,14 +4,12 @@
 [Principio]: SRP.
 """
 from src.modules.assistant.domain.entities.conversation import Conversation
-from src.modules.assistant.infrastructure.repositories.conversation_repository import (
-    InMemoryConversationRepository,
-)
+from src.modules.assistant.domain.interfaces.conversation_repository import ConversationRepository  # [DIP · Tarea 1]: puerto, no adaptador
 from src.shared.exceptions.custom_errors import NotFoundDomainError
 
 
 class GetConversationUseCase:
-    def __init__(self, repo: InMemoryConversationRepository) -> None:
+    def __init__(self, repo: ConversationRepository) -> None:
         self._repo = repo
 
     async def execute(self, conversation_id: str) -> Conversation:

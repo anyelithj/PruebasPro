@@ -1,0 +1,13 @@
+# Scripts de instalación: solo se permiten los de herramientas de desarrollo que los necesitan
+# (Cypress descarga su binario, SWC/esbuild/unrs-resolver verifican sus binarios nativos).
+# El resto se bloquea (p. ej. onnxruntime-node solo se usa en servidores; en el navegador se usa onnxruntime-web).
+allowBuilds:
+  '@firebase/util': false
+  '@parcel/watcher': false
+  '@swc/core': true
+  core-js: false
+  cypress: true
+  esbuild: true
+  onnxruntime-node: false
+  protobufjs: false
+  unrs-resolver: true

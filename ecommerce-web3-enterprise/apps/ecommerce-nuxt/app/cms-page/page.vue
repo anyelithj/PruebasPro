@@ -1,6 +1,6 @@
 <!--
   page.vue (/cms-page) => listado ÚNICO del CMS (Guard: auth + rbac): páginas, landings, eventos, lookbooks y
-  colecciones con un filtro "Tipo", con la MISMA tabla, las MISMAS acciones (íconos de ancho uniforme) y el MISMO editor
+  colecciones (cada tipo es una pestaña de PanelTabs), con la MISMA tabla, las MISMAS acciones (íconos de ancho uniforme) y el MISMO editor
   para los 4 tipos de contenido (CMSPageEditor). Antes lookbooks y colecciones abrían galerías públicas con otra
   interfaz; ahora todo se administra desde aquí y la galería pública queda solo para los visitantes.
   Solo navegador (routeRules: ssr false). La pestaña activa vive en Pinia (se conserva al volver del editor).
@@ -17,7 +17,6 @@ import { cmsApi } from "~~/features/cms/api/cms.api";
 import { useCmsStore, type ListKind } from "~~/features/cms/model/cms.store";
 import type { CatalogCollection, CmsContentSummary, ContentStatus } from "~~/entities/cms/model/cms.types";
 import DataTable from "~~/shared/ui/DataTable.vue";
-import Pagination from "~~/shared/ui/Pagination.vue";
 import Badge from "~~/shared/ui/Badge.vue";
 import Button from "~~/shared/ui/Button.vue";
 import ActionButton from "~~/shared/ui/ActionButton.vue";
@@ -44,12 +43,12 @@ const page = ref(1);
 const route = useRoute();
 const router = useRouter();
 const KINDS: ListKind[] = ["page", "landing", "event", "lookbook", "collection"];
-// NAV_KEY => ítem del menú lateral (grupo «CMS · Contenido») de cada tipo: título y descripción del encabezado
+// NAV_KEY => pestaña de la sección Contenido (barra PanelTabs) de cada tipo: título y descripción del encabezado
 const NAV_KEY: Record<ListKind, string> = { page: "content", landing: "cmsLandings", event: "cmsEvents", lookbook: "cmsLookbooks", collection: "cmsCollections" };
 // isKind => type guard (TypeScript): valida el texto de la URL antes de usarlo como ListKind
 const isKind = (value: unknown): value is ListKind => KINDS.includes(value as ListKind);
-// URL -> estado: "?kind=landing" (enlace del menú) selecciona el tipo; sin "kind" (volver del editor) se escribe en la
-// URL el tipo guardado en Pinia => el menú lateral marca el ítem correcto. "immediate" => también al entrar
+// URL -> estado: "?kind=landing" (enlace directo) selecciona el tipo; sin "kind" (menú lateral, volver del editor) se
+// escribe en la URL el tipo guardado en Pinia. "immediate" => también al entrar
 watch(() => route.query.kind, (kind) => {
   if (!isKind(kind)) return void router.replace({ query: { ...route.query, kind: store.listKind } });
   if (kind !== store.listKind) {
@@ -99,26 +98,13 @@ const archive = async (row: Row) => {
     toast.error((error as Error).message);
   }
 };
-// selectKind => estado + URL (router.replace: sin entrada nueva en el historial) => el menú lateral marca el tipo elegido
-const selectKind = (kind: ListKind) => {
-  store.setListKind(kind);
-  page.value = 1; // La página 3 de otra pestaña podría no existir
-  void router.replace({ query: { ...route.query, kind } });
-};
 </script>
 
 <template>
-  <div class="flex flex-col gap-6">
-    <!-- Encabezado = texto del menú ("Contenido del sitio") + descripción + acción principal (igual que Next.js) -->
+  <div class="flex flex-col gap-4">
+    <!-- Encabezado = texto del menú + descripción + acción principal (igual que Next.js) -->
     <AdminHeading :nav-key="NAV_KEY[store.listKind]"><Button :to="newUrl">{{ $t("common.new") }}</Button></AdminHeading>
-    <!-- Un solo listado con filtro "Tipo" (antes 5 pestañas con la misma tabla): mismo control que los filtros de Next -->
-    <label class="flex w-full flex-col gap-1.5 text-sm font-medium sm:w-60">
-      {{ $t("cms.kindFilter") }}
-      <select :value="store.listKind" class="h-9 rounded-md border border-slate-300 bg-white px-3 text-sm font-normal shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" @change="selectKind(($event.target as HTMLSelectElement).value as ListKind)">
-        <option v-for="kind in KINDS" :key="kind" :value="kind">{{ $t(`cms.kindsPlural.${kind}`) }}</option>
-      </select>
-    </label>
-    <DataTable :caption="$t(`cms.kindsPlural.${store.listKind}`)" :columns="columns" :rows="data?.data" :row-key="(row) => row.id" :loading="pending">
+    <DataTable :caption="$t(`cms.kindsPlural.${store.listKind}`)" :columns="columns" :rows="data?.data" :row-key="(row) => row.id" :loading="pending" :meta="data?.meta" @page="page = $event">
       <template #cell-title="{ row }"><span class="font-medium">{{ row.title }}</span><span class="block text-xs text-slate-500">/{{ row.slug }}</span></template>
       <template #cell-status="{ row }"><Badge :tone="TONE[row.status]">{{ $t(`cms.status.${row.status}`) }}</Badge></template>
       <template #cell-updatedAt="{ row }">{{ row.updatedAt ? formatDateTime(row.updatedAt, locale) : "—" }}</template>
@@ -131,6 +117,5 @@ const selectKind = (kind: ListKind) => {
         </div>
       </template>
     </DataTable>
-    <Pagination :meta="data?.meta" @page="page = $event" />
   </div>
 </template>

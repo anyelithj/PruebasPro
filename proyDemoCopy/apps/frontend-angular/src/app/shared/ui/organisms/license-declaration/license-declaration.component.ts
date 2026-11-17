@@ -80,7 +80,7 @@ export function holderFromUrl(source: string): string | null {
     @let lb = labels();
     <fieldset class="space-y-3 rounded-xl border border-border p-4">
       <legend class="px-1 text-sm font-bold">{{ lb.legend }}</legend>
-      <p class="text-xs text-muted-foreground">{{ lb.hint }}</p>
+      <p class="type-meta text-muted-foreground">{{ lb.hint }}</p>
       <div class="grid gap-3 sm:grid-cols-2">
         <label class="text-xs font-semibold text-muted-foreground">
           {{ lb.type }}
@@ -142,7 +142,7 @@ export function holderFromUrl(source: string): string | null {
         <span>{{ lb.confirm }}</span>
       </label>
       @if (problem(); as p) {
-        <p role="alert" class="text-xs font-semibold text-tone-warning"><aula-icon name="triangle-alert" /> {{ lb.problems[p] }}</p>
+        <p role="alert" class="type-meta font-semibold text-tone-warning"><aula-icon name="triangle-alert" /> {{ lb.problems[p] }}</p>
       }
     </fieldset>
   `,

@@ -1,6 +1,9 @@
 import { BackLinkComponent } from '@shared/ui/atoms/back-link/back-link.component';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { catchError, map, of } from 'rxjs';
+import { GamesRepository, type GameDeck } from '../../domain/games.repository.port';
 import { I18nService } from '@core/i18n/i18n.service';
 import { ButtonComponent } from '@shared/ui/atoms/button/button.component';
 import { SpinnerComponent } from '@shared/ui/atoms/spinner/spinner.component';
@@ -23,22 +26,58 @@ import { FlashcardComponent } from '../components/flashcard.component';
         tx.backToHub
       }}</a>
       @if (games.error(); as err) {
-        <p role="alert" class="mb-3 text-sm text-tone-danger">{{ err }}</p>
+        <p role="alert" class="mb-3 text-tone-danger">{{ err }}</p>
       }
+      <!-- [Tema · 2026-11-11]: tu repaso (SM-2) o un juego de flashcards del docente → el estudiante elige qué practicar -->
+      <label class="mb-4 block max-w-sm text-xs font-semibold text-muted-foreground">
+        {{ tx.theme }}
+        <select class="control mt-1 w-full" [value]="deckId()" (change)="pickDeck($any($event.target).value)">
+          <option value="">{{ tx.myReview }}</option>
+          @if (decks().length) {
+            <optgroup [label]="tx.themeDecks">
+              @for (d of decks(); track d.id) {
+                <option [value]="d.id">{{ d.title }} · {{ i18n.languageName(d.language) }}{{ d.level ? ' · ' + d.level : '' }}</option>
+              }
+            </optgroup>
+          }
+        </select>
+      </label>
+      @if (deck(); as dk) {
+        @if (deckCard(); as c) {
+          <p class="mb-3 font-semibold" aria-live="polite">{{ deckIndex() + 1 }} / {{ dk.items.length }}</p>
+          <aula-flashcard
+            [front]="c.term"
+            [back]="(c.emoji ? c.emoji + ' ' : '') + (c.translation ?? '')"
+            [language]="dk.language"
+            [cardKey]="dk.id + deckIndex()"
+            [question]="tx.whatMeans"
+            [recallHint]="tx.recallFirst"
+            [revealLabel]="tx.reveal"
+            [howWellLabel]="tx.howWell"
+            [qualityLabels]="tx.quality"
+            (graded)="deckIndex.set(deckIndex() + 1)"
+          />
+        } @else {
+          <div role="status" class="space-y-3 rounded-xl border border-dashed border-border p-6 text-center">
+            <p class="type-lead font-semibold">{{ tx.gameOver }}</p>
+            <button aulaButton type="button" (click)="deckIndex.set(0)">{{ tx.playAgain }}</button>
+          </div>
+        }
+      } @else {
       @switch (games.due.status()) {
         @case ('loading') {
           <aula-spinner [label]="i18n.t().common.loading" />
         }
         @case ('error') {
-          <p role="alert" class="text-sm text-tone-danger">{{ games.due.error() }}</p>
+          <p role="alert" class="text-tone-danger">{{ games.due.error() }}</p>
         }
         @case ('success') {
           @let card = current()!;
-          <p class="mb-3 text-sm font-semibold" aria-live="polite">
+          <p class="mb-3 font-semibold" aria-live="polite">
             {{ i18n.fmt(tx.deckDue, { n: games.due.data()!.length }) }}
           </p>
           <aula-flashcard
-            [front]="card.entry.term"
+            [front]="card.entry.grammar?.headword || card.entry.term"
             [back]="card.entry.translation"
             [example]="card.entry.example"
             [language]="card.entry.language"
@@ -54,9 +93,9 @@ import { FlashcardComponent } from '../components/flashcard.component';
         }
         @default {
           <div class="space-y-3 rounded-xl border border-dashed border-border p-6 text-center">
-            <p class="text-lg font-semibold">{{ tx.deckEmpty }}</p>
+            <p class="type-lead font-semibold">{{ tx.deckEmpty }}</p>
             @if (filled() !== null) {
-              <p role="status" class="text-sm text-tone-brand">
+              <p role="status" class="text-tone-brand">
                 {{ i18n.fmt(tx.deckFilled, { n: filled()! }) }}
               </p>
             }
@@ -71,6 +110,7 @@ import { FlashcardComponent } from '../components/flashcard.component';
           </div>
         }
       }
+      }
     </aula-card-page>
   `,
 })
@@ -80,8 +120,25 @@ export default class FlashcardsPage {
   protected readonly filled = signal<number | null>(null);
   protected readonly current = computed(() => this.games.due.data()?.[0] ?? null); // Siempre la primera vencida
 
+  // [Juegos del docente · 2026-11-11]: antes ?mazo= se ignoraba aquí (solo SM-2) → ahora se elige y se repasa en el cliente (sin agenda SM-2)
+  private readonly repo = inject(GamesRepository);
+  private readonly route = inject(ActivatedRoute);
+  protected readonly decks = toSignal(
+    this.repo.decks().pipe(map((ds) => ds.filter((d) => d.gameType === 'flashcards')), catchError(() => of([] as GameDeck[]))),
+    { initialValue: [] as GameDeck[] },
+  );
+  protected readonly deckId = signal(this.route.snapshot.queryParamMap.get('mazo') ?? '');
+  protected readonly deckIndex = signal(0);
+  protected readonly deck = computed(() => this.decks().find((d) => d.id === this.deckId()) ?? null);
+  protected readonly deckCard = computed(() => this.deck()?.items[this.deckIndex()] ?? null);
+
   constructor() {
     void this.games.loadDue();
+  }
+
+  protected pickDeck(id: string): void {
+    this.deckId.set(id);
+    this.deckIndex.set(0);
   }
 
   protected async fill(): Promise<void> {

@@ -32,7 +32,7 @@ import { PromptCardComponent } from './prompt-card.component';
             [language]="games.session()!.language"
             [caption]="tx.secretWord"
           >
-            <p class="text-sm">
+            <p>
               <span class="font-semibold text-tone-danger"><aula-icon name="ban" /> {{ tx.forbiddenWords }}: </span>
               <span [attr.lang]="games.session()!.language">{{ c!.forbidden!.join(' · ') }}</span>
             </p>

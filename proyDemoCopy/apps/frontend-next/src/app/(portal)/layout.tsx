@@ -9,6 +9,9 @@ import { displayNameFromEmail, getCurrentUserPayload } from "@/lib/auth";
 import { getLocale } from "@/lib/i18n-server";
 import { getDictionary } from "@aula/shared-i18n";
 import { AngularElements } from "@/components/shared/AngularElements"; // [Sprint 7.11]: carga el remoto Angular para <aula-guia-widget>
+import { WordDictionary } from "@/components/shared/WordDictionary";
+import { SessionWatcher } from "@/components/auth/SessionWatcher";
+import { BusyOverlay } from "@/components/shared/BusyOverlay"; // [2026-11-16]: «Cargando… puede tardar unos minutos» al crear/editar/eliminar
 import { Toaster } from "@/components/shared/Toaster"; // [2026-10-19]: avisos «guardado / editado / eliminado» (también los de los Angular Elements)
 // [Portal Layout]: server component, deriva rol + displayName del JWT e idioma de la cookie | [Patrón]: Container + Provider | [Principio]: SSOT
 
@@ -39,7 +42,10 @@ export default async function PortalLayout({ children }: { children: React.React
         {/* [Agente Guía · Sprint 7.11]: Angular Element flotante en todas las páginas del portal (mismo componente que el marco de Angular) */}
         <aula-guia-widget />
         <AngularElements />
+        <WordDictionary /> {/* [2026-10-30]: diccionario de palabra en todo el portal */}
+        <SessionWatcher /> {/* [2026-10-31]: sesión terminada → login, y vuelta a la misma pantalla */}
         <Toaster />
+        <BusyOverlay />
       </MobileNavProvider>
     </PreferencesProvider>
   );

@@ -8,6 +8,7 @@
     "previous": "Anterior",
     "next": "Siguiente",
     "page": "Página {page} de {total}",
+    "pageCount": "Página {page} de {total} · {count} registros",
     "actions": "Acciones",
     "all": "Todos",
     "delete": "Eliminar",

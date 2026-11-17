@@ -278,6 +278,9 @@ export class DialogueTopicSeeder implements OnModuleInit {
           })
         ).map((t) => t.slug),
       );
+      // [Fix 2026-11-05 · borrados que reaparecían]: solo se siembra en una instalación vacía → lo que el administrador borra no vuelve al reiniciar
+      // ponytail: entradas nuevas del seed no llegan a BD ya sembradas; añadir una tabla de «seeds aplicados» si hace falta
+      if (existing.size) return;
       const missing = seed.filter((s) => !existing.has(s.slug!));
       if (missing.length) {
         await this.topics.save(missing.map((s) => this.topics.create(s)));

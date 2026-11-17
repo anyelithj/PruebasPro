@@ -17,8 +17,8 @@ import { words } from '../../domain/models/practice';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' }, // Elemento anfitrión en bloque → respeta márgenes y space-y del contenedor
   template: `
-    <p class="mb-2 text-sm text-muted-foreground">{{ hint() }}</p>
-    <p class="flex flex-wrap gap-1 text-lg leading-relaxed" [attr.lang]="language()">
+    <p class="mb-2 text-muted-foreground">{{ hint() }}</p>
+    <p class="flex flex-wrap gap-1 type-lead leading-relaxed" [attr.lang]="language()">
       @for (w of list(); track $index) {
         @let on = marked().has($index);
         <button
@@ -40,7 +40,7 @@ import { words } from '../../domain/models/practice';
         </button>
       }
     </p>
-    <p class="mt-2 text-xs text-muted-foreground" aria-live="polite">
+    <p class="mt-2 type-meta text-muted-foreground" aria-live="polite">
       {{ countLabel().replace('{n}', '' + marked().size) }}
     </p>
   `,

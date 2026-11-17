@@ -155,7 +155,14 @@ cd apps/frontend-angular
 nvm use 22.22.3                 # Si la terminal está en otra versión de Node
 pnpm install                    # Primera vez (o tras cambiar package.json)
 pnpm start                      # ng serve --port 9100 → http://localhost:9100/ng/
+
+cd apps/frontend-angular  && pnpm serve:fast   # ng build + servidor estático
+cd apps/frontend-next     && pnpm start:fast   # next build + next start
+
+$ NG_BUILD_PARALLEL_TS=0 npx ng build
 ```
+pnpm storybook 
+
 
 Para usarlo **como en producción (a través del shell)**, con los demás servicios arriba:
 

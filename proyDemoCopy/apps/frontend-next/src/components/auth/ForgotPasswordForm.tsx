@@ -56,8 +56,8 @@ export function ForgotPasswordForm() {
   return (
     <form onSubmit={onSubmit} className="w-full max-w-[420px] space-y-5" noValidate aria-label={f.formLabel}>
       <header className="mb-2">
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{f.title}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">{f.subtitle}</p>
+        <h1 className="title-page">{f.title}</h1>
+        <p className="mt-2 text-muted-foreground">{f.subtitle}</p>
       </header>
 
       {/* [Live region]: `role` + `aria-live` (WAI-ARIA) → el lector de pantalla anuncia el resultado */}
@@ -87,7 +87,7 @@ export function ForgotPasswordForm() {
           {...register("email")} // Spread de props de RHF (name, ref, onChange, onBlur)
         />
         {errors.email && (
-          <p id="email-error" role="alert" className="text-xs text-destructive">
+          <p id="email-error" role="alert" className="type-meta text-destructive">
             {errors.email.message}
           </p>
         )}
@@ -98,7 +98,7 @@ export function ForgotPasswordForm() {
         {status === "sending" ? f.submitting : status === "sent" ? f.resend : f.submit}
       </Button>
 
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-center text-muted-foreground">
         {f.remembered}{" "}
         <Link href={AUTH_ROUTES.login} className="font-semibold text-primary hover:text-primary-dark">
           {a.login.submit}

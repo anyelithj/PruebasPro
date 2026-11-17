@@ -1,0 +1,20 @@
+// MODULE — shortcuts (accesos rápidos del inicio)
+.shortcuts {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  a {
+    display: inline-block;
+    padding: var(--pad-item);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    font-weight: 700;
+    &:hover {
+      border-color: var(--petrol);
+    }
+  }
+}

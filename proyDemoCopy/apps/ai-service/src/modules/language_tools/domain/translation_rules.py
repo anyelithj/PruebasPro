@@ -23,10 +23,14 @@ SHORT_REPLIES = MappingProxyType(
             "sorry": "lo siento", "i'm sorry": "lo siento", "maybe": "quizás", "perhaps": "quizás", "i don't know": "no lo sé",
             "me too": "yo también", "not really": "la verdad, no", "exactly": "exacto", "really": "¿en serio?", "yes please": "sí, por favor",
             "no thanks": "no, gracias", "no thank you": "no, gracias", "of course not": "claro que no",
+            # [2026-11-13 · Caso C]: fórmula de cortesía → equivalente natural (no «mucho gusto de conocerte»)
+            "nice to meet you": "mucho gusto", "nice to meet you too": "igualmente, mucho gusto",
         },
-        "fr": {"oui": "sí", "non": "no", "merci": "gracias", "d'accord": "de acuerdo", "peut-être": "quizás", "bien sûr": "por supuesto"},
-        "de": {"ja": "sí", "nein": "no", "danke": "gracias", "vielleicht": "quizás", "natürlich": "por supuesto", "genau": "exacto"},
-        "pt": {"sim": "sí", "não": "no", "obrigado": "gracias", "obrigada": "gracias", "talvez": "quizás", "claro": "claro"},
+        "fr": {"oui": "sí", "non": "no", "merci": "gracias", "d'accord": "de acuerdo", "peut-être": "quizás", "bien sûr": "por supuesto", "enchanté": "mucho gusto", "enchantée": "mucho gusto"},
+        "de": {"ja": "sí", "nein": "no", "danke": "gracias", "vielleicht": "quizás", "natürlich": "por supuesto", "genau": "exacto", "freut mich": "mucho gusto"},
+        "pt": {"sim": "sí", "não": "no", "obrigado": "gracias", "obrigada": "gracias", "talvez": "quizás", "claro": "claro", "muito prazer": "mucho gusto", "prazer": "mucho gusto"},
+        "ru": {"да": "sí", "нет": "no", "спасибо": "gracias", "пожалуйста": "por favor", "очень приятно": "mucho gusto"},
+        "zh": {"是": "sí", "不是": "no", "谢谢": "gracias", "请": "por favor", "很高兴认识你": "mucho gusto"},
     }
 )
 
@@ -43,7 +47,52 @@ GLOSSARY_EN = MappingProxyType(
         "tomatoes": "tomates", "chili": "chile", "chilli": "chile",
     }
 )
-GLOSSARIES = MappingProxyType({"en": GLOSSARY_EN})
+# [Parentesco · 2026-11-13 · Caso A]: «niece» se traducía «prima» y luego «nieta» → equivalentes curados en los 7 idiomas (temperatura baja + glosario
+# en el prompt + validación de la salida) | ponytail: términos inequívocos; «cousin», «belle-mère»… dependen del contexto y los resuelve el LLM
+KINSHIP = MappingProxyType({
+    "en": {"niece": "sobrina", "nieces": "sobrinas", "nephew": "sobrino", "nephews": "sobrinos", "granddaughter": "nieta", "grandson": "nieto",
+           "grandchildren": "nietos", "aunt": "tía", "uncle": "tío", "mother-in-law": "suegra", "father-in-law": "suegro",
+           "son-in-law": "yerno", "daughter-in-law": "nuera", "brother-in-law": "cuñado", "sister-in-law": "cuñada",
+           "stepmother": "madrastra", "stepfather": "padrastro"},
+    "fr": {"nièce": "sobrina", "neveu": "sobrino", "petite-fille": "nieta", "petit-fils": "nieto", "tante": "tía", "oncle": "tío"},
+    "de": {"nichte": "sobrina", "neffe": "sobrino", "enkelin": "nieta", "enkel": "nieto", "tante": "tía", "onkel": "tío",
+           "schwiegermutter": "suegra", "schwiegervater": "suegro"},
+    "pt": {"sobrinha": "sobrina", "sobrinho": "sobrino", "neta": "nieta", "neto": "nieto", "tia": "tía", "tio": "tío", "sogra": "suegra", "sogro": "suegro"},
+    "ru": {"племянница": "sobrina", "племянник": "sobrino", "внучка": "nieta", "внук": "nieto", "тётя": "tía", "тетя": "tía", "дядя": "tío"},
+    "zh": {"侄女": "sobrina", "外甥女": "sobrina", "侄子": "sobrino", "外甥": "sobrino", "孙女": "nieta", "孙子": "nieto"},
+})  # fmt: skip
+# `{**a, **b}` (PEP 448): une glosarios temáticos por idioma sin duplicar datos | [Principio]: OCP (un tema = un mapa más)
+GLOSSARIES = MappingProxyType({lang: MappingProxyType({**(GLOSSARY_EN if lang == "en" else {}), **kin}) for lang, kin in KINSHIP.items()})
+
+# [Expresiones y títulos · 2026-11-13 · Caso C]: (natural, cercana, literal) curadas → deterministas, sin LLM («Hands To Myself» ≠ «Manos a mí»)
+# Natural = cómo lo diría un hispanohablante (la recomendada) · cercana = el sentido con otras palabras · literal = palabra por palabra
+EXPRESSIONS = MappingProxyType({
+    "en": {
+        "hands to myself": ("No puedo contenerme", "No puedo mantener mis manos quietas", "Mis manos para mí"),
+        "it's raining cats and dogs": ("Está lloviendo a cántaros", "Está lloviendo muchísimo", "Está lloviendo gatos y perros"),
+        "raining cats and dogs": ("Lloviendo a cántaros", "Lloviendo muchísimo", "Lloviendo gatos y perros"),
+        "break a leg": ("¡Mucha suerte!", "¡Que te vaya muy bien!", "Rómpete una pierna"),
+        "piece of cake": ("Pan comido", "Muy fácil", "Pedazo de pastel"),
+        "it's a piece of cake": ("Es pan comido", "Es muy fácil", "Es un pedazo de pastel"),
+        "under the weather": ("Indispuesto", "Un poco enfermo", "Bajo el clima"),
+        "once in a blue moon": ("De higos a brevas", "Muy de vez en cuando", "Una vez en una luna azul"),
+        "call it a day": ("Dar por terminado el día", "Dejarlo por hoy", "Llamarlo un día"),
+    },
+    "fr": {
+        "il pleut des cordes": ("Está lloviendo a cántaros", "Llueve muchísimo", "Llueve cuerdas"),
+        "coûter les yeux de la tête": ("Costar un ojo de la cara", "Ser carísimo", "Costar los ojos de la cabeza"),
+    },
+    "de": {
+        "daumen drücken": ("Cruzar los dedos", "Desear suerte", "Apretar los pulgares"),
+        "tomaten auf den augen haben": ("No ver lo que tienes delante", "No darse cuenta de algo evidente", "Tener tomates en los ojos"),
+    },
+    "pt": {
+        "chover canivetes": ("Llover a cántaros", "Llover muchísimo", "Llover navajas"),
+        "pagar o pato": ("Pagar los platos rotos", "Cargar con la culpa", "Pagar el pato"),
+    },
+    "ru": {"ни пуха ни пера": ("¡Mucha suerte!", "¡Que te vaya bien!", "Ni pelusa ni pluma")},
+    "zh": {"马马虎虎": ("Más o menos", "Regular", "Caballo caballo tigre tigre"), "加油": ("¡Ánimo!", "¡Tú puedes!", "Añade aceite")},
+})  # fmt: skip
 
 # [Español neutro]: voseo frecuente → tuteo («Preferís» → «Prefieres») | lista cerrada: una regex genérica rompería «después», «inglés»…
 _VOSEO = MappingProxyType(
@@ -65,6 +114,8 @@ _ARTICLE_FIX = MappingProxyType({"el": "la", "del": "de la", "un": "una"})
 _ENGLISH_MARKERS = frozenset(
     "the and is are was were you your my it this that with of to in for on do does what how why have has like i i'm don't it's very they we".split()
 )
+# [2026-11-09]: palabras francesas que NO existen en español → si quedan en la salida, la línea se quedó a medio traducir («Qui me fascina»)
+_FRENCH_MARKERS = frozenset("qui je nous vous ils elles est sont avec dans mais comme très être avoir mon ton cœur coeur où oui pas ne ce cette du au aux".split())
 _TRAILING_PUNCT = re.compile(r"[\s.!?¡¿,;:…]+$")
 
 
@@ -94,13 +145,28 @@ def _capitalize(text: str) -> str:
     return text
 
 
+def _normalized(tables: MappingProxyType) -> MappingProxyType:  # type: ignore[type-arg]
+    """Tablas por idioma con las claves normalizadas igual que la búsqueda («Nièce» → «niece», «Daumen drücken») | se calcula una vez."""
+    return MappingProxyType({lang: MappingProxyType({_key(k): v for k, v in table.items()}) for lang, table in tables.items()})
+
+
+_QUICK_SHORT = _normalized(SHORT_REPLIES)
+_QUICK_GLOSSARY = _normalized(GLOSSARIES)
+_QUICK_EXPRESSIONS = _normalized(EXPRESSIONS)
+
+
 def quick_translation(text: str, source: str, target: str = "es") -> str | None:
-    """Traducción determinista SIN LLM: respuesta corta («yes» → «Sí») o término exacto del glosario («Bell pepper»)."""
+    """Traducción determinista SIN LLM: respuesta corta («yes» → «Sí») o término exacto del glosario («Bell pepper», «niece»)."""
     if target != "es":
         return None
     key = _key(text)
-    hit = SHORT_REPLIES.get(source, {}).get(key) or GLOSSARIES.get(source, {}).get(key)
+    hit = _QUICK_SHORT.get(source, {}).get(key) or _QUICK_GLOSSARY.get(source, {}).get(key)
     return _shape_like(text, hit) if hit else None
+
+
+def curated_options(text: str, source: str) -> tuple[str, str, str] | None:
+    """(natural, cercana, literal) de una expresión o título curado; None si no está en la tabla. Función pura."""
+    return _QUICK_EXPRESSIONS.get(source, {}).get(_key(text))
 
 
 def glossary_hints(text: str, source: str) -> list[tuple[str, str]]:
@@ -141,6 +207,8 @@ def is_acceptable(source_text: str, translation: str | None, source: str, target
     if target == "es" and source == "en" and len(out_words) >= 3:
         if sum(w in _ENGLISH_MARKERS for w in out_words) / len(out_words) >= 0.3:  # Sigue en inglés
             return False
+    if target == "es" and source == "fr" and any(w in _FRENCH_MARKERS for w in out_words):  # Sigue (en parte) en francés
+        return False
     if len(out_words) >= 3 and sum(w in set(src_words) for w in out_words) / len(out_words) >= 0.8:  # Copia casi literal
         return False
     if target != "es":

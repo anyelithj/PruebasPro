@@ -172,7 +172,7 @@ export function CourseOutlineEditor({ courseId, initial }: { courseId: string; i
                           </div>
                           {/* [Estado guardado]: recursos reutilizados o hueco con generación (solo lecciones ya guardadas) */}
                           {state && (
-                            <p className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
+                            <p className="mt-1.5 flex flex-wrap items-center gap-2 type-meta">
                               {state.gap ? (
                                 <>
                                   <span className="badge bg-tone-warning-soft text-tone-warning">Hueco: sin recursos</span>

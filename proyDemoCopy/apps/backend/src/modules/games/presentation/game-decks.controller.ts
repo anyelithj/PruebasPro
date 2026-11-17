@@ -24,8 +24,7 @@ import {
   MaxLength,
   Min,
   MinLength,
-  ValidateNested,
-} from 'class-validator';
+  ValidateNested, Matches } from 'class-validator';
 import {
   CurrentUser,
   type JwtPayload,
@@ -41,18 +40,20 @@ import {
 import { GAME_TYPES, type GameType } from '../domain/game-type';
 // [GameDecksController · 2026-10-25]: /games/decks — juegos de vocabulario con material propio (Gestión → Actividades → Juegos) | [Patrón]: Thin Controller + DTO validado | [Principio]: SRP + Least Privilege (@Roles)
 
-// Juegos que se juegan con una lista de palabras (familia «vocab» de GAME_META)
-const DECK_GAMES = GAME_TYPES.filter((t) =>
-  ['flashcards', 'memory', 'bingo', 'quick_sort', 'recovery_drills'].includes(
-    t,
-  ),
-);
+// [2026-11-11]: TODOS los juegos admiten material propio (antes solo los de vocabulario) → el contenido de cada ítem depende del juego (ver DeckItem)
+const DECK_GAMES = GAME_TYPES;
 
 export class DeckItemBody {
-  @IsString() @MinLength(1) @MaxLength(80) term!: string;
+  @IsString() @MinLength(1) @MaxLength(200) term!: string; // [2026-11-11]: 80 → 200 (temas y frases de escucha)
   @IsOptional() @IsString() @MaxLength(120) translation?: string;
   @IsOptional() @IsString() @MaxLength(8) emoji?: string;
+  // [2026-11-03]: imagen por enlace https (como Políglota) | [Seguridad]: solo https → sin javascript:/data: en el <img>
+  // [2026-11-03]: miniatura WebP del navegador (data:image, igual que vocabulario · ≤ 150 000) o enlace https | [Seguridad]: sin javascript:/svg (no ejecutable)
+  @IsOptional() @IsString() @MaxLength(150_000) @Matches(/^(https:\/\/\S{4,396}|data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+)$/) image?: string;
   @IsOptional() @IsString() @MaxLength(40) category?: string;
+  @IsOptional() @IsString() @MaxLength(200) words?: string;
+  @IsOptional() @IsString() @MaxLength(200) question?: string;
+  @IsOptional() @IsString() @MaxLength(80) answer?: string;
 }
 
 export class CreateDeckBody {
@@ -67,7 +68,10 @@ export class CreateDeckBody {
   items!: DeckItemBody[];
 }
 
+// [UpdateDeckBody · 2026-10-27]: «Editar» del juego en Gestión → también cambia de juego (mismo material) y de nivel | `@IsOptional` (class-validator): PATCH parcial
 export class UpdateDeckBody {
+  @IsOptional() @IsIn(DECK_GAMES) gameType?: GameType;
+  @IsOptional() @IsEnum(CefrLevel) level?: CefrLevel;
   @IsOptional() @IsString() @MinLength(2) @MaxLength(160) title?: string;
   @IsOptional()
   @IsArray()
@@ -112,6 +116,7 @@ export class GameDecksController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Detalle de un juego con material propio (palabras incluidas)' }) // [Sprint 11.2]: toda operación documentada en OpenAPI
   get(@CurrentUser() u: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
     return this.decks.get(actorOf(u), id);
   }
@@ -124,7 +129,8 @@ export class GameDecksController {
   }
 
   @Patch(':id')
-  @Roles(Role.TEACHER, Role.ADMIN)
+  @Roles(Role.TEACHER, Role.ADMIN) // Mismo guard que crear; el caso de uso exige además ser el autor o ADMIN
+  @ApiOperation({ summary: 'Editar un juego con material propio (título, juego, nivel, palabras o estado)' })
   update(
     @CurrentUser() u: JwtPayload,
     @Param('id', ParseUUIDPipe) id: string,
@@ -136,6 +142,7 @@ export class GameDecksController {
   @Delete(':id')
   @HttpCode(204)
   @Roles(Role.TEACHER, Role.ADMIN)
+  @ApiOperation({ summary: 'Archivar un juego con material propio (borrado lógico)' })
   remove(@CurrentUser() u: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
     return this.decks.archive(actorOf(u), id);
   }

@@ -125,6 +125,11 @@ export class Course {
   @Column({ type: 'boolean', default: true, name: 'is_published' })
   isPublished!: boolean;
 
+  // [Propietario · 2026-10-27]: usuario (docente o admin) que creó el curso → el DOCENTE solo gestiona los suyos; el ADMIN, todos
+  // `nullable`: los cursos anteriores a esta columna no tienen dueño → solo los gestiona el ADMIN | `string | null` (TS): unión explícita | [Patrón]: Ownership (ABAC sobre RBAC)
+  @Column({ type: 'uuid', nullable: true, name: 'created_by' })
+  createdBy!: string | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 

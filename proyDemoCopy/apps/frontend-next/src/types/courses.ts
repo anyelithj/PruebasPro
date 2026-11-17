@@ -1,3 +1,4 @@
+import type { SocialLinks } from "@/types/profile"; // [2026-10-28]: redes sociales del autor (SSOT en types/profile)
 // [Tipos compartidos Courses]: SSOT entre frontend y backend NestJS | [Patrón]: Type Module | [Principio]: SSOT | [Paradigma]: TS estructural
 
 // [Nivel MCER]: categoría fina del curso, alineada con CourseCategory del backend
@@ -11,6 +12,14 @@ export type LanguageGroup = "EN" | "FR" | "DE" | "ES" | "PT" | "ZH" | "RU";
 
 // [Grupo]: idioma vigente; admite grupos legacy que pudieran llegar de filas antiguas
 export type CourseGroup = LanguageGroup | (string & {});
+
+// [Autor del curso · 2026-10-28]: resumen PÚBLICO del docente (sin email ni teléfono) | espejo de CourseAuthorDto (NestJS) | [Principio]: Least Privilege
+export interface CourseAuthor {
+  id: string;
+  name: string;
+  bio: string | null;
+  social: SocialLinks; // null por red = no configurada
+}
 
 // [Respuesta GET /courses/:id]
 export interface CourseResponse {
@@ -45,11 +54,15 @@ export interface CourseResponse {
   modality: string;
   isProBono: boolean;
   isPublished: boolean;
+  createdBy?: string | null; // [2026-10-27]: dueño (docente/admin que lo creó) | `?`: backend anterior sin el campo
+  author?: CourseAuthor | null; // [2026-10-28]: perfil público del dueño (bio + redes) para «Autoría del contenido» | solo en el DETALLE · null sin dueño
   // [Estado por usuario]
   progress: number;
+  // [Caso F · 2026-11-13]: ⭐ favorito privado + reacción excluyente 👍/❤️ + conteos públicos (antes likeOn/loveOn sin conteos) → ver CourseEngagement
   isFavorite: boolean;
-  likeOn: boolean;
-  loveOn: boolean;
+  reaction: ReactionType | null;
+  likesCount: number;
+  lovesCount: number;
   hasAccess: boolean; // [Acceso al material]: comprado (pago) o inscrito (gratis) — el backend lo exige al servir cada archivo
   completedMaterialIds: string[]; // [Línea de tiempo]: materiales ya marcados como completados
   completedTopics?: string[]; // [2026-10-25]: subtemas del temario estudiados
@@ -69,6 +82,7 @@ export interface PaginatedCoursesResponse {
 }
 
 export interface CourseFilterInput {
+  isPublished?: "true" | "false"; // [2026-10-30]: solo Gestión → filtro «Estado»
   group?: CourseGroup;
   category?: CourseCategory;
   eje?: number;
@@ -97,6 +111,24 @@ export const COURSE_TAGS = [
   "Intensivo",
   "Para niños",
 ] as const;
+export const MAX_COURSE_TAGS = 10; // [SSOT]: el máximo que anuncia el formulario
+
+// [suggestCourseTags · 2026-10-30]: etiquetas según el temario (manual, archivo, enlace o IA) → siempre quedan marcadas al crear | [Patrón]: Table-Driven | [Paradigma]: Función pura
+// `\b` + `i` (RegExp): palabra completa sin distinguir mayúsculas | ponytail: palabras clave fijas en español e inglés; una etiqueta nueva = una fila
+const TAG_KEYWORDS: ReadonlyArray<[(typeof COURSE_TAGS)[number], RegExp]> = [
+  ["Conversación", /\b(conversaci[oó]n|di[aá]logos?|saludos?|presentarse|hablar|speaking)\b/i],
+  ["Gramática", /\b(gram[aá]tica|verbos?|presente|pasado|futuro|art[ií]culos?|pronombres?|adjetivos?|adverbios?|preposiciones?|plural|tiempos? verbal(es)?|grammar|tenses?|was|were)\b/i],
+  ["Vocabulario", /\b(vocabulario|palabras?|l[eé]xico|colores|n[uú]meros|familia|comida|ropa|animales|profesiones|vocabulary|words)\b/i],
+  ["Pronunciación", /\b(pronunciaci[oó]n|fon[eé]tica|ipa|acento|sonidos?|vocales|consonantes)\b/i],
+  ["Comprensión lectora", /\b(lectura|leer|comprensi[oó]n lectora|textos?|reading)\b/i],
+  ["Comprensión auditiva", /\b(escuchar|auditiva|audios?|listening|canciones)\b/i],
+  ["Escritura", /\b(escritura|escribir|redacci[oó]n|ortograf[ií]a|writing)\b/i],
+  ["Preparación de examen", /\b(ex[aá]menes|examen|delf|ielts|toefl|cambridge|goethe|certificaci[oó]n)\b/i],
+  ["Negocios", /\b(negocios?|empresa|oficina|trabajo|business)\b/i],
+  ["Viajes", /\b(viajes?|viajar|aeropuerto|hotel|turismo)\b/i],
+  ["Para niños", /\b(ni[nñ]os|infantil)\b/i],
+];
+export const suggestCourseTags = (text: string): string[] => TAG_KEYWORDS.filter(([, re]) => re.test(text)).map(([tag]) => tag);
 
 // [Laboratorios de práctica]: lista cerrada para el campo "Laboratorio" (antes texto libre poco claro) | máx. 60 caracteres en el backend | [Principio]: SSOT
 export const COURSE_LABS = [
@@ -112,7 +144,10 @@ export const COURSE_LABS = [
 // [Duración por defecto]: horas orientativas de un nivel MCER en un curso (editable)
 export const DEFAULT_COURSE_HOURS = 40;
 
-export type ReactionKind = "like" | "love" | "favorite";
+// [Caso F · 2026-11-13]: 👍 like = valoración positiva · ❤️ love = alta satisfacción — EXCLUYENTES (máximo una por usuario y curso)
+export type ReactionType = "like" | "love";
+// [CourseEngagement]: lo que pinta la barra ⭐ 👍 ❤️ (mismo contrato que CourseEngagementDto de NestJS) | `Pick` (TS): subconjunto tipado de CourseResponse → SSOT
+export type CourseEngagement = Pick<CourseResponse, "isFavorite" | "reaction" | "likesCount" | "lovesCount">;
 
 // [Idiomas del catálogo]: orden de los chips de filtro | [Principio]: SSOT
 export const LANGUAGE_GROUPS: ReadonlyArray<LanguageGroup> = ["EN", "FR", "DE", "ES", "PT", "ZH", "RU"];

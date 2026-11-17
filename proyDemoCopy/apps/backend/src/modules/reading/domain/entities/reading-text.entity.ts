@@ -1,3 +1,4 @@
+import type { ReadingKind } from '../sentence-splitter';
 import {
   Column,
   CreateDateColumn,
@@ -17,7 +18,9 @@ import type {
 @Index('IDX_reading_texts_filters', ['language', 'level', 'genre', 'status']) // [Rendimiento]: filtros de la lista del estudiante
 @Index('IDX_reading_texts_created_by', ['createdBy'])
 export class ReadingText {
-  @PrimaryGeneratedColumn('uuid', { primaryKeyConstraintName: 'PK_reading_texts' })
+  @PrimaryGeneratedColumn('uuid', {
+    primaryKeyConstraintName: 'PK_reading_texts',
+  })
   id!: string;
 
   @Column({ type: 'varchar', length: 160 })
@@ -31,6 +34,10 @@ export class ReadingText {
 
   @Column({ type: 'varchar', length: 20 })
   genre!: ReadingGenre;
+
+  // [kind · 2026-11-16]: 'reading' = lectura · 'dictation' = dictado (/lectura/dictado) — mismo texto con frases, IPA y traducción
+  @Column({ type: 'varchar', length: 10, default: 'reading' })
+  kind!: ReadingKind;
 
   @Column({ type: 'varchar', length: 160, nullable: true })
   topic!: string | null; // De qué trata (lo usa el prompt de la IA y la ficha)

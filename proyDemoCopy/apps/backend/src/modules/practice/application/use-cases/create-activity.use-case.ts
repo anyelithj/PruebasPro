@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, IsNull, Repository } from 'typeorm';
+import { assertUniqueTitle } from '../../../../shared/application/unique-title'; // [2026-10-28]: regla anti-duplicados compartida (DRY)
 import { PracticeActivity } from '../../domain/entities/practice-activity.entity';
 import { PracticeItem } from '../../domain/entities/practice-item.entity';
 import { itemProblem } from '../../domain/item-rules';
@@ -58,6 +59,13 @@ export class CreateActivityUseCase {
     opts: { published?: boolean } = {},
   ): Promise<PracticeActivity> {
     const items = (input.items ?? []).map(checkedItem); // Valida todo antes de escribir nada
+    // [Fix 2026-10-28 · Sin duplicados]: misma actividad (título normalizado) en idioma + nivel + habilidad y no archivada → 409 antes de abrir la transacción
+    await assertUniqueTitle(
+      this.activities,
+      input.title,
+      { language: input.language, level: input.level, skill: input.skill, archivedAt: IsNull() },
+      { label: 'una actividad de práctica', language: input.language, level: input.level },
+    );
     // `transaction` (TypeORM): actividad e ítems se guardan juntos o no se guarda nada
     return this.db.transaction(async (tx) => {
       const activity = await tx.save(

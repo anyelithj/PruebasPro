@@ -17,9 +17,7 @@ export class GuideFacade {
   readonly streaming = signal(false);
   readonly error = signal<string | null>(null);
   readonly isEmpty = computed(() => this.turns().length === 0);
-  readonly mode = signal<BotMode>('guide'); // [2026-10-19]: Tutor · Soporte · Guía (cada modo es una conversación aparte)
-  readonly language = signal('en'); // Idioma que estudia (modo tutor)
-  readonly level = signal('A1'); // [2026-10-25]: nivel MCER (modo tutor) → el tutor gradúa reglas y ejemplos
+  readonly mode = signal<BotMode>('guide'); // [2026-10-19 → 2026-10-28]: Soporte · Guía (cada modo es una conversación aparte; sin tutor) · «guide» por defecto (el manual /ayuda lo usa así)
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.sub?.unsubscribe()); // Cerrar el widget/página cancela la respuesta en curso
@@ -31,7 +29,7 @@ export class GuideFacade {
     this.error.set(null);
     this.streaming.set(true);
     this.turns.update((t) => [...t, { role: 'user', content: text }, { role: 'assistant', content: '' }]);
-    this.sub = this.repo.ask({ message: text, sessionId: this.sessionId(), route: /^\/[\w\-/]*$/.test(route) ? route : undefined, locale: this.i18n.locale(), mode: this.mode(), language: this.mode() === 'tutor' ? this.language() : undefined, level: this.mode() === 'tutor' ? this.level() : undefined }).subscribe({
+    this.sub = this.repo.ask({ message: text, sessionId: this.sessionId(), route: /^\/[\w\-/]*$/.test(route) ? route : undefined, locale: this.i18n.locale(), mode: this.mode() }).subscribe({
       next: (chunk) => {
         switch (chunk.type) {
           case 'session':
@@ -41,7 +39,7 @@ export class GuideFacade {
             this.patchLast((last) => ({ content: last.content + chunk.text }));
             break;
           case 'sources':
-            this.patchLast(() => ({ sources: chunk.sources, answeredBy: chunk.answeredBy }));
+            this.patchLast(() => ({ sources: chunk.sources, answeredBy: chunk.answeredBy, degraded: chunk.degraded }));
             break;
           case 'done':
             this.streaming.set(false);
@@ -49,7 +47,13 @@ export class GuideFacade {
         }
       },
       error: (err: unknown) => {
-        this.turns.update((t) => (t.at(-1)?.content === '' ? t.slice(0, -1) : t)); // Quita el turno vacío del agente
+        // [2026-10-27 · Nunca solo un error]: el turno vacío del agente se rellena con una respuesta amable (FAQ y manual) + el detalle técnico en la alerta
+        const reply = this.i18n.t().help.unavailableReply;
+        this.turns.update((t) => {
+          const last = t.at(-1);
+          if (last?.role !== 'assistant') return t;
+          return [...t.slice(0, -1), last.content ? last : { ...last, content: reply, answeredBy: 'none', degraded: true, offline: true }];
+        });
         this.error.set(err instanceof Error ? err.message : String(err));
         this.streaming.set(false);
       },
@@ -70,11 +74,20 @@ export class GuideFacade {
     }
   }
 
-  // [setMode]: cambiar de modo empieza otra conversación (el contexto de soporte no se mezcla con el del tutor)
+  // [setMode]: cambiar de modo empieza otra conversación (el contexto de soporte no se mezcla con el de la guía)
   setMode(mode: BotMode): void {
     if (mode === this.mode()) return;
     void this.clear();
     this.mode.set(mode);
+  }
+
+  // [reset · 2026-11-09]: «Nueva conversación» → empieza de cero sin borrar la anterior del servidor
+  reset(): void {
+    this.sub?.unsubscribe();
+    this.turns.set([]);
+    this.sessionId.set(undefined);
+    this.streaming.set(false);
+    this.error.set(null);
   }
 
   // [clear]: borra la conversación en el servidor (si existe) y empieza de cero

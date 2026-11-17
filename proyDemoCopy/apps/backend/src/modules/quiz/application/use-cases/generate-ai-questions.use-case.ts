@@ -39,6 +39,7 @@ export class GenerateAIQuestionsUseCase {
       difficulty: dto.difficulty,
       type: dto.type,
       language,
+      sourceText: dto.sourceText?.trim() || undefined,
     };
 
     // [Acumulación con dedup]: combina varios intentos hasta alcanzar la cantidad pedida, sin repetir enunciados | [Patrón]: Top-up Loop + Dedup
@@ -61,7 +62,8 @@ export class GenerateAIQuestionsUseCase {
         fallbackUsed = fallbackUsed || result.fallbackUsed;
 
         let added = 0;
-        for (const q of result.questions) {
+        for (const raw of result.questions) {
+          const q = cleanQuestion(raw); // [2026-11-11]: sin etiquetas que deja el modelo («<text>», «</option>»…)
           const key = q.text.trim().toLowerCase();
           if (seen.has(key)) continue;
           seen.add(key);
@@ -92,3 +94,15 @@ export class GenerateAIQuestionsUseCase {
     return { questions, usedProvider, fallbackUsed };
   }
 }
+
+// [stripMarkup · 2026-11-11]: el modelo a veces envuelve el contenido en etiquetas («<text>¿…?</text>») y se mostraban tal cual en el examen
+// Quita etiquetas tipo XML/HTML y colapsa espacios | se aplica igual a opciones y respuesta → la respuesta sigue coincidiendo con su opción | Función pura
+export const stripMarkup = (s: string): string => s.replace(/<\/?[a-z][\w-]*(?:\s[^<>]*)?\/?>/gi, ' ').replace(/\s+/g, ' ').trim();
+const cleanQuestion = (q: AIGeneratedQuestion): AIGeneratedQuestion => ({
+  ...q,
+  text: stripMarkup(q.text),
+  ...(q.options ? { options: q.options.map(stripMarkup) } : {}),
+  ...(typeof q.correctAnswer === 'string' ? { correctAnswer: stripMarkup(q.correctAnswer) } : {}),
+  ...(q.explanation ? { explanation: stripMarkup(q.explanation) } : {}),
+  ...(q.feedback ? { feedback: stripMarkup(q.feedback) } : {}),
+});

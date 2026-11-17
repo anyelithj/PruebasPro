@@ -11,7 +11,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
       <dt class="text-xs font-semibold text-muted-foreground">{{ label() }}</dt>
       <dd class="mt-1 text-2xl font-extrabold tabular-nums tracking-tight">{{ value() }}</dd>
       @if (hint()) {
-        <dd class="mt-0.5 text-xs text-muted-foreground">{{ hint() }}</dd>
+        <dd class="mt-0.5 type-meta text-muted-foreground">{{ hint() }}</dd>
       }
     </dl>
   `,

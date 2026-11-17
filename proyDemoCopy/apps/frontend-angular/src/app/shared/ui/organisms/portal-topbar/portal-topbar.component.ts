@@ -30,7 +30,7 @@ const SQUARE = 'size-10 shrink-0 place-items-center rounded-xl border border-bor
       }
       <div class="border-b border-border px-4 py-2.5"><b class="text-sm"><aula-icon name="shopping-cart" /> {{ t.cart }}</b></div>
       @if (!items.length) {
-        <p class="px-4 py-6 text-center text-xs text-muted-foreground">{{ t.cartEmpty }}</p>
+        <p class="px-4 py-6 text-center type-meta text-muted-foreground">{{ t.cartEmpty }}</p>
       } @else {
         <ul class="max-h-72 overflow-y-auto">
           @for (i of items; track i.id) {
@@ -50,7 +50,7 @@ const SQUARE = 'size-10 shrink-0 place-items-center rounded-xl border border-bor
           </div>
           <!-- [Sprint 7.4]: el pago (Stripe embebido) vive en la pantalla Angular /checkout → routerLink (misma app, sin recargar) -->
           <a routerLink="/checkout" (click)="dd.close()" aria-describedby="checkout-soon" class="btn btn-primary btn-sm w-full">{{ t.checkout }}</a>
-          <p id="checkout-soon" class="text-center text-[10px] text-muted-foreground">{{ t.checkoutSoon }}</p>
+          <p id="checkout-soon" class="text-center type-meta text-muted-foreground">{{ t.checkoutSoon }}</p>
         </div>
       }
     </aula-dropdown>

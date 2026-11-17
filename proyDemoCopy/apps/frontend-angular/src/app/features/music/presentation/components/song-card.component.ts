@@ -13,7 +13,7 @@ import { LevelTintDirective } from '@shared/ui/atoms/level-tint/level-tint.direc
       [aulaLevel]="level()"
       class="surface flex h-full flex-col gap-2 border-l-4 border-l-(--lvl) p-4"
     >
-      <h3 class="text-base font-bold leading-tight">
+      <h3 class="title-card">
         <a
           [routerLink]="link()"
           class="text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -21,16 +21,16 @@ import { LevelTintDirective } from '@shared/ui/atoms/level-tint/level-tint.direc
         >
       </h3>
       @if (artist()) {
-        <p class="text-sm text-muted-foreground">{{ artist() }}</p>
+        <p class="text-muted-foreground">{{ artist() }}</p>
       }
-      <p class="flex flex-wrap gap-1.5 text-xs">
+      <p class="flex flex-wrap gap-1.5 type-meta">
         <span class="badge bg-tone-brand-soft text-tone-brand">{{ languageName() }}</span>
         <span class="badge bg-muted font-bold">{{ level() }}</span>
         @if (statusLabel()) {
           <span class="badge bg-tone-warning-soft text-tone-warning">{{ statusLabel() }}</span>
         }
       </p>
-      <p class="mt-auto text-xs text-muted-foreground">© {{ licenseLabel() }}</p>
+      <p class="mt-auto type-meta text-muted-foreground">© {{ licenseLabel() }}</p>
       <a [routerLink]="link()" class="btn btn-outline btn-sm self-start">{{ actionLabel() }} →</a>
     </article>
   `,

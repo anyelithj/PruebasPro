@@ -1,11 +1,12 @@
 {
-  "$comment": "admin-nav.json => menú ÚNICO del panel (Shared Kernel / Configuration as Data). Lo leen Next.js (AdminSidebar.tsx) y Nuxt (AdminSidebar.vue): mismo menú, íconos y orden sin importar qué aplicación sirve la pantalla (microfrontends transparentes). app = aplicación que sirve la ruta; path admite query (?tab= abre una pestaña del panel de Next, ?kind= un tipo del CMS de Nuxt) y el ítem con query coincidente gana sobre el que no la tiene; adminOnly = oculto al rol VENDOR y a clientes; everyone = grupo visible para toda sesión (Mi cuenta, IA); description = subtítulo de la página; match = prefijos extra que activan el ítem; icons = trazos SVG 24x24 estáticos. Reglas de organización (2026-10-25): cada grupo es un desplegable de máximo 6 ítems con UNA sola responsabilidad (CRM = solo cliente; CMS = solo contenido; Ventas = pedido, cobro y envío) y el acordeón abre un grupo a la vez => el menú no genera scroll. Orden: «General» primero y luego «Mi cuenta».",
+  "$comment": "admin-nav.json => menú ÚNICO del panel (Shared Kernel / Configuration as Data). Lo leen Next.js y Nuxt. Regla ÚNICA de navegación (2026-11-01): cada grupo es UNA sección = un solo enlace en el menú lateral (va a su primer ítem visible) y cada ítem es UNA pestaña de la barra PanelTabs, igual en las dos apps; lo que no cabe entra en el Dropdown «Más» (sin scroll horizontal). Con un solo ítem visible no hay barra. app = aplicación que sirve la ruta (una pestaña puede vivir en la otra app); path admite query (?tab= una pestaña de la sección de Next, ?kind= un tipo del CMS); adminOnly = oculto al rol VENDOR y a clientes; everyone (grupo o ítem) = visible para toda sesión; description = subtítulo de la página; match = prefijos extra que activan el ítem; keywords = términos extra del buscador; icons = trazos SVG 24x24 estáticos. Una pestaña pertenece a un solo ítem (lo verifica scripts/admin-nav.test.mjs).",
   "groups": [
     {
       "key": "general",
+      "icon": "home",
       "label": {
-        "es": "General",
-        "en": "General"
+        "es": "Panel principal",
+        "en": "Main dashboard"
       },
       "items": [
         {
@@ -18,23 +19,955 @@
             "es": "Panel principal",
             "en": "Main dashboard"
           }
+        }
+      ]
+    },
+    {
+      "key": "sales",
+      "icon": "cart",
+      "label": {
+        "es": "Ventas y pedidos",
+        "en": "Sales & orders"
+      },
+      "items": [
+        {
+          "key": "orders",
+          "app": "next",
+          "path": "/dashboard/orders?tab=orders",
+          "icon": "cart",
+          "rf": "RF-09.2",
+          "label": {
+            "es": "Pedidos",
+            "en": "Orders"
+          }
         },
+        {
+          "key": "transfers",
+          "app": "next",
+          "path": "/dashboard/orders?tab=transfers",
+          "icon": "receipt",
+          "rf": "RF-08.3",
+          "label": {
+            "es": "Transferencias",
+            "en": "Transfers"
+          },
+          "adminOnly": true
+        },
+        {
+          "key": "invoices",
+          "app": "next",
+          "path": "/dashboard/orders?tab=invoices",
+          "icon": "file",
+          "rf": "RF-11.1",
+          "label": {
+            "es": "Facturas",
+            "en": "Invoices"
+          },
+          "adminOnly": true
+        },
+        {
+          "key": "dian",
+          "app": "next",
+          "path": "/dashboard/orders?tab=dian",
+          "icon": "shield",
+          "rf": "RF-11.3",
+          "label": {
+            "es": "DIAN",
+            "en": "DIAN"
+          },
+          "adminOnly": true
+        }
+      ]
+    },
+    {
+      "key": "logistics",
+      "icon": "truck",
+      "label": {
+        "es": "Envíos y devoluciones",
+        "en": "Shipping & returns"
+      },
+      "items": [
+        {
+          "key": "shipments",
+          "app": "next",
+          "path": "/dashboard/orders?tab=shipments",
+          "icon": "truck",
+          "rf": "RF-10.1",
+          "label": {
+            "es": "Envíos",
+            "en": "Shipments"
+          }
+        },
+        {
+          "key": "refunds",
+          "app": "next",
+          "path": "/dashboard/orders?tab=refunds",
+          "icon": "undo",
+          "rf": "RF-12.3",
+          "label": {
+            "es": "Devoluciones",
+            "en": "Returns"
+          },
+          "adminOnly": true
+        },
+        {
+          "key": "shipping",
+          "app": "nuxt",
+          "path": "/config/shipping",
+          "icon": "truck",
+          "adminOnly": true,
+          "description": {
+            "es": "Transportadoras, tarifas por peso y tasas de impuesto por región.",
+            "en": "Carriers, weight-based rates and tax rates per region."
+          },
+          "rf": "RF-27.4",
+          "label": {
+            "es": "Transportadoras y tarifas",
+            "en": "Carriers & rates"
+          }
+        }
+      ]
+    },
+    {
+      "key": "catalog",
+      "icon": "tag",
+      "label": {
+        "es": "Catálogo",
+        "en": "Catalog"
+      },
+      "items": [
+        {
+          "key": "products",
+          "app": "next",
+          "path": "/dashboard/products?tab=products",
+          "icon": "tag",
+          "rf": "RF-04.1",
+          "label": {
+            "es": "Productos",
+            "en": "Products"
+          }
+        },
+        {
+          "key": "brands",
+          "app": "next",
+          "path": "/dashboard/products?tab=brands",
+          "icon": "badge",
+          "rf": "RF-05.1",
+          "label": {
+            "es": "Marcas",
+            "en": "Brands"
+          }
+        }
+      ]
+    },
+    {
+      "key": "inventory",
+      "icon": "box",
+      "label": {
+        "es": "Inventario y proveedores",
+        "en": "Inventory & suppliers"
+      },
+      "items": [
+        {
+          "key": "inventory",
+          "app": "next",
+          "path": "/dashboard/inventory?tab=stock",
+          "icon": "box",
+          "rf": "RF-23.1",
+          "label": {
+            "es": "Stock",
+            "en": "Stock"
+          },
+          "adminOnly": true
+        },
+        {
+          "key": "suppliers",
+          "app": "next",
+          "path": "/dashboard/inventory?tab=suppliers",
+          "icon": "store",
+          "rf": "RF-23.5",
+          "label": {
+            "es": "Proveedores",
+            "en": "Suppliers"
+          },
+          "adminOnly": true
+        },
+        {
+          "key": "purchases",
+          "app": "next",
+          "path": "/dashboard/inventory?tab=purchases",
+          "icon": "receipt",
+          "rf": "RF-23.6",
+          "label": {
+            "es": "Órdenes de compra",
+            "en": "Purchase orders"
+          },
+          "adminOnly": true
+        },
+        {
+          "key": "ranking",
+          "app": "next",
+          "path": "/dashboard/inventory?tab=ranking",
+          "icon": "star",
+          "rf": "RF-23.5",
+          "label": {
+            "es": "Ranking y precios",
+            "en": "Ranking & prices"
+          },
+          "adminOnly": true
+        },
+        {
+          "key": "valuation",
+          "app": "next",
+          "path": "/dashboard/inventory?tab=valuation",
+          "icon": "chart",
+          "rf": "RF-23.3",
+          "label": {
+            "es": "Valorización",
+            "en": "Valuation"
+          },
+          "adminOnly": true
+        },
+        {
+          "key": "inventoryAudit",
+          "app": "next",
+          "path": "/dashboard/inventory?tab=audit",
+          "icon": "qr",
+          "rf": "RF-23.7",
+          "label": {
+            "es": "Auditoría QR",
+            "en": "QR audit"
+          },
+          "adminOnly": true
+        }
+      ]
+    },
+    {
+      "key": "crm",
+      "icon": "users",
+      "label": {
+        "es": "Clientes y usuarios",
+        "en": "Customers & users"
+      },
+      "items": [
+        {
+          "key": "customers",
+          "app": "next",
+          "path": "/dashboard/customers?tab=list",
+          "icon": "users",
+          "rf": "RF-22.1",
+          "label": {
+            "es": "Clientes",
+            "en": "Customers"
+          },
+          "adminOnly": true,
+          "keywords": "crm"
+        },
+        {
+          "key": "crmSegments",
+          "app": "next",
+          "path": "/dashboard/customers?tab=segments",
+          "icon": "filter",
+          "rf": "RF-22.2",
+          "label": {
+            "es": "Segmentos",
+            "en": "Segments"
+          },
+          "adminOnly": true
+        },
+        {
+          "key": "crmCohorts",
+          "app": "next",
+          "path": "/dashboard/customers?tab=cohorts",
+          "icon": "layers",
+          "rf": "RF-22.7",
+          "label": {
+            "es": "Cohortes",
+            "en": "Cohorts"
+          },
+          "adminOnly": true
+        },
+        {
+          "key": "crmValue",
+          "app": "next",
+          "path": "/dashboard/customers?tab=value",
+          "icon": "badge",
+          "rf": "RF-22.3",
+          "label": {
+            "es": "Alto valor y abandono",
+            "en": "High value & churn"
+          },
+          "adminOnly": true
+        },
+        {
+          "key": "crmDuplicates",
+          "app": "next",
+          "path": "/dashboard/customers?tab=duplicates",
+          "icon": "copy",
+          "rf": "RF-22.4",
+          "label": {
+            "es": "Duplicados e importación",
+            "en": "Duplicates & import"
+          },
+          "adminOnly": true
+        },
+        {
+          "key": "settings",
+          "app": "next",
+          "path": "/dashboard/settings?tab=roles",
+          "icon": "shield",
+          "rf": "RF-03.1",
+          "label": {
+            "es": "Roles",
+            "en": "Roles"
+          },
+          "adminOnly": true,
+          "keywords": "equipo usuarios team users"
+        },
+        {
+          "key": "permissions",
+          "app": "next",
+          "path": "/dashboard/settings?tab=permissions",
+          "icon": "shield",
+          "rf": "RF-03.3",
+          "label": {
+            "es": "Permisos",
+            "en": "Permissions"
+          },
+          "adminOnly": true
+        }
+      ]
+    },
+    {
+      "key": "marketing",
+      "icon": "megaphone",
+      "label": {
+        "es": "Marketing y promociones",
+        "en": "Marketing & promotions"
+      },
+      "items": [
+        {
+          "key": "marketing",
+          "app": "next",
+          "path": "/dashboard/marketing?tab=campaigns",
+          "icon": "megaphone",
+          "rf": "RF-21.4",
+          "label": {
+            "es": "Campañas",
+            "en": "Campaigns"
+          },
+          "adminOnly": true
+        },
+        {
+          "key": "emails",
+          "app": "next",
+          "path": "/dashboard/marketing?tab=emails",
+          "icon": "send",
+          "rf": "RF-21.1",
+          "label": {
+            "es": "Correos enviados",
+            "en": "Sent emails"
+          },
+          "adminOnly": true
+        },
+        {
+          "key": "templates",
+          "app": "next",
+          "path": "/dashboard/marketing?tab=templates",
+          "icon": "template",
+          "rf": "RF-21.6",
+          "label": {
+            "es": "Plantillas",
+            "en": "Templates"
+          },
+          "adminOnly": true
+        },
+        {
+          "key": "coupons",
+          "app": "next",
+          "path": "/dashboard/marketing?tab=coupons",
+          "icon": "tag",
+          "rf": "RF-13.1",
+          "label": {
+            "es": "Cupones",
+            "en": "Coupons"
+          },
+          "adminOnly": true,
+          "keywords": "descuentos discounts"
+        },
+        {
+          "key": "promotions",
+          "app": "next",
+          "path": "/dashboard/marketing?tab=promotions",
+          "icon": "sparkle",
+          "rf": "RF-13.4",
+          "label": {
+            "es": "Promociones",
+            "en": "Promotions"
+          },
+          "adminOnly": true
+        },
+        {
+          "key": "multipliers",
+          "app": "next",
+          "path": "/dashboard/marketing?tab=multipliers",
+          "icon": "badge",
+          "rf": "RF-14.9",
+          "label": {
+            "es": "Puntos x2",
+            "en": "Points x2"
+          },
+          "adminOnly": true,
+          "keywords": "fidelidad fidelizacion loyalty"
+        },
+        {
+          "key": "socialProducts",
+          "app": "nuxt",
+          "path": "/social/products",
+          "icon": "globe",
+          "description": {
+            "es": "Productos publicados en Instagram, TikTok y Facebook: publica, sincroniza y retira.",
+            "en": "Products published on Instagram, TikTok and Facebook: publish, sync and remove."
+          },
+          "rf": "RF-19.2",
+          "label": {
+            "es": "Publicaciones sociales",
+            "en": "Social posts"
+          },
+          "keywords": "social commerce instagram tiktok facebook"
+        },
+        {
+          "key": "influencers",
+          "app": "nuxt",
+          "path": "/social/influencers",
+          "icon": "star",
+          "description": {
+            "es": "Ranking de influencers, códigos de referido y comisiones.",
+            "en": "Influencer ranking, referral codes and commissions."
+          },
+          "rf": "RF-19.6",
+          "label": {
+            "es": "Influencers",
+            "en": "Influencers"
+          },
+          "keywords": "social commerce comisiones"
+        },
+        {
+          "key": "liveShopping",
+          "app": "nuxt",
+          "path": "/social/live",
+          "icon": "play",
+          "description": {
+            "es": "Transmisiones de compra en vivo en varias redes a la vez, con productos y producto fijado en tiempo real.",
+            "en": "Live shopping streams on several networks at once, with products and a real-time pinned product."
+          },
+          "rf": "RF-19.9",
+          "label": {
+            "es": "Live Shopping",
+            "en": "Live Shopping"
+          },
+          "keywords": "social commerce en vivo"
+        }
+      ]
+    },
+    {
+      "key": "cms",
+      "icon": "file",
+      "label": {
+        "es": "Contenido y CMS",
+        "en": "Content & CMS"
+      },
+      "items": [
+        {
+          "key": "content",
+          "app": "nuxt",
+          "path": "/cms-page",
+          "match": [
+            "/cms-"
+          ],
+          "icon": "file",
+          "description": {
+            "es": "Páginas, landings, eventos, lookbooks y colecciones con el editor visual de bloques.",
+            "en": "Pages, landings, events, lookbooks and collections with the visual block editor."
+          },
+          "rf": "RF-25",
+          "label": {
+            "es": "CMS",
+            "en": "CMS"
+          },
+          "keywords": "cms"
+        },
+        {
+          "key": "cmsLandings",
+          "app": "nuxt",
+          "path": "/cms-page?kind=landing",
+          "icon": "template",
+          "rf": "RF-25",
+          "label": {
+            "es": "Landings",
+            "en": "Landings"
+          },
+          "description": {
+            "es": "Páginas de campaña y promociones con contador y captura de leads.",
+            "en": "Campaign and promotion pages with countdown and lead capture."
+          },
+          "keywords": "cms"
+        },
+        {
+          "key": "cmsEvents",
+          "app": "nuxt",
+          "path": "/cms-page?kind=event",
+          "icon": "calendar",
+          "rf": "RF-25",
+          "label": {
+            "es": "Eventos",
+            "en": "Events"
+          },
+          "description": {
+            "es": "Eventos de la tienda (lanzamientos, ventas privadas) con fecha y lugar.",
+            "en": "Store events (launches, private sales) with date and venue."
+          },
+          "keywords": "cms"
+        },
+        {
+          "key": "cmsLookbooks",
+          "app": "nuxt",
+          "path": "/cms-page?kind=lookbook",
+          "icon": "image",
+          "rf": "RF-25",
+          "label": {
+            "es": "Lookbooks",
+            "en": "Lookbooks"
+          },
+          "description": {
+            "es": "Galerías editoriales de looks con productos enlazados.",
+            "en": "Editorial look galleries with linked products."
+          },
+          "match": [
+            "/cms-lookbook"
+          ],
+          "keywords": "cms"
+        },
+        {
+          "key": "cmsCollections",
+          "app": "nuxt",
+          "path": "/cms-page?kind=collection",
+          "icon": "tag",
+          "rf": "RF-25",
+          "label": {
+            "es": "Colecciones",
+            "en": "Collections"
+          },
+          "description": {
+            "es": "Colecciones del catálogo (temporadas, cápsulas) visibles en la tienda.",
+            "en": "Catalog collections (seasons, capsules) shown in the store."
+          },
+          "match": [
+            "/cms-collection"
+          ],
+          "keywords": "cms"
+        },
+        {
+          "key": "media",
+          "app": "next",
+          "path": "/dashboard/media",
+          "icon": "image",
+          "rf": "RF-26",
+          "label": {
+            "es": "Imágenes y archivos",
+            "en": "Images & files"
+          },
+          "keywords": "medios biblioteca multimedia media library"
+        }
+      ]
+    },
+    {
+      "key": "support",
+      "icon": "chat",
+      "label": {
+        "es": "Atención al cliente",
+        "en": "Customer care"
+      },
+      "items": [
+        {
+          "key": "aiSupport",
+          "app": "next",
+          "path": "/dashboard/ai-assistant?tab=support",
+          "icon": "users",
+          "rf": "RF-17.11",
+          "label": {
+            "es": "Soporte humano",
+            "en": "Human support"
+          },
+          "adminOnly": true,
+          "keywords": "chatwoot conversaciones tickets"
+        },
+        {
+          "key": "aiContact",
+          "app": "next",
+          "path": "/dashboard/ai-assistant?tab=contact",
+          "icon": "send",
+          "rf": "RF-21.2",
+          "label": {
+            "es": "Mensajes de contacto",
+            "en": "Contact messages"
+          },
+          "adminOnly": true
+        },
+        {
+          "key": "chatbot",
+          "app": "next",
+          "path": "/chat",
+          "icon": "chat",
+          "rf": "RF-17",
+          "label": {
+            "es": "Chatbot IA",
+            "en": "AI chatbot"
+          },
+          "everyone": true
+        },
+        {
+          "key": "notifications",
+          "app": "nuxt",
+          "path": "/pwa/notifications",
+          "icon": "bell",
+          "description": {
+            "es": "Avisos push del navegador: suscripción y envío de pruebas.",
+            "en": "Browser push notifications: subscription and test sends."
+          },
+          "rf": "RF-28.3",
+          "label": {
+            "es": "Notificaciones push",
+            "en": "Push notifications"
+          }
+        },
+        {
+          "key": "aiNlu",
+          "app": "next",
+          "path": "/dashboard/ai-assistant?tab=nlu",
+          "icon": "bot",
+          "rf": "RF-17.12",
+          "label": {
+            "es": "Comprensión del chatbot",
+            "en": "Chatbot understanding"
+          },
+          "adminOnly": true,
+          "keywords": "asistente ia nlu"
+        },
+        {
+          "key": "aiAssistant",
+          "app": "next",
+          "path": "/dashboard/ai-assistant?tab=knowledge",
+          "icon": "file",
+          "rf": "RF-17.8",
+          "label": {
+            "es": "Conocimiento",
+            "en": "Knowledge"
+          },
+          "adminOnly": true,
+          "keywords": "asistente ia rag"
+        },
+        {
+          "key": "aiTools",
+          "app": "next",
+          "path": "/dashboard/ai-assistant?tab=tools",
+          "icon": "gear",
+          "rf": "RF-17.3",
+          "label": {
+            "es": "Herramientas",
+            "en": "Tools"
+          },
+          "adminOnly": true,
+          "keywords": "asistente ia"
+        },
+        {
+          "key": "aiActions",
+          "app": "next",
+          "path": "/dashboard/ai-assistant?tab=actions",
+          "icon": "play",
+          "rf": "RF-17.3",
+          "label": {
+            "es": "Acciones del asistente",
+            "en": "Assistant actions"
+          },
+          "adminOnly": true,
+          "keywords": "asistente ia"
+        },
+        {
+          "key": "aiEvaluations",
+          "app": "next",
+          "path": "/dashboard/ai-assistant?tab=evaluations",
+          "icon": "check",
+          "rf": "RF-17.4",
+          "label": {
+            "es": "Evaluaciones",
+            "en": "Evaluations"
+          },
+          "adminOnly": true,
+          "keywords": "asistente ia"
+        }
+      ]
+    },
+    {
+      "key": "insights",
+      "icon": "chart",
+      "label": {
+        "es": "Analítica y reportes",
+        "en": "Analytics & reports"
+      },
+      "items": [
         {
           "key": "analytics",
           "app": "next",
-          "path": "/dashboard/analytics",
+          "path": "/dashboard/analytics?tab=overview",
           "icon": "chart",
-          "adminOnly": true,
-          "rf": "RF-24",
+          "rf": "RF-24.1",
           "label": {
-            "es": "Analítica",
-            "en": "Analytics"
+            "es": "Resumen",
+            "en": "Overview"
+          },
+          "adminOnly": true,
+          "keywords": "ventas reportes metricas conversion reports metrics"
+        },
+        {
+          "key": "analyticsHeatmap",
+          "app": "next",
+          "path": "/dashboard/analytics?tab=heatmap",
+          "icon": "view",
+          "rf": "RF-24.8",
+          "label": {
+            "es": "Mapa de calor y rendimiento",
+            "en": "Heatmap & performance"
+          },
+          "adminOnly": true
+        },
+        {
+          "key": "analyticsAttribution",
+          "app": "next",
+          "path": "/dashboard/analytics?tab=attribution",
+          "icon": "filter",
+          "rf": "RF-24.11",
+          "label": {
+            "es": "Atribución",
+            "en": "Attribution"
+          },
+          "adminOnly": true
+        },
+        {
+          "key": "analyticsCohorts",
+          "app": "next",
+          "path": "/dashboard/analytics?tab=cohorts",
+          "icon": "layers",
+          "rf": "RF-24.2",
+          "label": {
+            "es": "Cohortes",
+            "en": "Cohorts"
+          },
+          "adminOnly": true
+        },
+        {
+          "key": "analyticsAlerts",
+          "app": "next",
+          "path": "/dashboard/analytics?tab=alerts",
+          "icon": "alert",
+          "rf": "RF-24.10",
+          "label": {
+            "es": "Alertas",
+            "en": "Alerts"
+          },
+          "adminOnly": true
+        },
+        {
+          "key": "analyticsCrypto",
+          "app": "next",
+          "path": "/dashboard/analytics?tab=crypto",
+          "icon": "qr",
+          "rf": "RF-24.12",
+          "label": {
+            "es": "Cripto",
+            "en": "Crypto"
+          },
+          "adminOnly": true,
+          "keywords": "web3 blockchain"
+        },
+        {
+          "key": "analyticsSimulation",
+          "app": "next",
+          "path": "/dashboard/analytics?tab=simulation",
+          "icon": "play",
+          "rf": "RF-24.14",
+          "label": {
+            "es": "Simular promociones",
+            "en": "Simulate promotions"
+          },
+          "adminOnly": true
+        },
+        {
+          "key": "socialAnalytics",
+          "app": "nuxt",
+          "path": "/social/analytics",
+          "icon": "chart",
+          "description": {
+            "es": "Alcance, clics y ventas por red social y por publicación.",
+            "en": "Reach, clicks and sales per social network and per post."
+          },
+          "rf": "RF-19.5",
+          "label": {
+            "es": "Analítica social",
+            "en": "Social analytics"
+          }
+        }
+      ]
+    },
+    {
+      "key": "integrations",
+      "icon": "refresh",
+      "label": {
+        "es": "Integraciones y automatización",
+        "en": "Integrations & automation"
+      },
+      "items": [
+        {
+          "key": "automation",
+          "app": "next",
+          "path": "/dashboard/settings?tab=automation",
+          "icon": "refresh",
+          "rf": "RF-20.1",
+          "label": {
+            "es": "Automatizaciones",
+            "en": "Automations"
+          },
+          "adminOnly": true,
+          "keywords": "flujos workflows n8n"
+        },
+        {
+          "key": "automationHealth",
+          "app": "next",
+          "path": "/dashboard/settings?tab=automation-health",
+          "icon": "check",
+          "rf": "RF-20.7",
+          "label": {
+            "es": "Salud de automatizaciones",
+            "en": "Automation health"
+          },
+          "adminOnly": true
+        },
+        {
+          "key": "automationTemplates",
+          "app": "next",
+          "path": "/dashboard/settings?tab=automation-templates",
+          "icon": "template",
+          "rf": "RF-20.5",
+          "label": {
+            "es": "Plantillas de flujos",
+            "en": "Workflow templates"
+          },
+          "adminOnly": true
+        },
+        {
+          "key": "webhooks",
+          "app": "next",
+          "path": "/dashboard/settings?tab=webhooks",
+          "icon": "send",
+          "rf": "RF-20.10",
+          "label": {
+            "es": "Webhooks",
+            "en": "Webhooks"
+          },
+          "adminOnly": true,
+          "keywords": "integraciones integrations"
+        },
+        {
+          "key": "socialChannels",
+          "app": "nuxt",
+          "path": "/social/channels",
+          "adminOnly": true,
+          "icon": "store",
+          "description": {
+            "es": "Catálogo sincronizado con Facebook, Instagram, Marketplace, WhatsApp y TikTok Shop; pedidos de esas redes y fotos de clientes (UGC) para moderar.",
+            "en": "Catalog synced with Facebook, Instagram, Marketplace, WhatsApp and TikTok Shop; orders from those networks and customer photos (UGC) to moderate."
+          },
+          "rf": "RF-19.1",
+          "label": {
+            "es": "Canales y UGC",
+            "en": "Channels & UGC"
+          },
+          "keywords": "social commerce whatsapp marketplace ugc"
+        }
+      ]
+    },
+    {
+      "key": "settings",
+      "icon": "gear",
+      "label": {
+        "es": "Configuración y seguridad",
+        "en": "Settings & security"
+      },
+      "items": [
+        {
+          "key": "payments",
+          "app": "nuxt",
+          "path": "/config/payments",
+          "icon": "receipt",
+          "adminOnly": true,
+          "description": {
+            "es": "Pasarelas de pago, billeteras cripto y moneda de la tienda.",
+            "en": "Payment gateways, crypto wallets and store currency."
+          },
+          "rf": "RF-27.1",
+          "label": {
+            "es": "Pagos y moneda",
+            "en": "Payments & currency"
+          },
+          "keywords": "metodos de pago pasarelas web3 cripto monedas payment methods crypto"
+        },
+        {
+          "key": "audit",
+          "app": "next",
+          "path": "/dashboard/settings?tab=audit",
+          "icon": "history",
+          "rf": "RF-30.1",
+          "label": {
+            "es": "Historial de actividad",
+            "en": "Activity log"
+          },
+          "adminOnly": true,
+          "keywords": "auditoria seguridad security audit"
+        },
+        {
+          "key": "auditInsights",
+          "app": "next",
+          "path": "/dashboard/settings?tab=audit-insights",
+          "icon": "alert",
+          "rf": "RF-30.7",
+          "label": {
+            "es": "Cumplimiento y alertas",
+            "en": "Compliance & alerts"
+          },
+          "adminOnly": true,
+          "keywords": "auditoria seguridad"
+        },
+        {
+          "key": "offline",
+          "app": "nuxt",
+          "path": "/pwa/cache",
+          "icon": "layers",
+          "adminOnly": true,
+          "description": {
+            "es": "Caché del dispositivo para usar la tienda sin conexión: tamaño y limpieza.",
+            "en": "Device cache to use the store offline: size and cleanup."
+          },
+          "rf": "RF-28",
+          "label": {
+            "es": "App y modo sin conexión",
+            "en": "App & offline mode"
           }
         }
       ]
     },
     {
       "key": "account",
+      "icon": "profile",
       "label": {
         "es": "Mi cuenta",
         "en": "My account"
@@ -106,433 +1039,6 @@
             "es": "Notificaciones",
             "en": "Notifications"
           }
-        }
-      ]
-    },
-    {
-      "key": "sales",
-      "label": {
-        "es": "Ventas",
-        "en": "Sales"
-      },
-      "items": [
-        {
-          "key": "orders",
-          "app": "next",
-          "path": "/dashboard/orders",
-          "icon": "cart",
-          "rf": "RF-09",
-          "label": {
-            "es": "Pedidos de clientes",
-            "en": "Customer orders"
-          }
-        },
-        {
-          "key": "payments",
-          "app": "nuxt",
-          "path": "/config/payments",
-          "icon": "receipt",
-          "adminOnly": true,
-          "description": {
-            "es": "Pasarelas de pago, billeteras cripto y moneda de la tienda.",
-            "en": "Payment gateways, crypto wallets and store currency."
-          },
-          "rf": "RF-27.1",
-          "label": {
-            "es": "Pagos y moneda",
-            "en": "Payments & currency"
-          }
-        },
-        {
-          "key": "shipping",
-          "app": "nuxt",
-          "path": "/config/shipping",
-          "icon": "truck",
-          "adminOnly": true,
-          "description": {
-            "es": "Transportadoras, tarifas por peso y tasas de impuesto por región.",
-            "en": "Carriers, weight-based rates and tax rates per region."
-          },
-          "rf": "RF-27.4",
-          "label": {
-            "es": "Envío e impuestos",
-            "en": "Shipping & taxes"
-          }
-        }
-      ]
-    },
-    {
-      "key": "crm",
-      "label": {
-        "es": "CRM · Clientes",
-        "en": "CRM · Customers"
-      },
-      "items": [
-        {
-          "key": "customers",
-          "app": "next",
-          "path": "/dashboard/customers",
-          "icon": "users",
-          "adminOnly": true,
-          "rf": "RF-22",
-          "label": {
-            "es": "Clientes",
-            "en": "Customers"
-          }
-        },
-        {
-          "key": "crmSegments",
-          "app": "next",
-          "path": "/dashboard/customers?tab=segments",
-          "icon": "filter",
-          "adminOnly": true,
-          "rf": "RF-22.2",
-          "label": {
-            "es": "Segmentos",
-            "en": "Segments"
-          },
-          "description": {
-            "es": "Grupos con tus propias reglas (pedidos, gasto, inactividad, ciudad, etiquetas) para campañas.",
-            "en": "Groups with your own rules (orders, spend, inactivity, city, tags) for campaigns."
-          }
-        },
-        {
-          "key": "crmCohorts",
-          "app": "next",
-          "path": "/dashboard/customers?tab=cohorts",
-          "icon": "layers",
-          "adminOnly": true,
-          "rf": "RF-22.7",
-          "label": {
-            "es": "Cohortes",
-            "en": "Cohorts"
-          },
-          "description": {
-            "es": "Qué porcentaje de los clientes de cada mes vuelve a comprar.",
-            "en": "What share of each month's customers buys again."
-          }
-        },
-        {
-          "key": "crmValue",
-          "app": "next",
-          "path": "/dashboard/customers?tab=value",
-          "icon": "badge",
-          "adminOnly": true,
-          "rf": "RF-22.3",
-          "label": {
-            "es": "Alto valor y abandono",
-            "en": "High value & churn"
-          },
-          "description": {
-            "es": "Clientes que más valdrán en 12 meses y quiénes están por irse.",
-            "en": "Customers worth the most in 12 months and who is about to leave."
-          }
-        },
-        {
-          "key": "crmDuplicates",
-          "app": "next",
-          "path": "/dashboard/customers?tab=duplicates",
-          "icon": "copy",
-          "adminOnly": true,
-          "rf": "RF-22.4",
-          "label": {
-            "es": "Duplicados e importación",
-            "en": "Duplicates & import"
-          },
-          "description": {
-            "es": "Une cuentas repetidas e importa clientes desde un CSV.",
-            "en": "Merge repeated accounts and import customers from a CSV."
-          }
-        }
-      ]
-    },
-    {
-      "key": "catalog",
-      "label": {
-        "es": "Catálogo",
-        "en": "Catalog"
-      },
-      "items": [
-        {
-          "key": "products",
-          "app": "next",
-          "path": "/dashboard/products",
-          "icon": "tag",
-          "rf": "RF-04",
-          "label": {
-            "es": "Productos",
-            "en": "Products"
-          }
-        },
-        {
-          "key": "inventory",
-          "app": "next",
-          "path": "/dashboard/inventory",
-          "icon": "box",
-          "adminOnly": true,
-          "rf": "RF-23",
-          "label": {
-            "es": "Inventario",
-            "en": "Inventory"
-          }
-        },
-        {
-          "key": "media",
-          "app": "next",
-          "path": "/dashboard/media",
-          "icon": "image",
-          "rf": "RF-26",
-          "label": {
-            "es": "Imágenes y archivos",
-            "en": "Images & files"
-          }
-        }
-      ]
-    },
-    {
-      "key": "cms",
-      "label": {
-        "es": "CMS · Contenido",
-        "en": "CMS · Content"
-      },
-      "items": [
-        {
-          "key": "content",
-          "app": "nuxt",
-          "path": "/cms-page?kind=page",
-          "match": [
-            "/cms-"
-          ],
-          "icon": "file",
-          "description": {
-            "es": "Páginas informativas del sitio con el editor visual de bloques.",
-            "en": "Informational site pages built with the visual block editor."
-          },
-          "rf": "RF-25",
-          "label": {
-            "es": "Páginas",
-            "en": "Pages"
-          }
-        },
-        {
-          "key": "cmsLandings",
-          "app": "nuxt",
-          "path": "/cms-page?kind=landing",
-          "icon": "template",
-          "rf": "RF-25",
-          "label": {
-            "es": "Landings",
-            "en": "Landings"
-          },
-          "description": {
-            "es": "Páginas de campaña y promociones con contador y captura de leads.",
-            "en": "Campaign and promotion pages with countdown and lead capture."
-          }
-        },
-        {
-          "key": "cmsEvents",
-          "app": "nuxt",
-          "path": "/cms-page?kind=event",
-          "icon": "calendar",
-          "rf": "RF-25",
-          "label": {
-            "es": "Eventos",
-            "en": "Events"
-          },
-          "description": {
-            "es": "Eventos de la tienda (lanzamientos, ventas privadas) con fecha y lugar.",
-            "en": "Store events (launches, private sales) with date and venue."
-          }
-        },
-        {
-          "key": "cmsLookbooks",
-          "app": "nuxt",
-          "path": "/cms-page?kind=lookbook",
-          "icon": "image",
-          "rf": "RF-25",
-          "label": {
-            "es": "Lookbooks",
-            "en": "Lookbooks"
-          },
-          "description": {
-            "es": "Galerías editoriales de looks con productos enlazados.",
-            "en": "Editorial look galleries with linked products."
-          },
-          "match": [
-            "/cms-lookbook"
-          ]
-        },
-        {
-          "key": "cmsCollections",
-          "app": "nuxt",
-          "path": "/cms-page?kind=collection",
-          "icon": "tag",
-          "rf": "RF-25",
-          "label": {
-            "es": "Colecciones",
-            "en": "Collections"
-          },
-          "description": {
-            "es": "Colecciones del catálogo (temporadas, cápsulas) visibles en la tienda.",
-            "en": "Catalog collections (seasons, capsules) shown in the store."
-          },
-          "match": [
-            "/cms-collection"
-          ]
-        }
-      ]
-    },
-    {
-      "key": "marketing",
-      "label": {
-        "es": "Marketing",
-        "en": "Marketing"
-      },
-      "items": [
-        {
-          "key": "marketing",
-          "app": "next",
-          "path": "/dashboard/marketing",
-          "icon": "megaphone",
-          "adminOnly": true,
-          "rf": "RF-21",
-          "label": {
-            "es": "Campañas y correos",
-            "en": "Campaigns & emails"
-          }
-        },
-        {
-          "key": "notifications",
-          "app": "nuxt",
-          "path": "/pwa/notifications",
-          "icon": "bell",
-          "description": {
-            "es": "Avisos push del navegador: suscripción y envío de pruebas.",
-            "en": "Browser push notifications: subscription and test sends."
-          },
-          "rf": "RF-28.3",
-          "label": {
-            "es": "Notificaciones push",
-            "en": "Push notifications"
-          }
-        }
-      ]
-    },
-    {
-      "key": "social",
-      "label": {
-        "es": "Social commerce",
-        "en": "Social commerce"
-      },
-      "items": [
-        {
-          "key": "socialProducts",
-          "app": "nuxt",
-          "path": "/social/products",
-          "icon": "globe",
-          "description": {
-            "es": "Productos publicados en Instagram, TikTok y Facebook: publica, sincroniza y retira.",
-            "en": "Products published on Instagram, TikTok and Facebook: publish, sync and remove."
-          },
-          "rf": "RF-19.2",
-          "label": {
-            "es": "Publicaciones sociales",
-            "en": "Social posts"
-          }
-        },
-        {
-          "key": "socialAnalytics",
-          "app": "nuxt",
-          "path": "/social/analytics",
-          "icon": "chart",
-          "description": {
-            "es": "Alcance, clics y ventas por red social y por publicación.",
-            "en": "Reach, clicks and sales per social network and per post."
-          },
-          "rf": "RF-19.5",
-          "label": {
-            "es": "Analítica social",
-            "en": "Social analytics"
-          }
-        },
-        {
-          "key": "influencers",
-          "app": "nuxt",
-          "path": "/social/influencers",
-          "icon": "star",
-          "description": {
-            "es": "Ranking de influencers, códigos de referido y comisiones.",
-            "en": "Influencer ranking, referral codes and commissions."
-          },
-          "rf": "RF-19.6",
-          "label": {
-            "es": "Influencers",
-            "en": "Influencers"
-          }
-        },
-        {
-          "key": "socialChannels",
-          "app": "nuxt",
-          "path": "/social/channels",
-          "adminOnly": true,
-          "icon": "store",
-          "description": {
-            "es": "Catálogo sincronizado con Facebook, Instagram, Marketplace, WhatsApp y TikTok Shop; pedidos de esas redes y fotos de clientes (UGC) para moderar.",
-            "en": "Catalog synced with Facebook, Instagram, Marketplace, WhatsApp and TikTok Shop; orders from those networks and customer photos (UGC) to moderate."
-          },
-          "rf": "RF-19.1",
-          "label": {
-            "es": "Canales y UGC",
-            "en": "Channels & UGC"
-          }
-        },
-        {
-          "key": "liveShopping",
-          "app": "nuxt",
-          "path": "/social/live",
-          "icon": "play",
-          "description": {
-            "es": "Transmisiones de compra en vivo en varias redes a la vez, con productos y producto fijado en tiempo real.",
-            "en": "Live shopping streams on several networks at once, with products and a real-time pinned product."
-          },
-          "rf": "RF-19.9",
-          "label": {
-            "es": "Live Shopping",
-            "en": "Live Shopping"
-          }
-        }
-      ]
-    },
-    {
-      "key": "ai",
-      "label": {
-        "es": "Inteligencia artificial",
-        "en": "Artificial intelligence"
-      },
-      "everyone": true,
-      "items": [
-        {
-          "key": "aiAssistant",
-          "app": "next",
-          "path": "/dashboard/ai-assistant",
-          "icon": "bot",
-          "adminOnly": true,
-          "rf": "RF-17",
-          "label": {
-            "es": "Asistente IA",
-            "en": "AI assistant"
-          }
-        },
-        {
-          "key": "chatbot",
-          "app": "next",
-          "path": "/chat",
-          "icon": "chat",
-          "rf": "RF-17",
-          "label": {
-            "es": "Chatbot IA",
-            "en": "AI chatbot"
-          }
         },
         {
           "key": "recommendations",
@@ -543,43 +1049,6 @@
           "label": {
             "es": "Recomendaciones para ti",
             "en": "Recommended for you"
-          }
-        }
-      ]
-    },
-    {
-      "key": "settings",
-      "label": {
-        "es": "Configuración",
-        "en": "Settings"
-      },
-      "items": [
-        {
-          "key": "settings",
-          "app": "next",
-          "path": "/dashboard/settings",
-          "icon": "shield",
-          "adminOnly": true,
-          "rf": "RF-03",
-          "label": {
-            "es": "Equipo e integraciones",
-            "en": "Team & integrations"
-          }
-        },
-        {
-          "key": "offline",
-          "app": "nuxt",
-          "path": "/pwa/cache",
-          "icon": "layers",
-          "adminOnly": true,
-          "description": {
-            "es": "Caché del dispositivo para usar la tienda sin conexión: tamaño y limpieza.",
-            "en": "Device cache to use the store offline: size and cleanup."
-          },
-          "rf": "RF-28",
-          "label": {
-            "es": "App y modo sin conexión",
-            "en": "App & offline mode"
           }
         }
       ]

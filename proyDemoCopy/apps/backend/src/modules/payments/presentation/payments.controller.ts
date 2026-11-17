@@ -80,12 +80,21 @@ export class PaymentsController {
   @Post('webhook')
   @HttpCode(HttpStatus.OK)
   @ApiExcludeEndpoint() // No se documenta: solo lo llama Stripe
+  // [2026-11-16 · Mercado Pago]: misma ruta para las dos pasarelas · Stripe firma en `stripe-signature`; Mercado Pago en `x-signature` + `x-request-id` y manda `?data.id=…&type=…`
   receive(
     @Req() req: RawBodyRequest<Request>,
-    @Headers('stripe-signature') signature?: string,
+    @Headers('stripe-signature') stripeSignature?: string,
+    @Headers('x-signature') mpSignature?: string,
+    @Headers('x-request-id') requestId?: string,
   ) {
+    const signature = stripeSignature ?? mpSignature;
     if (!req.rawBody || !signature)
       throw new BadRequestException('Falta la firma del webhook');
-    return this.webhook.execute(req.rawBody, signature);
+    const q = req.query as Record<string, string | undefined>;
+    return this.webhook.execute(req.rawBody, signature, {
+      requestId,
+      dataId: q['data.id'] ?? q.id,
+      topic: q.type ?? q.topic,
+    });
   }
 }

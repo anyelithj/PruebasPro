@@ -1,4 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
+import {
+  COURSE_REACTION_TYPES,
+  type CourseReactionType,
+} from '../../domain/entities/course-reaction.entity';
+import type { CourseEngagementDto } from './course-engagement.dto';
 import { Course } from '../../domain/entities/course.entity';
 import { CourseEnrollment } from '../../domain/entities/course-enrollment.entity';
 import {
@@ -7,7 +12,49 @@ import {
   courseCategoryLabel,
 } from '../../domain/value-objects/course-category.vo';
 import { CoursePrice } from '../../domain/value-objects/course-price.vo';
+import type { User } from '../../../users/domain/entities/user.entity';
+import {
+  socialLinksOf,
+  type SocialLinks,
+} from '../../../users/domain/value-objects/social-links.vo'; // [2026-10-28]: regla única de las redes sociales (re-valida https + dominio al leer)
 // [DTO CourseResponse]: forma uniforme de respuesta GET /courses | [Patrón]: DTO + Mapper | [Principio]: SRP
+
+// [DTO CourseAuthor · 2026-10-28]: resumen PÚBLICO del docente dueño del curso para «Autoría del contenido» | [Principio]: Least Privilege → sin email, teléfono ni datos privados
+export class CourseAuthorSocialDto implements SocialLinks {
+  @ApiProperty({ type: String, nullable: true }) linkedin!: string | null;
+  @ApiProperty({ type: String, nullable: true }) twitter!: string | null;
+  @ApiProperty({ type: String, nullable: true }) spotify!: string | null;
+  @ApiProperty({ type: String, nullable: true }) youtube!: string | null;
+}
+
+export class CourseAuthorDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() name!: string;
+  @ApiProperty({ type: String, nullable: true }) bio!: string | null;
+  @ApiProperty({ type: CourseAuthorSocialDto }) social!: CourseAuthorSocialDto;
+
+  // [Mapper]: User → resumen público | `Pick<>` (TS): solo los campos que se leen (no puede filtrarse nada más por error) | [Patrón]: Mapper
+  static fromUser(
+    user: Pick<
+      User,
+      | 'id'
+      | 'firstName'
+      | 'lastName'
+      | 'bio'
+      | 'linkedinUrl'
+      | 'twitterUrl'
+      | 'spotifyUrl'
+      | 'youtubeUrl'
+    >,
+  ): CourseAuthorDto {
+    const dto = new CourseAuthorDto();
+    dto.id = user.id;
+    dto.name = `${user.firstName} ${user.lastName}`.trim();
+    dto.bio = user.bio?.trim() || null; // `?.` + `||` (ES2020/JS): vacío → null
+    dto.social = socialLinksOf(user);
+    return dto;
+  }
+}
 
 export class CourseResponseDto {
   @ApiProperty() id!: string;
@@ -53,13 +100,21 @@ export class CourseResponseDto {
   @ApiProperty() modality!: string;
   @ApiProperty() isProBono!: boolean;
   @ApiProperty() isPublished!: boolean;
+  // [2026-10-27]: dueño del curso → la UI muestra «Editar/Publicar/Eliminar» al docente que lo creó | `nullable`: cursos antiguos sin dueño
+  @ApiProperty({ type: String, nullable: true }) createdBy!: string | null;
+  // [Autoría · 2026-10-28]: perfil público del dueño (bio + redes) | solo en el DETALLE (GET /courses/:id); listados y cursos sin dueño → null
+  @ApiProperty({ type: CourseAuthorDto, nullable: true })
+  author!: CourseAuthorDto | null;
 
   // [Estado del usuario]: solo si hay sesión activa | [Principio]: SSOT — se popula desde enrollment
   @ApiProperty({ description: 'Progreso 0..100 del usuario actual' })
   progress!: number;
+  // [Caso F · 2026-11-13]: ⭐ favorito (privado) · reacción excluyente 👍/❤️ del usuario · conteos públicos (antes likeOn/loveOn sin conteos)
   @ApiProperty() isFavorite!: boolean;
-  @ApiProperty() likeOn!: boolean;
-  @ApiProperty() loveOn!: boolean;
+  @ApiProperty({ enum: COURSE_REACTION_TYPES, nullable: true })
+  reaction!: CourseReactionType | null;
+  @ApiProperty() likesCount!: number;
+  @ApiProperty() lovesCount!: number;
   // [Acceso al material]: gratis o comprado → puede ver videos/PDF (el ADMIN siempre accede, lo resuelve el caso de uso de materiales)
   @ApiProperty({
     description: 'El usuario compró o se inscribió → puede ver el material',
@@ -84,6 +139,8 @@ export class CourseResponseDto {
   static fromDomain(
     course: Course,
     enrollment: CourseEnrollment | null = null,
+    author: CourseAuthorDto | null = null, // [2026-10-28]: parámetro por defecto (ES2015) → los demás llamadores no cambian
+    engagement: CourseEngagementDto | null = null, // [Caso F]: favorito, reacción y conteos (null = gestión/admin → valores neutros)
   ): CourseResponseDto {
     const price = CoursePrice.create(
       Number(course.price),
@@ -123,10 +180,13 @@ export class CourseResponseDto {
     dto.modality = course.modality;
     dto.isProBono = course.isProBono;
     dto.isPublished = course.isPublished;
+    dto.createdBy = course.createdBy ?? null; // `??` (ES2020): entidades de tests/seeds sin el campo → null
+    dto.author = author;
     dto.progress = enrollment?.progress ?? 0;
-    dto.isFavorite = enrollment?.isFavorite ?? false;
-    dto.likeOn = enrollment?.reactionLike ?? false;
-    dto.loveOn = enrollment?.reactionLove ?? false;
+    dto.isFavorite = engagement?.isFavorite ?? false; // `?.` + `??` (ES2020): sin datos → valores neutros
+    dto.reaction = engagement?.reaction ?? null;
+    dto.likesCount = engagement?.likesCount ?? 0;
+    dto.lovesCount = engagement?.lovesCount ?? 0;
     dto.hasAccess = Boolean(enrollment?.purchasedAt); // `Boolean()` (JS): compra o inscripción (también en gratuitos)
     dto.completedMaterialIds = enrollment?.completedMaterialIds ?? [];
     dto.completedTopics = enrollment?.completedTopics ?? [];

@@ -4,6 +4,7 @@ import * as bcrypt from 'bcrypt';
 jest.mock('bcrypt', () => ({ compare: jest.fn(), hash: jest.fn() }));
 import { LoginUseCase } from '../../../../src/modules/auth/application/use-cases/login.use-case';
 import { Role } from '../../../../src/modules/users/domain/value-objects/role.vo';
+import type { AuthResponseDto } from '../../../../src/modules/auth/application/dtos/auth-response.dto';
 import { USER_LOGGED_IN_EVENT } from '../../../../src/modules/auth/domain/events/user-logged-in.event';
 
 // [Suite LoginUseCase]: valida credenciales, emite tokens, crea sesión y dispara evento
@@ -22,6 +23,7 @@ describe('LoginUseCase', () => {
     hashRefresh: jest.Mock;
   };
   let events: { emit: jest.Mock };
+  let otp: { execute: jest.Mock };
 
   const activeUser = {
     id: 'u1',
@@ -54,12 +56,14 @@ describe('LoginUseCase', () => {
       hashRefresh: jest.fn(),
     };
     events = { emit: jest.fn() };
+    otp = { execute: jest.fn() };
 
     useCase = new LoginUseCase(
       users as any,
       authRepo as any,
       tokens,
       events as any,
+      otp as any,
     );
 
     tokens.issuePair.mockResolvedValue(pair);
@@ -77,8 +81,10 @@ describe('LoginUseCase', () => {
       { ipAddress: '1.1.1.1', userAgent: 'jest' },
     );
 
-    expect(res.accessToken).toBe('acc');
-    expect(res.user.email).toBe(activeUser.email);
+    // `as AuthResponseDto` (TS): sin 2FA la unión siempre es el par de tokens
+    const auth = res as AuthResponseDto;
+    expect(auth.accessToken).toBe('acc');
+    expect(auth.user.email).toBe(activeUser.email);
     expect(tokens.issuePair).toHaveBeenCalledWith({
       userId: activeUser.id,
       email: activeUser.email,
@@ -115,5 +121,39 @@ describe('LoginUseCase', () => {
       useCase.execute({ email: activeUser.email, password: 'bad' }),
     ).rejects.toThrow(UnauthorizedException);
     expect(authRepo.createSession).not.toHaveBeenCalled();
+  });
+
+  // [2FA · 2026-11-16]: con el segundo factor activo NO se emiten tokens; se devuelve el reto
+  it('con 2FA activo devuelve el reto y no crea sesión', async () => {
+    users.findByEmail.mockResolvedValue({
+      ...activeUser,
+      twoFactorEnabled: true,
+    });
+    (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+    otp.execute.mockResolvedValue({
+      twoFactorRequired: true,
+      challengeId: 'c1',
+    });
+
+    const res = await useCase.execute({
+      email: activeUser.email,
+      password: 'plain',
+    });
+
+    expect(res).toEqual({ twoFactorRequired: true, challengeId: 'c1' });
+    expect(tokens.issuePair).not.toHaveBeenCalled();
+    expect(authRepo.createSession).not.toHaveBeenCalled();
+  });
+
+  it('con 2FA activo y contraseña errónea no envía código', async () => {
+    users.findByEmail.mockResolvedValue({
+      ...activeUser,
+      twoFactorEnabled: true,
+    });
+    (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+    await expect(
+      useCase.execute({ email: activeUser.email, password: 'bad' }),
+    ).rejects.toThrow(UnauthorizedException);
+    expect(otp.execute).not.toHaveBeenCalled();
   });
 });

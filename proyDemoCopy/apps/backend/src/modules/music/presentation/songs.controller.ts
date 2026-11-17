@@ -30,7 +30,8 @@ import {
 import { Roles } from '../../../shared/decorators/roles.decorator';
 import { sendRanged } from '../../../shared/http/ranged-response';
 import { Role } from '../../users/domain/value-objects/role.vo';
-import { CreateSongBody, SongStatusBody } from '../application/dtos/song.dto';
+import { CreateSongBody, SongStatusBody, UpdateSongBody } from '../application/dtos/song.dto';
+import { UpdateSongUseCase } from '../application/use-cases/update-song.use-case';
 import { ChangeSongStatusUseCase } from '../application/use-cases/change-song-status.use-case';
 import { CreateSongUseCase } from '../application/use-cases/create-song.use-case';
 import {
@@ -40,12 +41,13 @@ import {
 import { ListSongsUseCase } from '../application/use-cases/list-songs.use-case';
 import { StreamSongAudioUseCase } from '../application/use-cases/stream-song-audio.use-case';
 import {
-  fetchMediaUrl,
   MAX_SONG_AUDIO_BYTES,
   type UploadedAudio,
   UploadSongAudioUseCase,
 } from '../application/use-cases/upload-song-audio.use-case';
 import { WithdrawSongUseCase } from '../application/use-cases/withdraw-song.use-case';
+import { EnrichSongLinesUseCase } from '../application/use-cases/enrich-song-lines.use-case';
+import { bearer } from '../../ai/assistant.controller';
 import type { SongStatus } from '../domain/entities/song.entity';
 // [Controller Songs · Sprint 9.2 · RF-115/RF-116/RF-119/RF-128]: canciones — crear con licencia y subir audio (TEACHER o ADMIN), listar y ver (todos), audio por rangos (206), revisión (autor → ADMIN) y retiro | [Patrón]: Thin Controller | [Principio]: SRP + mínimo privilegio | [Tecnología]: NestJS + Multer en memoria + Express streaming
 
@@ -71,7 +73,16 @@ export class SongsController {
     private readonly stream: StreamSongAudioUseCase,
     private readonly changeStatus: ChangeSongStatusUseCase,
     private readonly withdraw: WithdrawSongUseCase,
+    private readonly update: UpdateSongUseCase,
+    private readonly enrich: EnrichSongLinesUseCase,
   ) {}
+
+  @Patch(':id')
+  @Roles(Role.TEACHER, Role.ADMIN)
+  @ApiOperation({ summary: 'Editar título, artista, nivel, licencia e IPA/traducción del título' })
+  updateOne(@CurrentUser() u: JwtPayload, @Param('id', ParseUUIDPipe) id: string, @Body() body: UpdateSongBody) {
+    return this.update.execute(actorOf(u), id, body);
+  }
 
   @Post()
   @Roles(Role.TEACHER, Role.ADMIN)
@@ -85,7 +96,7 @@ export class SongsController {
   @Post(':id/audio')
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Subir el audio de la canción (máx. 20 MB)' })
+  @ApiOperation({ summary: 'Subir el audio de la canción (máx. 100 MB)' })
   @UseInterceptors(
     FileInterceptor('file', { limits: { fileSize: MAX_SONG_AUDIO_BYTES } }),
   ) // Multer en memoria → ObjectStore
@@ -100,13 +111,15 @@ export class SongsController {
   // [2026-10-20]: «subir por URL» — enlace directo a un .mp3/.mp4…; se descarga en el servidor y sigue el mismo camino que una subida
   @Post(':id/audio/url')
   @Roles(Role.TEACHER, Role.ADMIN)
-  @ApiOperation({ summary: 'Importar el audio de la canción desde un enlace directo (máx. 20 MB)' })
+  @ApiOperation({ summary: 'Importar el audio de la canción desde un enlace directo (máx. 100 MB)' })
   async uploadFromUrl(
     @CurrentUser() u: JwtPayload,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: MediaUrlBody,
   ) {
-    return this.uploadAudio.execute(actorOf(u), id, await fetchMediaUrl(body.url));
+    // [2026-11-03]: YouTube/Spotify… → reproductor embebido; enlace directo → se descarga como antes
+    // [2026-11-04]: cualquier enlace (streaming, archivo directo o página web con audio) → UploadSongAudioUseCase.fromLink
+    return this.uploadAudio.fromLink(actorOf(u), id, body.url);
   }
 
   @Get()
@@ -135,8 +148,11 @@ export class SongsController {
   @ApiOperation({
     summary: 'Canción con sus líneas, IPA, traducción y tiempos',
   })
-  getOne(@CurrentUser() u: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
-    return this.get.execute(actorOf(u), id);
+  async getOne(@CurrentUser() u: JwtPayload, @Param('id', ParseUUIDPipe) id: string, @Headers('authorization') auth: string) {
+    const song = await this.get.execute(actorOf(u), id);
+    // [2026-11-10]: sin glosa del título guardada → se calcula en segundo plano y se guarda (no retrasa esta respuesta; Fail Soft)
+    if (!song.titleIpa) void this.enrich.fillTitleGloss(id, bearer(auth)).catch(() => undefined);
+    return song;
   }
 
   @Get(':id/audio')

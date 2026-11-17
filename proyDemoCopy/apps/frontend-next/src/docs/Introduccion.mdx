@@ -1,0 +1,54 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Guía/Introducción" />
+
+# Aula de Idiomas — guía de componentes (Next.js 16)
+
+Catálogo vivo de los componentes reutilizables del **shell Next.js**. Cada página muestra el componente, sus variantes (historias),
+la tabla de props generada desde TypeScript y la pestaña **Accessibility** (axe-core, WCAG 2.1 AA).
+Usa el menú **Tema** de la barra superior para revisar cada historia con los temas de la plataforma.
+
+## Cómo está organizado el catálogo
+
+| Sección       | Carpeta                  | Qué contiene                                                                       |
+| ------------- | ------------------------ | ---------------------------------------------------------------------------------- |
+| `UI/*`        | `src/components/ui/`     | Átomos y moléculas base (Button, Input, Dialog) sobre Radix UI                     |
+| `Shared/*`    | `src/components/shared/` | Piezas transversales de todo el portal (estados vacíos, paginación, detalle, avisos) |
+| `Layout/*`    | `src/components/layout/` | Barras y proveedores de la estructura de página                                    |
+
+Las pantallas de cada módulo (`components/courses`, `quiz`, `curriculum`…) no tienen historia: dependen de datos y rutas reales y se prueban con **Playwright (E2E)**.
+
+## Arquitectura en capas
+
+| Capa                        | Carpetas                                            | Responsabilidad                                                     |
+| --------------------------- | --------------------------------------------------- | ------------------------------------------------------------------- |
+| Presentación                | `app/` (rutas), `components/`                       | Pantallas (Server y Client Components) y componentes Atomic Design  |
+| Controlador / BFF           | `app/api/`, `proxy.ts`                              | Route Handlers que reenvían a NestJS; protección de rutas del portal |
+| Aplicación                  | `hooks/`, `store/slices/`                           | Lógica reutilizable (custom hooks) y estado global (Redux Toolkit)  |
+| Infraestructura             | `store/api/` (RTK Query), `lib/*-api.ts`, `lib/bff` | Acceso HTTP al backend a través del BFF                             |
+| Dominio                     | `types/`, `@aula/shared-schemas`                    | Tipos y esquemas Zod compartidos con Angular y NestJS               |
+
+Cada capa solo depende de la que tiene debajo. Los tipos de las rutas del backend salen del OpenAPI de NestJS (`@aula/api-client`).
+
+## Rutas públicas y privadas
+
+- `app/(auth)/`: login, registro, recuperación y verificación de correo (públicas).
+- `app/(portal)/`: todo el portal; `proxy.ts` (antes `middleware.ts` en Next.js 16) exige la cookie de sesión y redirige a `/login` si falta.
+- Los permisos por rol los decide NestJS; la interfaz solo oculta lo que el rol no puede usar.
+
+## Paquetes compartidos con Angular
+
+| Paquete               | Uso                                                                  |
+| --------------------- | -------------------------------------------------------------------- |
+| `@aula/ui-tokens`     | Temas, escala tipográfica y movimiento reducido (ver **Guía/Sistema de diseño**) |
+| `@aula/shared-i18n`   | Diccionarios de textos (`usePreferences().t`)                        |
+| `@aula/shared-nav`    | Menú lateral por rol                                                 |
+| `@aula/api-client`    | Tipos de rutas generados del OpenAPI                                 |
+
+## Accesibilidad
+
+- Cada campo tiene `label` asociado; los errores se anuncian con `role="alert"` y los avisos con `role="status"`.
+- Los iconos son decorativos (`aria-hidden`) y el significado va siempre en texto (WCAG 1.4.1).
+- Foco visible con anillo (`focus-visible:ring`) y todo usable con teclado; los diálogos (Radix) atrapan el foco y cierran con Escape.
+- `motion.css` frena animaciones cuando el sistema pide **movimiento reducido**.
+- Storybook marca como fallida cualquier historia con violaciones de axe (`a11y.test: "error"`).

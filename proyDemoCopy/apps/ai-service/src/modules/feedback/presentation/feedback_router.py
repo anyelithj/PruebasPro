@@ -51,7 +51,8 @@ def get_study_plan() -> GenerateStudyPlanUseCase:
     return GenerateStudyPlanUseCase()
 
 
-@router.get("/health")
+# `summary` (FastAPI): título de la operación en /api/v1/docs · [2026-11-17]: toda ruta documentada en OpenAPI
+@router.get("/health", summary="Estado del módulo feedback (comprobación de vida)")
 async def health() -> dict[str, str]:
     return {"module": "feedback", "status": "ready"}
 

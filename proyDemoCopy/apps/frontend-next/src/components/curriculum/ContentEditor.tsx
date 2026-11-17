@@ -1,8 +1,14 @@
 "use client"; // [Next.js]: Client Component → campos controlados e interacción (añadir/quitar filas)
-import { Image, Plus, TriangleAlert, Volume2 } from "lucide-react"; // [2026-10-23]: iconos SVG uniformes (antes emojis)
+import { Image, Plus, Trash2, TriangleAlert, Volume2 } from "lucide-react"; // [2026-10-23]: iconos SVG uniformes (antes emojis)
 import { useId, useState } from "react"; // [React 18+]: ids únicos y estables (SSR-safe) para enlazar <label> ↔ campo
 import {
+  ARTICLE_REQUIRED,
+  articleInLemma,
   EXERCISE_TYPE_LABEL,
+  isNoun,
+  normalizeArticle,
+  VOCAB_ARTICLES,
+  vocabularyArticleProblem,
   type ContentByKind,
   type CurriculumItemKind,
   type ExampleValue,
@@ -11,9 +17,11 @@ import {
   type ExerciseType,
   type IpaValue,
   type RubricCriterion,
+  type VisualFields,
   type VocabularyContent,
 } from "@/types/curriculum";
 import type { Language } from "@/types/quiz";
+import { MouthMediaField } from "@/components/curriculum/MouthMediaField"; // [2026-11-14]: imagen o video de la boca
 import { EmojiPicker } from "@/components/curriculum/EmojiPicker"; // [Modal]: todos los emojis Unicode con búsqueda
 import { ResourceVocabularyField } from "@/components/language/ResourceVocabularyField"; // [Sprint 8.4]: traducción e IPA UK/US automáticos al agregar un término
 // [ContentEditor]: edita el contenido de un recurso con CAMPOS según su tipo (antes era un JSON escrito a mano) | [Patrón]: Strategy + Registry (un editor por tipo) + Controlled Components | [Principio]: OCP + SRP + DRY | [Paradigma]: Funcional + Declarativo
@@ -81,7 +89,7 @@ function TextField({
         />
       )}
       {hint && (
-        <p id={`${id}-hint`} className="mt-1 text-[11px] text-muted-foreground">
+        <p id={`${id}-hint`} className="mt-1 type-meta text-muted-foreground">
           {hint}
         </p>
       )}
@@ -106,7 +114,7 @@ function RemoveButton({
       title={label}
       className="btn btn-ghost shrink-0 px-2.5! text-tone-danger"
     >
-      ✕
+      <Trash2 aria-hidden className="size-4" />
     </button>
   );
 }
@@ -375,7 +383,7 @@ function IpaFields({
           </select>
           <p
             id={`${accentId}-hint`}
-            className="mt-1 text-[11px] text-muted-foreground"
+            className="mt-1 type-meta text-muted-foreground"
           >
             La misma palabra suena distinto según el país.
           </p>
@@ -459,7 +467,7 @@ const PARTS_OF_SPEECH = [
 
 // ───── Apoyo visual del vocabulario ─────
 const THUMB_PX = 256; // Lado máximo de la imagen guardada (suficiente para una ficha; datos mínimos)
-const MAX_IMAGE_CHARS = 150_000; // Mismo límite que el esquema del backend (~110 KB)
+export const MAX_IMAGE_CHARS = 150_000; // Mismo límite que el esquema del backend (~110 KB)
 
 // [toThumbnail]: reduce la imagen en el navegador y la convierte a WebP (data URL) | Canvas API + createImageBitmap (Web APIs) | [Software verde]: sin subir el original al servidor
 async function toThumbnail(file: File): Promise<string> {
@@ -474,12 +482,13 @@ async function toThumbnail(file: File): Promise<string> {
 }
 
 // [VisualAid]: emoji o imagen de la ficha | [Patrón]: Controlled Component | [Principio]: SRP
-function VisualAid({
+// [2026-10-30]: genérico `<T>` (TS) → sirve para todos los tipos de recurso, no solo vocabulario
+export function VisualAid<T extends VisualFields>({ // [2026-11-03]: exportado → Juegos usa el MISMO apoyo visual que vocabulario
   value: c,
   onChange,
 }: {
-  value: VocabularyContent;
-  onChange: (v: VocabularyContent) => void;
+  value: T;
+  onChange: (v: T) => void;
 }) {
   const fileId = useId();
   const [error, setError] = useState<string | null>(null);
@@ -540,7 +549,7 @@ function VisualAid({
                 onClick={() => onChange({ ...c, emoji: undefined })}
                 className="btn btn-ghost text-tone-danger"
               >
-                ✕ Quitar emoji
+                <Trash2 aria-hidden className="size-4" /> Quitar emoji
               </button>
             )}
           </div>
@@ -568,7 +577,7 @@ function VisualAid({
                 onClick={() => onChange({ ...c, image: undefined })}
                 className="btn btn-ghost text-tone-danger"
               >
-                ✕ Quitar imagen
+                <Trash2 aria-hidden className="size-4" /> Quitar imagen
               </button>
             )}
             <span className="text-[11px] text-muted-foreground">
@@ -576,13 +585,47 @@ function VisualAid({
             </span>
           </div>
           {error && (
-            <p role="alert" className="text-xs text-tone-danger">
+            <p role="alert" className="type-meta text-tone-danger">
               {error}
             </p>
           )}
         </div>
       </div>
     </fieldset>
+  );
+}
+
+// [ArticleField · 2026-11-02]: artículo del sustantivo según el idioma | de/fr/pt/es: obligatorio si «Tipo de palabra» = sustantivo · en: opcional (a/an/the) · ru/zh: desactivado, «No aplica»
+// Nunca se rellena solo: sin datos suficientes del género, lo elige el docente | <select> nativo: lista cerrada, teclado y lector de pantalla incluidos
+function ArticleField({ value: c, onChange, language }: EditorProps<"vocabulary">) {
+  const id = useId();
+  const allowed = VOCAB_ARTICLES[language || "en"] ?? [];
+  const required = ARTICLE_REQUIRED.has(language) && isNoun(c.partOfSpeech) && !articleInLemma(language, c.lemma);
+  const hint = !allowed.length
+    ? "Este idioma no tiene artículos gramaticales."
+    : ARTICLE_REQUIRED.has(language)
+      ? "Obligatorio en los sustantivos (marca «Sustantivo» en «Tipo de palabra»)."
+      : "Opcional: depende del contexto.";
+  return (
+    <div>
+      <label htmlFor={id} className="mb-1 block text-xs font-semibold text-muted-foreground">
+        Artículo
+        {required && <span className="req" aria-hidden="true"> *</span>}
+      </label>
+      {allowed.length ? (
+        <select id={id} value={normalizeArticle(c.article)} required={required} aria-describedby={`${id}-hint`} onChange={(e) => onChange({ ...c, article: e.target.value })} className="control w-full">
+          <option value="">{ARTICLE_REQUIRED.has(language) ? "Elige el artículo" : "Sin artículo"}</option>
+          {allowed.map((a) => (
+            <option key={a} value={a}>
+              {a}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <input id={id} value="No aplica" disabled aria-describedby={`${id}-hint`} className="control w-full" />
+      )}
+      <p id={`${id}-hint`} className="mt-1 type-meta text-muted-foreground">{hint}</p>
+    </div>
   );
 }
 
@@ -603,6 +646,7 @@ function VocabularyEditor({
         required
         hint="Tal como aparece en el diccionario (con su artículo si lo lleva)."
       />
+      <ArticleField value={c} onChange={onChange} language={language} />
       <TextField
         label="Qué significa en español"
         value={c.translationEs}
@@ -617,7 +661,7 @@ function VocabularyEditor({
           c.translationEs.trim().toLowerCase() && (
           <p
             role="status"
-            className="rounded-lg border border-tone-warning-line bg-tone-warning-soft px-3 py-2 text-xs text-tone-warning sm:col-span-2"
+            className="rounded-lg border border-tone-warning-line bg-tone-warning-soft px-3 py-2 type-meta text-tone-warning sm:col-span-2"
           >
             <TriangleAlert aria-hidden className="inline size-4 align-[-0.125em]" /> La traducción es igual a la palabra. Si no es un préstamo que se
             usa igual en español, escribe la traducción correcta.
@@ -635,6 +679,8 @@ function VocabularyEditor({
         open={filled(
           c.partOfSpeech,
           c.gender,
+          c.plural,
+          c.classifier,
           c.ipa?.value,
           c.romanization,
           c.examples,
@@ -679,6 +725,25 @@ function VocabularyEditor({
             language={language}
           />
         </div>
+        {/* [2026-11-05]: plural (con su artículo) y clasificador del chino → el sustantivo se aprende como unidad gramatical completa */}
+        {language !== "zh" && (
+          <TextField
+            label="Plural"
+            value={c.plural}
+            onChange={(plural) => onChange({ ...c, plural })}
+            placeholder={({ de: "die Tische", fr: "les livres", pt: "os livros", es: "los libros", en: "books", ru: "столы" } as Record<string, string>)[language] ?? ""}
+            hint="Con su artículo cuando el idioma lo tiene."
+          />
+        )}
+        {language === "zh" && (
+          <TextField
+            label="Clasificador"
+            value={c.classifier}
+            onChange={(classifier) => onChange({ ...c, classifier })}
+            placeholder="一本书"
+            hint="Con numeral (p. ej. 一本书 · yì běn shū)."
+          />
+        )}
         {HAS_ROMANIZATION.has(language) && (
           <TextField
             className="sm:col-span-2"
@@ -874,6 +939,8 @@ function PronunciationEditor({
         multiline
         rows={2}
       />
+      {/* [2026-11-14]: «Cómo se pronuncia» también con imagen o video de la boca */}
+      <MouthMediaField value={c.mouthMedia} onChange={(mouthMedia) => onChange({ ...c, mouthMedia })} />
       <WordsEditor value={c.words} onChange={(words) => onChange({ ...c, words })} language={language} />
       <ExamplesEditor
         value={c.examples ?? []}
@@ -1355,7 +1422,14 @@ export function ContentEditor<K extends CurriculumItemKind>({
   language,
 }: { kind: K } & EditorProps<K>) {
   const Editor = EDITORS[kind] as (props: EditorProps<K>) => React.ReactElement;
-  return <Editor value={value} onChange={onChange} language={language} />;
+  // [Fix 2026-11-13]: un solo contenedor (antes Fragment) → en la rejilla editor | vista previa el apoyo visual ya no ocupa una celda propia y la vista previa queda a la derecha (sin huecos)
+  return (
+    <div className="min-w-0 space-y-3">
+      <Editor value={value} onChange={onChange} language={language} />
+      {/* [Apoyo visual · 2026-10-30]: imagen o emoji en todos los tipos, igual que en vocabulario (que ya lo pinta en su propio orden) */}
+      {kind !== "vocabulary" && <VisualAid value={value as VisualFields} onChange={(v) => onChange(v as typeof value)} />}
+    </div>
+  );
 }
 
 // [missingFields]: comprobación local de obligatorios → mensajes claros ANTES de ir al servidor (el backend vuelve a validar) | [Paradigma]: Funcional (pura)
@@ -1370,7 +1444,9 @@ export function missingFields(
     language && variant && !variant.toLowerCase().startsWith(language)
       ? [`La variante IPA "${variant}" no es del idioma elegido`]
       : [];
-  return [...mismatch, ...requiredFields(kind, content)];
+  // [Artículo · 2026-11-02]: misma regla que NestJS → sin artículo (de/fr/pt/es) el sustantivo no se guarda
+  const article = kind === "vocabulary" && language ? vocabularyArticleProblem(language, content) : null;
+  return [...mismatch, ...requiredFields(kind, content), ...(article ? [article] : [])];
 }
 
 // [requiredFields]: obligatorios por tipo | [Paradigma]: Funcional (pura)

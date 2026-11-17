@@ -38,6 +38,10 @@ export class PolyglotTopic implements TopicLike {
   @Column({ type: 'jsonb', default: () => "'[]'" })
   levels!: string[];
 
+  // [2026-11-11]: idiomas que compara el tema (vacío = los siete) | migración PolyglotTopicLanguages
+  @Column({ type: 'jsonb', default: () => "'[]'" })
+  languages!: string[];
+
   @Column({ type: 'varchar', length: 16, default: 'vocabulary' })
   category!: PolyglotCategory;
 

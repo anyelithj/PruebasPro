@@ -98,9 +98,9 @@ export function ReportsClient({ userStats, leaderboard, quizzes }: ReportsClient
       <div className="grid gap-6 md:grid-cols-2">
         {/* [Pie chart usuarios por rol] */}
         <section className="rounded-xl border bg-card p-5">
-          <h2 className="text-lg font-bold mb-3">Distribución de usuarios</h2>
+          <h2 className="title-section mb-3">Distribución de usuarios</h2>
           {rolePie.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin datos.</p>
+            <p className="text-muted-foreground">Sin datos.</p>
           ) : (
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -115,7 +115,7 @@ export function ReportsClient({ userStats, leaderboard, quizzes }: ReportsClient
               </ResponsiveContainer>
             </div>
           )}
-          <ul className="mt-3 space-y-1 text-sm">
+          <ul className="mt-3 space-y-1">
             {rolePie.map((r) => (
               <li key={r.name} className="flex items-center gap-2">
                 <span className="size-3 rounded-full" style={{ backgroundColor: r.color }} aria-hidden />
@@ -128,9 +128,9 @@ export function ReportsClient({ userStats, leaderboard, quizzes }: ReportsClient
 
         {/* [Bar chart quizzes por categoría] */}
         <section className="rounded-xl border bg-card p-5">
-          <h2 className="text-lg font-bold mb-3">Quizzes por categoría</h2>
+          <h2 className="title-section mb-3">Quizzes por categoría</h2>
           {quizzesByCategory.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin quizzes registrados.</p>
+            <p className="text-muted-foreground">Sin quizzes registrados.</p>
           ) : (
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -155,9 +155,9 @@ export function ReportsClient({ userStats, leaderboard, quizzes }: ReportsClient
 
       {/* [Bar chart por dificultad] */}
       <section className="rounded-xl border bg-card p-5">
-        <h2 className="text-lg font-bold mb-3">Quizzes por dificultad</h2>
+        <h2 className="title-section mb-3">Quizzes por dificultad</h2>
         {quizzesByDifficulty.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Sin datos.</p>
+          <p className="text-muted-foreground">Sin datos.</p>
         ) : (
           <div className="h-56 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -175,9 +175,9 @@ export function ReportsClient({ userStats, leaderboard, quizzes }: ReportsClient
 
       {/* [Top 10 leaderboard real] */}
       <section className="rounded-xl border bg-card p-5">
-        <h2 className="text-lg font-bold mb-3">Top 10 estudiantes</h2>
+        <h2 className="title-section mb-3">Top 10 estudiantes</h2>
         {leaderboard.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Sin actividad aún.</p>
+          <p className="text-muted-foreground">Sin actividad aún.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -212,7 +212,7 @@ export function ReportsClient({ userStats, leaderboard, quizzes }: ReportsClient
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border bg-card p-4">
-      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="type-meta uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="mt-1 text-2xl font-extrabold tracking-tight">{value}</p>
     </div>
   );

@@ -73,10 +73,12 @@ export interface GuideTurn {
   sources?: GuideSource[];
   answeredBy?: AnsweredBy;
   rating?: boolean; // Valoración enviada (útil / no útil)
+  degraded?: boolean; // [2026-10-27]: respondido SIN IA (FastAPI/Ollama caídos → NestJS busca en la FAQ y el manual) → la UI muestra un aviso suave
+  offline?: boolean; // [2026-10-27]: respuesta local del navegador (el servidor no respondió) → no se puede valorar (no existe en la conversación del servidor)
 }
 
-// [BotMode · 2026-10-19]: modo del chatbot flotante → persona de FastAPI (tutor | support | guide)
-export const BOT_MODES = ['tutor', 'support', 'guide'] as const;
+// [BotMode · 2026-10-19 → 2026-10-28]: modo del asistente «Soporte y Guía» → persona de FastAPI (support | guide) — sin «tutor» (el Tutor IA vive en /tutor)
+export const BOT_MODES = ['support', 'guide'] as const;
 export type BotMode = (typeof BOT_MODES)[number];
 
 export interface GuideQuestion {
@@ -85,15 +87,19 @@ export interface GuideQuestion {
   route?: string;
   locale: HelpLocale;
   mode?: BotMode;
-  language?: string; // Solo tutor: idioma que estudia
-  level?: string; // [2026-10-25] Solo tutor: nivel MCER
+}
+
+// [transcript · 2026-10-28]: conversación en texto plano para el correo a soporte (escalado) | máx. 1 500 caracteres (límite práctico de un `mailto:`) | Puro
+export function transcript(turns: readonly GuideTurn[], you: string, bot: string, max = 1500): string {
+  const text = turns.map((t) => `${t.role === 'user' ? you : bot}: ${t.content.trim()}`).join('\n');
+  return text.length > max ? `…${text.slice(-max)}` : text;
 }
 
 // [GuideChunk]: unión discriminada del flujo SSE del Agente Guía (el del tutor + `sources`)
 export type GuideChunk =
   | { type: 'session'; sessionId: string }
   | { type: 'token'; text: string }
-  | { type: 'sources'; sources: GuideSource[]; answeredBy: AnsweredBy }
+  | { type: 'sources'; sources: GuideSource[]; answeredBy: AnsweredBy; degraded: boolean }
   | { type: 'done' };
 
 // [toGuideChunk]: mensaje SSE genérico → trozo del Agente Guía | null = evento desconocido o mal formado | Puro
@@ -103,7 +109,8 @@ export function toGuideChunk({ type, data }: SseMessage<SseData>): GuideChunk | 
   if (type === 'sources') {
     const sources = z.array(GuideSourceSchema).safeParse(data['sources']);
     const by = data['answered_by'];
-    return sources.success ? { type: 'sources', sources: sources.data, answeredBy: (['faq', 'manual', 'llm', 'none'] as const).find((x) => x === by) ?? 'llm' } : null;
+    // `degraded` (2026-10-27): solo `true` literal cuenta (Tolerant Reader: FastAPI no lo envía → false)
+    return sources.success ? { type: 'sources', sources: sources.data, answeredBy: (['faq', 'manual', 'llm', 'none'] as const).find((x) => x === by) ?? 'llm', degraded: data['degraded'] === true } : null;
   }
   return type === 'done' ? { type: 'done' } : null;
 }

@@ -30,7 +30,8 @@ export async function CourseCard({ course }: CourseCardProps) {
     // [Card]: borde superior de 3px con el color del idioma + hover elevado con sombra teñida (igual al original)
     // `--card-glow` (CSS custom property inline): permite a Tailwind usar el color dinámico en `hover:shadow-[…]`
     <article
-      className="group overflow-hidden rounded-[14px] border border-border bg-card shadow-[var(--nl-shd)] transition-[transform,box-shadow] duration-200 hover:-translate-y-[3px] hover:shadow-[0_8px_30px_var(--card-glow)] focus-within:ring-2 focus-within:ring-ring"
+      id={`course-${course.id}`} // [Caso F]: ancla → tras iniciar sesión se vuelve a ESTA card
+      className="group surface-interactive scroll-mt-20"
       style={{ borderTop: `3px solid ${color}`, "--card-glow": `${color}22` } as React.CSSProperties} // `as React.CSSProperties` (TS): admite la custom property
     >
       <Link href={href} className="block focus-visible:outline-none" aria-label={fmt(t.card.view, { title: course.title })}>
@@ -56,13 +57,13 @@ export async function CourseCard({ course }: CourseCardProps) {
 
         {/* Título */}
         <Link href={href} className="block focus-visible:outline-none">
-          <h3 className="mb-1 line-clamp-2 text-[13px] font-bold leading-snug text-foreground transition-colors group-hover:text-primary">
+          <h3 className="title-card mb-1 line-clamp-2 text-foreground transition-colors group-hover:text-primary">
             {course.title}
           </h3>
         </Link>
 
         {/* Instructor ★ rating • estudiantes — mismos datos que el original | `toLocaleString` (ECMA-402): separador de miles del idioma */}
-        <p className="mb-2 text-[11px] text-muted-foreground">
+        <p className="mb-2 type-meta text-muted-foreground">
           {course.instructor}&nbsp; ★ {course.rating.toFixed(1)} • {course.studentsCount.toLocaleString(INTL_LOCALE[locale])} {t.card.students}
         </p>
 
@@ -99,9 +100,7 @@ export async function CourseCard({ course }: CourseCardProps) {
           hasAccess={course.hasAccess}
           color={color}
           lab={course.lab}
-          initialFavorite={course.isFavorite}
-          initialLike={course.likeOn}
-          initialLove={course.loveOn}
+          engagement={{ isFavorite: course.isFavorite, reaction: course.reaction, likesCount: course.likesCount, lovesCount: course.lovesCount }} // [Caso F]: ⭐ + 👍/❤️ + conteos
           primaryHref={href}
           variant="card"
           purchase={{ title: course.title, price: course.price, currency: course.currency }} // [Carrito]: datos para "Comprar"

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiFetch } from "@/lib/api-client";
-import { getCurrentAccessToken } from "@/lib/auth";
+import { getFreshAccessToken } from "@/lib/auth";
 import { ApiError } from "@/lib/errors";
 import type { MyHistoryItem } from "@/types/quiz";
 // [Route Handler /api/quiz/sessions/me]: BFF proxy del historial académico | [Patrón]: Proxy | [Principio]: SRP
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
-  const bearer = (await getCurrentAccessToken()) ?? undefined;
+  const bearer = (await getFreshAccessToken()) ?? undefined;
   const limit = req.nextUrl.searchParams.get("limit") ?? "20";
   try {
     const data = await apiFetch<MyHistoryItem[]>(

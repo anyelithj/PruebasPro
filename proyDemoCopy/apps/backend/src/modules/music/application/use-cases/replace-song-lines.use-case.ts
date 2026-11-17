@@ -1,7 +1,12 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SongLine } from '../../domain/entities/song-line.entity';
+import { Song } from '../../domain/entities/song.entity';
+import {
+  LEVEL_CLASSIFIER,
+  type LevelClassifierPort,
+} from '../../../dialogues/domain/interfaces/level-classifier.interface'; // [DRY]: el mismo clasificador de Diálogos (RF-126)
 import { EnrichSongLinesUseCase } from './enrich-song-lines.use-case';
 import { type MusicActor, SongAccess } from './get-song.use-case';
 // [UseCase ReplaceSongLines · Sprint 9.2 · RF-117]: divide la letra en líneas, las guarda (reemplazando las anteriores) y pide su traducción e IPA; si FastAPI no responde las líneas quedan guardadas sin IPA y se pueden enriquecer después | [Patrón]: Use Case (Command) + Unit of Work (borrar e insertar juntos) | [Principio]: SRP + DRY (EnrichSongLines) + degradación elegante | [Paradigma]: POO + funcional (splitLyrics pura)
@@ -23,7 +28,21 @@ export class ReplaceSongLinesUseCase {
     private readonly access: SongAccess,
     @InjectRepository(SongLine) private readonly lines: Repository<SongLine>,
     private readonly enrich: EnrichSongLinesUseCase,
+    @InjectRepository(Song) private readonly songs: Repository<Song>,
+    @Inject(LEVEL_CLASSIFIER) private readonly classifier: LevelClassifierPort,
   ) {}
+
+  // [estimateLevel · 2026-11-16 · RF-148]: canción creada sin nivel → nivel MCER estimado de la letra · si la IA no responde queda sin nivel
+  // (blocker «level»: no se publica hasta que el docente lo elija al editar) | [Principio]: degradación elegante + verificación humana
+  private async estimateLevel(song: Song, texts: string[], token: string): Promise<void> {
+    if (song.level) return; // El nivel elegido por el docente prevalece
+    try {
+      const { level } = await this.classifier.classify({ language: song.language, turns: texts }, token);
+      await this.songs.update({ id: song.id }, { level });
+    } catch (err) {
+      this.logger.warn(`Canción ${song.id} sin nivel estimado: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
 
   async execute(
     actor: MusicActor,
@@ -36,7 +55,7 @@ export class ReplaceSongLinesUseCase {
     if (!texts.length) throw new BadRequestException('La letra está vacía');
     if (texts.length > MAX_LINES)
       throw new BadRequestException(`Máximo ${MAX_LINES} líneas`);
-    await this.access.editable(actor, songId);
+    const song = await this.access.editable(actor, songId);
     // `transaction` (TypeORM): nunca queda una letra a medias
     await this.lines.manager.transaction(async (tx) => {
       await tx.delete(SongLine, { songId });
@@ -53,16 +72,20 @@ export class ReplaceSongLinesUseCase {
         ),
       );
     });
+    await this.estimateLevel(song, texts, token);
     if (!auto)
       return {
         lines: await this.lines.find({ where: { songId }, order: { position: 'ASC' } }),
         enriched: false,
         missing: 0, // Modo manual: no se pidió nada automático
+        more: false,
+        unavailable: false,
       };
     try {
       // [2026-10-24]: enriquecimiento por trozos con reintento y respaldo de IPA → `missing` dice cuántas líneas quedan por completar
-      const { lines, missing } = await this.enrich.run(actor, songId, token);
-      return { lines, enriched: missing === 0, missing };
+      // [2026-10-27]: + `more` (presupuesto agotado → la UI pide otra tanda a /lines/enrich) y `unavailable` (IA sin respuesta)
+      const { lines, missing, more, unavailable } = await this.enrich.run(actor, songId, token);
+      return { lines, enriched: missing === 0, missing, more, unavailable };
     } catch (err) {
       this.logger.warn(
         `Letra ${songId} guardada sin IPA: ${err instanceof Error ? err.message : String(err)}`,
@@ -71,7 +94,7 @@ export class ReplaceSongLinesUseCase {
         where: { songId },
         order: { position: 'ASC' },
       });
-      return { lines, enriched: false, missing: lines.length };
+      return { lines, enriched: false, missing: lines.length, more: false, unavailable: true };
     }
   }
 

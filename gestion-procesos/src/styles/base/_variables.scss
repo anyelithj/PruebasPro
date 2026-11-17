@@ -1,0 +1,44 @@
+// SMACSS · BASE — variables de Bootstrap (deben cargarse antes que Bootstrap).
+$font-family-sans-serif:
+  'Atkinson Hyperlegible',
+  system-ui,
+  -apple-system,
+  'Segoe UI',
+  Roboto,
+  'Helvetica Neue',
+  Arial,
+  sans-serif;
+$primary: #1b4d6b;
+$secondary: #566874;
+$success: #2e7d5b;
+$warning: #e3a008;
+$danger: #b3412f;
+$info: #2f7f9e;
+$body-bg: #f3f6f8;
+$body-color: #14232e;
+$headings-font-weight: 700;
+$border-radius: 0.5rem;
+$enable-shadows: false;
+$link-color: #1b4d6b;
+
+// Tipografía: escala de títulos compacta y uniforme.
+$h1-font-size: 1.75rem;
+$h2-font-size: 1.5rem;
+$h3-font-size: 1.375rem;
+$h4-font-size: 1.25rem;
+$h5-font-size: 1.125rem;
+$h6-font-size: 1rem;
+$headings-margin-bottom: 0.75rem;
+$small-font-size: 0.875rem;
+
+// Botones y campos: mismo alto, peso y radio en toda la app.
+$input-btn-padding-y: 0.5rem;
+$input-btn-padding-x: 1rem;
+$input-btn-padding-y-sm: 0.3rem;
+$input-btn-padding-x-sm: 0.75rem;
+$btn-font-weight: 700;
+$btn-border-radius: $border-radius;
+$btn-border-radius-sm: $border-radius;
+$btn-border-radius-lg: $border-radius;
+$input-border-radius: $border-radius;
+$input-border-radius-sm: $border-radius;

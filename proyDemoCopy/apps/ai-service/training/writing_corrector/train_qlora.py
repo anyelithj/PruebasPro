@@ -36,12 +36,15 @@ def main() -> None:
     from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
     from trl import SFTConfig, SFTTrainer
 
+    # [2026-11-14 · Colab]: la T4 (Turing) no soporta bfloat16 → float16; GPUs Ampere o más nuevas usan bfloat16 | `is_bf16_supported` (PyTorch CUDA)
+    bf16 = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
+    compute_dtype = torch.bfloat16 if bf16 else torch.float16
     tokenizer = AutoTokenizer.from_pretrained(args.base)
     model = AutoModelForCausalLM.from_pretrained(
         args.base,
         # [QLoRA]: pesos base congelados en 4 bits NF4; cómputo en bfloat16
         quantization_config=BitsAndBytesConfig(
-            load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_use_double_quant=True, bnb_4bit_compute_dtype=torch.bfloat16
+            load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_use_double_quant=True, bnb_4bit_compute_dtype=compute_dtype
         ),
         device_map="auto",
     )
@@ -59,7 +62,8 @@ def main() -> None:
             per_device_train_batch_size=4,
             gradient_accumulation_steps=4,
             gradient_checkpointing=True,
-            bf16=True,
+            bf16=bf16,
+            fp16=not bf16,  # Precisión mixta según la GPU (excluyentes)
             logging_steps=10,
             save_strategy="epoch",
             report_to="none",

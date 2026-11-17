@@ -23,7 +23,10 @@ export class VocabularyFacade {
     this.saved.set(null);
     const r = await this.result.run(this.repo.lookup(input));
     if (r)
-      this.history.update((h) => [r, ...h.filter((x) => x.id !== r.id)].slice(0, HISTORY_SIZE));
+      // [2026-10-27]: resultado sin guardar (id '') → se deduplica por texto e idioma
+      this.history.update((h) =>
+        [r, ...h.filter((x) => (x.id || `${x.language}|${x.text}`) !== (r.id || `${r.language}|${r.text}`))].slice(0, HISTORY_SIZE),
+      );
     return r;
   }
 

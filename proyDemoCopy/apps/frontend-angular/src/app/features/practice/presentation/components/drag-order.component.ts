@@ -23,7 +23,7 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' }, // Elemento anfitrión en bloque → respeta márgenes y space-y del contenedor
   template: `
-    <p class="mb-2 text-sm text-muted-foreground">{{ hint() }}</p>
+    <p class="mb-2 text-muted-foreground">{{ hint() }}</p>
     <ol
       cdkDropList
       cdkDropListOrientation="vertical"

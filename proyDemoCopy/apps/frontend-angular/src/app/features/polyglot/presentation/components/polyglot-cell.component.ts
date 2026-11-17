@@ -18,7 +18,11 @@ import type { Term } from '../../domain/models/polyglot';
       <span class="flex items-start gap-2">
         <span class="min-w-0 flex-1">
           <span class="block text-base font-bold leading-tight" [attr.lang]="language()">{{ t.text }}</span>
-          <span class="block text-xs"><aula-ipa-label [ipa]="ipa()" [language]="language()" /></span>
+          <span class="block text-xs"><aula-ipa-label [ipa]="ipa()" [language]="language()" [text]="t.text" /></span>
+          <!-- [2026-11-16 · Regla obligatoria de vocabulario]: plural, género / contable / clasificador + pinyin bajo el término (tabla y tarjetas) -->
+          @if (t.grammar) {
+            <span class="block text-xs text-muted-foreground">{{ t.grammar }}</span>
+          }
           @if (t.needsNativeReview) {
             <span class="mt-1 inline-block text-[11px] text-tone-warning" [title]="nativeLabel()"><aula-icon name="triangle-alert" /> {{ nativeLabel() }}</span>
           } @else if (!t.reviewed && showReview()) {

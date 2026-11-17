@@ -28,13 +28,38 @@ export class DictionaryFacade {
     const key = `${language}|${termKey(word)}|${sentence}`;
     let hit = this.cache.get(key);
     if (!hit) {
-      hit = firstValueFrom(this.repo.lookup(parsed.data)).catch(() => {
-        this.cache.delete(key); // Un fallo no queda en caché: el siguiente clic reintenta
-        return null;
-      });
+      hit = firstValueFrom(this.repo.lookup(parsed.data))
+        .then((r) => {
+          if (!r.result.translation) this.cache.delete(key); // [Fix 2026-10-31]: una traducción vacía (IA ocupada) tampoco queda en caché
+          return r;
+        })
+        .catch(() => {
+          this.cache.delete(key); // Un fallo no queda en caché: el siguiente clic reintenta
+          return null;
+        });
       this.cache.set(key, hit);
     }
     return hit;
+  }
+
+  // [ipa · 2026-10-31]: IPA sin esperar a la IA | `async` + try/catch: un fallo → null (la consulta completa también la trae)
+  async ipa(language: string, word: string): Promise<{ ipa: string | null; ipa_us: string | null } | null> {
+    const parsed = WordQuerySchema.safeParse({ language, word });
+    if (!parsed.success) return null;
+    try {
+      return await firstValueFrom(this.repo.ipa({ language: parsed.data.language, word: parsed.data.word }));
+    } catch {
+      return null;
+    }
+  }
+
+  // [translate · 2026-11-09]: traducción de una frase entera (la consulta de palabra traduce solo una palabra → «hace bien» para un título de 5)
+  async translate(language: string, text: string, target = 'es'): Promise<string> {
+    try {
+      return this.repo.translate ? (await firstValueFrom(this.repo.translate(text, language, target))).translation : '';
+    } catch {
+      return '';
+    }
   }
 
   // [loadMarked]: una vez por idioma y sesión (el resaltado no vuelve a pedirse en cada texto)

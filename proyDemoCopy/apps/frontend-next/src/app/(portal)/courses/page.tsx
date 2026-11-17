@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import { RememberReturn } from "@/components/shared/RememberReturn"; // [2026-10-23 · 4.º pase]: el «Volver» de los formularios regresa a esta pestaña/filtros
 import Link from "next/link";
 import { listCourses } from "@/lib/courses-api";
-import { CourseFilter, type CourseChip } from "@/components/courses/CourseFilter";
+import type { CourseChip } from "@/components/courses/CourseFilter";
+import { FilterPanel } from "@/components/admin/FilterPanel"; // [2026-11-11]: MISMO panel que Gestión → Cursos
+import { LanguageChips } from "@/components/shared/LanguageChips";
+import { CEFR_LEVELS } from "@/lib/constants";
+import { isLanguage } from "@/lib/languages";
 import { CourseGrid } from "@/components/courses/CourseGrid";
 import { LANGUAGE_GROUPS, type CourseFilterInput } from "@/types/courses";
 import { fmt, getDictionary, plural } from "@aula/shared-i18n";
@@ -21,7 +25,9 @@ export const dynamic = "force-dynamic";
 
 // `interface` (TS): forma de los query params aceptados
 interface SearchParams {
-  chip?: string; // Idioma seleccionado (EN, FR…)
+  chip?: string; // Idioma seleccionado (EN, FR…) — enlaces antiguos
+  language?: string; // [2026-11-11]: ISO 639-1 de las pestañas de idioma (como Gestión → Cursos)
+  level?: string; // [2026-11-11]: nivel MCER
   search?: string; // Texto libre
   page?: string; // Página (1-based)
 }
@@ -40,13 +46,16 @@ export default async function CoursesPage(props: {
   const dict = getDictionary(locale);
   const t = dict.courses; // Alias de la sección de cursos
 
-  const chip: CourseChip | "ALL" = sp.chip && isChip(sp.chip) ? sp.chip : "ALL"; // Chip inválido → "ALL"
+  const activeLanguage = isLanguage(sp.language) ? sp.language : sp.chip && isChip(sp.chip) ? sp.chip.toLowerCase() : undefined; // ?chip= antiguo → idioma
+  const chip: CourseChip | "ALL" = activeLanguage && isChip(activeLanguage.toUpperCase()) ? (activeLanguage.toUpperCase() as CourseChip) : "ALL";
+  const level = CEFR_LEVELS.find((l) => l === sp.level); // Solo niveles conocidos
   const search = sp.search ?? ""; // `??` (ES2020): string vacío si no hay búsqueda
   const page = sp.page ? Math.max(1, parseInt(sp.page, 10) || 1) : 1; // Sanea la página (mínimo 1)
 
   // [Filtro para el backend]: el chip ES el grupo (idioma); "ALL" = sin filtro
   const filter: CourseFilterInput = {
     group: chip === "ALL" ? undefined : chip,
+    category: level as CourseFilterInput["category"], // NestJS llama «category» al nivel MCER (igual que Gestión → Cursos)
     search: search || undefined,
     page,
     limit: 24,
@@ -60,7 +69,7 @@ export default async function CoursesPage(props: {
     return (
       <div className="w-full space-y-5 py-4">
         <header>
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{t.title}</h1>
+          <h1 className="title-page">{t.title}</h1>
         </header>
         <div
           className="rounded-xl border p-6"
@@ -73,7 +82,7 @@ export default async function CoursesPage(props: {
           <p style={{ color: "var(--danger)" }}>
             {fmt(t.loadError, { error: err instanceof Error ? err.message : String(err) })}
           </p>
-          <p className="text-xs mt-2" style={{ color: "var(--nl-txt2)" }}>
+          <p className="type-meta mt-2" style={{ color: "var(--nl-txt2)" }}>
             {t.loadErrorHint}
           </p>
         </div>
@@ -88,17 +97,24 @@ export default async function CoursesPage(props: {
     <div className="fade-in w-full space-y-5 py-4">
       <RememberReturn memo="catalog" />
       <header>
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl" style={{ color: "var(--nl-txt)" }}>
+        <h1 className="title-page" style={{ color: "var(--nl-txt)" }}>
           {t.title}
         </h1>
-        <p className="mt-1 text-sm" style={{ color: "var(--nl-txt2)" }}>
+        <p className="mt-1" style={{ color: "var(--nl-txt2)" }}>
           {/* `plural` (Intl.PluralRules): "1 curso" / "3 cursos" según el idioma */}
           {fmt(t.subtitle, { heading, count: plural(locale, data.total, t.count) })}
         </p>
       </header>
 
       {/* [Filtros]: Client Component que actualiza la URL (estado compartible y SEO-friendly) */}
-      <CourseFilter activeChip={chip} initialSearch={search} />
+      <FilterPanel
+        label={t.filtersLabel}
+        clearHref="/courses"
+        hidden={{ language: activeLanguage }}
+        search={{ value: search, placeholder: t.searchPlaceholder }}
+        selects={[{ name: "level", label: "Nivel", value: level, all: "Todos", options: CEFR_LEVELS.map((l) => ({ value: l, label: l })) }]}
+        chips={<LanguageChips active={activeLanguage} hrefFor={(language) => ({ pathname: "/courses", query: Object.fromEntries(Object.entries({ search, level, language }).filter(([, v]) => v)) as Record<string, string> })} names={dict.languageNames} allLabel={t.all} label="Idioma" />}
+      />
 
       {/* [Grid]: componente presentacional; recibe datos ya resueltos en el servidor */}
       <CourseGrid
@@ -112,7 +128,7 @@ export default async function CoursesPage(props: {
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
             <Link
               key={p}
-              href={{ pathname: "/courses", query: { ...sp, page: String(p) } }}
+              href={{ pathname: "/courses", query: Object.fromEntries(Object.entries({ search, level, language: activeLanguage, page: String(p) }).filter(([, v]) => v)) as Record<string, string> }}
               aria-current={p === data.page ? "page" : undefined}
               className={p === data.page ? "btn btn-primary btn-sm min-w-9" : "btn btn-outline btn-sm min-w-9"} // [Sistema de diseño]: misma paginación en toda la app
             >

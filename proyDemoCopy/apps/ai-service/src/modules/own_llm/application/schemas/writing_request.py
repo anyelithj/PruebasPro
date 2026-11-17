@@ -27,5 +27,8 @@ class WritingRequest(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")  # Inmutable y sin campos desconocidos | [Principio]: Fail Fast
 
     text: str = Field(..., min_length=3, max_length=MAX_TEXT_LENGTH, description="Redacción del estudiante")
-    language: WritingLanguage = "en"
+    # [Detectar idioma · 2026-10-27]: «auto» → el servidor detecta el idioma (por defecto en la UI, como GrammarMama); la API sigue en «en» por compatibilidad
+    language: WritingLanguage | Literal["auto"] = "en"
+    # [2026-11-11]: pregunta a la que responde el alumno (diálogos) → corrige lo que no encaja con ella
+    context: str | None = Field(default=None, max_length=400)
     level: WritingLevel = "B1"  # Nivel MCER: ajusta qué se marca (en A1 no se corrige estilo avanzado)

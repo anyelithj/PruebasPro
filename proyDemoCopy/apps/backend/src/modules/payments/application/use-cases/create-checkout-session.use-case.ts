@@ -23,6 +23,8 @@ export interface CheckoutSessionResponse {
   paymentId: string;
   clientSecret: string;
   publishableKey: string; // Clave pública de Stripe (no es secreta) → el navegador no necesita variables de build
+  provider: string; // [2026-11-16]: 'stripe' | 'mercadopago'
+  redirectUrl?: string; // [2026-11-16]: Mercado Pago → el navegador va a su página de pago
 }
 
 @Injectable()
@@ -39,7 +41,7 @@ export class CreateCheckoutSessionUseCase {
   ): Promise<CheckoutSessionResponse> {
     if (!this.gateway.enabled)
       throw new ServiceUnavailableException(
-        'Pagos no configurados: define STRIPE_SECRET_KEY (clave de prueba)',
+        'Pagos no configurados: define MERCADOPAGO_ACCESS_TOKEN o STRIPE_SECRET_KEY (credenciales de prueba)',
       );
     const order = await this.orders.findOneBy({
       id: orderId,
@@ -94,6 +96,8 @@ export class CreateCheckoutSessionUseCase {
       paymentId,
       clientSecret: session.clientSecret,
       publishableKey: paymentsConfig().publishableKey ?? '',
+      provider: this.gateway.provider,
+      redirectUrl: session.redirectUrl,
     };
   }
 }

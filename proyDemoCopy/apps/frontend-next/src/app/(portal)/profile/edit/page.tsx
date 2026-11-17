@@ -1,12 +1,13 @@
 import type { Metadata } from "next"; // [Next.js]: tipo de la Metadata API (SEO) | `import type` (TS): se borra al compilar
 import Link from "next/link"; // [Next.js]: navegación cliente con prefetch
 import { redirect } from "next/navigation"; // [Next.js]: redirección server-side (lanza y corta el render)
-import { getMyProfile, type ProfileData } from "@/lib/profile-api"; // [Facade]: GET /profile/me con cookie httpOnly
+import { getMyProfile, getTwoFactor, type ProfileData } from "@/lib/profile-api"; // [Facade]: GET /profile/me con cookie httpOnly
 import { getServerDictionary } from "@/lib/i18n-server";
 import { toPortalRole } from "@/components/portal/portal-role";
 import { ProfileEditForm } from "./ProfileEditForm"; // [Presentational]: tarjeta de datos personales
 import { AvatarCard } from "./AvatarCard"; // [Presentational]: tarjeta del avatar
 import { ChangePasswordForm } from "./ChangePasswordForm"; // [Presentational]: cambio de contraseña (2026-10-23)
+import { TwoFactorCard } from "./TwoFactorCard"; // [Presentational]: verificación en dos pasos (2026-11-16)
 // [Página /profile/edit]: "Mi Perfil" de NeuroLearning — datos personales (izq.) + avatar (der.) | [Patrón]: Container/Presentational | [Principio]: SRP | [Paradigma]: RSC + Server Fetch
 
 // `export const metadata` (Next.js): título/descr. para la pestaña; noindex porque es privada | [SEO]
@@ -28,6 +29,8 @@ export default async function ProfileEditPage() {
     redirect("/login?from=/profile/edit"); // [Fail-safe]: sesión inválida → login y volver aquí
   }
   const t = await getServerDictionary();
+  // [2FA · 2026-11-16]: si el backend falla se muestra «desactivada» (fail-soft); el cambio real siempre lo valida NestJS | `.catch` (Promise)
+  const twoFactor = await getTwoFactor().catch(() => ({ enabled: false }));
   const roleLabel = t.roles[toPortalRole(profile.role)]; // USER/TEACHER/ADMIN → "Estudiante"/"Docente"/…
 
   return (
@@ -35,10 +38,10 @@ export default async function ProfileEditPage() {
     <section className="fade-in w-full space-y-5 py-4" aria-labelledby="profile-title">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 id="profile-title" className="text-2xl font-extrabold tracking-tight sm:text-3xl">
+          <h1 id="profile-title" className="title-page">
             {t.profile.title}
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">{t.profile.intro}</p>
+          <p className="mt-1 text-muted-foreground">{t.profile.intro}</p>
         </div>
         <Link
           href="/profile"
@@ -61,6 +64,7 @@ export default async function ProfileEditPage() {
           bio={profile.bio}
           timezone={profile.timezone}
           preferredLanguage={profile.preferredLanguage}
+          social={profile} // [2026-10-28]: linkedinUrl/twitterUrl/spotifyUrl/youtubeUrl (el form solo lee esas claves)
           enrolledCourses={profile.enrolledCourses}
           level={profile.level}
         />
@@ -68,6 +72,9 @@ export default async function ProfileEditPage() {
         {/* [2026-10-24]: «Cambiar contraseña» ocupa el 100 % del contenedor (las dos columnas) en vez de quedar bajo el avatar */}
         <div className="lg:col-span-2">
           <ChangePasswordForm />
+        </div>
+        <div className="lg:col-span-2">
+          <TwoFactorCard initialEnabled={twoFactor.enabled} />
         </div>
       </div>
     </section>

@@ -15,12 +15,15 @@ import { TextImportComponent } from '@shared/ui/molecules/text-import/text-impor
 import { TextImportService } from '@core/media/text-import.service';
 import { LyricsImportService } from '../../infrastructure/lyrics-import.service';
 // [LyricsEditorComponent · Presentacional · Sprint 9.9 · RF-117]: pegar la letra y revisar el IPA y la traducción de cada línea (la corrección manual prevalece sobre la automática) | [Patrón]: Presentational Component + Dirty Tracking (solo se envían las líneas cambiadas) | [Principio]: SRP + verificación humana | [Paradigma]: Declarativo + Reactivo
+// [2026-11-10]: sin columna «IPA US» (el reproductor usa el IPA principal; el US se calcula solo) · el verso es editable
 // [A11y]: tabla con encabezados y campos con etiqueta oculta por línea · scroll horizontal solo dentro de la tabla en móvil
 
 export interface LyricsLabels {
   lyrics: string;
   loadLyrics: string;
   loadLyricsManual: string;
+  manualTranslation: string; // [2026-11-06]: traducción escrita a mano en modo manual
+  manualIpa: string; // [2026-11-06]: IPA escrito a mano en modo manual
   mode: string;
   modeAuto: string;
   modeAutoHint: string;
@@ -61,32 +64,63 @@ export interface LyricsLabels {
       <!-- [2026-10-23]: la letra también llega de un PDF, un Word, una imagen (OCR) o un enlace → rellena el área de texto para revisarla -->
       <aula-text-import
         [language]="language()"
-        [labels]="{ file: lb.importFile, url: '', read: lb.importRead, reading: lb.importReading }"
-        (imported)="draft.set($event.text)"
+        [labels]="{ file: lb.importFile, url: lb.importUrl, read: lb.importRead, reading: lb.importReading }"
+        (imported)="$event.text && draft.set($event.text)"
       />
-      <label class="block text-xs font-semibold text-muted-foreground">
-        {{ lb.lyrics }} <span class="req" aria-hidden="true">*</span>
-        <textarea
-          class="control mt-1 min-h-40 w-full font-mono text-sm"
-          required
-          [attr.lang]="language()"
-          maxlength="12000"
-          [value]="draft()"
-          (input)="draft.set($any($event.target).value)"
-        ></textarea>
-      </label>
+      <!-- [2026-11-06]: área más alta (antes min-h-40 → se veían pocos versos) · modo manual: traducción al lado, verso a verso (en móvil, debajo) -->
+      <!-- [2026-11-06 · Manual]: letra · IPA · traducción, una línea por verso (sin IA: nada se rellena solo) -->
+      <div class="grid gap-3" [class]="manualMode() ? (manualTx() ? 'lg:grid-cols-3' : 'md:grid-cols-2') : ''">
+        <label class="block text-xs font-semibold text-muted-foreground">
+          {{ lb.lyrics }} <span class="req" aria-hidden="true">*</span>
+          <textarea
+            class="control mt-1 min-h-80 w-full resize-y font-mono text-sm leading-6"
+            rows="16"
+            required
+            [attr.lang]="language()"
+            maxlength="12000"
+            [value]="draft()"
+            (input)="draft.set($any($event.target).value)"
+          ></textarea>
+        </label>
+        @if (manualMode()) {
+          <label class="block text-xs font-semibold text-muted-foreground">
+            {{ lb.manualIpa }}
+            <textarea
+              class="control mt-1 min-h-80 w-full resize-y font-mono text-sm leading-6"
+              rows="16"
+              lang="und-fonipa"
+              maxlength="12000"
+              [value]="ipaDraft()"
+              (input)="ipaDraft.set($any($event.target).value)"
+            ></textarea>
+          </label>
+        }
+        @if (manualTx()) {
+          <label class="block text-xs font-semibold text-muted-foreground">
+            {{ lb.manualTranslation }}
+            <textarea
+              class="control mt-1 min-h-80 w-full resize-y font-mono text-sm leading-6"
+              rows="16"
+              lang="es"
+              maxlength="12000"
+              [value]="translationDraft()"
+              (input)="translationDraft.set($any($event.target).value)"
+            ></textarea>
+          </label>
+        }
+      </div>
       <button
         type="button"
         class="btn btn-primary"
         [disabled]="!draft().trim() || busy()"
-        (click)="loadLyrics.emit({ lyrics: draft(), auto: mode() === 'auto' })"
+        (click)="loadLyrics.emit({ lyrics: draft(), auto: mode() === 'auto', translations: manualTx() ? translationDraft() : '', ipas: manualMode() ? ipaDraft() : '' })"
       >
         <aula-icon [name]="mode() === 'auto' ? 'sparkles' : 'pen-line'" /> {{ mode() === 'auto' ? lb.loadLyrics : lb.loadLyricsManual }}
       </button>
 
       @if (lines().length) {
         @if (nativeReview()) {
-          <p class="rounded-lg bg-tone-warning-soft p-2 text-xs font-semibold text-tone-warning">
+          <p class="rounded-lg bg-tone-warning-soft p-2 type-meta font-semibold text-tone-warning">
             <aula-icon name="triangle-alert" /> {{ lb.nativeReview }}
           </p>
         }
@@ -97,9 +131,6 @@ export interface LyricsLabels {
                 <th class="p-2">#</th>
                 <th class="p-2">{{ lb.text }}</th>
                 <th class="p-2">{{ lb.ipa }}</th>
-                @if (language() === 'en') {
-                  <th class="p-2">{{ lb.ipaUs }}</th>
-                }
                 @if (language() !== 'es') {
                   <th class="p-2">{{ lb.translation }}</th>
                 }
@@ -111,7 +142,17 @@ export interface LyricsLabels {
                   <td class="p-2 text-xs tabular-nums text-muted-foreground">
                     {{ l.position + 1 }}
                   </td>
-                  <td class="p-2" [attr.lang]="language()">{{ l.text }}</td>
+                  <td class="p-1">
+                    <!-- [2026-11-10]: el verso también se corrige aquí (antes solo IPA y traducción) -->
+                    <input
+                      class="control w-full text-xs"
+                      [attr.lang]="language()"
+                      maxlength="500"
+                      [attr.aria-label]="lb.text + ' ' + (l.position + 1)"
+                      [value]="l.text"
+                      (input)="edit(l.id, 'text', $any($event.target).value)"
+                    />
+                  </td>
                   <td class="p-1">
                     <input
                       class="control w-full font-mono text-xs"
@@ -120,16 +161,6 @@ export interface LyricsLabels {
                       (input)="edit(l.id, 'ipa', $any($event.target).value)"
                     />
                   </td>
-                  @if (language() === 'en') {
-                    <td class="p-1">
-                      <input
-                        class="control w-full font-mono text-xs"
-                        [attr.aria-label]="lb.ipaUs + ' ' + (l.position + 1)"
-                        [value]="l.ipaUs ?? ''"
-                        (input)="edit(l.id, 'ipaUs', $any($event.target).value)"
-                      />
-                    </td>
-                  }
                   @if (language() !== 'es') {
                     <td class="p-1">
                       <input
@@ -146,14 +177,17 @@ export interface LyricsLabels {
             </tbody>
           </table>
         </div>
-        <button
-          type="button"
-          class="btn btn-outline"
-          [disabled]="!dirty() || busy()"
-          (click)="save.emit(patches())"
-        >
-          <aula-icon name="save" /> {{ lb.saveLines }}
-        </button>
+        <!-- [2026-11-13]: «Guardar» sin icono, a la derecha y con el mismo aspecto que el resto (btn-primary) -->
+        <div class="flex justify-end">
+          <button
+            type="button"
+            class="btn btn-primary"
+            [disabled]="!dirty() || busy()"
+            (click)="save.emit(patches())"
+          >
+            {{ lb.saveLines }}
+          </button>
+        </div>
       }
     </div>
   `,
@@ -164,8 +198,12 @@ export class LyricsEditorComponent {
   readonly busy = input(false);
   readonly labels = input.required<LyricsLabels>();
   readonly initial = input(''); // [2026-10-24]: letra propuesta (p. ej. la generada con IA) mientras aún no hay líneas guardadas
-  readonly loadLyrics = output<{ lyrics: string; auto: boolean }>();
+  readonly loadLyrics = output<{ lyrics: string; auto: boolean; translations: string; ipas: string }>();
   protected readonly mode = signal<string>('auto');
+  protected readonly translationDraft = signal(''); // [2026-11-06]: una línea por verso (mismo orden que la letra)
+  protected readonly ipaDraft = signal('');
+  protected readonly manualMode = computed(() => this.mode() === 'manual');
+  protected readonly manualTx = computed(() => this.manualMode() && this.language() !== 'es');
   readonly save = output<LinePatch[]>();
   protected readonly draft = signal('');
   protected readonly changes = signal<Record<string, LinePatch>>({});
@@ -190,7 +228,14 @@ export class LyricsEditorComponent {
     });
   }
 
-  protected edit(id: string, field: 'ipa' | 'ipaUs' | 'translation', value: string): void {
+  // [pendingLoad · 2026-11-10 · «Falta la letra» al publicar]: letra escrita/importada en el área pero SIN cargar → lo que emitiría «Cargar letra» (null = nada pendiente)
+  pendingLoad(): { lyrics: string; auto: boolean; translations: string; ipas: string } | null {
+    const text = this.draft().trim();
+    if (!text || text === this.lines().map((l) => l.text).join('\n').trim()) return null;
+    return { lyrics: this.draft(), auto: this.mode() === 'auto', translations: this.manualTx() ? this.translationDraft() : '', ipas: this.manualMode() ? this.ipaDraft() : '' };
+  }
+
+  protected edit(id: string, field: 'text' | 'ipa' | 'translation', value: string): void {
     this.changes.update((c) => ({ ...c, [id]: { ...c[id], id, [field]: value } }));
   }
 }

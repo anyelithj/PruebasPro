@@ -66,12 +66,15 @@ export class ReadingTextsController {
     private readonly exportUc: ExportReadingTextUseCase,
   ) {}
 
-  // [Throttle]: la IA local es cara (CPU/RAM) → 6 borradores por minuto y usuario/IP
+  // [Throttle]: la IA es cara (CPU/RAM) → 6 borradores por minuto y usuario/IP
   @Post('draft')
   @HttpCode(200)
   @Roles(Role.TEACHER, Role.ADMIN)
   @Throttle({ default: { limit: 6, ttl: 60_000 } })
-  @ApiOperation({ summary: 'Borrador de lectura con la IA local (género, nivel, tema, longitud; opcional: material importado) — no guarda' })
+  @ApiOperation({
+    summary:
+      'Borrador de lectura con la IA (género, nivel, tema, longitud; opcional: material importado) — no guarda',
+  })
   draft(@Body() body: DraftReadingBody) {
     return this.draftUc.execute(body);
   }
@@ -79,34 +82,71 @@ export class ReadingTextsController {
   @Post()
   @Roles(Role.TEACHER, Role.ADMIN)
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
-  @ApiOperation({ summary: 'Crear lectura (borrador): divide en frases y añade traducción e IPA por lotes' })
-  create(@CurrentUser() u: JwtPayload, @Body() body: CreateReadingBody, @Headers('authorization') auth: string) {
+  @ApiOperation({
+    summary:
+      'Crear lectura (borrador): divide en frases y añade traducción e IPA por lotes',
+  })
+  create(
+    @CurrentUser() u: JwtPayload,
+    @Body() body: CreateReadingBody,
+    @Headers('authorization') auth: string,
+  ) {
     return this.createUc.execute(actorOf(u), body, bearer(auth));
   }
 
   @Get()
-  @ApiOperation({ summary: 'Lecturas por idioma, nivel y género (publicadas · mine=true: Gestión)' })
+  @ApiOperation({
+    summary:
+      'Lecturas por idioma, nivel y género (publicadas · mine=true: Gestión)',
+  })
   list(@CurrentUser() u: JwtPayload, @Query() q: ListReadingQuery) {
-    return this.listUc.execute(actorOf(u), { language: q.language, level: q.level, genre: q.genre, mine: flag(q.mine) });
+    return this.listUc.execute(actorOf(u), {
+      language: q.language,
+      level: q.level,
+      genre: q.genre,
+      mine: flag(q.mine),
+      kind: q.kind,
+    });
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Lectura con frases, traducción, IPA y el marcador del usuario' })
-  getOne(@CurrentUser() u: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
-    return this.getUc.execute(actorOf(u), id);
+  @ApiOperation({
+    summary:
+      'Lectura con frases, traducción, IPA y el marcador del usuario (si faltan traducciones, se generan en segundo plano: enriching=true)',
+  })
+  getOne(
+    @CurrentUser() u: JwtPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Headers('authorization') auth: string,
+  ) {
+    return this.getUc.execute(actorOf(u), id, bearer(auth)); // [2026-10-28]: el JWT permite el relleno perezoso de traducciones (FastAPI /language-tools/lines)
   }
 
   @Patch(':id')
   @Roles(Role.TEACHER, Role.ADMIN)
-  @ApiOperation({ summary: 'Editar metadatos, estado o el texto completo (re-divide en frases conservando las traducciones sin cambios)' })
-  update(@CurrentUser() u: JwtPayload, @Param('id', ParseUUIDPipe) id: string, @Body() body: UpdateReadingBody, @Headers('authorization') auth: string) {
+  @ApiOperation({
+    summary:
+      'Editar metadatos, estado o el texto completo (re-divide en frases conservando las traducciones sin cambios)',
+  })
+  update(
+    @CurrentUser() u: JwtPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: UpdateReadingBody,
+    @Headers('authorization') auth: string,
+  ) {
     return this.updateUc.execute(actorOf(u), id, body, bearer(auth));
   }
 
   @Patch(':id/status')
   @Roles(Role.TEACHER, Role.ADMIN)
-  @ApiOperation({ summary: 'Publicar (visible para estudiantes) o despublicar (borrador)' })
-  status(@CurrentUser() u: JwtPayload, @Param('id', ParseUUIDPipe) id: string, @Body() body: ReadingStatusBody) {
+  @ApiOperation({
+    summary: 'Publicar (visible para estudiantes) o despublicar (borrador)',
+  })
+  status(
+    @CurrentUser() u: JwtPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: ReadingStatusBody,
+  ) {
     return this.updateUc.status(actorOf(u), id, body.status);
   }
 
@@ -114,8 +154,16 @@ export class ReadingTextsController {
   @HttpCode(200)
   @Roles(Role.TEACHER, Role.ADMIN)
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  @ApiOperation({ summary: 'Completar IPA y traducción de las frases que no la tienen (force=true: recalcular las no revisadas)' })
-  enrich(@CurrentUser() u: JwtPayload, @Param('id', ParseUUIDPipe) id: string, @Headers('authorization') auth: string, @Query('force') force?: string) {
+  @ApiOperation({
+    summary:
+      'Completar IPA y traducción de las frases que no la tienen (force=true: recalcular las no revisadas)',
+  })
+  enrich(
+    @CurrentUser() u: JwtPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Headers('authorization') auth: string,
+    @Query('force') force?: string,
+  ) {
     return this.enrichUc.execute(actorOf(u), id, bearer(auth), flag(force));
   }
 
@@ -129,30 +177,59 @@ export class ReadingTextsController {
     @Body() body: UpdateSentenceBody,
     @Headers('authorization') auth: string,
   ) {
-    return this.sentenceUc.execute(actorOf(u), id, sentenceId, body, bearer(auth));
+    return this.sentenceUc.execute(
+      actorOf(u),
+      id,
+      sentenceId,
+      body,
+      bearer(auth),
+    );
   }
 
   @Patch(':id/progress')
   @ApiOperation({ summary: 'Guardar el marcador de lectura (frase y palabra)' })
-  progress(@CurrentUser() u: JwtPayload, @Param('id', ParseUUIDPipe) id: string, @Body() body: ProgressBody) {
+  progress(
+    @CurrentUser() u: JwtPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: ProgressBody,
+  ) {
     return this.progressUc.execute(actorOf(u), id, body);
   }
 
   @Delete(':id/progress')
   @HttpCode(204)
   @ApiOperation({ summary: 'Borrar el marcador (empezar de nuevo)' })
-  resetProgress(@CurrentUser() u: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
+  resetProgress(
+    @CurrentUser() u: JwtPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     return this.progressUc.reset(actorOf(u), id);
   }
 
   // `@Res()`: respuesta binaria (no pasa por el envelope JSON) · `attachment` → el navegador descarga
   @Get(':id/export')
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
-  @ApiOperation({ summary: 'Descargar la lectura en PDF o TXT (original + traducción + IPA a elección)' })
-  async export(@CurrentUser() u: JwtPayload, @Param('id', ParseUUIDPipe) id: string, @Query() q: ExportQuery, @Res() res: Response): Promise<void> {
-    const file = await this.exportUc.execute(actorOf(u), id, q.format ?? 'pdf', q.include ?? ['translation', 'ipa']);
+  @ApiOperation({
+    summary:
+      'Descargar la lectura en PDF o TXT (original + traducción + IPA a elección)',
+  })
+  async export(
+    @CurrentUser() u: JwtPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() q: ExportQuery,
+    @Res() res: Response,
+  ): Promise<void> {
+    const file = await this.exportUc.execute(
+      actorOf(u),
+      id,
+      q.format ?? 'pdf',
+      q.include ?? ['translation', 'ipa'],
+    );
     res.setHeader('Content-Type', file.contentType);
-    res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${file.filename}"`,
+    );
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Cache-Control', 'private, no-store');
     res.send(file.body);

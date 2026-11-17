@@ -1,12 +1,16 @@
 "use client"; // [Next.js]: Client Component → subida/borrado de material (ADMIN) sin recargar
-import { useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom"; // [2026-10-30]: Resumen y Gestionar material se pintan en la columna lateral de la página (Server Component) conservando el estado de aquí
 import Link from "next/link";
 import { usePreferences } from "@/components/layout/PreferencesProvider";
 import { uploadMaterial } from "@/lib/materials-client";
 import { fmt } from "@aula/shared-i18n";
+import { COURSE_CTA_CLASS } from "@/components/courses/CourseActions";
 import { SyllabusList } from "@/components/courses/SyllabusList";
+import { ProgressBar } from "@/components/courses/ProgressBar"; // [2026-10-28]: barra única de los cursos (role="progressbar" + aria-valuetext)
+import { pctOf } from "@/lib/course-progress";
 import { lessonHref, MATERIAL_ACCEPT, MAX_MATERIAL_MB, nextPendingIndex, type CourseMaterial } from "@/types/courses";
-// [CourseMaterials]: Temario del curso en el detalle, como openCourseDetail del demo → tarjeta "Temario" (Completado / En curso / Bloqueado) + tarjeta "Recursos" + botón Iniciar/Continuar/Repasar
+// [CourseMaterials]: «Materiales adicionales» del detalle del curso (antes «Recursos del curso», 2026-10-28) → tarjeta de lista (Completado / En curso / Bloqueado) + tarjeta de resumen + botón Iniciar/Continuar/Repasar
 // Cada lección se abre en su propia página (/courses/:id/lessons/:mid) — ya no hay visor debajo del detalle del curso
 // [Patrón]: Container + Presentational (SyllabusList) | [Principio]: SRP + DRY | [Paradigma]: Reactivo + Declarativo
 
@@ -19,6 +23,8 @@ export interface CourseMaterialsProps {
   color: string; // Color del idioma del curso
 }
 
+export const COURSE_ASIDE_SLOT = "course-aside-slot"; // `id` del hueco en la columna lateral de /courses/:id
+
 export function CourseMaterials({ courseId, initial, initialCompleted, canTrack, canManage, color }: CourseMaterialsProps) {
   const { t } = usePreferences();
   const m = t.courses.materials;
@@ -28,7 +34,7 @@ export function CourseMaterials({ courseId, initial, initialCompleted, canTrack,
 
   const done: ReadonlySet<string> = new Set(initialCompleted); // `Set` (ES2015): pertenencia O(1)
   const completed = items.filter((x) => done.has(x.id)).length;
-  const pct = items.length ? Math.round((completed / items.length) * 100) : 0;
+  const pct = pctOf(completed, items.length); // [DRY]: mismo redondeo/acotado que el resto de barras (lib/course-progress)
   const nextPending = nextPendingIndex(items, done);
 
   // [Subir]: ADMIN añade material al final del temario
@@ -65,21 +71,26 @@ export function CourseMaterials({ courseId, initial, initialCompleted, canTrack,
   // [Botón de acción]: igual que el demo → Iniciar / Continuar / Repasar según el progreso
   const actionLabel = pct === 100 ? m.review : completed === 0 ? m.start : m.resume;
   const actionItem = items[nextPending === -1 ? 0 : nextPending];
+  // [Hueco lateral]: `useEffect`: el nodo solo existe en el cliente | sin él (móvil no aplica: la columna existe siempre) se pinta aquí mismo
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => setSlot(document.getElementById(COURSE_ASIDE_SLOT)), []);
+  const inAside = (node: ReactNode) => (slot ? createPortal(node, slot) : node);
 
   return (
     <section aria-labelledby="materials-title" className="scroll-mt-4 space-y-4">
-      <h2 id="materials-title" className="text-base font-bold">
+      <h2 id="materials-title" className="title-section">
         {m.title}
       </h2>
 
       {items.length === 0 ? (
-        <p className="surface p-5 text-sm text-muted-foreground">{m.empty}</p>
+        <p className="surface p-5 text-muted-foreground">{m.empty}</p>
       ) : (
-        // [grid-2 del demo]: Temario | Recursos (apilado en móvil) | Tailwind responsive `lg:`
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <nav aria-label={m.syllabus} className="surface h-fit p-5">
+        // [Ancho completo · 2026-10-28]: «Materiales adicionales» ocupa el mismo ancho que «Ruta del curso» → lista y resumen apilados a todo el ancho de la columna principal (antes `xl:grid-cols-2` los partía a la mitad)
+        <div className="grid grid-cols-1 gap-4">
+          {/* [2026-10-28]: `m.list` («Lista de materiales») en vez de `m.syllabus` («Recursos», que sigue usando la página de la lección) → la sección ya no repite «Recursos» */}
+          <nav aria-label={m.list} className="surface h-fit p-5">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-semibold">{m.syllabus}</h3>
+              <h3 className="title-card">{m.list}</h3>
               <span className="eeg-mono rounded px-2 py-0.5 text-[11px] font-bold" style={{ background: `${color}18`, color }}>
                 {pct}%
               </span>
@@ -97,8 +108,8 @@ export function CourseMaterials({ courseId, initial, initialCompleted, canTrack,
             />
           </nav>
 
-          <aside aria-labelledby="resources-title" className="surface h-fit p-5">
-            <h3 id="resources-title" className="mb-3 text-sm font-semibold">
+          {inAside(<section aria-labelledby="resources-title" className="surface h-fit p-5">
+            <h3 id="resources-title" className="title-card mb-3">
               {m.resources}
             </h3>
             {/* [Lista de definición]: <dl> semántico para pares etiqueta → valor (a11y) */}
@@ -116,44 +127,35 @@ export function CourseMaterials({ courseId, initial, initialCompleted, canTrack,
                 </dd>
               </div>
             </dl>
-            <div className="mt-3">
-              <div className="mb-1 flex justify-between text-[11px] text-muted-foreground">
-                <span>{m.progressLabel}</span>
-                <b className="eeg-mono" style={{ color }}>
-                  {pct}%
-                </b>
-              </div>
-              {/* `role="progressbar"` + aria-value* (WAI-ARIA) */}
-              <div className="h-2 overflow-hidden rounded-full" style={{ background: `${color}22` }} role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={m.progressLabel}>
-                <div className="h-full transition-[width] duration-500" style={{ width: `${pct}%`, background: color }} />
-              </div>
-            </div>
+            {/* [Fix 2026-10-28]: esta barra cuenta SOLO recursos → se rotula «Recursos completados» (antes «Progreso del curso» con un % distinto al de la cabecera, que suma también subtemas y ruta) | ProgressBar compartida */}
+            <ProgressBar className="mt-3" pct={pct} label="Recursos completados" color={color} detail={`${completed} de ${items.length} recursos`} size="sm" />
             {/* [Acción principal]: <Link> a la página de la lección (navegación, no botón) */}
             <Link href={lessonHref(courseId, actionItem.id)} className="btn btn-primary mt-4 w-full">
               {actionLabel}
             </Link>
-            {!canTrack && <p className="mt-2 text-[11px] text-muted-foreground">{m.adminNoProgress}</p>}
-          </aside>
+            {!canTrack && <p className="mt-2 type-meta text-muted-foreground">{m.adminNoProgress}</p>}
+          </section>)}
         </div>
       )}
 
       {error && (
-        <p role="alert" className="text-xs text-tone-danger">
+        <p role="alert" className="type-meta text-tone-danger">
           {error}
         </p>
       )}
 
-      {canManage && (
+      {canManage && inAside(
         <div className="surface space-y-1 p-4">
-          <p className="text-sm font-semibold">{m.manage}</p>
-          <label className="btn btn-primary btn-sm cursor-pointer has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring">
+          <p className="font-semibold">{m.manage}</p>
+          {/* [Fix 2026-10-31]: mismo ancho y altura que «Iniciar curso» (COURSE_CTA_CLASS) | `block text-center`: un <label> no centra su texto como un <button> */}
+          <label className={`${COURSE_CTA_CLASS} block text-center has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring`}>
             {progress === null ? `+ ${m.upload}` : fmt(m.uploading, { pct: progress })}
             <input type="file" accept={MATERIAL_ACCEPT} className="sr-only" disabled={progress !== null} onChange={(e) => {
               void onPick(e.target.files?.[0]);
               e.target.value = "";
             }} />
           </label>
-          <p className="text-[11px] text-muted-foreground">{fmt(m.uploadHint, { mb: MAX_MATERIAL_MB })}</p>
+          <p className="type-meta text-muted-foreground">{fmt(m.uploadHint, { mb: MAX_MATERIAL_MB })}</p>
         </div>
       )}
     </section>

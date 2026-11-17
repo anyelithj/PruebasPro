@@ -60,8 +60,8 @@ export function RegisterForm() {
       aria-label={r.formLabel}
     >
       <header className="mb-2">
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{r.title}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <h1 className="title-page">{r.title}</h1>
+        <p className="mt-2 text-muted-foreground">
           {fmt(r.subtitle, { brand: BRAND.name })}
         </p>
       </header>
@@ -89,7 +89,7 @@ export function RegisterForm() {
             {...register("firstName")}
           />
           {errors.firstName && (
-            <p id="firstName-error" role="alert" className="text-xs text-destructive">
+            <p id="firstName-error" role="alert" className="type-meta text-destructive">
               {errors.firstName.message}
             </p>
           )}
@@ -105,7 +105,7 @@ export function RegisterForm() {
             {...register("lastName")}
           />
           {errors.lastName && (
-            <p id="lastName-error" role="alert" className="text-xs text-destructive">
+            <p id="lastName-error" role="alert" className="type-meta text-destructive">
               {errors.lastName.message}
             </p>
           )}
@@ -125,7 +125,7 @@ export function RegisterForm() {
           {...register("email")}
         />
         {errors.email && (
-          <p id="email-error" role="alert" className="text-xs text-destructive">
+          <p id="email-error" role="alert" className="type-meta text-destructive">
             {errors.email.message}
           </p>
         )}
@@ -146,11 +146,11 @@ export function RegisterForm() {
           aria-describedby={errors.phone ? "phone-hint phone-error" : "phone-hint"}
           {...register("phone")}
         />
-        <p id="phone-hint" className="text-xs text-muted-foreground">
+        <p id="phone-hint" className="type-meta text-muted-foreground">
           {r.phoneHint}
         </p>
         {errors.phone && (
-          <p id="phone-error" role="alert" className="text-xs text-destructive">
+          <p id="phone-error" role="alert" className="type-meta text-destructive">
             {errors.phone.message}
           </p>
         )}
@@ -169,7 +169,7 @@ export function RegisterForm() {
             {...register("password")}
           />
           {errors.password && (
-            <p id="password-error" role="alert" className="text-xs text-destructive">
+            <p id="password-error" role="alert" className="type-meta text-destructive">
               {errors.password.message}
             </p>
           )}
@@ -190,7 +190,7 @@ export function RegisterForm() {
             <p
               id="confirmPassword-error"
               role="alert"
-              className="text-xs text-destructive"
+              className="type-meta text-destructive"
             >
               {errors.confirmPassword.message}
             </p>
@@ -217,7 +217,7 @@ export function RegisterForm() {
         </span>
       </label>
       {errors.acceptTerms && (
-        <p role="alert" className="text-xs text-destructive -mt-3">
+        <p role="alert" className="type-meta text-destructive -mt-3">
           {errors.acceptTerms.message}
         </p>
       )}
@@ -238,7 +238,7 @@ export function RegisterForm() {
 
       <OAuthButtons />
 
-      <p className="text-center text-sm text-muted-foreground mt-5">
+      <p className="text-center text-muted-foreground mt-5">
         {r.hasAccount}{" "}
         <Link
           href={AUTH_ROUTES.login}

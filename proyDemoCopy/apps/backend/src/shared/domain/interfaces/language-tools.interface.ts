@@ -16,6 +16,7 @@ export interface TermLookupResult {
   ipa_us: string | null;
   ipa: string | null;
   engine: string;
+  detected_language?: string | null; // [2026-10-27]: idioma detectado cuando se pidió source="auto"
 }
 
 export interface WordLookupResult {
@@ -44,6 +45,18 @@ export interface LinesResult {
 }
 
 // [Sprint 10.5/10.9]: IPA sin traducción (fonetizador de FastAPI) — términos poliglota y ejemplos de gramática
+export type TextKind = 'frase' | 'titulo' | 'expresion'; // Mismos valores que «tipo_de_texto» (Anexo A)
+export interface TranslateOptions {
+  kind?: TextKind;
+  context?: string;
+}
+// [TranslationResult]: espejo de TranslateResponse de FastAPI (`options` vacío en «frase»)
+export interface TranslationResult {
+  translation: string;
+  detected_language?: string | null;
+  options?: { tipo: 'natural' | 'cercana' | 'literal'; texto: string }[];
+}
+
 export interface IpaOnlyResult {
   ipa: string; // Variante por defecto del idioma (en: en-GB)
   ipa_us: string | null; // Solo inglés
@@ -62,7 +75,35 @@ export interface LanguageToolsPort {
     language: string,
     token: string,
   ): Promise<WordLookupResult>;
-  lines(lines: string[], language: string, token: string): Promise<LinesResult>; // [Sprint 9.1]: Music y Dialogues
+  lines(
+    lines: string[],
+    language: string,
+    token: string,
+    context?: string,
+  ): Promise<LinesResult>; // [Sprint 9.1]: Music y Dialogues · [2026-11-13]: `context` = conversación previa (no se traduce)
   ipa(text: string, language: string, token: string): Promise<IpaOnlyResult>; // [Sprint 10.5]: Polyglot (sin LLM: determinista)
-  translate(text: string, source: string, target: string, token: string): Promise<{ translation: string }>; // [2026-10-19]: título de tema español → idioma estudiado
+  // [2026-10-27]: `source` admite 'auto' → FastAPI devuelve además `detected_language` (Traductor «Detectar idioma»)
+  detect(text: string, token: string): Promise<{ language: string }>; // [2026-10-30]: Enter en /traductor → idioma sin traducir (sin LLM)
+  // [2026-11-13 · Caso C]: `opts.kind` «titulo»/«expresion» → opciones natural (recomendada), cercana y literal · `opts.context`: conversación previa
+  translate(
+    text: string,
+    source: string,
+    target: string,
+    token: string,
+    opts?: TranslateOptions,
+  ): Promise<TranslationResult>; // [2026-10-19]: título de tema español → idioma estudiado
+  nounGrammar(
+    term: string,
+    language: string,
+    token: string,
+  ): Promise<NounGrammarResult>; // [2026-11-03]: regla obligatoria de vocabulario
+}
+
+// [2026-11-03]: espejo de NounGrammarResponse de FastAPI
+export interface NounGrammarResult {
+  lemma: string;
+  grammar: import('../../../modules/vocabulary/domain/noun-grammar').NounGrammar;
+  headword: string;
+  missing: string[];
+  checked: boolean;
 }

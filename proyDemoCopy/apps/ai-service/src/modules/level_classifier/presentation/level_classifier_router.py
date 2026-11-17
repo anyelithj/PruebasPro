@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends
 
 from src.modules.feedback.infrastructure.clients.ollama_client import OllamaClient
 from src.modules.level_classifier.application.schemas.classify_request import ClassifyRequest
+from src.modules.level_classifier.application.schemas.criteria_response import CriteriaResponse
 from src.modules.level_classifier.application.schemas.classify_response import ClassifyResponse
 from src.modules.level_classifier.application.use_cases.classify_text import BANDS, ClassifyTextUseCase
 from src.modules.level_classifier.infrastructure.clients.cefr_rubric_judge import RUBRIC, CefrRubricJudge
@@ -36,6 +37,6 @@ async def classify(
     return await use_case.execute(payload)
 
 
-@router.get("/criteria", summary="Rúbrica y bandas de los indicadores por nivel")
+@router.get("/criteria", response_model=CriteriaResponse, summary="Rúbrica y bandas de los indicadores por nivel")
 async def get_criteria(_user: CurrentUserDep) -> dict[str, object]:
     return {"rubric": RUBRIC, "bands": BANDS, "min_confidence": get_settings().level_classifier_min_confidence}

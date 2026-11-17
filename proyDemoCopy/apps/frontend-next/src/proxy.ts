@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { COOKIE_NAMES, PORTAL_PREFIXES } from "./lib/constants";
-import { apiFetch } from "./lib/api-client"; // [Facade HTTP]: fetch nativo → válido en el runtime del proxy
+import { COOKIE_NAMES, isProtectedPath } from "./lib/constants";
+import { isRefreshRefused, refreshOnce, type RefreshedTokens } from "./lib/token-refresh"; // [Facade HTTP]: fetch nativo → válido en el runtime del proxy
 // [Proxy Next.js 16]: protege rutas (portal)/* y redirige auth si ya hay sesión | [Patrón]: Chain of Responsibility | [Principio]: SRP | [Paradigma]: Funcional + AOP
 // [Nota]: en Next.js 16 el archivo `middleware.ts` fue deprecado y renombrado a `proxy.ts`.
 
@@ -26,22 +26,16 @@ function hasValidSession(token: string | undefined): boolean {
   }
 }
 
-// [Respuesta mínima de /auth/refresh]: solo lo que el proxy necesita | `interface` (TS): se borra al compilar
-interface RefreshResponse {
-  accessToken: string;
-  refreshToken: string;
-  accessExpiresIn: number; // Segundos
-}
-
 // [Opciones de cookie]: mismas que lib/auth.ts (httpOnly + secure en prod + SameSite=Lax) | [Seguridad]: anti-XSS
 const cookieOptions = (maxAge: number) => ({ httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const, path: "/", maxAge });
 
 // [tryRefresh]: rota el par de tokens con el refresh token | [Patrón]: Token Refresh + Fail-soft (null → se redirige a /login como antes)
-async function tryRefresh(refreshToken: string): Promise<RefreshResponse | null> {
+// `"unavailable"` (2026-10-31): el backend no pudo responder; la sesión sigue viva y no se manda al login
+async function tryRefresh(refreshToken: string): Promise<RefreshedTokens | "unavailable" | null> {
   try {
-    return await apiFetch<RefreshResponse>("/auth/refresh", { method: "POST", body: { refreshToken } });
-  } catch {
-    return null; // Refresh vencido o revocado
+    return await refreshOnce(refreshToken); // [Fix 2026-10-31]: una sola rotación aunque la página pida varias cosas a la vez
+  } catch (err) {
+    return isRefreshRefused(err) ? null : "unavailable"; // null = refresh vencido o revocado
   }
 }
 
@@ -51,13 +45,15 @@ export async function proxy(request: NextRequest): Promise<NextResponse | undefi
   const accessToken = request.cookies.get(COOKIE_NAMES.access)?.value;
   const refreshToken = request.cookies.get(COOKIE_NAMES.refresh)?.value;
   const hasSession = hasValidSession(accessToken);
-  const isPortal = PORTAL_PREFIXES.some((p) => pathname.startsWith(p));
+  const isPortal = isProtectedPath(pathname); // [Caso E]: /certificados/verificar es pública aunque /certificados no
 
   // [Renovación silenciosa]: access vencido (15 min) + refresh vigente → se renueva y la petición continúa.
   // [Fix]: antes el proxy redirigía a /login también los POST de Server Actions (p. ej. "Crear curso" tras rellenar el formulario
   // más de 15 min) y Next.js mostraba "An unexpected response was received from the server".
   if (isPortal && !hasSession && refreshToken) {
     const fresh = await tryRefresh(refreshToken);
+    // `Retry-After` (HTTP): 503 pasajero → las cookies siguen intactas y basta con recargar cuando el backend vuelva
+    if (fresh === "unavailable") return new NextResponse("El servidor no responde. Recarga la página en unos segundos.", { status: 503, headers: { "content-type": "text/plain; charset=utf-8", "retry-after": "5" } });
     if (fresh) {
       // [Cookie reescrita en la PETICIÓN]: los Server Components/Actions de esta misma petición ya leen el token nuevo
       request.cookies.set(COOKIE_NAMES.access, fresh.accessToken);
@@ -73,7 +69,8 @@ export async function proxy(request: NextRequest): Promise<NextResponse | undefi
   // [Portal sin sesión → /login]: append `?from=…` para volver tras login
   if (isPortal && !hasSession) {
     const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("from", pathname);
+    loginUrl.searchParams.set("from", pathname + request.nextUrl.search); // [Fix 2026-10-31]: + query → se vuelve a la misma vista y filtros
+    if (refreshToken) loginUrl.searchParams.set("expired", "1"); // Había sesión y ya no se pudo renovar → el login lo explica
     const res = NextResponse.redirect(loginUrl);
     // [Limpieza]: cookie presente pero inválida/expirada → borrar para evitar estados zombis
     // [Carrera de refresh]: si había refresh token NO se borra: otra petición paralela pudo haber rotado ya el par y borrarlo cerraría esa sesión recién renovada

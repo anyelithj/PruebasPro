@@ -93,3 +93,43 @@ describe("importación ampliada", () => {
     expect(r.contents[0]).toMatchObject({ title: "Presente simple" });
   });
 });
+
+// [2026-10-27 · Ejercicios]: hoja de ejercicios (PDF/Word/OCR/web/Excel) → ejercicios editables con tipo y respuesta deducidos
+describe("extractedToContents · exercise", () => {
+  it("lee preguntas numeradas con opciones, respuesta por letra, verdadero/falso y huecos", () => {
+    const text = [
+      "Unit 3 – Present simple",
+      "1. She ___ to school every day.",
+      "a) go",
+      "b) goes",
+      "c) going",
+      "Respuesta: b",
+      "Explicación: tercera persona del singular.",
+      "2) The sun rises in the west. (True/False)",
+      "3. I ____ (be) a teacher.",
+      "Answer: am",
+      "4. What is your favourite food",
+      "and why do you like it?",
+    ].join("\n");
+    const r = extractedToContents("exercise", { rows: [], text }, "en");
+    expect(r.contents).toHaveLength(4);
+    expect(r.contents[0]).toEqual({ prompt: "She ___ to school every day.", type: "multiple_choice", options: ["go", "goes", "going"], answerKey: ["goes"], explanationEs: "tercera persona del singular." });
+    expect(r.contents[1]).toMatchObject({ type: "true_false", answerKey: [] }); // Sin respuesta → el docente elige V/F
+    expect(r.contents[2]).toMatchObject({ type: "fill_blank", answerKey: ["am"] });
+    expect(r.contents[3]).toMatchObject({ type: "open_answer", prompt: "What is your favourite food and why do you like it?" });
+    expect(r.incomplete).toBe(2);
+  });
+
+  it("aplica el solucionario final y la opción marcada con asterisco", () => {
+    const text = ["1. Choose the correct word: I ___ coffee.", "a) like *", "b) likes", "2. He ___ tennis.", "a) play", "b) plays", "Answers", "2 - b"].join("\n");
+    const r = extractedToContents("exercise", { rows: [], text }, "en");
+    expect(r.contents.map((c) => c.answerKey)).toEqual([["like"], ["plays"]]);
+  });
+
+  it("lee una tabla «pregunta | opciones | respuesta»", () => {
+    const rows = [["Pregunta", "Opciones", "Respuesta", "Explicación"], ["She ___ to school.", "go | goes", "goes", "-s"], ["Paris is in France.", "Verdadero | Falso", "verdadero", ""]];
+    const r = extractedToContents("exercise", { rows, text: "" }, "en");
+    expect(r.contents[0]).toMatchObject({ type: "multiple_choice", options: ["go", "goes"], answerKey: ["goes"], explanationEs: "-s" });
+    expect(r.contents[1]).toMatchObject({ type: "true_false", answerKey: ["true"] });
+  });
+});

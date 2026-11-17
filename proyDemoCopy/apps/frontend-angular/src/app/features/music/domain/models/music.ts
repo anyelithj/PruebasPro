@@ -7,9 +7,9 @@ export type SongStatus = (typeof SONG_STATUSES)[number];
 export const PRACTICE_KINDS = ['gap_fill', 'order_lines', 'mark_words'] as const;
 export type SongPracticeKind = (typeof PRACTICE_KINDS)[number];
 // [2026-10-24]: requisitos de publicación (espejo de NestJS music/domain/song-readiness) → checklist del asistente
-export const SONG_BLOCKERS = ['license', 'audio', 'lyrics'] as const;
+export const SONG_BLOCKERS = ['license', 'lyrics', 'level'] as const; // [2026-11-16 · RF-148]: + nivel (null hasta estimarlo de la letra) // [2026-10-31]: el audio ya no bloquea la publicación (opcional)
 export type SongBlocker = (typeof SONG_BLOCKERS)[number];
-export const MAX_AUDIO_MB = 20; // Mismo límite que NestJS (MAX_SONG_AUDIO_BYTES) y el BFF de Next.js
+export const MAX_AUDIO_MB = 100; // [2026-11-03]: 20 → 100 (MP4) // Mismo límite que NestJS (MAX_SONG_AUDIO_BYTES) y el BFF de Next.js
 
 const LicenseSchema = z.object({
   type: z.enum(['public_domain', 'creative_commons', 'own_work', 'permission']),
@@ -35,16 +35,28 @@ export const SongLineSchema = z.object({
 });
 export type SongLine = z.infer<typeof SongLineSchema>;
 
+// [EMBED_ORIGINS · 2026-11-03]: espejo de EMBED_HOSTS (NestJS music/domain/media-links.ts) → únicos <iframe> permitidos
+export const EMBED_ORIGINS = ['https://www.youtube-nocookie.com', 'https://open.spotify.com', 'https://w.soundcloud.com', 'https://player.vimeo.com', 'https://widget.deezer.com', 'https://embed.music.apple.com'] as const;
+
 export const SongSchema = z.object({
   id: z.string(),
   title: z.string(),
   artist: z.string().default(''),
+  titleIpa: z.string().default(''), // [2026-11-10]: glosa del título guardada → sin esperar a la IA
+  titleTranslation: z.string().default(''),
   language: z.string(),
-  level: z.string(),
+  level: z.string().nullable().transform((v) => v ?? ''), // [2026-11-16 · RF-148]: '' = aún sin nivel (se estima de la letra)
   status: z.enum(SONG_STATUSES),
   license: LicenseSchema,
   reviewNote: z.string().default(''),
   audioKey: z.string().nullable().default(null),
+  // [2026-11-03]: reproductor oficial embebido (YouTube, Spotify…) · solo orígenes de la lista (defensa ante un valor manipulado en la BD)
+  embedUrl: z
+    .string()
+    .refine((u) => EMBED_ORIGINS.some((o) => u.startsWith(o + '/')))
+    .nullable()
+    .catch(null)
+    .default(null),
   createdBy: z.string(),
   practiceIds: z.record(z.string(), z.string()).default({}),
   createdAt: z.string().default(''),
@@ -63,6 +75,9 @@ export const LyricsLoadSchema = z.object({
   lines: z.array(SongLineSchema),
   enriched: z.boolean(),
   missing: z.number().int().nonnegative().default(0),
+  // [2026-10-27]: `more` = NestJS cortó la tanda por tiempo y quedan versos por intentar (se pide otra a /lines/enrich) · `unavailable` = el servicio de IA no respondió a nada
+  more: z.boolean().default(false),
+  unavailable: z.boolean().default(false),
 });
 export type LyricsLoad = z.infer<typeof LyricsLoadSchema>;
 
@@ -100,6 +115,7 @@ export const LyricsDraftSchema = z.object({
   lyrics: z.string(),
   lines: z.number().int(),
   model: z.string().default(''),
+  warning: z.string().optional(), // [Fix 2026-10-28]: letra parcial (pocos versos) → aviso visible; `optional()` (Zod): ausente si está completa
 });
 export type LyricsDraft = z.infer<typeof LyricsDraftSchema>;
 export interface LyricsDraftInput {
@@ -107,11 +123,12 @@ export interface LyricsDraftInput {
   level: string;
   topic: string;
   title?: string;
+  artist?: string; // [2026-10-27]: referencia de estilo («canción original al estilo de …»), nunca su letra real
 }
 
 // [publishBlockers]: lo que falta para enviar a revisión/publicar — el servidor lo calcula (`blockers`); si no llega, se deduce del audio y las líneas | Función pura
-export const publishBlockers = (s: Pick<SongDetail, 'audioKey' | 'lines' | 'blockers'>): SongBlocker[] =>
-  s.blockers ?? [...(s.audioKey ? [] : (['audio'] as const)), ...(s.lines.length ? [] : (['lyrics'] as const))];
+export const publishBlockers = (s: Pick<SongDetail, 'lines' | 'blockers'>): SongBlocker[] =>
+  s.blockers ?? (s.lines.length ? [] : ['lyrics']);
 
 export const CollectionSchema = z.object({
   id: z.string(),
@@ -150,9 +167,11 @@ export interface SongInput {
   title: string;
   artist?: string;
   language: string;
-  level: string;
+  level?: string; // [2026-11-16 · RF-148]: sin nivel → NestJS lo estima de la letra
   license: z.infer<typeof LicenseSchema>;
 }
+// [2026-11-10 · Editar canción]: datos + glosa del título (idioma fijo: la letra ya está en ese idioma)
+export type SongPatch = Partial<Omit<SongInput, 'language'>> & { titleIpa?: string; titleTranslation?: string };
 export interface CollectionInput {
   title: string;
   description?: string;

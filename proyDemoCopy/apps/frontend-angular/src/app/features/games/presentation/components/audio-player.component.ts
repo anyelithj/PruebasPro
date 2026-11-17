@@ -31,7 +31,7 @@ import { SpeechSynthesisService } from '@core/audio/speech-synthesis.service';
       </div>
     } @else {
       <!-- [Sin voz]: aviso en texto SIN revelar la frase (es la respuesta en dictado, reformula y pregunta rápida) -->
-      <p role="status" class="text-sm text-tone-warning"><aula-icon name="volume-x" /> {{ unsupportedLabel() }}</p>
+      <p role="status" class="text-tone-warning"><aula-icon name="volume-x" /> {{ unsupportedLabel() }}</p>
     }
   `,
 })

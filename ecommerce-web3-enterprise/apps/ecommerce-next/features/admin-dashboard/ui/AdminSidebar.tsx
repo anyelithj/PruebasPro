@@ -1,13 +1,13 @@
 // AdminSidebar.tsx (Client Component · React + Tailwind) => menú lateral ÚNICO de la plataforma (panel admin, "Mi cuenta"
 // y chatbot), dibujado desde el manifiesto COMPARTIDO con Nuxt (@ecommerce/shared-types/admin-nav.json). Nuxt tiene el
 // espejo exacto (AdminSidebar.vue): mismo diseño, orden, textos e íconos => el usuario no distingue qué app sirve la pantalla.
-// Diseño "pro sidebar": fondo oscuro, marca, tarjeta del usuario (avatar, rol, en línea), buscador de opciones, grupos
-// desplegables (acordeón EXCLUSIVO: un grupo abierto a la vez => el menú nunca genera scroll), ítem activo resaltado,
+// Diseño "pro sidebar": fondo oscuro, marca, tarjeta del usuario (avatar, rol, en línea), buscador de opciones, UNA fila por
+// sección (lo de adentro son las pestañas de PanelTabs => el menú nunca genera scroll), sección activa resaltada,
 // riel de solo íconos (escritorio) y panel deslizable con fondo (móvil). Botón ocultar/mostrar estilo Claude/Gemini:
 // ícono "panel lateral" arriba, junto a la marca (expandido) o solo en el riel (colapsado).
 // Patrones: Composite (grupos -> ítems como datos), Adapter (itemHref traduce un ítem a URL de Next o de Nuxt),
 // Strategy (navVisible decide qué ve cada rol), Shared Kernel (manifiesto compartido). Paradigma declarativo + funcional.
-// Accesibilidad: <nav> con nombre, acordeón WAI-ARIA (aria-expanded/aria-controls), aria-current="page", foco visible,
+// Accesibilidad: <nav> con nombre, aria-current="page", foco visible,
 // tooltips (title) en el riel, Escape cierra el panel móvil; todos los ítems son <a> reales (cursor de mano y teclado).
 "use client"; // Directiva de Next.js: usa hooks (ruta activa, sesión, estado) => se ejecuta en el navegador
 
@@ -33,9 +33,9 @@ export function NavIcon({ name, className = "size-4" }: { name: string; classNam
 }
 
 // navVisible => regla de visibilidad por rol (la misma en usePanelNav.ts de Nuxt) — Strategy por rol:
-// ADMIN ve todo; un ítem "adminOnly" solo ADMIN; grupos "everyone" (Mi cuenta, IA) toda sesión; VENDOR el resto
+// ADMIN ve todo; un ítem "adminOnly" solo ADMIN; grupos o ítems "everyone" toda sesión; VENDOR el resto
 export const navVisible = (group: AdminNavGroup, item: AdminNavItem, roles: readonly string[]) =>
-  roles.includes("ADMIN") || (!item.adminOnly && (Boolean(group.everyone) || roles.includes("VENDOR")));
+  roles.includes("ADMIN") || (!item.adminOnly && (Boolean(group.everyone || item.everyone) || roles.includes("VENDOR")));
 
 // splitPath => "/dashboard/customers?tab=segments" -> ["/dashboard/customers", "segments"] (función pura, sin estado)
 const splitPath = (path: string): [string, string | null] => {
@@ -44,8 +44,8 @@ const splitPath = (path: string): [string, string | null] => {
 };
 
 // matchScore => cuánto de la URL coincide con el ítem (0 = nada); el ítem activo es el de mayor puntaje.
-// Ítem con "?tab=": +1 si esa pestaña es la activa de su sección (Redux), 0 si hay otra activa, y sin pestaña elegida
-// empata con el ítem sin query (gana el primero del grupo: "Clientes")
+// Ítem con "?tab=": +1 si es la pestaña activa de su sección (Redux), 0 si hay otra activa, y sin pestaña elegida empatan
+// todos (gana el primero del manifiesto, que es el de la pestaña por defecto)
 const matchScore = (item: AdminNavItem, path: string, tabs: Readonly<Record<string, string>>) => {
   const [itemPath, tab] = splitPath(item.path);
   const base = Math.max(0, ...[itemPath, ...(item.match ?? [])].map((prefix) => (path === prefix || path.startsWith(`${prefix}/`) || (prefix.endsWith("-") && path.startsWith(prefix)) ? prefix.length : 0)));
@@ -78,7 +78,7 @@ export function usePanelNav() {
 }
 
 // itemHref => URL de un ítem servido por Nuxt (español sin prefijo, otros idiomas /<locale>, igual que Next)
-const nuxtHref = (item: AdminNavItem, locale: string) => `${config.cmsUrl}${locale === "es" ? "" : `/${locale}`}${item.path}`;
+export const nuxtHref = (item: AdminNavItem, locale: string) => `${config.cmsUrl}${locale === "es" ? "" : `/${locale}`}${item.path}`;
 // storeHref => tienda (Nuxt) en el idioma actual: la usan el pie del menú y la barra superior
 export const storeHref = (locale: string) => (locale === "es" ? config.cmsUrl : `${config.cmsUrl}/${locale}`);
 
@@ -90,7 +90,7 @@ export const initials = (name: string) => {
 
 // Clases compartidas (DRY) — idénticas en AdminSidebar.vue. Menú compacto: fila de 28 px (ícono 24 px + 2 px arriba/abajo),
 // sobre el mínimo de 24 px de WCAG 2.5.8 (tamaño del objetivo táctil)
-const ITEM = "group/item relative flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-0.5 text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400";
+const ITEM = "group/item relative flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1 text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400";
 const ITEM_ACTIVE = "bg-indigo-500/15 text-white";
 const ICON_BOX = "flex size-6 shrink-0 items-center justify-center rounded-md bg-slate-800 text-slate-400 transition-colors group-hover/item:text-indigo-300";
 const ICON_BOX_ACTIVE = "bg-indigo-500 text-white group-hover/item:text-white";
@@ -109,36 +109,28 @@ export function AdminSidebar({ collapsed, mobileOpen, onToggleCollapsed, onClose
   const [query, setQuery] = useState(""); // Filtro del buscador del menú
   const pathname = usePathname();
 
-  // Acordeón EXCLUSIVO (Dropdown): un solo grupo abierto (string | null) => la lista nunca crece hasta generar scroll.
-  // El grupo de la ruta activa se abre solo; abrir otro cierra el anterior
-  const activeGroup = active?.group.key;
-  const [open, setOpen] = useState<string | null>(activeGroup ?? "account");
-  useEffect(() => {
-    if (activeGroup) setOpen(activeGroup); // Al navegar a otra sección se despliega su grupo
-  }, [activeGroup]);
   useEffect(() => onCloseMobile(), [pathname]); // eslint-disable-line react-hooks/exhaustive-deps -- al navegar se cierra el panel móvil
-  const toggleGroup = (key: string) => setOpen((prev) => (prev === key ? null : key)); // Mismo grupo => se pliega
 
-  // Buscador: filtra por texto sin tildes ("normalize NFD" + quitar diacríticos) y abre todos los grupos con resultados
+  // Buscador: filtra por texto sin tildes ("normalize NFD" + quitar diacríticos). Encuentra pestañas de cualquier sección,
+  // también por "keywords" ("auditoría" lleva a Historial de actividad)
   const normalize = (value: string) => value.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
-  const filtered = useMemo(() => {
+  const results = useMemo(() => {
     const q = normalize(query.trim());
-    if (!q) return groups;
-    return groups.map((group) => ({ ...group, items: group.items.filter((item) => normalize(item.label[locale]).includes(q)) })).filter((group) => group.items.length > 0);
+    if (!q) return [];
+    return groups.flatMap((group) => group.items.filter((item) => normalize(`${group.label[locale]} ${item.label[locale]} ${item.keywords ?? ""}`).includes(q)));
   }, [groups, query, locale]);
   const searching = query.trim().length > 0;
   const roleLabel = user?.roles.map((role) => NAV.roles[role]?.[locale] ?? role)[0] ?? "";
 
-  const renderItem = (item: AdminNavItem) => {
-    const isActive = active?.item.key === item.key;
-    const label = item.label[locale];
+  // renderLink => enlace del menú: una sección (va a su primer ítem visible) o un resultado del buscador
+  const renderLink = (item: AdminNavItem, label: string, icon: string, isActive: boolean) => {
     const className = cn(ITEM, collapsed && "lg:justify-center lg:px-0", isActive && ITEM_ACTIVE);
     const content = (
       <>
         {/* Barra de acento a la izquierda del ítem activo */}
         {isActive && <span className="absolute inset-y-1 -left-3 w-1 rounded-r-full bg-indigo-400" aria-hidden="true" />}
         <span className={cn(ICON_BOX, isActive && ICON_BOX_ACTIVE)}>
-          <NavIcon name={item.icon} />
+          <NavIcon name={icon} />
         </span>
         <span className={cn("truncate", collapsed && "lg:sr-only")}>{label}</span>
       </>
@@ -173,7 +165,7 @@ export function AdminSidebar({ collapsed, mobileOpen, onToggleCollapsed, onClose
       >
         {/* Marca + botón ocultar/mostrar (estilo Claude/Gemini): expandido => marca a la izquierda y botón "panel lateral"
             a la derecha; colapsado (riel) => solo el botón, centrado, en el mismo lugar (el usuario no lo busca) */}
-        <div className={cn("flex h-16 shrink-0 items-center gap-3 border-b border-white/10 px-4", collapsed && "lg:justify-center lg:px-0")}>
+        <div className={cn("flex h-14 shrink-0 items-center gap-3 border-b border-white/10 px-4", collapsed && "lg:justify-center lg:px-0")}>
           <Link href={panelHome(user?.roles ?? [])} className={cn("flex min-w-0 items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400", collapsed && "lg:hidden")}>
             <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-sm font-bold text-white shadow">W3</span>
             <span className="truncate font-semibold text-white">{config.siteName}</span>
@@ -190,7 +182,7 @@ export function AdminSidebar({ collapsed, mobileOpen, onToggleCollapsed, onClose
 
         {/* Tarjeta del usuario (como el ejemplo "pro sidebar"): avatar con iniciales, nombre, rol y estado */}
         {user && (
-          <div className={cn("flex shrink-0 items-center gap-3 border-b border-white/10 px-4 py-4", collapsed && "lg:justify-center lg:px-0")}>
+          <div className={cn("flex shrink-0 items-center gap-3 border-b border-white/10 px-4 py-3", collapsed && "lg:justify-center lg:px-0")}>
             <span className="relative flex size-10 shrink-0 items-center justify-center rounded-full bg-indigo-500/20 text-sm font-semibold text-indigo-200" title={collapsed ? user.name : undefined}>
               {initials(user.name)}
               <span className="absolute bottom-0 right-0 size-2.5 rounded-full bg-emerald-400 ring-2 ring-slate-900" aria-hidden="true" />
@@ -214,29 +206,19 @@ export function AdminSidebar({ collapsed, mobileOpen, onToggleCollapsed, onClose
         </div>
 
         <nav aria-label={text("menu")} className="flex-1 overflow-y-auto overscroll-contain px-3 py-2 [scrollbar-color:theme(colors.slate.700)_transparent] [scrollbar-width:thin]">
-          {filtered.length === 0 && <p className="px-3 py-2 text-sm text-slate-500">{text("noResults")}</p>}
-          {filtered.map((group) => {
-            const expanded = collapsed || searching || open === group.key;
-            const panelId = `nav-panel-${group.key}`;
-            return (
-              <section key={group.key} aria-label={group.label[locale]} className={cn("mb-0.5", collapsed && "lg:mb-2 lg:border-t lg:border-white/10 lg:pt-3 lg:first:border-t-0 lg:first:pt-0")}>
-                {/* Cabecera de acordeón (WAI-ARIA): botón con aria-expanded que controla su panel */}
-                <h2 className={cn(collapsed && "lg:sr-only")}>
-                  <button type="button" onClick={() => toggleGroup(group.key)} aria-expanded={expanded} aria-controls={panelId} className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 pb-0.5 pt-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">
-                    {group.label[locale]}
-                    <NavIcon name="chevron" className={cn("size-3.5 transition-transform", expanded && "rotate-180")} />
-                  </button>
-                </h2>
-                {/* Cerrado => clase "hidden" (display:none). El atributo hidden solo NO basta: la clase "flex" de Tailwind
-                    tiene más especificidad que el [hidden] del preflight y el grupo nunca se ocultaba */}
-                <ul id={panelId} hidden={!expanded} className={cn("flex flex-col gap-px", !expanded && "hidden")}>
-                  {group.items.map((item) => (
-                    <li key={item.key}>{renderItem(item)}</li>
-                  ))}
-                </ul>
-              </section>
-            );
-          })}
+          {searching ? (
+            <>
+              {results.length === 0 && <p className="px-3 py-2 text-sm text-slate-500">{text("noResults")}</p>}
+              <ul className="flex flex-col gap-px">
+                {results.map((item) => <li key={item.key}>{renderLink(item, item.label[locale], item.icon, active?.item.key === item.key)}</li>)}
+              </ul>
+            </>
+          ) : (
+            // Una sección = un enlace; lo que hay dentro son las pestañas de PanelTabs (regla única, sin desplegables aquí)
+            <ul className="flex flex-col gap-px">
+              {groups.map((group) => group.items[0] && <li key={group.key}>{renderLink(group.items[0], group.label[locale], group.icon, active?.group.key === group.key)}</li>)}
+            </ul>
+          )}
         </nav>
 
         {/* Pie: volver a la tienda (el botón ocultar/mostrar vive arriba, junto a la marca) */}

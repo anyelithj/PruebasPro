@@ -30,7 +30,14 @@ export const PaymentSchema = z.object({
 export type Payment = z.infer<typeof PaymentSchema>;
 
 // [CheckoutSession]: `clientSecret` monta el formulario embebido de Stripe; `publishableKey` es pública (no es un secreto)
-export const CheckoutSessionSchema = z.object({ paymentId: z.string(), clientSecret: z.string().min(1), publishableKey: z.string().min(1) });
+// [2026-11-16 · Mercado Pago]: `redirectUrl` → página de pago de la pasarela (Checkout Pro); con ella clientSecret/publishableKey llegan vacíos
+export const CheckoutSessionSchema = z.object({
+  paymentId: z.string(),
+  clientSecret: z.string().default(''),
+  publishableKey: z.string().default(''),
+  provider: z.string().default('stripe'),
+  redirectUrl: z.string().url().optional(),
+});
 export type CheckoutSession = z.infer<typeof CheckoutSessionSchema>;
 
 export const RefundSchema = z.object({

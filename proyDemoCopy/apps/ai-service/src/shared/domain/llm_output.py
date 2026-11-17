@@ -75,8 +75,21 @@ def parse_translation(raw: Any, source: str = "") -> str | None:
     value = _unwrap(raw, norm(source), 0)
     if value is None:
         return None
-    text = strip_wrapping_quotes(" ".join(value.split()))  # `split/join`: espacios y saltos de línea simples
+    text = natural_age(strip_wrapping_quotes(" ".join(value.split())))  # `split/join`: espacios y saltos de línea simples
     return text if text and not looks_like_json(text) else None
+
+
+# [2026-11-10 · «I am ten years old» → «Soy de diez años»]: la edad en español se «tiene» → «Tengo diez años»
+_AGE = re.compile(r"\b(?:yo\s+)?(soy|estoy)(?:\s+de)?\s+(\w+)\s+años(?:\s+de\s+edad)?", re.I)
+_TENER = {"soy": "tengo", "estoy": "tengo"}
+
+
+def natural_age(text: str) -> str:
+    """«Soy de diez años» / «Estoy 10 años» → «Tengo diez años» (conserva la mayúscula inicial). Función pura."""
+    def fix(m: re.Match[str]) -> str:
+        verb = _TENER[m.group(1).lower()]
+        return f"{verb.capitalize() if m.group(0)[0].isupper() else verb} {m.group(2)} años"
+    return _AGE.sub(fix, text)
 
 
 def _unwrap(raw: Any, source: str, depth: int) -> str | None:

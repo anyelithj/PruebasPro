@@ -10,6 +10,9 @@ import {
   signal,
 } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { catchError, of, switchMap } from 'rxjs';
+import { GamesRepository, type GameDeck, type GameThemes } from '../../domain/games.repository.port';
 import { CEFR_LEVELS, LANGUAGES } from '@aula/shared-schemas';
 import { I18nService } from '@core/i18n/i18n.service';
 import { ButtonComponent } from '@shared/ui/atoms/button/button.component';
@@ -37,7 +40,7 @@ import { accuracy, type GameSession, type StartInput } from '../../domain/models
         tx.backToHub
       }}</a>
       @if (facade.error(); as err) {
-        <p role="alert" class="mb-3 text-sm text-tone-danger">{{ err }}</p>
+        <p role="alert" class="mb-3 text-tone-danger">{{ err }}</p>
       }
       @switch (facade.phase()) {
         @case ('playing') {
@@ -67,7 +70,7 @@ import { accuracy, type GameSession, type StartInput } from '../../domain/models
             </div>
           </div>
           @if (s?.content?.fallback) {
-            <p role="status" class="mb-3 text-xs text-tone-warning">{{ tx.fallbackBank }}</p>
+            <p role="status" class="mb-3 type-meta text-tone-warning">{{ tx.fallbackBank }}</p>
           }
           <ng-content />
         }
@@ -75,8 +78,8 @@ import { accuracy, type GameSession, type StartInput } from '../../domain/models
           <!-- [Resumen]: puntaje final calculado por NestJS -->
           <div class="space-y-4 text-center" role="status">
             <p class="text-4xl" aria-hidden="true"><aula-icon name="flag" [size]="36" /></p>
-            <h2 class="text-xl font-extrabold">{{ tx.gameOver }}</h2>
-            <p class="text-sm text-muted-foreground">
+            <h2 class="title-section">{{ tx.gameOver }}</h2>
+            <p class="text-muted-foreground">
               {{ tx.score }}: <b class="text-foreground">{{ s?.score ?? 0 }}</b>
               @if (scored()) {
                 · {{ tx.accuracy }}: <b class="text-foreground">{{ pct() }} %</b>
@@ -94,7 +97,7 @@ import { accuracy, type GameSession, type StartInput } from '../../domain/models
           <!-- [Preparación]: idioma, nivel y dificultad (prellenados desde el hub por ?lang=&level=&d=) -->
           <ng-content select="[gameIntro]" />
           <form
-            class="grid gap-3 sm:grid-cols-3 sm:items-end"
+            class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 sm:items-end"
             (submit)="$event.preventDefault(); begin()"
           >
             <label class="text-xs font-semibold text-muted-foreground">
@@ -122,6 +125,31 @@ import { accuracy, type GameSession, type StartInput } from '../../domain/models
                 }
               </select>
             </label>
+            <!-- [Tema · 2026-11-11]: al azar, un juego del docente o un tema del banco → el estudiante ve y elige qué jugar (el escenario de role-play ya es el tema) -->
+            <label class="text-xs font-semibold text-muted-foreground" [hidden]="!!scenarioId() || !!deckId()">
+              {{ tx.theme }}
+              <select
+                class="control mt-1 w-full"
+                [value]="choice()"
+                (change)="choice.set($any($event.target).value)"
+              >
+                <option value="">{{ tx.themeRandom }}</option>
+                @if (myDecks().length) {
+                  <optgroup [label]="tx.themeDecks">
+                    @for (d of myDecks(); track d.id) {
+                      <option [value]="'deck:' + d.id">{{ d.title }}{{ d.level ? ' · ' + d.level : '' }}</option>
+                    }
+                  </optgroup>
+                }
+                @if (bankThemes().length) {
+                  <optgroup [label]="tx.themeBank">
+                    @for (t of bankThemes(); track t) {
+                      <option [value]="'theme:' + t">{{ t }}</option>
+                    }
+                  </optgroup>
+                }
+              </select>
+            </label>
             <label class="text-xs font-semibold text-muted-foreground">
               {{ tx.difficulty }}
               <select
@@ -138,7 +166,7 @@ import { accuracy, type GameSession, type StartInput } from '../../domain/models
               aulaButton
               type="submit"
               size="lg"
-              class="sm:col-span-3 sm:justify-self-start"
+              class="sm:col-span-2 lg:col-span-4 sm:justify-self-start"
               [loading]="facade.phase() === 'starting'"
               [disabled]="!canStart()"
             >
@@ -159,6 +187,7 @@ export class GameShellComponent {
   readonly lvl = input<string | undefined>(undefined); // ?level=
   readonly diff = input<string | number | undefined>(undefined); // ?d=
   readonly scenarioId = input<string | undefined>(undefined); // Role-play
+  readonly deckId = input<string | undefined>(undefined); // [2026-11-11]: juego del docente fijado por la página (role-play del docente)
   readonly canStart = input(true);
   readonly started = output<GameSession>();
 
@@ -169,6 +198,25 @@ export class GameShellComponent {
   protected readonly language = signal('en');
   protected readonly level = signal('');
   protected readonly difficulty = signal(1);
+  // [Tema · 2026-11-11]: '' = al azar · 'deck:<id>' = juego del docente · 'theme:<texto>' = tema del banco
+  protected readonly choice = signal('');
+  private readonly repo = inject(GamesRepository);
+  private readonly decks = toSignal(this.repo.decks().pipe(catchError(() => of([] as GameDeck[]))), { initialValue: [] as GameDeck[] });
+  private readonly themes = toSignal(
+    toObservable(this.language).pipe(switchMap((l) => this.repo.themes(l).pipe(catchError(() => of({ categories: [], topics: [] } as GameThemes))))),
+    { initialValue: { categories: [], topics: [] } as GameThemes },
+  );
+  // Juegos publicados de ESTE tipo en el idioma elegido (el elegido por ?mazo= siempre aparece)
+  protected readonly myDecks = computed(() =>
+    this.decks().filter((d) => d.gameType === this.type() && (d.language === this.language() || this.choice() === 'deck:' + d.id)),
+  );
+  // Temas del banco que el juego sabe usar: categorías de tarjetas (vocabulario y tarjetas secretas) o temas de conversación
+  protected readonly bankThemes = computed(() => {
+    const t = this.type();
+    if (['chained_story', 'debate', 'random_topic', 'speed_speaking'].includes(t)) return this.themes().topics;
+    if (this.info().family === 'vocab' || ['taboo', 'forbidden_word', 'twenty_questions', 'describe_guess'].includes(t)) return this.themes().categories;
+    return [];
+  });
   // [scored]: los juegos abiertos (agente, oral) no tienen aciertos → no se muestra el porcentaje
   protected readonly scored = computed(() => ['vocab', 'listening'].includes(this.info().family));
   protected readonly pct = computed(() =>
@@ -182,6 +230,8 @@ export class GameShellComponent {
       if (this.lang()) this.language.set(this.lang()!);
       if (this.lvl()) this.level.set(this.lvl()!);
       if (this.diff()) this.difficulty.set(Math.min(Math.max(Number(this.diff()) || 1, 1), 3));
+      const mazo = this.route.snapshot.queryParamMap.get('mazo'); // [2026-10-25]: juego del docente desde el hub o Gestión → preseleccionado
+      if (mazo || this.deckId()) this.choice.set('deck:' + (this.deckId() ?? mazo));
     });
   }
 
@@ -192,8 +242,9 @@ export class GameShellComponent {
       level: (this.level() || undefined) as StartInput['level'],
       difficulty: this.difficulty(),
       scenarioId: this.scenarioId(),
-      // [2026-10-25]: ?mazo= → juego creado en Gestión con sus propias palabras | `snapshot` basta: la URL no cambia durante la partida
-      deckId: this.route.snapshot.queryParamMap.get('mazo') ?? undefined,
+      // [2026-11-11]: el selector «Tema» decide (antes solo ?mazo=) → juego del docente o tema del banco; vacío = al azar
+      deckId: this.choice().startsWith('deck:') ? this.choice().slice(5) : undefined,
+      theme: this.choice().startsWith('theme:') ? this.choice().slice(6) : undefined,
     };
     const s = await this.facade.start(input);
     if (s) this.started.emit(s);

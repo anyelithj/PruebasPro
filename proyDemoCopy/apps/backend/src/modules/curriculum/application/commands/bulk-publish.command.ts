@@ -61,7 +61,16 @@ export class BulkPublishCommand {
           result.failed.push({ id, message: 'Recurso no encontrado' });
           continue; // `continue`: pasa al siguiente id sin abortar el lote
         }
-        const steps = publishSteps(item.reviewStatus, publish); // [] si ya está en el estado pedido → idempotente
+        const steps = publishSteps(item.reviewStatus, publish, item.provenance); // [] si ya está en el estado pedido → idempotente
+        if (steps === null) {
+          // [RNF-37]: contenido de IA sin revisar → no se publica (los demás del lote siguen)
+          result.failed.push({
+            id,
+            message:
+              'Contenido generado por IA: un docente debe marcarlo como «revisado» antes de publicarlo.',
+          });
+          continue;
+        }
         if (!steps.length) {
           result.unchanged += 1;
           continue;

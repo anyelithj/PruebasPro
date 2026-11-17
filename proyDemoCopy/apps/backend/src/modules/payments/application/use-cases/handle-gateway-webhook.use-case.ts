@@ -7,6 +7,7 @@ import {
   PAYMENT_GATEWAY,
   type GatewaySessionStatus,
   type PaymentGatewayPort,
+  type WebhookMeta,
 } from '../../domain/interfaces/payment-gateway.interface';
 import { FulfillOrderUseCase } from './fulfill-order.use-case';
 // [UseCase HandleGatewayWebhook · Sprint 7.3]: concilia el webhook FIRMADO de la pasarela → confirma el pago, marca la orden pagada y desbloquea los cursos | [Patrón]: Use Case (Command) + State + Idempotent Receiver | [Principio]: SRP + DIP | [Paradigma]: Event-Driven + async/await
@@ -28,8 +29,9 @@ export class HandleGatewayWebhookUseCase {
   async execute(
     rawBody: Buffer,
     signature: string,
+    meta?: WebhookMeta,
   ): Promise<{ received: true }> {
-    const event = this.gateway.parseWebhook(rawBody, signature);
+    const event = await this.gateway.parseWebhook(rawBody, signature, meta); // `await`: Mercado Pago consulta el pago antes de decidir
     if (event.kind === 'ignored') return { received: true };
     const payment = await this.payments.findOneBy({
       sessionId: event.sessionId,

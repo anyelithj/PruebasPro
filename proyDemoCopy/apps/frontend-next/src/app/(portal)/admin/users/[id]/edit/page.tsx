@@ -20,8 +20,8 @@ export default async function EditUserPage(props: { params: Promise<{ id: string
       <BackLink href="/admin/users" memo="users">Volver a usuarios</BackLink>
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Editar usuario</h1>
-          <p className="mt-1 text-sm text-muted-foreground font-mono">{user.email}</p>
+          <h1 className="title-page">Editar usuario</h1>
+          <p className="mt-1 text-muted-foreground font-mono">{user.email}</p>
         </div>
       </header>
 

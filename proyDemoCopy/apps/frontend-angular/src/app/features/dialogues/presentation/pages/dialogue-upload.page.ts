@@ -67,12 +67,12 @@ import { LevelConfirmComponent } from '../components/level-confirm.component';
             <aula-spinner [label]="i18n.t().common.loading" />
           }
           @case ('error') {
-            <p role="alert" class="text-sm text-tone-danger">{{ dialogues.dialogue.error() }}</p>
+            <p role="alert" class="text-tone-danger">{{ dialogues.dialogue.error() }}</p>
           }
         }
         @if (d) {
           <div class="space-y-6">
-            <p class="flex flex-wrap items-center gap-2 text-sm">
+            <p class="flex flex-wrap items-center gap-2">
               <aula-level-badge
                 [level]="d.level"
                 [status]="d.levelStatus"
@@ -90,7 +90,7 @@ import { LevelConfirmComponent } from '../components/level-confirm.component';
                 (confirm)="dialogues.confirmLevel(d.id, $event)"
               />
               <section class="space-y-2" aria-labelledby="dialogue-audio">
-                <h2 id="dialogue-audio" class="text-base font-extrabold">{{ tx.form.audio }}</h2>
+                <h2 id="dialogue-audio" class="title-section">{{ tx.form.audio }}</h2>
                 <label class="block text-xs font-semibold text-muted-foreground">
                   {{ i18n.fmt(i18n.t().music.wizard.audio, { mb: maxMb }) }}
                   <input
@@ -109,19 +109,19 @@ import { LevelConfirmComponent } from '../components/level-confirm.component';
                   <aula-icon name="upload" /> {{ tx.form.uploadAudio }}
                 </button>
                 @if (tooBig()) {
-                  <p role="alert" class="text-xs font-semibold text-tone-danger">
+                  <p role="alert" class="type-meta font-semibold text-tone-danger">
                     {{ i18n.fmt(i18n.t().music.wizard.audioTooBig, { mb: maxMb }) }}
                   </p>
                 }
                 @if (aligned() !== null || d.hasAudio) {
-                  <p class="text-sm font-semibold text-tone-brand" role="status">
+                  <p class="font-semibold text-tone-brand" role="status">
                     ✓ {{ aligned() === false ? tx.form.notAligned : tx.form.aligned }}
                   </p>
                 }
               </section>
             }
             <section aria-labelledby="dialogue-preview">
-              <h2 id="dialogue-preview" class="mb-2 text-base font-extrabold">
+              <h2 id="dialogue-preview" class="title-section mb-2">
                 {{ tx.form.preview }}
               </h2>
               <aula-synced-transcript
@@ -149,7 +149,7 @@ import { LevelConfirmComponent } from '../components/level-confirm.component';
         }
       }
       @if (dialogues.actionError()) {
-        <p role="alert" class="mt-3 text-sm text-tone-danger">{{ dialogues.actionError() }}</p>
+        <p role="alert" class="mt-3 text-tone-danger">{{ dialogues.actionError() }}</p>
       }
     </aula-card-page>
   `,
@@ -159,7 +159,7 @@ export default class DialogueUploadPage {
   protected readonly dialogues = inject(DialoguesFacade);
   private readonly router = inject(Router);
   private readonly returnTo = inject(ReturnToService); // [2026-10-23]: conserva ?volver= y regresa a Gestión
-  readonly id = input<string>(); // /dialogos/subir/:id (opcional: sin id = diálogo nuevo)
+  readonly id = input<string>(); // /dialogos/editar/:id (opcional: sin id = diálogo nuevo)
   readonly modo = input<string>(); // [2026-10-23]: ?modo=ia|url (Gestión → «Con IA» / «Importar»)
   readonly idioma = input<string>(); // [2026-10-24]: ?idioma= (withComponentInputBinding)
   readonly nivel = input<string>(); // ?nivel=
@@ -186,7 +186,7 @@ export default class DialogueUploadPage {
 
   protected async create(input: DialogueInput): Promise<void> {
     const d = await this.dialogues.create(input);
-    if (d) await this.returnTo.go(['/dialogos/subir', d.id]); // Siguiente paso: confirmar el nivel estimado
+    if (d) await this.returnTo.go(['/dialogos/editar', d.id]); // Siguiente paso: confirmar el nivel estimado (2026-11-06: subir/:id ahora abre el diálogo)
   }
 
   // [askDraft · 2026-10-19]: modo URL → texto de la página → guion · modo IA → diálogo original; el formulario lo muestra para revisarlo

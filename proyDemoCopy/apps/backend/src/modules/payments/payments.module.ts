@@ -25,6 +25,8 @@ import { Payment } from './domain/entities/payment.entity';
 import { Refund } from './domain/entities/refund.entity';
 import { PAYMENT_GATEWAY } from './domain/interfaces/payment-gateway.interface';
 import { StripeGatewayAdapter } from './infrastructure/gateways/stripe-gateway.adapter';
+import { MercadoPagoGatewayAdapter } from './infrastructure/gateways/mercadopago-gateway.adapter'; // [2026-11-16]: Checkout Pro (Colombia, modo prueba)
+import { paymentsConfig } from '../../shared/config/payments.config';
 import { OrdersController } from './presentation/orders.controller';
 import { GetInvoiceUseCase } from './application/use-cases/get-invoice.use-case';
 import { PaymentsController } from './presentation/payments.controller';
@@ -40,7 +42,14 @@ import { RefundsController } from './presentation/refunds.controller';
   ],
   controllers: [OrdersController, RefundsController, PaymentsController],
   providers: [
-    { provide: PAYMENT_GATEWAY, useClass: StripeGatewayAdapter },
+    // [2026-11-16]: PAYMENT_PROVIDER elige el adaptador (por defecto Mercado Pago si hay MERCADOPAGO_ACCESS_TOKEN) | [Patrón]: Strategy + Factory | [Principio]: OCP (los casos de uso no cambian)
+    {
+      provide: PAYMENT_GATEWAY,
+      useClass:
+        paymentsConfig().provider === 'mercadopago'
+          ? MercadoPagoGatewayAdapter
+          : StripeGatewayAdapter,
+    },
     CreateOrderUseCase,
     ListMyOrdersUseCase,
     GetOrderUseCase,

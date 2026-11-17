@@ -31,12 +31,12 @@ const STATUS_TONE: Record<PaymentStatus, BadgeTone> = {
     @let t = i18n.t().payments;
     <aula-card-page [heading]="t.historyTitle" [subtitle]="t.historySubtitle">
       @if (facade.actionError(); as err) {
-        <p role="alert" class="mb-3 text-sm text-tone-danger">{{ err }}</p>
+        <p role="alert" class="mb-3 text-tone-danger">{{ err }}</p>
       }
       @if (selected(); as p) {
         <!-- [Detalle]: /pagos/:id -->
         <section aria-labelledby="payment-detail" class="mb-4 space-y-1 rounded-xl border border-border bg-muted/40 p-4 text-sm">
-          <h2 id="payment-detail" class="font-bold">{{ t.detail }}</h2>
+          <h2 id="payment-detail" class="title-section">{{ t.detail }}</h2>
           <p>{{ t.order }}: <span class="eeg-mono">{{ p.orderId }}</span></p>
           <p>{{ t.amount }}: {{ money(p.amountMinor, p.currency) }} · {{ t.refunded }}: {{ money(p.refundedMinor, p.currency) }}</p>
           <aula-badge [tone]="tone(p.status)">{{ t.status[p.status] }}</aula-badge>

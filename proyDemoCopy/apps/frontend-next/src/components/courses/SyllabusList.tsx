@@ -1,4 +1,6 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { isLessonLocked, lessonHref, MATERIAL_ICON, type CourseMaterial } from "@/types/courses";
 // [SyllabusList]: lista del temario (Completado / En curso / Bloqueado / Pendiente) compartida por el detalle del curso y la página de la lección
 // [Patrón]: Presentational Component (sin estado, sin "use client" → sirve en Server y Client Components) | [Principio]: SRP + DRY | [Paradigma]: Declarativo + Funcional
@@ -21,22 +23,67 @@ export interface SyllabusListProps {
   canTrack: boolean; // Alumno inscrito → aplica el bloqueo secuencial
   color: string;
   labels: SyllabusLabels;
-  compact?: boolean; // `?` (TS): prop opcional → versión lateral con scroll
+  timeline?: boolean; // [2026-10-31]: línea de tiempo como «Subtemas» (página de la lección)
   openIndex?: number; // Lección abierta (aria-current)
   onRemove?: (id: string) => void; // Solo ADMIN
 }
 
 type StepState = "done" | "current" | "locked" | "pending"; // Unión de literales (TS)
 
-export function SyllabusList({ courseId, items, done, activeIndex, nextPending, canTrack, color, labels, compact, openIndex, onRemove }: SyllabusListProps) {
+// [Píldora de estado · 2026-10-31]: «▶ En curso» de Recursos, compartida con «Subtemas» (LessonSyllabus) | [Principio]: DRY + SSOT
+export const STATUS_PILL = "shrink-0 whitespace-nowrap rounded-full border px-2 py-px text-[9px] font-bold";
+export const statusPillStyle = (color: string) => ({ color, background: `${color}18`, borderColor: `${color}33` });
+
+// [Nodo de la línea de tiempo · 2026-10-31]: relleno = completado · anillo = abierto · hueco = pendiente | colores del curso con alfa hex | [Principio]: DRY (Subtemas y Recursos) | Función pura
+export const timelineDotStyle = (state: "done" | "current" | "pending", ring: boolean, color: string): CSSProperties => ({
+  background: state === "done" ? color : "var(--nl-surf)",
+  borderColor: state === "pending" ? "var(--nl-brd)" : color,
+  color: state === "done" ? "#fff" : state === "current" ? color : "var(--nl-txt2)",
+  boxShadow: ring ? `0 0 0 4px ${color}2e` : undefined,
+});
+
+export function SyllabusList({ courseId, items, done, activeIndex, nextPending, canTrack, color, labels, timeline, openIndex, onRemove }: SyllabusListProps) {
   return (
-    <ol className={compact ? "max-h-[420px] overflow-y-auto" : undefined}>
+    <ol>
       {items.map((it, i) => {
         // [Estado del paso]: ternarios encadenados → prioridad Completado > En curso > Bloqueado > Pendiente
         const state: StepState = done.has(it.id) ? "done" : i === activeIndex ? "current" : isLessonLocked(i, nextPending, canTrack) ? "locked" : "pending";
         const locked = state === "locked";
         const accent = state === "done" || state === "current"; // Pasos con el color del curso
         const badge = { done: `✓ ${labels.done}`, current: `▶ ${labels.current}`, locked: labels.locked, pending: labels.pending }[state]; // [Patrón]: Lookup Table
+        // [Línea de tiempo · 2026-10-31]: mismos nodo, conector y píldora que «Subtemas» | <li> relative + conector absolute | el estado va en TEXTO además del color (WCAG 1.4.1)
+        if (timeline) {
+          const last = i === items.length - 1;
+          const open = openIndex === i;
+          const row = cn("flex w-full items-start gap-2 rounded-lg px-2 py-1 text-left", open && "bg-muted");
+          const body = (
+            <>
+              <span className="min-w-0 flex-1 text-sm font-semibold" style={open ? { color } : undefined}>
+                <span aria-hidden>{MATERIAL_ICON[it.kind]}</span> {it.title}
+              </span>
+              <span className={cn(STATUS_PILL, "mt-0.5")} style={statusPillStyle(color)}>
+                {badge}
+              </span>
+            </>
+          );
+          return (
+            <li key={it.id} className={cn("relative pl-9", !last && "pb-4")}>
+              {!last && <span aria-hidden className="absolute bottom-0 left-[11px] top-7 w-0.5 rounded-full motion-safe:transition-colors" style={{ background: state === "done" ? color : "var(--nl-brd)" }} />}
+              <span aria-hidden className="absolute left-0 top-1 grid size-6 place-items-center rounded-full border-2 text-[11px] font-bold motion-safe:transition-all" style={timelineDotStyle(state === "done" || state === "current" ? state : "pending", open, color)}>
+                {state === "done" ? "✓" : i + 1}
+              </span>
+              {locked ? (
+                <span aria-disabled="true" title={labels.lockedHint} className={cn(row, "cursor-not-allowed opacity-60")}>
+                  {body}
+                </span>
+              ) : (
+                <Link href={lessonHref(courseId, it.id)} aria-current={open ? "step" : undefined} className={cn(row, "transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring")}>
+                  {body}
+                </Link>
+              )}
+            </li>
+          );
+        }
         const rowClass = "flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-1.5 py-2.5 text-left transition-colors";
         const content = (
           <>
@@ -59,12 +106,8 @@ export function SyllabusList({ courseId, items, done, activeIndex, nextPending, 
             </span>
             {/* [Badge de estado]: píldora a la derecha como en el demo */}
             <span
-              className="shrink-0 whitespace-nowrap rounded-full border px-2 py-px text-[9px] font-bold"
-              style={
-                accent
-                  ? { color, background: `${color}18`, borderColor: `${color}33` }
-                  : { color: "var(--nl-txt2)", background: "var(--nl-surf2)", borderColor: "var(--nl-brd)" }
-              }
+              className={STATUS_PILL}
+              style={accent ? statusPillStyle(color) : { color: "var(--nl-txt2)", background: "var(--nl-surf2)", borderColor: "var(--nl-brd)" }}
             >
               {badge}
             </span>

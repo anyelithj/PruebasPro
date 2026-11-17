@@ -1,0 +1,73 @@
+// SMACSS · LAYOUT — clases con prefijo `l-`: solo organizan la página, no decoran.
+
+// Área privada: barra superior + menú lateral + contenido.
+.l-shell {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: var(--topbar-h) 1fr;
+  grid-template-areas: 'top' 'main';
+  min-height: 100vh;
+  &__aside {
+    grid-area: aside;
+    background: var(--ink);
+    overflow-x: hidden;
+    // Menú fijo bajo la barra superior, con scroll propio si no cabe.
+    position: sticky;
+    top: var(--topbar-h);
+    height: calc(100vh - var(--topbar-h));
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+  }
+  &__main {
+    grid-area: main;
+    padding: 1.5rem 1rem;
+    min-width: 0;
+  }
+  @media (min-width: 992px) {
+    grid-template-columns: var(--sidebar-w) 1fr;
+    grid-template-areas: 'top top' 'aside main';
+    transition: grid-template-columns 0.2s ease;
+    &.is-collapsed {
+      grid-template-columns: 4.25rem 1fr;
+    }
+    &__main {
+      padding: 2rem;
+    }
+  }
+}
+
+// Páginas de acceso (login y registro).
+.l-auth {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: linear-gradient(160deg, var(--tint) 0%, #f3f6f8 60%);
+}
+
+// Pila vertical de tarjetas.
+.l-stack {
+  display: grid;
+  gap: 0.75rem;
+}
+
+// Rejilla adaptable (gráficos).
+.l-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: var(--space);
+  margin-block: var(--space);
+  // Cada tarjeta mide lo que su contenido: sin huecos verticales cuando la vecina es más alta.
+  align-items: start;
+}
+
+// Contenido principal + panel lateral (calendario).
+.l-split {
+  display: grid;
+  gap: 1rem;
+  @media (min-width: 992px) {
+    grid-template-columns: 1fr 18rem;
+    align-items: start;
+  }
+}

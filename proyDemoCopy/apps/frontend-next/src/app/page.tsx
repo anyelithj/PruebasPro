@@ -16,7 +16,7 @@ import { Pricing } from "@/components/landing/Pricing";
 import Link from "next/link";
 import { getDictionary } from "@aula/shared-i18n";
 import { getLocale } from "@/lib/i18n-server";
-// [Landing /]: página pública traducida (ES/EN) compuesta por secciones (Sprint 7.13): hero, idiomas, niveles MCER, características, roles, cómo funciona, IA local, planes, FAQ y CTA | [Patrón]: Composite + Template + Data-driven rendering (textos desde el diccionario) | [Principio]: SRP (una sección por componente) + DRY + OCP | [Tecnología]: React Server Component (HTML completo en servidor → SEO)
+// [Landing /]: página pública traducida (ES/EN) compuesta por secciones (Sprint 7.13): hero, idiomas, niveles MCER, características, roles, cómo funciona, IA, planes, FAQ y CTA | [Patrón]: Composite + Template + Data-driven rendering (textos desde el diccionario) | [Principio]: SRP (una sección por componente) + DRY + OCP | [Tecnología]: React Server Component (HTML completo en servidor → SEO)
 // [SEO]: JSON-LD EducationalOrganization + ItemList de Course + FAQPage · [Rendimiento]: sin JS de cliente salvo el navbar; datos en paralelo
 
 // [Iconos de características]: mismo orden que `landing.features` del diccionario | `ReadonlyArray<JSX>` | [Patrón]: Lookup Table
@@ -62,7 +62,7 @@ export default async function Home() {
     <PreferencesProvider initialLocale={locale}>
       <SEOHead jsonLd={organizationJsonLd()} />
       {/* [Fuera de .landing-root]: los estilos propios de la landing (.btn, button) no alteran el navbar compartido */}
-      <PublicNavbar showSections />
+      <PublicNavbar />
       {/* `id="main-content"`: destino del enlace «Saltar al contenido» del layout raíz (WCAG 2.4.1) */}
       <main id="main-content" tabIndex={-1} className="landing-root outline-none">
         <Hero l={l} n={n} />

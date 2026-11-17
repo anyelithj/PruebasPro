@@ -33,6 +33,18 @@ export function isRetryableNetworkError(err: unknown): boolean {
   return false;
 }
 
+// [isUpstreamTimeout · 2026-10-27]: NestJS aceptó la conexión pero no respondió a tiempo (undici: 300 s de `headersTimeout` por defecto) ≠ servidor inalcanzable → mensaje distinto (antes ambos decían «No se pudo contactar con el servidor») | función pura exportada para pruebas
+const TIMEOUT_CODES = new Set(["UND_ERR_HEADERS_TIMEOUT", "UND_ERR_BODY_TIMEOUT"]);
+export function isUpstreamTimeout(err: unknown): boolean {
+  let current: unknown = err;
+  for (let depth = 0; depth < 4 && current && typeof current === "object"; depth++) {
+    const { code, name } = current as { code?: string; name?: string };
+    if (name === "TimeoutError" || (code && TIMEOUT_CODES.has(code))) return true;
+    current = (current as { cause?: unknown }).cause;
+  }
+  return false;
+}
+
 // [readBody]: decide entre buffer (reenviable) o stream (subida grande) | `ArrayBuffer` = bytes completos en memoria
 async function readBody(request: Request, hasBody: boolean): Promise<{ body: BodyInit | null; replayable: boolean }> {
   if (!hasBody || !request.body) return { body: null, replayable: true }; // Sin cuerpo: siempre se puede repetir
@@ -44,8 +56,9 @@ async function readBody(request: Request, hasBody: boolean): Promise<{ body: Bod
   return { body: request.body, replayable: false }; // multipart/audio/video: streaming, sin reintento posible
 }
 
-// [badGateway]: respuesta JSON uniforme cuando NestJS no responde (el cliente muestra `message`)
-const badGateway = (message: string): Response => Response.json({ message }, { status: 502 });
+// [badGateway]: respuesta JSON uniforme cuando NestJS no responde (el cliente muestra `message`) | `status` (2026-10-27): 504 = el backend tardó demasiado · 502 = no se pudo conectar
+const badGateway = (message: string, status = 502): Response => Response.json({ message }, { status });
+const TIMEOUT_MESSAGE = "El servidor tardó demasiado en responder (la IA puede estar ocupada). Lo ya procesado se guardó: inténtalo de nuevo en un momento.";
 
 // `setTimeout` envuelto en Promise: espera no bloqueante
 const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -83,6 +96,7 @@ export async function streamToBackend(request: Request, path: string, method: st
     } catch (err) {
       const retry = attempt < attempts && isRetryableNetworkError(err);
       console.warn(`[bff] ${method} ${path} falló (intento ${attempt}/${attempts}${retry ? ", se reintenta" : ""}):`, (err as Error).message);
+      if (!retry && isUpstreamTimeout(err)) return badGateway(TIMEOUT_MESSAGE, 504);
       if (!retry) return badGateway("No se pudo contactar con el servidor. Inténtalo de nuevo en unos segundos.");
       await delay(RETRY_DELAY_MS);
     }

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { parse } from "node-html-parser";
 import { getCurrentUserPayload } from "@/lib/auth";
 import { Role } from "@/lib/constants";
-import { safeFetch } from "@/lib/safe-fetch";
+import { politeFetch } from "@/lib/safe-fetch"; // [Tarea 9]: anti-SSRF + robots.txt + límite de frecuencia
 import { MAX_IMPORT_ROWS, type Extracted } from "@/lib/resource-import";
 const MAX_TEXT = 50_000; // Tope de texto devuelto (una página larga de gramática cabe; evita respuestas enormes)
 // [Route Handler POST /api/curriculum/import-url]: importa recursos desde el ENLACE de una página web (o de un PDF/Excel/CSV/Word/imagen publicado en la web)
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
   if (!parsed.success) return NextResponse.json({ message: "Escribe un enlace válido (https://…)." }, { status: 400 });
 
   try {
-    const res = await safeFetch(parsed.data.url);
+    const res = await politeFetch(parsed.data.url);
     const type = res.contentType.split(";")[0].trim().toLowerCase();
     if (type === "text/html" || type === "application/xhtml+xml") {
       return NextResponse.json({ kind: "page", ...htmlExtract(res.body.toString("utf-8")) }); // `...` (ES2018): rows + text + title

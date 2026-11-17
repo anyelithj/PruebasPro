@@ -27,11 +27,12 @@ describe('DialogueHubPage', () => {
     expect(el.textContent).not.toContain('Nuevo tema');
   });
 
-  it('docente ve «Nuevo tema» y «Subir diálogo»; sin temas → mensaje', async () => {
+  // [2026-11-03]: «Subir diálogo» vive en Gestión → Actividades → Diálogos
+  it('docente ve «Nuevo tema» (sin «Subir diálogo»); sin temas → mensaje', async () => {
     server.use(http.get(`${API}/dialogues/topics`, () => HttpResponse.json(envelope([]))), http.get(`${API}/dialogues/sessions/me`, () => HttpResponse.json(envelope([]))));
     const { el } = await render(DialogueHubPage, providers('TEACHER'));
     expect(getByRole(el, 'button', 'Nuevo tema')).toBeTruthy();
-    expect(el.querySelector('a[href="/dialogos/subir"]')).not.toBeNull();
+    expect(el.querySelector('a[href="/dialogos/subir"]')).toBeNull();
     expect(el.textContent).toContain('No hay temas');
   });
 

@@ -32,8 +32,10 @@ import { DialoguesModule } from './modules/dialogues/dialogues.module'; // [Spri
 import { PolyglotModule } from './modules/polyglot/polyglot.module'; // [Sprints 10.5/10.6]: comparador de idiomas por tema con IPA y borrador con IA
 import { GrammarModule } from './modules/grammar/grammar.module'; // [Sprints 10.9/10.10]: fichas de gramática con ejemplos, IPA UK/US y traducción
 import { ReadingModule } from './modules/reading/reading.module'; // [2026-10-25 · Lectura]: textos por género con traducción, IPA, marcador y descarga
+import { BooksModule } from './modules/books/books.module'; // [2026-11-14 · Libros]: catálogo de dominio público (Gutendex) · RF-145
 import { SchedulerModule } from './modules/scheduler/scheduler.module'; // [Sprint 7.18]: purga nocturna (cron de Bull) y panel de colas
 import { RedisCacheModule } from './shared/cache/redis-cache.module'; // [Sprint 6.6]: caché distribuida
+import { BackgroundTasksModule } from './shared/background/background-tasks.module'; // [2026-10-27]: «guardar primero, enriquecer después» (IPA/traducción en segundo plano)
 import databaseConfig from './shared/config/database.config';
 import jwtConfig from './shared/config/jwt.config';
 import redisConfig from './shared/config/redis.config';
@@ -48,10 +50,12 @@ import { TransformInterceptor } from './shared/interceptors/transform.intercepto
 import { validateStorageEnv } from './shared/config/storage.config';
 import { validatePaymentsEnv } from './shared/config/payments.config';
 import { validateWeb3Env } from './shared/config/web3.config';
+import { NounGrammarModule } from './shared/noun-grammar/noun-grammar.service'; // [2026-11-06]: artículo/género/plural al generar vocabulario con IA
 // [App Module]: composición raíz del backend | [Patrón]: Module + DI Container | [Principio]: ISP + DIP | [Paradigma]: POO
 
 @Module({
   imports: [
+    NounGrammarModule,
     // [ConfigModule global]: carga .env y registra namespaces
     ConfigModule.forRoot({
       isGlobal: true,
@@ -86,10 +90,13 @@ import { validateWeb3Env } from './shared/config/web3.config';
         migrationsTableName: 'typeorm_migrations',
         migrationsRun: cfg.migrationsRun,
         logging: cfg.logging,
+        // [Fail Fast · 2026-11-16]: `extra` (TypeORM → pool de `pg`): si Postgres no contesta (p. ej. Docker Desktop congelado) la conexión falla a los 10 s con error claro en vez de colgar el arranque sin log
+        extra: { connectionTimeoutMillis: 10_000 },
       }),
     }),
     // [Sprint 6.6 · Redis]: caché distribuida global (CACHE_MANAGER) y conexión de las colas Bull
     RedisCacheModule,
+    BackgroundTasksModule, // [2026-10-27 · Rendimiento]: cola en segundo plano global (Lectura, Diálogos, Gramática)
     BullModule.forRootAsync({
       imports: [ConfigModule.forFeature(redisConfig)],
       inject: [redisConfig.KEY],
@@ -133,6 +140,7 @@ import { validateWeb3Env } from './shared/config/web3.config';
     PolyglotModule,
     GrammarModule,
     ReadingModule,
+    BooksModule,
     SchedulerModule,
   ],
   controllers: [AppController],

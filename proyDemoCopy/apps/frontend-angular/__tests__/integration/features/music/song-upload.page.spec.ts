@@ -8,7 +8,7 @@ import { MusicRepository } from '@features/music/domain/music.repository.port';
 import { MusicHttpRepository } from '@features/music/infrastructure/music.http-repository';
 import SongUploadPage from '@features/music/presentation/pages/song-upload.page';
 import { sessionAs, song, songDetail } from '@testing/music-dialogues';
-// [Spec SongUploadPage · Sprint 9.9]: sin licencia válida no se guarda; borrador → enviar a revisión; ADMIN ve publicar/rechazar; letra sin IPA → aviso; rechazo con motivo visible | [Herramienta]: render() + setInput + msw
+// [Spec SongUploadPage · Sprint 9.9 → 2026-11-13]: sin licencia válida no se guarda; borrador → enviar a revisión; ADMIN ve publicar/rechazar; letra sin IPA → aviso; rechazo con motivo visible | [Herramienta]: render() + setInput + msw
 
 const providers = (role: 'TEACHER' | 'ADMIN') => [{ provide: MusicRepository, useClass: MusicHttpRepository }, MusicFacade, sessionAs(role)];
 
@@ -35,6 +35,12 @@ describe('SongUploadPage', () => {
     expect(save.disabled).toBe(false);
   });
 
+  it('[RF-148] nueva canción: no pide nivel (se estima de la letra) y lo indica', async () => {
+    const { el } = await render(SongUploadPage, providers('TEACHER'));
+    expect(el.textContent).toContain('se estima solo a partir de la letra');
+    expect([...el.querySelectorAll('select option')].some((o) => o.textContent?.trim() === 'C2')).toBe(false); // Sin select de nivel al crear
+  });
+
   it('borrador rechazado: motivo visible y «Enviar a revisión»; letra sin IPA → aviso', async () => {
     server.use(
       http.get(`${API}/music/songs/s1`, () => HttpResponse.json(envelope(songDetail({ status: 'rejected', reviewNote: 'Falta permiso', editable: true })))),
@@ -47,17 +53,18 @@ describe('SongUploadPage', () => {
     // [2026-10-25]: con la canción ya creada se abre directamente el paso 2 «Audio y letra»
     getByRole(el, 'button', 'Cargar letra').click();
     await settle(fixture);
-    expect(el.textContent).toContain('no está disponible ahora');
-    // «Enviar a revisión» vive en el último paso, junto a Guardar y Cancelar
+    // [2026-10-24]: el servidor guardó la letra sin IPA ni traducción → aviso con la acción concreta para reintentar
+    expect(el.textContent).toContain('El IPA y la traducción no se generaron'); // Indica reintentar con «Completar IPA y traducción»
+    // [2026-11-10]: el último paso solo tiene Guardar (enviar a revisión/publicar se hace en Gestión)
     getByRole(el, 'button', 'Sincronización').click();
     await settle(fixture);
-    expect(getByRole(el, 'button', 'Enviar a revisión')).toBeTruthy();
+    expect(el.textContent).not.toContain('Enviar a revisión');
     expect(getByRole(el, 'button', 'Guardar')).toBeTruthy();
   });
 
-  // [2026-10-24]: checklist de publicación — sin audio, «Enviar a revisión» deshabilitado y explicado (antes: 400 «Falta subir el audio» del servidor)
-  it('sin audio: el último paso muestra qué falta y NO ofrece «Enviar a revisión»', async () => {
-    server.use(http.get(`${API}/music/songs/s1`, () => HttpResponse.json(envelope(songDetail({ status: 'draft', audioKey: null, editable: true, blockers: ['audio'] })))));
+  // [2026-10-31]: el audio es opcional · [2026-11-13]: el checklist salió del asistente (enviar a revisión y publicar viven en Gestión)
+  it('sin audio: el último paso lo explica, ofrece Retirar y Guardar y NO «Enviar a revisión»', async () => {
+    server.use(http.get(`${API}/music/songs/s1`, () => HttpResponse.json(envelope(songDetail({ status: 'draft', audioKey: null, editable: true, blockers: ['lyrics'] })))));
     const { fixture, el } = await render(SongUploadPage, providers('TEACHER'));
     fixture.componentRef.setInput('id', 's1');
     await settle(fixture);
@@ -65,8 +72,9 @@ describe('SongUploadPage', () => {
     getByRole(el, 'button', 'Sincronización').click();
     await settle(fixture);
     expect(el.textContent).not.toContain('Enviar a revisión');
-    expect(el.textContent).toContain('Audio subido');
-    expect(el.textContent).toContain('Completa lo que falta');
+    expect(el.textContent).toContain('aún no tiene audio');
+    expect(getByRole(el, 'button', 'Retirar canción')).toBeTruthy();
+    expect(getByRole(el, 'button', 'Guardar')).toBeTruthy();
   });
 
   it('versos sin traducción → «Completar IPA y traducción» reintenta solo lo que falta', async () => {
@@ -91,45 +99,8 @@ describe('SongUploadPage', () => {
     expect(el.textContent).not.toContain('sin IPA o sin traducción');
   });
 
-  it('letra con IA: usa el título y el autor como tema (sin campo «tema») y rellena la letra para revisar', async () => {
-    let body: unknown;
-    server.use(
-      http.post(`${API}/music/lyrics/draft`, async ({ request }) => {
-        body = await request.json();
-        return HttpResponse.json(envelope({ title: 'Morning Song', lyrics: 'I wake up\nI brush my teeth', lines: 2, model: 'aya' }));
-      }),
-    );
-    const { fixture, el } = await render(SongUploadPage, providers('TEACHER'));
-    expect(el.querySelector('input[maxlength="200"]')).toBeNull();
-    type(el, 'input[maxlength="160"]', 'Morning Song');
-    await settle(fixture);
-    getByRole(el, 'button', 'Generar letra').click();
-    await settle(fixture);
-    expect(body).toMatchObject({ topic: 'Morning Song', title: 'Morning Song', language: 'en' });
-    expect(el.querySelector<HTMLTextAreaElement>('textarea')!.value).toContain('I brush my teeth');
-  });
-
-  it('ADMIN con canción en revisión: publicar y rechazar (con motivo)', async () => {
-    let decision: unknown;
-    server.use(
-      http.get(`${API}/music/songs/s1`, () => HttpResponse.json(envelope(songDetail({ status: 'review', editable: true })))),
-      http.patch(`${API}/music/songs/s1/status`, async ({ request }) => {
-        decision = await request.json();
-        return HttpResponse.json(envelope(song()));
-      }),
-    );
-    const { fixture, el } = await render(SongUploadPage, providers('ADMIN'));
-    fixture.componentRef.setInput('id', 's1');
-    await settle(fixture);
-    getByRole(el, 'button', 'Sincronización').click();
-    await settle(fixture);
-    expect((getByRole(el, 'button', 'Rechazar') as HTMLButtonElement).disabled).toBe(true); // Sin motivo no se rechaza
-    getByRole(el, 'button', 'Publicar').click();
-    await settle(fixture);
-    expect(decision).toEqual({ status: 'published' });
-  });
-  // [2026-10-24 · Enlace del audio]: página de letras pegada en «enlace directo del audio» → NO se envía el POST (sin 400 en la consola) y se ofrece importar la letra
-  it('enlace de letras en el campo del audio → UN solo botón «Importar la letra desde este enlace» y la letra aparece debajo', async () => {
+  // [2026-11-13]: «letra con IA» salió del asistente de subida → sus pruebas se retiraron con la función
+  it('enlace de letras en el campo del audio → aviso, UN solo botón «Importar enlace» y la letra aparece debajo sin subir audio', async () => {
     let audioPosted = false;
     server.use(
       http.get(`${API}/music/songs/s1`, () => HttpResponse.json(envelope(songDetail({ status: 'draft', audioKey: null, lines: [], editable: true })))),
@@ -146,16 +117,17 @@ describe('SongUploadPage', () => {
     await settle(fixture);
     const field = el.querySelector<HTMLInputElement>('input[type="url"]')!;
     expect(field.getAttribute('aria-invalid')).toBe('true');
-    expect(el.textContent).toContain('Esto es una página de letras');
-    expect(el.textContent).not.toContain('Importar enlace'); // [2026-10-25]: el botón del enlace cambia de acción (no se duplica)
-    getByRole(el, 'button', 'Importar la letra desde este enlace').click();
+    expect(el.textContent).toContain('Página de letras: se importará la letra');
+    // [2026-11-04]: SIEMPRE un único botón «Importar enlace»; el tipo de enlace decide qué se importa (aquí, solo la letra)
+    expect(el.querySelector('aula-audio-uploader')!.querySelectorAll('button[type="submit"]')).toHaveLength(1);
+    getByRole(el, 'button', 'Importar enlace').click();
     await settle(fixture);
     expect(audioPosted).toBe(false);
     expect(el.querySelector<HTMLTextAreaElement>('textarea')!.value).toContain('We were gold');
     expect(el.textContent).toContain('Letra importada');
   });
 
-  it('enlace de YouTube → explicación clara y sin POST; enlace directo .mp3 → sí se envía', async () => {
+  it('enlace de YouTube → se guarda su reproductor (POST del enlace); enlace directo .mp3 → también se envía', async () => {
     let posted: unknown;
     server.use(
       http.get(`${API}/music/songs/s1`, () => HttpResponse.json(envelope(songDetail({ status: 'draft', audioKey: null, editable: true })))),
@@ -169,10 +141,9 @@ describe('SongUploadPage', () => {
     await settle(fixture);
     type(el, 'input[type="url"]', 'https://www.youtube.com/watch?v=abc');
     await settle(fixture);
-    expect(el.textContent).toContain('plataformas de streaming no permiten importar');
     getByRole(el, 'button', 'Importar enlace').click();
     await settle(fixture);
-    expect(posted).toBeUndefined();
+    expect(posted).toEqual({ url: 'https://www.youtube.com/watch?v=abc' }); // NestJS decide: reproductor embebido
     type(el, 'input[type="url"]', 'https://cdn.example.com/flowers.mp3');
     await settle(fixture);
     getByRole(el, 'button', 'Importar enlace').click();

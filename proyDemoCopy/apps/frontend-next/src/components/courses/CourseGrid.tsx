@@ -25,7 +25,7 @@ export function CourseGrid({ courses, emptyMessage }: CourseGridProps) {
         <div className="text-3xl mb-2" aria-hidden>
           <Library aria-hidden className="mx-auto size-10 text-tone-brand" />
         </div>
-        <p className="text-sm">{emptyMessage ?? "No hay cursos en esta categoría."}</p>
+        <p>{emptyMessage ?? "No hay cursos en esta categoría."}</p>
       </div>
     );
   }
@@ -33,7 +33,7 @@ export function CourseGrid({ courses, emptyMessage }: CourseGridProps) {
   return (
     <div
       className="grid gap-4"
-      style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}
+      style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 300px), 1fr))" }} /* [2026-11-06]: 240 → 300 px: tarjetas más anchas */
     >
       {courses.map((c) => (
         <CourseCard key={c.id} course={c} />

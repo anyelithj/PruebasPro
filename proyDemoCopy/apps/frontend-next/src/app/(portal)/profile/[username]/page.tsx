@@ -60,7 +60,7 @@ export default async function PublicProfilePage(props: { params: Promise<{ usern
     return (
       <div className="grid min-h-[60vh] place-items-center py-4">
         <div className="text-center space-y-3">
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Usuario no encontrado</h1>
+          <h1 className="title-page">Usuario no encontrado</h1>
           <Link href="/profile" className="text-sm text-primary hover:underline">
             Volver a mi perfil
           </Link>
@@ -77,34 +77,34 @@ export default async function PublicProfilePage(props: { params: Promise<{ usern
         <div className="w-20 h-20 rounded-full bg-gradient-brand mx-auto flex items-center justify-center text-2xl font-bold text-white">
           {profile.firstName.charAt(0)}{profile.lastName.charAt(0)}
         </div>
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{displayName}</h1>
+        <h1 className="title-page">{displayName}</h1>
         {profile.section && (
-          <p className="text-sm text-muted-foreground">Sección: {profile.section}</p>
+          <p className="text-muted-foreground">Sección: {profile.section}</p>
         )}
         {/* [Teléfono · 2026-10-24]: solo si existe (`&&` cortocircuito JS) */}
         {profile.phone && (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground">
             Teléfono: <PhoneLink phone={profile.phone} />
           </p>
         )}
-        <p className="text-xs text-muted-foreground">
+        <p className="type-meta text-muted-foreground">
           Miembro desde {new Date(profile.createdAt).toLocaleDateString("es-CO")}
         </p>
       </header>
 
       {stats && (
         <section className="grid grid-cols-3 gap-4">
-          <div className="rounded-xl border border-border bg-card p-4 text-center">
+          <div className="surface p-4 text-center">
             <p className="text-2xl font-bold">{stats.quizzesCompleted}</p>
-            <p className="text-xs text-muted-foreground">Quizzes completados</p>
+            <p className="type-meta text-muted-foreground">Quizzes completados</p>
           </div>
-          <div className="rounded-xl border border-border bg-card p-4 text-center">
+          <div className="surface p-4 text-center">
             <p className="text-2xl font-bold">{stats.avgAccuracy}%</p>
-            <p className="text-xs text-muted-foreground">Precisión promedio</p>
+            <p className="type-meta text-muted-foreground">Precisión promedio</p>
           </div>
-          <div className="rounded-xl border border-border bg-card p-4 text-center">
+          <div className="surface p-4 text-center">
             <p className="text-2xl font-bold">{stats.totalPoints}</p>
-            <p className="text-xs text-muted-foreground">Puntos totales</p>
+            <p className="type-meta text-muted-foreground">Puntos totales</p>
           </div>
         </section>
       )}

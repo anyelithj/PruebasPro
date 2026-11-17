@@ -27,6 +27,16 @@ export class DictionaryHttpRepository extends DictionaryRepository {
       .pipe(map((r) => WordLookupSchema.parse(r)));
   }
 
+  ipa(q: Pick<WordQuery, 'language' | 'word'>): Observable<{ ipa: string | null; ipa_us: string | null }> {
+    return this.http.post<{ ipa: string | null; ipa_us: string | null }>(`${this.base}/lookup/word/ipa`, q);
+  }
+
+  override translate(text: string, source: string, target: string): Observable<{ translation: string }> {
+    return this.http
+      .post<unknown>(`${this.base}/lookup/translate`, { text, source, target })
+      .pipe(map((r) => z.object({ translation: z.string() }).parse(r)));
+  }
+
   listMarked(language: string): Observable<MarkedWord[]> {
     return this.http
       .get<unknown>(`${this.base}/words`, { params: new HttpParams().set('language', language) })

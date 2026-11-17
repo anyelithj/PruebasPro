@@ -29,11 +29,14 @@
 
   background: var(--bg);
   color: var(--text);
-  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-  line-height: 1.55;
+  /* [Tipografía uniforme · 2026-10-28]: misma familia, cuerpo e interlineado que el portal (tokens de @aula/ui-tokens/typography.css) | [Principio]: SSOT */
+  font-family: var(--ff-body);
+  line-height: var(--lh-body);
   -webkit-font-smoothing: antialiased;
-  font-size: 15px;
+  font-size: var(--fs-body);
 }
+/* [Títulos de la landing]: familia de títulos del portal; cada bloque fija solo su tamaño con un token */
+.landing-root :is(h1, h2, h3) { font-family: var(--ff-heading); }
 
 .landing-root * { box-sizing: border-box; }
 .landing-root a { color: var(--primary-dark); text-decoration: none; } /* [Sprint 7.13 · WCAG AA]: #4f46e5 sobre blanco = 6.3:1 (el #6366f1 daba 4.46:1) */
@@ -55,7 +58,7 @@
   padding: 11px 22px;
   border-radius: var(--radius-cta); /* [2026-10-23 · 4.º pase]: SSOT del radio «Comenzar gratis» (globals.css) */
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--fs-label); /* [Tipografía uniforme]: mismo tamaño que .btn del portal */
   transition: var(--transition);
   border: 1px solid transparent;
   white-space: nowrap;
@@ -88,7 +91,7 @@
   display: grid; place-items: center; color: #fff;
 }
 .landing-root .nav-links { display: flex; gap: 28px; align-items: center; }
-.landing-root .nav-links a { color: var(--text-muted); font-weight: 500; font-size: 14px; }
+.landing-root .nav-links a { color: var(--text-muted); font-weight: 500; font-size: var(--fs-label); }
 .landing-root .nav-links a:hover { color: var(--primary); }
 .landing-root .nav-actions { display: flex; gap: 10px; align-items: center; }
 
@@ -108,15 +111,16 @@
   display: grid; grid-template-columns: 1.05fr 1fr; gap: 60px; align-items: center;
   position: relative; z-index: 1;
 }
+/* [Hero]: único título «display» del sitio → token --fs-display (`clamp()` 28 → 54 px, sustituye las 3 media queries de tamaño) */
 .landing-root .hero h1 {
-  font-size: 54px; line-height: 1.08; letter-spacing: -1.5px;
-  margin-bottom: 20px; font-weight: 800;
+  font-size: var(--fs-display); line-height: var(--lh-display); letter-spacing: var(--ls-display);
+  margin-bottom: 20px; font-weight: var(--fw-display);
 }
 .landing-root .hero h1 .grad {
   background: var(--gradient); -webkit-background-clip: text;
   -webkit-text-fill-color: transparent; background-clip: text;
 }
-.landing-root .hero p.lead { font-size: 18px; color: var(--text-muted); margin-bottom: 32px; max-width: 540px; }
+.landing-root .hero p.lead { font-size: var(--fs-lead); color: var(--text-muted); margin-bottom: 32px; max-width: 540px; }
 .landing-root .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; }
 .landing-root .hero-stats { display: flex; gap: 32px; margin-top: 48px; }
 .landing-root .hero-stats div b { display: block; font-size: 26px; color: var(--primary); }
@@ -135,10 +139,18 @@
   border-radius: 14px; box-shadow: var(--shadow-lg);
   display: flex; align-items: center; gap: 12px;
   font-size: 13px;
-  animation: landingFloat 4s ease-in-out infinite;
 }
-.landing-root .floating-card.fc-1 { top: 8%; left: -10%; }
-.landing-root .floating-card.fc-2 { bottom: 12%; right: -8%; animation-delay: 1.5s; }
+/* [Fix 2026-11-17 · WCAG 2.2.2 + Lighthouse]: la flotación infinita al cargar movía la página sin parar (Speed Index 15,9 s → Rendimiento 88)
+   y un movimiento automático de más de 5 s debe poder pausarse → ahora solo flota mientras el puntero está sobre la ilustración */
+.landing-root .hero-visual:hover .floating-card { animation: landingFloat 4s ease-in-out infinite; }
+/* `prefers-reduced-motion` (CSS Media Queries 5): quien pide menos movimiento no la ve nunca */
+@media (prefers-reduced-motion: reduce) {
+  .landing-root .hero-visual:hover .floating-card { animation: none; }
+}
+/* [Fix 2026-11-03]: antes left: -10% / right: -8% → las cajas se salían del .container (no quedaban a plomo con el navbar ni con «Regístrese»)
+   Ahora dentro del borde: .hero-visual termina en el borde derecho del contenedor (margin-left: auto) → fc-2 alinea con el botón del navbar */
+.landing-root .floating-card.fc-1 { top: 8%; left: 0; }
+.landing-root .floating-card.fc-2 { bottom: 12%; right: 0; animation-delay: 1.5s; }
 .landing-root .floating-card .ic {
   width: 36px; height: 36px; border-radius: 10px;
   background: var(--gradient); color: #fff;
@@ -154,11 +166,12 @@
 .landing-root .section-head .eyebrow {
   display: inline-block; padding: 6px 14px;
   background: var(--gradient-soft); color: var(--primary);
-  border-radius: 99px; font-size: 12px; font-weight: 600;
+  border-radius: 99px; font-size: var(--fs-caption); font-weight: 600;
   letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 16px;
 }
-.landing-root .section-head h2 { font-size: 38px; letter-spacing: -1px; margin-bottom: 14px; font-weight: 800; }
-.landing-root .section-head p { color: var(--text-muted); font-size: 17px; }
+/* [Títulos de sección de la landing]: --fs-display-2 (22 → 38 px fluido) + entradilla --fs-lead | [Principio]: DRY (mismo token que la franja CTA) */
+.landing-root .section-head h2 { font-size: var(--fs-display-2); line-height: var(--lh-heading); letter-spacing: var(--ls-display); margin-bottom: 14px; font-weight: var(--fw-display); }
+.landing-root .section-head p { color: var(--text-muted); font-size: var(--fs-lead); }
 
 .landing-root .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
 .landing-root .feature-card {
@@ -171,8 +184,9 @@
   background: var(--gradient-soft); color: var(--primary);
   display: grid; place-items: center; margin-bottom: 18px;
 }
-.landing-root .feature-card h3 { font-size: 18px; margin-bottom: 8px; font-weight: 700; }
-.landing-root .feature-card p { color: var(--text-muted); font-size: 14px; }
+/* [Tarjetas]: título = --fs-h3 y texto = --fs-body, iguales a las tarjetas del portal */
+.landing-root .feature-card h3 { font-size: var(--fs-h3); line-height: var(--lh-heading); margin-bottom: 8px; font-weight: var(--fw-heading); }
+.landing-root .feature-card p { color: var(--text-muted); font-size: var(--fs-body); }
 
 /* [Cursos de idiomas]: reutilizan .feature-card (mismo fondo, borde, radio y hover que «Características») en versión compacta | [Principio]: DRY */
 /* `auto-fill` + `minmax` (CSS Grid): 4 → 3 → 2 → 1 columnas según el ancho, sin media queries (responsive nativo) */
@@ -182,10 +196,10 @@
 .landing-root .course-head { display: flex; align-items: center; gap: 12px; }
 .landing-root .course-card .icon { width: 42px; height: 42px; border-radius: 12px; margin: 0; flex-shrink: 0; }
 .landing-root .course-card .icon b { font-size: 14px; letter-spacing: 0.5px; }
-.landing-root .course-card h3 { font-size: 16px; margin: 0; line-height: 1.25; }
-.landing-root .course-meta { font-size: 12px; font-weight: 600; color: var(--primary-dark); }
+.landing-root .course-card h3 { font-size: var(--fs-h3); margin: 0; line-height: var(--lh-heading); font-weight: var(--fw-heading); }
+.landing-root .course-meta { font-size: var(--fs-meta); font-weight: var(--fw-label); color: var(--primary-dark); }
 /* `line-clamp` (CSS): máximo 3 renglones → tarjetas de la misma altura; el texto completo sigue en el HTML (SEO) */
-.landing-root .course-card p { font-size: 13px; line-height: 1.5; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
+.landing-root .course-card p { font-size: var(--fs-label); line-height: 1.5; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
 .landing-root .course-btn { margin-top: auto; padding: 8px 16px; font-size: 13px; }
 
 .landing-root .roles-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
@@ -202,10 +216,10 @@
   border-radius: 99px; font-size: 11px; font-weight: 700;
   letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 16px;
 }
-.landing-root .role-card h3 { font-size: 22px; margin-bottom: 10px; }
+.landing-root .role-card h3 { font-size: var(--fs-h2); line-height: var(--lh-heading); margin-bottom: 10px; font-weight: var(--fw-heading); } /* Tarjeta destacada: un nivel por encima (--fs-h2) */
 .landing-root .role-card ul { list-style: none; margin: 16px 0 24px; padding: 0; }
 .landing-root .role-card ul li {
-  padding: 6px 0; color: var(--text-muted); font-size: 14px;
+  padding: 6px 0; color: var(--text-muted); font-size: var(--fs-label);
   display: flex; align-items: center; gap: 10px;
 }
 .landing-root .role-card ul li::before {
@@ -219,9 +233,9 @@
   /* [2026-10-23 · 4.º pase]: la franja vive DENTRO de .container (antes margin: 0 24px a todo el ancho → se salía de la vertical del navbar en pantallas anchas) */
 }
 .landing-root .cta-wrap { padding-bottom: 80px; }
-/* [Tipografía uniforme]: mismo tamaño que los <h2> de las secciones (antes 36 vs 38 px) */
-.landing-root .cta-section h2 { font-size: 38px; margin-bottom: 14px; letter-spacing: -1px; font-weight: 800; }
-.landing-root .cta-section p { opacity: 0.92; font-size: 17px; margin-bottom: 28px; }
+/* [Tipografía uniforme]: mismo token que los <h2> de las secciones (--fs-display-2) y la misma entradilla (--fs-lead) */
+.landing-root .cta-section h2 { font-size: var(--fs-display-2); line-height: var(--lh-heading); margin-bottom: 14px; letter-spacing: var(--ls-display); font-weight: var(--fw-display); }
+.landing-root .cta-section p { opacity: 0.92; font-size: var(--fs-lead); margin-bottom: 28px; }
 /* [2026-10-23]: «Crear cuenta» = mismo botón sólido que «Comenzar gratis»; sobre la franja morada lleva borde blanco para destacar */
 .landing-root .cta-section .btn-primary { border-color: rgba(255, 255, 255, 0.85); }
 
@@ -234,30 +248,27 @@
   display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px;
   margin-bottom: 40px;
 }
-.landing-root .footer h3 { color: #fff; margin-bottom: 16px; font-size: 14px; }
-.landing-root .footer a { color: #cbd5e1; display: block; padding: 4px 0; font-size: 14px; }
+.landing-root .footer h3 { color: #fff; margin-bottom: 16px; font-size: var(--fs-label); font-weight: var(--fw-heading); }
+.landing-root .footer a { color: #cbd5e1; display: block; padding: 4px 0; font-size: var(--fs-label); }
 .landing-root .footer a:hover { color: #fff; }
 /* [Contacto como texto]: los enlaces mailto no son fiables en todos los entornos | [UX] */
-.landing-root .footer-grid > div > span { color: #cbd5e1; display: block; padding: 4px 0; font-size: 14px; }
+.landing-root .footer-grid > div > span { color: #cbd5e1; display: block; padding: 4px 0; font-size: var(--fs-label); }
 .landing-root .footer-bottom {
   border-top: 1px solid #1e293b; padding-top: 24px;
-  text-align: center; font-size: 13px; color: #94a3b8; /* [WCAG AA]: 7.1:1 sobre #0f172a (el #64748b daba 3.75:1) */
+  text-align: center; font-size: var(--fs-meta); color: #94a3b8; /* [WCAG AA]: 7.1:1 sobre #0f172a (el #64748b daba 3.75:1) */
 }
 
+/* [Responsive]: los tamaños de título y entradilla ya no se redefinen aquí → `clamp()` en los tokens los escala de forma continua */
 @media (max-width: 1024px) {
   .landing-root .hero-grid { grid-template-columns: 1fr; }
   .landing-root .feature-grid, .landing-root .roles-grid { grid-template-columns: repeat(2, 1fr); }
   .landing-root .footer-grid { grid-template-columns: 1fr 1fr; }
-  .landing-root .hero h1 { font-size: 42px; }
 }
 @media (max-width: 720px) {
   .landing-root .nav-links { display: none; }
   .landing-root .hero { padding: 50px 0 70px; }
-  .landing-root .hero h1 { font-size: 34px; }
   .landing-root .section { padding: 60px 0; }
-  .landing-root .section-head h2 { font-size: 28px; }
   .landing-root .cta-section { padding: 48px 20px; } /* [2026-10-23 · 4.º pase]: franja final más compacta en móvil */
-  .landing-root .cta-section h2 { font-size: 28px; }
   .landing-root .feature-grid, .landing-root .roles-grid { grid-template-columns: 1fr; }
   .landing-root .footer-grid { grid-template-columns: 1fr; gap: 24px; }
   .landing-root .hero-visual { max-width: 320px; margin: 0 auto; }
@@ -269,17 +280,12 @@
   .landing-root .brand-mark { width: 32px; height: 32px; }
   .landing-root .nav-actions .btn-ghost { display: none; }
   .landing-root .hero { padding: 40px 0 60px; }
-  .landing-root .hero h1 { font-size: 28px; line-height: 1.15; }
-  .landing-root .hero p.lead { font-size: 15px; }
   .landing-root .hero-stats { gap: 16px; flex-wrap: wrap; }
   .landing-root .hero-stats div b { font-size: 22px; }
   .landing-root .hero-cta .btn { flex: 1; justify-content: center; min-width: 140px; }
   .landing-root .section { padding: 40px 0; }
-  .landing-root .section-head h2 { font-size: 22px; }
-  .landing-root .section-head p { font-size: 14px; }
   .landing-root .feature-card, .landing-root .role-card { padding: 20px 18px; }
   .landing-root .cta-section { padding: 50px 20px; margin: 0 16px 50px; }
-  .landing-root .cta-section h2 { font-size: 24px; }
   .landing-root .footer { padding: 40px 0 20px; }
   .landing-root .footer-grid { gap: 28px; }
 }

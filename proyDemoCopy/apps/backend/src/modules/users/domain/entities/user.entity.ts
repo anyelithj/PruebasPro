@@ -65,6 +65,24 @@ export class User {
   })
   preferredLanguage?: string | null;
 
+  // [Redes sociales · 2026-10-28]: enlaces públicos del docente (se muestran en «Autoría del contenido» del curso) | https + dominio de la red lo valida `@OptionalSocialUrl` (social-links.vo.ts) | `varchar(255)`: migración UserSocialLinks1791993500000
+  @Column({
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+    name: 'linkedin_url',
+  })
+  linkedinUrl?: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true, name: 'twitter_url' })
+  twitterUrl?: string | null; // X (antes Twitter): acepta x.com y twitter.com
+
+  @Column({ type: 'varchar', length: 255, nullable: true, name: 'spotify_url' })
+  spotifyUrl?: string | null; // Podcast / perfil / playlist
+
+  @Column({ type: 'varchar', length: 255, nullable: true, name: 'youtube_url' })
+  youtubeUrl?: string | null;
+
   // [Activo]: soft-disable sin borrar (logout forzado, baneo, etc.)
   @Column({ type: 'boolean', default: true, name: 'is_active' })
   isActive!: boolean;
@@ -72,6 +90,10 @@ export class User {
   // [Verificación email]: para flujo email verification (Sprint posterior)
   @Column({ type: 'boolean', default: false, name: 'is_email_verified' })
   isEmailVerified!: boolean;
+
+  // [2FA · 2026-11-16]: segundo factor por código OTP al correo; lo activa el propio usuario en «Mi perfil» | `@Column` (TypeORM): boolean con default → filas existentes quedan en false
+  @Column({ type: 'boolean', default: false, name: 'two_factor_enabled' })
+  twoFactorEnabled!: boolean;
 
   // [Timestamps auditables]: TypeORM los gestiona automáticamente
   @CreateDateColumn({ name: 'created_at' })

@@ -34,7 +34,7 @@ import { isInternalHref } from '../../domain/models/notifications';
           </div>
         }
         @case ('empty') {
-          <p class="py-6 text-center text-sm text-muted-foreground">{{ t.empty }}</p>
+          <p class="py-6 text-center text-muted-foreground">{{ t.empty }}</p>
         }
         @default {
           <ul class="divide-y divide-border" aria-live="polite">
@@ -42,13 +42,13 @@ import { isInternalHref } from '../../domain/models/notifications';
               <li class="flex flex-wrap items-start gap-3 py-3">
                 <span class="mt-1.5 size-2 shrink-0 rounded-full" [class.bg-primary]="!n.isRead" [class.bg-muted]="n.isRead" aria-hidden="true"></span>
                 <div class="min-w-0 flex-1">
-                  <p class="text-sm font-semibold">
+                  <p class="font-semibold">
                     {{ n.title }}
                     @if (!n.isRead) {
                       <span class="sr-only">(no leída)</span>
                     }
                   </p>
-                  <p class="text-sm text-muted-foreground">{{ n.body }}</p>
+                  <p class="text-muted-foreground">{{ n.body }}</p>
                   <time class="text-xs text-muted-foreground" [attr.datetime]="n.createdAt">{{ format(n.createdAt) }}</time>
                 </div>
                 <div class="flex gap-2">

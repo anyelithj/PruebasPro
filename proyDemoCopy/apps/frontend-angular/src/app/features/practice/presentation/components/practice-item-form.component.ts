@@ -191,7 +191,7 @@ const BLANK: ItemText = {
         </label>
       </div>
       @if (problem(); as p) {
-        <p role="alert" class="text-sm text-tone-danger">{{ p }}</p>
+        <p role="alert" class="text-tone-danger">{{ p }}</p>
       }
       <div class="flex flex-wrap gap-2">
         <button aulaButton size="sm" type="submit" [loading]="busy()">{{ submitLabel() }}</button>

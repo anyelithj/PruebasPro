@@ -1,0 +1,82 @@
+// MODULE — calendar (agenda mensual) y day-panel (panel del día)
+.calendar {
+  width: 100%;
+  min-width: 40rem;
+  table-layout: fixed;
+  border-collapse: collapse;
+  background: var(--surface);
+  &__wrap {
+    overflow-x: auto;
+  }
+  &__caption {
+    caption-side: top;
+    font-size: 1.25rem;
+    font-weight: 700;
+    text-transform: capitalize;
+    padding: 0 0 0.5rem;
+    color: var(--ink) !important;
+  }
+  &__filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.5rem;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  &__legend {
+    display: inline-flex;
+    gap: 0.5rem;
+  }
+  th {
+    padding: 0.5rem;
+    background: var(--petrol);
+    color: #fff;
+    text-align: center;
+    font-weight: 700;
+  }
+  &__cell {
+    vertical-align: top;
+    height: 6.5rem;
+    border: 1px solid var(--line);
+    padding: 0.25rem;
+  }
+  &__day {
+    background: transparent;
+    border: 0;
+    font-weight: 700;
+    font-size: 0.85rem;
+    padding: 0 0.25rem;
+    border-radius: 0.25rem;
+  }
+  &__items {
+    list-style: none;
+    padding: 0;
+    margin: 0.25rem 0 0;
+    display: grid;
+    gap: 2px;
+  }
+  &__item {
+    display: block;
+    font-size: 0.75rem;
+    padding: 1px 4px;
+    border-radius: 3px;
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    &--proceso {
+      background: #dbe9f1;
+      color: var(--petrol);
+    }
+    &--tarea {
+      background: #e3f1ea;
+      color: #1f5c41;
+    }
+  }
+}
+.day-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--pad-card);
+}

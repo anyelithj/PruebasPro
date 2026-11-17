@@ -21,6 +21,9 @@ export class ListQuizzesUseCase {
       category: options.category,
       difficulty: options.difficulty,
       authorId: options.authorId,
+      language: options.language, // [2026-10-27]: idioma opcional (undefined = todos)
+      search: options.search?.trim().slice(0, 120) || undefined, // [2026-10-30]: vacío = sin filtro; tope de longitud en la frontera
+      status: options.status,
       publishedOnly:
         options.publishedOnly === undefined ? true : options.publishedOnly,
     });

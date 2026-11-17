@@ -12,9 +12,12 @@ const OLD_CACHES = ['aula-audio-v1'];
 
 // [PlayHooks]: eventos de una reproducción | `audio` = elemento del servidor que va a sonar (boca del avatar con Web Audio) · `end` = terminó, falló o se cortó (UNA vez)
 export interface PlayHooks {
+  start?: () => void; // [2026-10-31]: la voz del navegador empezó a sonar
   boundary?: (charIndex: number) => void;
   audio?: (el: HTMLAudioElement) => void;
   end?: () => void;
+  // [2026-11-05 · Lectura]: true = cualquier voz instalada del navegador antes que el WAV del servidor → eventos `boundary` exactos (resaltado palabra a palabra en tiempo real, como Lecciones de Next.js)
+  preferBrowserVoice?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -54,7 +57,7 @@ export class ServerAudioService {
     };
     if (!text.trim()) return done();
     this.playing.set(text);
-    const browserVoice = () => this.speech.speak(text, language, rate, { boundary: hooks.boundary, end: done });
+    const browserVoice = () => this.speech.speak(text, language, rate, { start: hooks.start, boundary: hooks.boundary, end: done });
     const server = async () => {
       try {
         await this.playServer(text, language, rate, current, done, hooks.audio);
@@ -65,8 +68,8 @@ export class ServerAudioService {
     };
     // [2026-10-20]: con una voz natural instalada (Edge/Chrome/Windows 11/macOS) se usa ESA: suena humana; espeak-ng queda de respaldo
     // [2026-10-24]: si esa voz no suena (voz en red sin conexión, error del motor) → audio del servidor en vez de silencio
-    if (this.speech.hasNaturalVoice(language)) {
-      this.speech.speak(text, language, rate, { boundary: hooks.boundary, end: done, error: () => void (current() && server()) });
+    if (this.speech.hasNaturalVoice(language) || (hooks.preferBrowserVoice && this.speech.bestVoice(language))) {
+      this.speech.speak(text, language, rate, { start: hooks.start, boundary: hooks.boundary, end: done, error: () => void (current() && server()), wordTiming: hooks.preferBrowserVoice });
       return;
     }
     await server();

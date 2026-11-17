@@ -2,7 +2,6 @@ import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core'
 import { firstValueFrom, type Subscription } from 'rxjs';
 import { LipSyncService } from '@core/audio/lip-sync.service';
 import { ServerAudioService } from '@core/audio/server-audio.service';
-import { isServerSpeechDown } from '@core/audio/server-speech';
 import { SpeechSynthesisService } from '@core/audio/speech-synthesis.service';
 import type { AvatarState } from '@shared/ui/organisms/avatar-stage/avatar-state';
 import type { Recording } from '@shared/ui/organisms/voice-recorder/voice-recorder.component';
@@ -24,20 +23,20 @@ export class DialogueAgentFacade {
   readonly state = signal<AvatarState>('idle');
   readonly speakingIndex = signal<number | null>(null); // Turno resaltado mientras suena
   readonly partial = signal(''); // Respuesta del avatar llegando palabra a palabra
-  readonly lastCorrection = signal<string | null>(null);
   readonly vocabularyUsed = signal<string[]>([]);
   readonly error = signal<string | null>(null);
   readonly busy = computed(() => this.state() === 'thinking' || this.state() === 'listening');
   readonly ended = computed(() => this.session()?.status === 'ended');
   readonly noVoice = signal(false);
-  // [2026-10-25]: el servidor no pudo transcribir (faster-whisper no instalado o caído) → la página muestra el respaldo (dictado/escribir), no un error
-  readonly serverSpeechDown = signal(false);
   private stream: Subscription | null = null;
-  private pendingRecording: Blob | null = null; // [2026-10-20]: voz del próximo turno del usuario (se sube cuando NestJS devuelve su id)
+  private pendingRecording: Blob | null = null; // [2026-10-20]: voz del próximo turno del usuario (se asocia cuando NestJS devuelve su id)
+  // [2026-11-05 · Solo local]: grabaciones en memoria de la pestaña (blob: URL) — no se suben ni se guardan en ninguna base de datos; se liberan al salir
+  private readonly localRecordings = new Map<string, string>();
 
   constructor() {
     inject(DestroyRef).onDestroy(() => {
       this.stream?.unsubscribe();
+      this.localRecordings.forEach((url) => URL.revokeObjectURL(url));
       this.voice.stop();
       this.lipSync.detach();
     });
@@ -74,7 +73,7 @@ export class DialogueAgentFacade {
   }
 
   // [send]: SSE — `user` (turno guardado) → `token`… (texto del avatar en vivo) → `avatar` (turno con IPA y traducción) → `done`
-  send(text: string): void {
+  send(text: string, origin: 'voz' | 'escrito' = 'escrito'): void {
     const s = this.session();
     if (!s || !text.trim() || this.ended()) return;
     this.error.set(null);
@@ -82,13 +81,12 @@ export class DialogueAgentFacade {
     this.state.set('thinking');
     this.voice.stop();
     this.stream?.unsubscribe();
-    this.stream = this.repo.streamTurn(s.id, text.trim()).subscribe({
+    this.stream = this.repo.streamTurn(s.id, text.trim(), origin).subscribe({
       next: (m) => {
         if (m.type === 'user') {
           const t = TurnSchema.parse(m.data);
           this.turns.update((ts) => [...ts, t]);
-          this.lastCorrection.set(t.correction);
-          this.keepRecording(s.id, t.id);
+          this.keepRecording(t.id);
         } else if (m.type === 'token') this.partial.update((p) => p + String(m.data['text'] ?? ''));
         else if (m.type === 'avatar') {
           this.partial.set('');
@@ -106,49 +104,25 @@ export class DialogueAgentFacade {
     });
   }
 
-  // [transcribe]: voz del usuario → texto (faster-whisper en el idioma de la sesión; no se guarda el audio) | [2026-10-19]: ya NO se envía solo:
-  // el texto va al campo para que el alumno lo revise y corrija antes de enviarlo (antes se enviaba directo y no se podía evaluar)
-  async transcribe(rec: Recording, fallback = ''): Promise<string | null> {
-    const s = this.session();
-    if (!s) return null;
-    this.pendingRecording = rec.blob; // Se guarda con el turno al enviarlo
-    this.state.set('thinking');
-    try {
-      const text = await firstValueFrom(this.repo.transcribe(rec.blob, s.language));
-      if (!text)
-        throw new Error(
-          'No se entendió la grabación. Habla más cerca del micrófono o escribe tu respuesta.',
-        );
-      this.state.set('idle');
-      this.serverSpeechDown.set(false);
-      return text;
-    } catch (err) {
-      // [2026-10-25]: servidor sin voz a texto (503 SPEECH_ENGINE_MISSING, caído, sin red) → respaldo, no error; `pendingRecording` se conserva
-      // y se guarda en «Mis grabaciones» cuando el alumno envíe el texto dictado o escrito
-      const down = isServerSpeechDown(err);
-      this.serverSpeechDown.set(down);
-      // [2026-10-20]: si el reconocimiento en vivo del navegador ya escribió el texto, un fallo de Whisper (p. ej. falta de RAM) no es un error para el alumno
-      if (down || fallback.trim()) this.state.set('idle');
-      else this.fail(err);
-      return null;
-    }
+  // [heard · 2026-11-09]: la voz se queda SOLO en este navegador mientras dura la actividad → el texto lo da el dictado del navegador
+  // (Web Speech) y el audio queda en memoria para «Mis grabaciones» | nada se sube ni se guarda en el servidor
+  heard(rec: Recording): void {
+    this.pendingRecording = rec.blob;
+    this.state.set('idle');
   }
 
-  // [recordingUrl]: dónde escuchar la grabación guardada de un turno
+  // [recordingUrl]: grabación local del turno (null = no hay)
   recordingUrl(turnId: string): string | null {
-    const s = this.session();
-    return s ? this.repo.recordingUrl(s.id, turnId) : null;
+    return this.localRecordings.get(turnId) ?? null;
   }
 
-  // [keepRecording]: sube la voz pendiente al turno recién guardado; si falla, la conversación sigue (solo se pierde la grabación)
-  private keepRecording(sessionId: string, turnId: string): void {
+  // [keepRecording · 2026-11-05]: la voz pendiente queda en memoria asociada al turno (blob: URL) — nada se envía al servidor
+  private keepRecording(turnId: string): void {
     const blob = this.pendingRecording;
     this.pendingRecording = null;
     if (!blob?.size) return;
-    this.repo.saveRecording(sessionId, turnId, blob).subscribe({
-      next: (saved) => this.turns.update((ts) => ts.map((x) => (x.id === saved.id ? { ...x, audioKey: saved.audioKey } : x))),
-      error: () => undefined,
-    });
+    this.localRecordings.set(turnId, URL.createObjectURL(blob)); // `URL.createObjectURL` (Web API): reproducible con <audio> sin red
+    this.turns.update((ts) => ts.map((x) => (x.id === turnId ? { ...x, audioKey: 'local' } : x)));
   }
 
   listening(): void {

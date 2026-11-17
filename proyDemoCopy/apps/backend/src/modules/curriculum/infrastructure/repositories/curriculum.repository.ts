@@ -1,4 +1,5 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import {
   Brackets,
@@ -16,6 +17,10 @@ import {
   OWN_CONTENT_SOURCE_SLUG,
 } from '../../domain/entities/curriculum-source.entity';
 import { CurriculumTopic } from '../../domain/entities/curriculum-topic.entity';
+import {
+  CURRICULUM_ITEMS_CHANGED_EVENT,
+  CurriculumItemsChangedEvent,
+} from '../../domain/events/curriculum-items-changed.event';
 import { slugify } from '../../domain/slug';
 import { ReviewStatus } from '../../domain/value-objects/review-status.vo';
 import { CefrLevel } from '../../../../shared/domain/cefr-level.vo';
@@ -65,7 +70,18 @@ export class CurriculumRepository
     private readonly sources: Repository<CurriculumSource>,
     // `@InjectDataSource` (@nestjs/typeorm): conexión para abrir transacciones explícitas
     @InjectDataSource() private readonly dataSource: DataSource,
+    // `@Optional()` (NestJS): los tests pueden construir el adapter sin bus de eventos
+    @Optional() private readonly events?: EventEmitter2,
   ) {}
+
+  // [Tarea 9 · Write-Through al RAG]: TODA escritura de recursos pasa por este adapter → un único punto avisa del cambio DESPUÉS del COMMIT
+  // (alta manual, importación por archivo/enlace, edición, revisión, publicación en lote y baja) | [Patrón]: Domain Event (after-commit)
+  private changed(ids: ReadonlyArray<string>, actorId: string | null): void {
+    this.events?.emit(
+      CURRICULUM_ITEMS_CHANGED_EVENT,
+      new CurriculumItemsChangedEvent(ids, actorId),
+    );
+  }
 
   // [Seed idempotente]: crea la fuente "Contenido propio" y los temas de ejemplo solo si no existen
   async onModuleInit(): Promise<void> {
@@ -94,6 +110,9 @@ export class CurriculumRepository
         },
       });
       const known = new Set(existing.map((t) => t.slug));
+      // [Fix 2026-11-05 · borrados que reaparecían]: solo se siembra en una instalación vacía → lo que el administrador borra no vuelve al reiniciar
+      // ponytail: entradas nuevas del seed no llegan a BD ya sembradas; añadir una tabla de «seeds aplicados» si hace falta
+      if (known.size) return;
       const missing = SEED_TOPICS_EN_A1_GRAMMAR.filter(
         (n) => !known.has(slugify(n)),
       );
@@ -293,14 +312,16 @@ export class CurriculumRepository
     meta: RevisionMeta,
   ): Promise<CurriculumItem> {
     // `dataSource.transaction` (TypeORM): BEGIN … COMMIT; si algo lanza → ROLLBACK automático | [Patrón]: Unit of Work
-    return this.dataSource.transaction(async (m: EntityManager) => {
-      const saved = await m.save(
+    const saved = await this.dataSource.transaction(async (m: EntityManager) => {
+      const created = await m.save(
         CurriculumItem,
         m.create(CurriculumItem, item),
       ); // INSERT (version = 1)
-      await this.insertRevision(m, saved, meta); // INSERT en el log de auditoría
-      return saved;
+      await this.insertRevision(m, created, meta); // INSERT en el log de auditoría
+      return created;
     });
+    this.changed([saved.id], meta.changedBy); // Tras el COMMIT: el índice nunca ve una fila que luego se revierte
+    return saved;
   }
 
   async saveWithRevision(
@@ -308,7 +329,7 @@ export class CurriculumRepository
     expectedVersion: number,
     meta: RevisionMeta,
   ): Promise<CurriculumItem> {
-    return this.dataSource.transaction(async (m: EntityManager) => {
+    const saved = await this.dataSource.transaction(async (m: EntityManager) => {
       // [Bloqueo de fila]: `pessimistic_write` = SELECT … FOR UPDATE → serializa escrituras concurrentes del mismo ítem
       const current = await m.findOne(CurriculumItem, {
         where: { id: item.id },
@@ -318,10 +339,12 @@ export class CurriculumRepository
       if (!current || current.version !== expectedVersion) {
         throw new CurriculumVersionConflictError(item.id, expectedVersion);
       }
-      const saved = await m.save(CurriculumItem, item); // UPDATE; @VersionColumn incrementa version
-      await this.insertRevision(m, saved, meta);
-      return saved;
+      const updated = await m.save(CurriculumItem, item); // UPDATE; @VersionColumn incrementa version
+      await this.insertRevision(m, updated, meta);
+      return updated;
     });
+    this.changed([saved.id], meta.changedBy); // Edición, cambio de estado o publicación → reemplaza (o quita) sus fragmentos
+    return saved;
   }
 
   // `private` (TS): detalle interno del adapter; no forma parte del puerto
@@ -372,6 +395,7 @@ export class CurriculumRepository
       await m.delete(CurriculumItemRevision, { itemId: id });
       await m.delete(CurriculumItem, { id });
     });
+    this.changed([id], null); // Baja → sus fragmentos desaparecen del índice (sin huérfanos)
   }
 
   private async insertRevision(

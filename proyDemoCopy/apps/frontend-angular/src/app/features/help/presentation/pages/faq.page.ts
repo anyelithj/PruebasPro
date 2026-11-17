@@ -47,7 +47,7 @@ import { FaqListComponent } from '../components/faq-list.component';
         </aula-form-field>
       </div>
       @if (facade.actionError(); as err) {
-        <p role="alert" class="mb-3 text-sm text-tone-danger">{{ err }}</p>
+        <p role="alert" class="mb-3 text-tone-danger">{{ err }}</p>
       }
       @switch (facade.faqs.status()) {
         @case ('loading') {
@@ -60,7 +60,7 @@ import { FaqListComponent } from '../components/faq-list.component';
           </div>
         }
         @default {
-          <p role="status" class="mb-2 text-xs text-muted-foreground">{{ i18n.fmt(t.results, { n: facade.visible().length }) }}</p>
+          <p role="status" class="mb-2 type-meta text-muted-foreground">{{ i18n.fmt(t.results, { n: facade.visible().length }) }}</p>
           <aula-faq-list [faqs]="facade.visible()" [t]="t" [admin]="isAdmin()" [openId]="id()" [reviewedLabel]="reviewed" (edit)="openForm($event)" (archive)="archive($event)" />
         }
       }

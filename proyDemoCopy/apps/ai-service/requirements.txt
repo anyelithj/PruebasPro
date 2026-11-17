@@ -38,6 +38,8 @@ ecdsa==0.19.2
 et_xmlfile==2.0.0
 executing==2.2.1
 faiss-cpu==1.13.2
+# [Tarea 1 · RNF-06]: cliente oficial de Redis (conversaciones con estado compartidas entre workers)
+redis==5.2.1
 fastapi==0.128.1
 filelock==3.29.0
 Flask==3.1.2
@@ -183,3 +185,5 @@ zstandard==0.25.0
 # [Sprint 8.6]: voz a texto local (MIT) para los juegos orales — CPU, int8; trae ctranslate2 y PyAV
 faster-whisper==1.2.1
 av==16.1.0  # PyAV 19 quita el argumento metadata_errors que usa faster-whisper 1.2.1
+# [2026-10-27]: «Detectar idioma» del Traductor y del Corrector de redacciones (Apache-2.0, puro Python, sin modelo que descargar)
+langdetect==1.0.9

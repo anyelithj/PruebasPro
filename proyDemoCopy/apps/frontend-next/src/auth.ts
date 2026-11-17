@@ -14,7 +14,6 @@ import {
 // [Map provider id NextAuth → backend]: solo aceptamos los soportados | [Principio]: SSOT
 const SUPPORTED_PROVIDERS: Record<string, OAuthProviderId> = {
   google: "google",
-  "microsoft-entra-id": "microsoft",
 };
 
 // [toUser]: mapper BackendAuthResponse → User Auth.js | [Principio]: SRP

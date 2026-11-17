@@ -67,8 +67,8 @@ export default async function ProfilePage(props: {
     <div className="w-full space-y-5 py-4">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Progreso</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="title-page">Progreso</h1>
+          <p className="text-muted-foreground mt-1">
             Historial de quizzes, precisión promedio y temas a reforzar.
           </p>
         </div>

@@ -28,7 +28,7 @@ import { GrammarSectionFormComponent } from '../components/grammar-section-form.
       <div class="grid gap-6 lg:grid-cols-[18rem_1fr]">
         <aside class="space-y-4" aria-labelledby="ge-new">
           <form class="space-y-2 rounded-xl bg-muted p-3" (submit)="$event.preventDefault(); create(false)">
-            <h2 id="ge-new" class="text-sm font-bold">＋ {{ ex.newTopic }}</h2>
+            <h2 id="ge-new" class="title-section">＋ {{ ex.newTopic }}</h2>
             <label class="block text-xs font-semibold">
               {{ ex.topicTitle }}
               <input class="control mt-1 w-full" maxlength="120" [value]="title()" (input)="title.set($any($event.target).value)" />
@@ -55,14 +55,14 @@ import { GrammarSectionFormComponent } from '../components/grammar-section-form.
               <button type="submit" class="btn btn-outline btn-sm" [disabled]="g.busy() || !valid()">{{ ex.create }}</button>
               <button type="button" class="btn btn-primary btn-sm" [disabled]="g.busy() || !valid()" (click)="create(true)"><aula-icon name="sparkles" /> {{ ex.draft }}</button>
             </div>
-            <p class="text-[11px] text-muted-foreground">{{ ex.draftHint }}</p>
+            <p class="type-meta text-muted-foreground">{{ ex.draftHint }}</p>
             @if (generating()) {
-              <p class="text-xs text-tone-brand" aria-live="polite">{{ ex.generating }}</p>
+              <p class="type-meta text-tone-brand" aria-live="polite">{{ ex.generating }}</p>
             }
           </form>
 
           <nav [attr.aria-label]="ex.mine">
-            <h2 class="mb-2 text-sm font-bold">{{ ex.mine }}</h2>
+            <h2 class="title-section mb-2">{{ ex.mine }}</h2>
             <ul class="space-y-1">
               @for (t of g.topics.data() ?? []; track t.id) {
                 <li>
@@ -84,7 +84,7 @@ import { GrammarSectionFormComponent } from '../components/grammar-section-form.
         </aside>
 
         <section class="min-w-0 space-y-4">
-          <p class="text-sm" aria-live="polite">
+          <p aria-live="polite">
             @if (g.notice()) {
               <span class="text-tone-brand">✓ {{ g.notice() }}</span>
             }
@@ -93,7 +93,7 @@ import { GrammarSectionFormComponent } from '../components/grammar-section-form.
             }
           </p>
           @if (!id()) {
-            <p class="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">{{ ex.select }}</p>
+            <p class="rounded-xl border border-dashed border-border p-6 text-center text-muted-foreground">{{ ex.select }}</p>
           } @else if (g.topic.loading()) {
             <aula-spinner [label]="i18n.t().common.loading" />
           } @else if (g.topic.data(); as t) {
@@ -124,7 +124,7 @@ import { GrammarSectionFormComponent } from '../components/grammar-section-form.
             <ol class="space-y-4">
               @for (s of t.sections; track s.id) {
                 <li class="surface space-y-3 p-3">
-                  <p class="text-xs font-bold uppercase tracking-wide text-muted-foreground"><aula-icon [name]="meta[s.type].icon" /> {{ tx.sections[s.type] }}</p>
+                  <p class="type-meta font-bold uppercase tracking-wide text-muted-foreground"><aula-icon [name]="meta[s.type].icon" /> {{ tx.sections[s.type] }}</p>
                   <aula-grammar-section-form [section]="s" [busy]="g.busy()" [typeLabels]="tx.sections" [labels]="ex" (saved)="g.updateSection(t.id, s.id, $event)" />
                   <ul class="space-y-2 border-l-2 border-tone-brand-line pl-3">
                     @for (e of s.examples; track e.id) {
@@ -150,7 +150,7 @@ import { GrammarSectionFormComponent } from '../components/grammar-section-form.
             </div>
 
             <section aria-labelledby="ge-preview" class="border-t border-border pt-4">
-              <h2 id="ge-preview" class="mb-3 text-sm font-bold"><aula-icon name="eye" /> {{ ex.preview }}</h2>
+              <h2 id="ge-preview" class="title-section mb-3"><aula-icon name="eye" /> {{ ex.preview }}</h2>
               <aula-grammar-card [topic]="t" [languageName]="i18n.languageName(t.language ?? '')" [sectionLabels]="tx.sections" [listenLabel]="tx.listen" [unreviewedLabel]="tx.unreviewed" />
             </section>
           }

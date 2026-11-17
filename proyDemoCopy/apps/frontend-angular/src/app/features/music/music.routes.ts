@@ -14,7 +14,7 @@ export const MUSIC_ROUTES: Routes = [
     children: [
       {
         path: '',
-        title: 'Música · Aula de Idiomas',
+        title: 'Canciones · Aula de Idiomas',
         loadComponent: () => import('./presentation/pages/music-hub.page'),
       },
       {

@@ -26,8 +26,8 @@ export default async function CertificationsPage(props: PageProps) {
       <BackLink href="/admin/curriculum" memo="content">Volver a recursos</BackLink>
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Exámenes oficiales</h1>
-          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+          <h1 className="title-page">Exámenes oficiales</h1>
+          <p className="mt-1 max-w-3xl text-muted-foreground">
             Exámenes oficiales por idioma según sus especificaciones públicas. La plataforma prepara con ítems <b>originales</b>: nunca reproduce preguntas de
             exámenes oficiales y no es un centro examinador.
           </p>
@@ -52,8 +52,8 @@ export default async function CertificationsPage(props: PageProps) {
           <li key={c.id} className="surface flex flex-col gap-2 p-4">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <h2 className="text-base font-bold">{c.name}</h2>
-                <p className="text-xs text-muted-foreground">
+                <h2 className="title-section">{c.name}</h2>
+                <p className="type-meta text-muted-foreground">
                   {languageLabel(c.language)} · {c.issuer}
                 </p>
               </div>
@@ -62,20 +62,20 @@ export default async function CertificationsPage(props: PageProps) {
                 MCER {c.cefrMapping === "official" ? "oficial" : "orientativo"}
               </span>
             </div>
-            <ul className="flex flex-wrap gap-1 text-xs" aria-label="Niveles">
+            <ul className="flex flex-wrap gap-1 type-meta" aria-label="Niveles">
               {c.levels.map((l) => (
                 <li key={l.cefr} className="rounded-md border border-border px-2 py-0.5">
                   <b>{l.cefr}</b> · {l.exam}
                 </li>
               ))}
             </ul>
-            <p className="text-xs text-muted-foreground">Evalúa: {c.skills.map((s) => SKILL_LABEL[s]).join(", ")}</p>
+            <p className="type-meta text-muted-foreground">Evalúa: {c.skills.map((s) => SKILL_LABEL[s]).join(", ")}</p>
             {c.url ? (
               <a href={c.url} target="_blank" rel="noopener noreferrer" className="mt-auto text-xs font-semibold text-primary hover:underline">
                 Especificaciones oficiales ↗<span className="sr-only"> (se abre en otra pestaña)</span>
               </a>
             ) : (
-              <p className="mt-auto text-xs text-muted-foreground">Consultar las especificaciones con el centro examinador.</p>
+              <p className="mt-auto type-meta text-muted-foreground">Consultar las especificaciones con el centro examinador.</p>
             )}
           </li>
         ))}

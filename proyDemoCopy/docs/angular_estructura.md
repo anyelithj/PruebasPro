@@ -26,7 +26,7 @@
 
 **Prácticas:** SOLID (SRP: página contenedor + componente de UI · DIP: la presentación depende de la fachada) · DRY (esquemas Zod, i18n y tokens de diseño compartidos con Next.js) · Type-Safe (TS strict + Zod) · Reglas de capas verificadas con ESLint (`no-restricted-imports`) · A11y (WCAG 2.1 AA) · Responsive (Tailwind) · Rutas protegidas (`role.guard.ts` + sesión del shell)
 
-**Tecnologías:** Angular 22 · TypeScript · Signals + RxJS · Signal Forms · Tailwind CSS 4 · tw-animate-css · Zod · @angular/cdk (DragDrop) · @angular/elements · viem (EIP-6963, SIWE y sendTransaction en Sepolia) · @stripe/stripe-js · marked + DOMPurify · EventSource (SSE) · Jest · msw · Playwright · ESLint · Prettier
+**Tecnologías:** Angular 22 · TypeScript · Signals + RxJS · Signal Forms · Tailwind CSS 4 · tw-animate-css · Zod · @angular/cdk (DragDrop) · @angular/elements · viem (EIP-6963, SIWE y sendTransaction en Sepolia) · @stripe/stripe-js · marked + DOMPurify · EventSource (SSE) · Jest · msw · Playwright · ESLint · Prettier · Storybook 10 (@storybook/angular) · TypeDoc
 
 **Nota — Sin Module Federation:** Next.js es el *host* (login, layout, navegación y BFF) y Angular el remoto. La integración es por rutas (*rewrites*), Angular Elements y eventos `aula:*`; no se usa Module Federation (capítulo 15 del informe).
 
@@ -48,12 +48,16 @@
 
 ```
 apps/frontend-angular/                                           # Angular Microfrontend + Feature-Based Clean Architecture + Atomic Design · remoto :9100
+├── scripts/
+│   └── serve-dist.mjs                                           # sirve el build de producción de Angular (ng build) en :9100 bajo /ng/ — sin `ng serve` (que compila en caliente)
 ├── src/                                                         # Código fuente de la aplicación
 │   ├── app/                                                     # Código de la aplicación
 │   │   ├── core/                                                # Una sola vez en toda la app (no importa nada de la app)
 │   │   │   ├── audio/
+│   │   │   │   ├── audio-audibility.ts                          # ¿el audio descargado del servidor SUENA? (decodifica y mide RMS)
 │   │   │   │   ├── lip-sync.service.ts                          # Abre y cierra la boca según el volumen (Web Audio API, AnalyserNode)
 │   │   │   │   ├── server-audio.service.ts                      # Audio del servidor (nube) + copia local (Cache Storage) + respaldo a la voz del navegador · 2026-10-19
+│   │   │   │   ├── server-speech.ts                             # ¿puede el servidor transcribir? y qué decir al alumno si no (dictado del navegador o escribir)
 │   │   │   │   └── speech-synthesis.service.ts                  # Voz del navegador (en-GB o en-US según el interruptor)
 │   │   │   ├── auth/                                            # Sesión compartida con el shell de Next.js
 │   │   │   │   ├── auth.providers.ts                            # Providers de sesión y guards
@@ -72,6 +76,7 @@ apps/frontend-angular/                                           # Angular Micro
 │   │   │   │   └── toast.service.ts                             # Publica aula:toast; lo pinta el shell activo (Next.js o Angular)
 │   │   │   ├── http/                                            # Envuelve HttpClient: Angular no tiene BFF propio, usa /api/* de Next.js
 │   │   │   │   ├── api-url.token.ts                             # InjectionToken con la base de /api/*
+│   │   │   │   ├── busy.interceptor.ts                          # mientras haya un alta, edición o borrado en curso → indicador global «Cargando… puede tardar unos minutos» (BusyOverlayC…
 │   │   │   │   ├── credentials.interceptor.ts                   # withCredentials: la sesión viaja en cookie httpOnly
 │   │   │   │   ├── envelope.interceptor.ts                      # Desenvuelve { statusCode, data, meta } de NestJS (la ruta comodín del BFF lo deja pasar)
 │   │   │   │   ├── error.interceptor.ts                         # Errores comunes (401 → shell, 403, 5xx) hacia un mensaje legible
@@ -81,7 +86,15 @@ apps/frontend-angular/                                           # Angular Micro
 │   │   │   │   ├── i18n.service.ts                              # Textos ES/EN desde packages/shared-i18n
 │   │   │   │   └── locale.token.ts                              # InjectionToken del idioma activo
 │   │   │   ├── layout/                                          # Estado del marco del portal (sidebar y topbar)
-│   │   │   │   └── portal-nav.service.ts                        # Drawer móvil y sidebar oculto (cookie sidebar-collapsed compartida con Next.js)
+│   │   │   │   ├── not-found.page.ts                            # 404 del remoto Angular (antes '**' redirigía a /tutor y ocultaba el enlace roto)
+│   │   │   │   ├── portal-nav.service.ts                        # Drawer móvil y sidebar oculto (cookie sidebar-collapsed compartida con Next.js)
+│   │   │   │   ├── prefill.ts                                   # idioma y nivel elegidos en Gestión → Crear actividad llegan como ?idioma=&nivel= y los editores los usan como valor inic…
+│   │   │   │   └── return-to.ts                                 # «volver» al lugar de donde se vino — Gestión → Actividades abre los editores con ?volver=/admin/activities?tab=… y, al t…
+│   │   │   ├── media/
+│   │   │   │   └── text-import.service.ts                       # texto de un archivo (PDF, Word .docx, texto, imagen con OCR) o de un enlace → Route Handler de Next.js /api/media/extrac…
+│   │   │   ├── routing/
+│   │   │   │   ├── chunk-reload.ts                              # «Failed to fetch dynamically imported module: /ng/chunk-XXXX.js» → el remoto se recompiló o se desplegó y esa pantalla a…
+│   │   │   │   └── idle-preloading.strategy.ts                  # precarga las funcionalidades lazy cuando el navegador queda ocioso, no en cuanto se pinta la primera pantalla
 │   │   │   ├── theme/
 │   │   │   │   └── theme.service.ts                             # Tema activo (6 temas de packages/ui-tokens) y modo oscuro
 │   │   │   └── web3/
@@ -99,7 +112,11 @@ apps/frontend-angular/                                           # Angular Micro
 │   │   │   │   │   └── assistant.http-repository.ts             # [CREAR, LISTAR, VER DETALLE] Adaptador: implementa el puerto con HttpClient hacia /api/* (único lugar con HTTP)
 │   │   │   │   ├── presentation/                                # Capa Presentación — pages (contenedor) + components (presentacional)
 │   │   │   │   │   ├── components/                              # Componentes presentacionales (input() / output(), sin servicios)
-│   │   │   │   │   │   └── conversation-chat.component.ts       # Chat con respuesta en streaming
+│   │   │   │   │   │   ├── confirm-dialog.component.ts          # confirmación de borrado (conversación o mensaje) SIN `window.confirm`
+│   │   │   │   │   │   ├── conversation-chat.component.ts       # Chat con respuesta en streaming
+│   │   │   │   │   │   ├── conversation-list.component.ts       # «Mis conversaciones» del Tutor IA — abrir, renombrar en línea y pedir borrado (el diálogo lo pinta la página)
+│   │   │   │   │   │   ├── language-usage-meter.component.ts    # indicador «Uso del idioma: 45 % / meta 60 %» con barra y marca de la meta del nivel
+│   │   │   │   │   │   └── tutor-quick-chat.component.ts        # pestaña «Tutor» del chatbot flotante — misma conversación que /tutor en pequeño: idioma, nivel, chat, enviar y eliminar …
 │   │   │   │   │   └── pages/                                   # Contenedores (inyectan la fachada, sin HTTP)
 │   │   │   │   │       └── assistant.page.ts                    # Chat conversacional con el tutor
 │   │   │   │   └── assistant.routes.ts                          # Rutas lazy + providers (puerto → repositorio HTTP)
@@ -217,6 +234,7 @@ apps/frontend-angular/                                           # Angular Micro
 │   │   │   │   │       ├── forbidden-word.page.ts               # Vocabulario: palabra prohibida
 │   │   │   │   │       ├── game-result.page.ts                  # Resultado de una sesión
 │   │   │   │   │       ├── games-hub.page.ts                    # Hub: catálogo de juegos por habilidad
+│   │   │   │   │       ├── hangman.page.ts                      # /juegos/ahorcado — adivinar cada palabra del mazo letra a letra con su traducción (y emoji) como pista; 6 fallos = palab…
 │   │   │   │   │       ├── listen-reformulate.page.ts           # Comprensión: escucha y reformula
 │   │   │   │   │       ├── memory.page.ts                       # Vocabulario: parejas
 │   │   │   │   │       ├── partial-dictation.page.ts            # Comprensión: dictado parcial
@@ -286,6 +304,7 @@ apps/frontend-angular/                                           # Angular Micro
 │   │   │   │   │   │   └── music.ts                             # Tipos y esquemas de Funcionalidad: Música y canciones (colecciones, karaoke con avatar, prácticas)
 │   │   │   │   │   └── music.repository.port.ts                 # [CREAR, LISTAR, VER DETALLE, EDITAR, ELIMINAR] Puerto: contrato del repositorio (clase abstracta + InjectionToken)
 │   │   │   │   ├── infrastructure/                              # Capa Infraestructura — HTTP, SSE y mapeadores
+│   │   │   │   │   ├── lyrics-import.service.ts                 # «Importar la letra desde un enlace» → primero NestJS POST /music/lyrics/from-url (descarga como navegador y localiza la …
 │   │   │   │   │   └── music.http-repository.ts                 # [CREAR, LISTAR, VER DETALLE, EDITAR, ELIMINAR] Adaptador: implementa el puerto con HttpClient hacia /api/* (único lugar con HTTP)
 │   │   │   │   ├── presentation/                                # Capa Presentación — pages (contenedor) + components (presentacional)
 │   │   │   │   │   ├── components/                              # Componentes presentacionales (input() / output(), sin servicios)
@@ -332,6 +351,7 @@ apps/frontend-angular/                                           # Angular Micro
 │   │   │   │   │   └── own-llm.http-repository.ts               # [CREAR, LISTAR] Adaptador: HttpClient hacia /api/ai/own-llm/* (único lugar con HTTP)
 │   │   │   │   ├── presentation/
 │   │   │   │   │   ├── components/
+│   │   │   │   │   │   ├── correction-errors.component.ts       # lista de errores del corrector único → categoría, «original → sugerencia» y explicación en español
 │   │   │   │   │   │   └── marked-text.component.ts             # Texto con errores marcados: subrayado + icono + texto, navegable con teclado
 │   │   │   │   │   └── pages/
 │   │   │   │   │       └── writing-corrector.page.ts            # Corrector de redacciones: editor, nivel y resultado
@@ -387,9 +407,11 @@ apps/frontend-angular/                                           # Angular Micro
 │   │   │   │   │   │   └── practice.ts                          # Tipos y esquemas de Funcionalidad: Práctica interactiva y retroalimentación
 │   │   │   │   │   └── practice.repository.port.ts              # [CREAR, LISTAR, VER DETALLE, EDITAR, ELIMINAR] Puerto: contrato del repositorio (clase abstracta + InjectionToken)
 │   │   │   │   ├── infrastructure/                              # Capa Infraestructura — HTTP, SSE y mapeadores
+│   │   │   │   │   ├── content-catalog.service.ts               # opciones para VINCULAR contenido a una actividad (vocabulario de Recursos, juegos, canciones, diálogos, fichas de gramát…
 │   │   │   │   │   └── practice.http-repository.ts              # [CREAR, LISTAR, VER DETALLE, EDITAR, ELIMINAR] Adaptador: implementa el puerto con HttpClient hacia /api/* (único lugar con HTTP)
 │   │   │   │   ├── presentation/                                # Capa Presentación — pages (contenedor) + components (presentacional)
 │   │   │   │   │   ├── components/                              # Componentes presentacionales (input() / output(), sin servicios)
+│   │   │   │   │   │   ├── activity-contents.component.ts       # contenidos que forman una actividad (p. ej. «Los alimentos» → vocabulario, un juego, una canción, un diálogo)
 │   │   │   │   │   │   ├── correction-diff.component.ts         # Lo escrito tachado y la corrección
 │   │   │   │   │   │   ├── drag-order.component.ts              # Ordenar arrastrando (CDK DragDrop) + alternativa por teclado
 │   │   │   │   │   │   ├── error-badge.component.ts             # Tipo de error con icono y texto
@@ -405,6 +427,34 @@ apps/frontend-angular/                                           # Angular Micro
 │   │   │   │   │       ├── practice-list.page.ts                # Lista de actividades
 │   │   │   │   │       └── practice-player.page.ts              # Reproductor: resuelve y corrige un ejercicio
 │   │   │   │   └── practice.routes.ts                           # Rutas lazy + providers (puerto → repositorio HTTP)
+│   │   │   ├── reading/
+│   │   │   │   ├── application/
+│   │   │   │   │   ├── books.facade.ts                          # catálogo, lectura por páginas, traducción e IPA bajo demanda y progreso
+│   │   │   │   │   ├── read-aloud.player.ts                     # lectura en voz alta FRASE A FRASE con la palabra activa resaltada — reproducir/pausar, velocidad 0,75x/1x, repetir la fr…
+│   │   │   │   │   └── reading.facade.ts                        # casos de uso de la lista y del lector (cargar, guardar el marcador sin bloquear la lectura, empezar de nuevo, enlaces de…
+│   │   │   │   ├── domain/
+│   │   │   │   │   ├── models/
+│   │   │   │   │   │   ├── book.ts                              # contrato de /books (NestJS) validado con Zod + funciones puras del lector
+│   │   │   │   │   │   ├── dictation.ts                         # compara la frase dictada con lo que escribió el alumno, palabra por palabra
+│   │   │   │   │   │   └── reading.ts                           # contrato de /api/reading/texts/* de NestJS + funciones PURAS del lector (palabras con su posición, palabra activa por ca…
+│   │   │   │   │   ├── books.repository.port.ts                 # la fachada no conoce HTTP
+│   │   │   │   │   └── reading.repository.port.ts               # lista, lector, marcador y enlaces de descarga — sin que las pantallas conozcan HTTP
+│   │   │   │   ├── infrastructure/
+│   │   │   │   │   ├── books.http-repository.ts                 # BooksRepository sobre NestJS /books (respuestas validadas con Zod)
+│   │   │   │   │   └── reading.http-repository.ts               # HttpClient hacia /api/reading/texts/* (BFF de Next.js → NestJS)
+│   │   │   │   ├── presentation/
+│   │   │   │   │   ├── components/
+│   │   │   │   │   │   ├── reading-sentence.component.ts        # pulsar una palabra abre su ficha (la coloca la página con `el`) · las palabras del banco se resaltan: punteado = aprendi…
+│   │   │   │   │   │   ├── reading-translation-pane.component.ts  # columna DERECHA del lector — la traducción al español frase a frase, con los mismos párrafos que el original
+│   │   │   │   │   │   └── reading-views.component.ts           # pills de las vistas de Lectura — Lecturas · Dictado · Libros clásicos (mismo átomo que las secciones de Actividades)
+│   │   │   │   │   ├── pages/
+│   │   │   │   │   │   ├── book-reader.page.ts                  # /lectura/libros/:id — original y traducción al español en columnas
+│   │   │   │   │   │   ├── books-list.page.ts                   # /lectura/libros — buscar libros de dominio público por título o autor en los 7 idiomas
+│   │   │   │   │   │   ├── dictation.page.ts                    # /lectura/dictado — se elige una lectura publicada, se ESCUCHA cada frase (voz del navegador) y se escribe
+│   │   │   │   │   │   ├── reading-list.page.ts                 # sin tarjetas de libros abajo (están en /lectura/libros, pill «Libros clásicos»)
+│   │   │   │   │   │   └── reading-reader.page.ts               # /lectura/:id — el texto original con IPA y traducción a elección, lectura en voz alta frase a frase con la palabra activ…
+│   │   │   │   │   └── scroll-into-box.ts                       # desplaza SOLO la columna con scroll propio (`[data-reading-scroll]`) para que la frase quede a la vista,
+│   │   │   │   └── reading.routes.ts                            # /lectura (lista con filtros) y /lectura/:id (lector) — lazy y con sesión; crear/editar viven en Gestión de Next.js
 │   │   │   ├── reports/                                         # Funcionalidad: Exportación de reportes (PDF / Excel)
 │   │   │   │   ├── application/                                 # Capa Aplicación — fachadas (casos de uso) y estado con signals
 │   │   │   │   │   └── reports.facade.ts                        # [CREAR, LISTAR, VER DETALLE, ELIMINAR] Casos de uso: solicitar y descargar exportaciones
@@ -423,6 +473,7 @@ apps/frontend-angular/                                           # Angular Micro
 │   │   │   │   └── reports.routes.ts                            # Rutas lazy + providers (puerto → repositorio HTTP)
 │   │   │   ├── vocabulary/                                      # Funcionalidad: Traducción, IPA UK/US y banco de vocabulario
 │   │   │   │   ├── application/                                 # Capa Aplicación — fachadas (casos de uso) y estado con signals
+│   │   │   │   │   ├── ipa-lookup.cache.ts                      # consulta de IPA/traducción COMPARTIDA por todos los <aula-ipa-text> de la página
 │   │   │   │   │   ├── vocabulary-entry.facade.ts               # [CREAR, LISTAR, VER DETALLE, EDITAR, ELIMINAR] Casos de uso: CRUD del banco de vocabulario
 │   │   │   │   │   └── vocabulary.facade.ts                     # [CREAR, LISTAR, VER DETALLE, EDITAR, ELIMINAR] Casos de uso: traducir y obtener IPA
 │   │   │   │   ├── domain/                                      # Capa Dominio — sin Angular HTTP ni router (solo Zod y funciones puras)
@@ -435,12 +486,14 @@ apps/frontend-angular/                                           # Angular Micro
 │   │   │   │   │   ├── components/                              # Componentes presentacionales (input() / output(), sin servicios)
 │   │   │   │   │   │   ├── ipa-text.element.ts                  # Angular Element <aula-ipa-text>: texto con IPA por palabra
 │   │   │   │   │   │   ├── lookup-input.component.ts            # [VER DETALLE] Escribir un término o una frase
+│   │   │   │   │   │   ├── say.component.ts                     # una palabra o frase del idioma estudiado DENTRO de una actividad (práctica, juegos) → botón de sonido + IPA + traducción…
 │   │   │   │   │   │   ├── translation-card.component.ts        # Traducción y alternativas
 │   │   │   │   │   │   ├── vocabulary-entry-form.component.ts   # [CREAR, VER DETALLE, EDITAR] Alta de vocabulario (Signal Forms + Zod)
 │   │   │   │   │   │   └── vocabulary-entry-table.component.ts  # [LISTAR] Tabla con IPA UK/US y estado «automático» o «revisado»
 │   │   │   │   │   └── pages/                                   # Contenedores (inyectan la fachada, sin HTTP)
 │   │   │   │   │       ├── language-lookup.page.ts              # Traductor con IPA
 │   │   │   │   │       └── vocabulary-entry.page.ts             # Banco de vocabulario (revisión del docente)
+│   │   │   │   ├── ipa-text.providers.ts                        # lo que necesita <aula-ipa-text-element> (IPA + traducción + sonido de cualquier texto) DENTRO de la app Angular — puerto…
 │   │   │   │   └── vocabulary.routes.ts                         # Rutas lazy + providers (puerto → repositorio HTTP)
 │   │   │   └── web3/                                            # Funcionalidad: Billetera Web3
 │   │   │       ├── application/                                 # Capa Aplicación — fachadas (casos de uso) y estado con signals
@@ -469,63 +522,120 @@ apps/frontend-angular/                                           # Angular Micro
 │   │   │   ├── ui/                                              # Atomic Design — sin lógica de negocio
 │   │   │   │   ├── atoms/                                       # Átomos: no se dividen y no reciben datos del dominio
 │   │   │   │   │   ├── avatar-svg/
-│   │   │   │   │   │   └── avatar-svg.component.ts              # Personaje en SVG con formas de boca y parpadeo
+│   │   │   │   │   │   ├── avatar-svg.component.ts              # Personaje en SVG con formas de boca y parpadeo
+│   │   │   │   │   │   └── avatar-svg.stories.ts                # [Sprint 11.2] Storybook: avatar-svg (formas de boca y parpadeo) con axe
+│   │   │   │   │   ├── back-link/
+│   │   │   │   │   │   ├── back-link.component.ts               # enlace «volver» ÚNICO del remoto — flecha + texto, con aspecto de ENLACE (no de botón); espejo de <BackLink> de Next.js
+│   │   │   │   │   │   └── back-link.stories.ts                 # enlace «volver» (flecha + texto) sobre el <a> nativo
 │   │   │   │   │   ├── badge/
-│   │   │   │   │   │   └── badge.component.ts                   # Etiqueta de estado (texto + icono, no solo color)
+│   │   │   │   │   │   ├── badge.component.ts                   # Etiqueta de estado (texto + icono, no solo color)
+│   │   │   │   │   │   └── badge.stories.ts                     # [Sprint 11.2] Storybook: tonos brand/info/warning/danger/muted
 │   │   │   │   │   ├── button/
-│   │   │   │   │   │   └── button.component.ts                  # Botón: variantes y estados (disabled / loading)
+│   │   │   │   │   │   ├── button.component.ts                  # Botón: variantes y estados (disabled / loading)
+│   │   │   │   │   │   └── button.stories.ts                    # [Sprint 11.2] Storybook: variantes, tamaños, loading y disabled
 │   │   │   │   │   ├── icon/
-│   │   │   │   │   │   └── icon.component.ts                    # Icono SVG con etiqueta accesible
+│   │   │   │   │   │   ├── icon.component.ts                    # Icono SVG con etiqueta accesible
+│   │   │   │   │   │   └── icon.stories.ts                      # [Sprint 11.2] Storybook: icon (con y sin etiqueta accesible) con axe
 │   │   │   │   │   ├── ipa-label/
-│   │   │   │   │   │   └── ipa-label.component.ts               # IPA con lang="xx-fonipa"
+│   │   │   │   │   │   ├── ipa-label.component.ts               # IPA con lang="xx-fonipa"
+│   │   │   │   │   │   └── ipa-label.stories.ts                 # [Sprint 11.2] Storybook: ipa-label (IPA UK y US) con axe
+│   │   │   │   │   ├── level-tint/
+│   │   │   │   │   │   ├── level-tint.directive.ts              # `[aulaLevel]="'B1'"` publica `--lvl` (acento) y `--lvl-deep` (fondo oscuro) del nivel MCER en el elemento → los hijos se…
+│   │   │   │   │   │   └── level-tint.stories.ts                # tinte por nivel MCER (A1–C2) vía variables CSS `--lvl` / `--lvl-deep`
 │   │   │   │   │   ├── spinner/
-│   │   │   │   │   │   └── spinner.component.ts                 # Indicador de carga con role="status"
+│   │   │   │   │   │   ├── busy-overlay.component.ts            # capa sobre la pantalla con el MISMO indicador de carga (aula-spinner) mientras se crea, edita o elimina algo
+│   │   │   │   │   │   ├── spinner.component.ts                 # Indicador de carga con role="status"
+│   │   │   │   │   │   └── spinner.stories.ts                   # [Sprint 11.2] Storybook: spinner (tamaños y role=status) con axe
 │   │   │   │   │   └── text-input/
-│   │   │   │   │       └── text-input.component.ts              # Campo de texto compatible con Signal Forms
+│   │   │   │   │       ├── text-input.component.ts              # Campo de texto compatible con Signal Forms
+│   │   │   │   │       └── text-input.stories.ts                # [Sprint 11.2] Storybook: text-input (default · inválido · deshabilitado) con axe
 │   │   │   │   ├── molecules/                                   # Moléculas: juntan átomos con una sola función
 │   │   │   │   │   ├── accent-switch/
-│   │   │   │   │   │   └── accent-switch.component.ts           # Interruptor UK/US (role="switch") — usado por diccionario, poliglota y gramática
+│   │   │   │   │   │   ├── accent-switch.component.ts           # Interruptor UK/US (role="switch") — usado por diccionario, poliglota y gramática
+│   │   │   │   │   │   └── accent-switch.stories.ts             # [Sprint 11.2] Storybook: accent-switch (UK · US · teclado) con axe
 │   │   │   │   │   ├── dropdown/
-│   │   │   │   │   │   └── dropdown.component.ts                # Botón + panel flotante del topbar (Escape, clic fuera, aria-expanded)
+│   │   │   │   │   │   ├── dropdown.component.ts                # Botón + panel flotante del topbar (Escape, clic fuera, aria-expanded)
+│   │   │   │   │   │   └── dropdown.stories.ts                  # [Sprint 11.2] Storybook: dropdown (abierto · cerrado · Escape) con axe
+│   │   │   │   │   ├── filter-panel/
+│   │   │   │   │   │   ├── filter-panel.component.ts            # panel de filtros de las secciones de Actividades del estudiante con el MISMO diseño que Gestión (Next.js <FilterPanel>)
+│   │   │   │   │   │   └── filter-panel.stories.ts              # panel común de filtros (Buscar · Nivel · filtros propios · Filtrar · Limpiar + idiomas debajo)
 │   │   │   │   │   ├── form-field/
-│   │   │   │   │   │   └── form-field.component.ts              # Etiqueta + campo + mensaje de error asociado (aria-describedby)
+│   │   │   │   │   │   ├── form-field.component.ts              # Etiqueta + campo + mensaje de error asociado (aria-describedby)
+│   │   │   │   │   │   └── form-field.stories.ts                # [Sprint 11.2] Storybook: form-field (con error y ayuda) con axe
+│   │   │   │   │   ├── language-chips/
+│   │   │   │   │   │   ├── language-chips.component.ts          # pestañas de idioma («✦ Todos» + «EN Inglés», «FR Francés»…) — la MISMA clasificación del catálogo de Cursos de Next.js (…
+│   │   │   │   │   │   └── language-chips.stories.ts            # filtro de idioma con chips (radiogroup) a partir de LANGUAGES compartido
+│   │   │   │   │   ├── mode-switch/
+│   │   │   │   │   │   ├── mode-switch.component.ts             # control segmentado «¿Cómo lo quieres hacer?» (Automático con IA / Manual / Desde una URL…)
+│   │   │   │   │   │   └── mode-switch.stories.ts               # selector segmentado (fieldset + radios) con ayuda por opción
+│   │   │   │   │   ├── pill-nav/
+│   │   │   │   │   │   ├── pill-nav.component.ts                # navegación en pills (chips) entre pantallas hermanas — secciones de Actividades y vistas de una sección (Diálogos: temas…
+│   │   │   │   │   │   └── pill-nav.stories.ts                  # navegación en píldoras con RouterLinkActive
 │   │   │   │   │   ├── pronunciation-button/
-│   │   │   │   │   │   └── pronunciation-button.component.ts    # Botón de sonido con la voz del navegador del idioma
+│   │   │   │   │   │   ├── pronunciation-button.component.ts    # Botón de sonido con la voz del navegador del idioma
+│   │   │   │   │   │   └── pronunciation-button.stories.ts      # [Sprint 11.2] Storybook: pronunciation-button (reposo · reproduciendo · sin voz) con axe
+│   │   │   │   │   ├── text-import/
+│   │   │   │   │   │   ├── text-import.component.ts             # «Importar desde archivo o enlace» — PDF, Word, texto o imagen (OCR) y URL → emite el texto leído para rellenar un formul…
+│   │   │   │   │   │   └── text-import.stories.ts               # importar texto desde archivo (PDF/Word/imagen) o enlace
+│   │   │   │   │   ├── title-gloss/
+│   │   │   │   │   │   ├── title-gloss.component.ts             # bajo el título de una actividad o recurso → idioma · /IPA/ · 🔊 · traducción al español
+│   │   │   │   │   │   └── title-gloss.stories.ts               # título en el idioma original con su IPA y traducción debajo
 │   │   │   │   │   ├── transcript-line/
-│   │   │   │   │   │   └── transcript-line.component.ts         # Línea con IPA y traducción; la actual con aria-current
+│   │   │   │   │   │   ├── transcript-line.component.ts         # Línea con IPA y traducción; la actual con aria-current
+│   │   │   │   │   │   └── transcript-line.stories.ts           # [Sprint 11.2] Storybook: transcript-line (línea actual y normal) con axe
 │   │   │   │   │   └── word-token/
-│   │   │   │   │       └── word-token.component.ts              # Palabra pulsable dentro de un texto (resaltada si se está aprendiendo)
+│   │   │   │   │       ├── word-token.component.ts              # Palabra pulsable dentro de un texto (resaltada si se está aprendiendo)
+│   │   │   │   │       └── word-token.stories.ts                # [Sprint 11.2] Storybook: word-token (normal · aprendiendo · enfocada) con axe
 │   │   │   │   ├── mode-switch/
-│   │   │   │   │   └── mode-switch.component.ts                 # Selector de modo (automático / manual / URL / IA) · 2026-10-19
+│   │   │   │   │   ├── mode-switch.component.ts                 # Selector de modo (automático / manual / URL / IA) · 2026-10-19
+│   │   │   │   │   └── mode-switch.stories.ts                   # [Sprint 11.2] Storybook: mode-switch (automático · manual · URL · IA) con axe
 │   │   │   │   ├── organisms/                                   # Organismos: secciones autónomas con datos y comportamiento propios
 │   │   │   │   │   ├── ai-draft-dialog/
-│   │   │   │   │   │   └── ai-draft-dialog.component.ts         # Pide un borrador a la IA y lo deja como borrador (práctica, poliglota y gramática)
+│   │   │   │   │   │   ├── ai-draft-dialog.component.ts         # Pide un borrador a la IA y lo deja como borrador (práctica, poliglota y gramática)
+│   │   │   │   │   │   └── ai-draft-dialog.stories.ts           # [Sprint 11.2] Storybook: ai-draft-dialog (cerrado · cargando · borrador listo · error) con axe
 │   │   │   │   │   ├── avatar-stage/
 │   │   │   │   │   │   ├── avatar-stage.component.ts            # Escenario del avatar (voz, canto o escucha)
+│   │   │   │   │   │   ├── avatar-stage.stories.ts              # [Sprint 11.2] Storybook: avatar-stage (reposo · escuchando · hablando · cantando) con axe
 │   │   │   │   │   │   └── avatar-state.ts                      # Estados: en reposo, escuchando, hablando y cantando
 │   │   │   │   │   ├── data-table/
-│   │   │   │   │   │   └── data-table.component.ts              # Tabla de datos accesible con desplazamiento horizontal
+│   │   │   │   │   │   ├── data-table.component.ts              # Tabla de datos accesible con desplazamiento horizontal
+│   │   │   │   │   │   └── data-table.stories.ts                # [Sprint 11.2] Storybook: data-table (con datos · vacío · desplazamiento horizontal) con axe
 │   │   │   │   │   ├── license-declaration/
-│   │   │   │   │   │   └── license-declaration.component.ts     # Tipo de licencia, fuente, titular y confirmación de derechos (música y diálogos)
+│   │   │   │   │   │   ├── license-declaration.component.ts     # Tipo de licencia, fuente, titular y confirmación de derechos (música y diálogos)
+│   │   │   │   │   │   └── license-declaration.stories.ts       # [Sprint 11.2] Storybook: license-declaration (tipos de licencia · confirmación de derechos) con axe
 │   │   │   │   │   ├── portal-sidebar/
-│   │   │   │   │   │   └── portal-sidebar.component.ts          # Sidebar del portal idéntico al de Next.js (ítems por rol de packages/shared-nav)
+│   │   │   │   │   │   ├── portal-sidebar.component.ts          # Sidebar del portal idéntico al de Next.js (ítems por rol de packages/shared-nav)
+│   │   │   │   │   │   └── portal-sidebar.stories.ts            # [Sprint 11.2] Storybook: portal-sidebar (STUDENT · TEACHER · ADMIN · oculto) con axe
 │   │   │   │   │   ├── portal-topbar/
 │   │   │   │   │   │   ├── portal-toolbar.component.ts          # Selectores de tema e idioma (temas e idiomas del shell Next.js)
-│   │   │   │   │   │   └── portal-topbar.component.ts           # Topbar del portal: hamburguesa, ocultar sidebar, buscador, carrito, tema, idioma y perfil
+│   │   │   │   │   │   ├── portal-toolbar.stories.ts            # [Sprint 11.2] Storybook: portal-toolbar (6 temas · ES/EN) con axe
+│   │   │   │   │   │   ├── portal-topbar.component.ts           # Topbar del portal: hamburguesa, ocultar sidebar, buscador, carrito, tema, idioma y perfil
+│   │   │   │   │   │   └── portal-topbar.stories.ts             # [Sprint 11.2] Storybook: portal-topbar (escritorio · móvil · con carrito) con axe
 │   │   │   │   │   ├── synced-transcript/
 │   │   │   │   │   │   ├── current-line.service.ts              # Calcula la línea actual con el tiempo del audio o los eventos de voz
 │   │   │   │   │   │   ├── synced-transcript.component.ts       # Dos columnas: texto original con IPA y traducción al español
+│   │   │   │   │   │   ├── synced-transcript.stories.ts         # [Sprint 11.2] Storybook: synced-transcript (línea actual · IPA y traducción) con axe
 │   │   │   │   │   │   └── transcript-line.model.ts             # Línea: texto, IPA, traducción, inicio y fin
+│   │   │   │   │   ├── toaster/
+│   │   │   │   │   │   ├── toaster.component.ts                 # pinta los avisos `aula:toast` del shell Angular (abajo a la derecha; se cierran solos)
+│   │   │   │   │   │   └── toaster.stories.ts                   # avisos efímeros (role="status"/"alert") que llegan por el bus AulaEvents
 │   │   │   │   │   ├── voice-recorder/
-│   │   │   │   │   │   └── voice-recorder.component.ts          # Grabación con MediaRecorder y estado claro del micrófono (juegos y diálogos)
+│   │   │   │   │   │   ├── voice-recorder.component.ts          # Grabación con MediaRecorder y estado claro del micrófono (juegos y diálogos)
+│   │   │   │   │   │   └── voice-recorder.stories.ts            # [Sprint 11.2] Storybook: voice-recorder (reposo · grabando · permiso denegado) con axe
 │   │   │   │   │   └── word-lookup/
+│   │   │   │   │       ├── word-card.component.ts               # ficha de una palabra — sonido, IPA (UK/US en inglés), traducción al español según la frase y «Aprendido» | «Aprender»
+│   │   │   │   │       ├── word-dictionary.component.ts         # el pequeño diccionario en TODAS las pantallas Angular → seleccionar (doble clic) UNA palabra en otro idioma abre su fich…
 │   │   │   │   │       ├── word-lookup.component.ts             # Ventana junto a la palabra: sonido, IPA, traducción, ejemplos y Aprender / Aprendido
+│   │   │   │   │       ├── word-lookup.stories.ts               # [Sprint 11.2] Storybook: word-lookup (cargando · resultado · Aprender / Aprendido) con axe
 │   │   │   │   │       └── word-lookup.element.ts               # Angular Element <aula-word-lookup>: se monta en Next.js sobre cualquier texto
 │   │   │   │   ├── toaster/
-│   │   │   │   │   └── toaster.component.ts                     # Avisos breves del shell Angular (role status/alert) · 2026-10-19
+│   │   │   │   │   ├── toaster.component.ts                     # Avisos breves del shell Angular (role status/alert) · 2026-10-19
+│   │   │   │   │   └── toaster.stories.ts                       # [Sprint 11.2] Storybook: toaster (éxito · error · role status/alert) con axe
 │   │   │   │   └── templates/                                   # Plantillas: ordenan organismos
 │   │   │   │       ├── card-page.template.ts                    # Página tipo ficha con título, acciones y contenido
-│   │   │   │       └── two-column.template.ts                   # Dos columnas (por ejemplo, texto original + traducción)
+│   │   │   │       ├── card-page.stories.ts                     # [Sprint 11.2] Storybook: card-page (con y sin acciones) con axe
+│   │   │   │       ├── two-column.template.ts                   # Dos columnas (por ejemplo, texto original + traducción)
+│   │   │   │       └── two-column.stories.ts                    # [Sprint 11.2] Storybook: two-column (escritorio · móvil) con axe
 │   │   │   └── utils/                                           # Utilidades
 │   │   │       ├── .gitkeep                                     # Se llena cuando 2+ funcionalidades necesiten la misma función pura
 │   │   │       ├── async-state.ts                               # Máquina de estados carga → éxito / vacío / error con signals (las 5 fachadas)
@@ -535,6 +645,12 @@ apps/frontend-angular/                                           # Angular Micro
 │   │   ├── app.config.ts                                        # Providers globales: router, HttpClient, i18n, tema y zoneless
 │   │   ├── app.routes.ts                                        # Rutas lazy por funcionalidad (loadChildren → <nombre>.routes.ts)
 │   │   └── elements.ts                                          # Registra los Angular Elements (Web Components) para Next.js
+│   ├── docs/
+│   │   ├── Introduccion.mdx
+│   │   └── SistemaDeDiseno.mdx
+│   ├── stories/                                                 # [Sprint 11.2] Páginas MDX del catálogo (no son componentes)
+│   │   ├── introduction.mdx                                     # Bienvenida al catálogo: Atomic Design, cómo escribir una historia y reglas de a11y
+│   │   └── themes.mdx                                           # Los temas y el modo oscuro de packages/ui-tokens con su contraste AA
 │   ├── index.html                                               # HTML base: lang, meta viewport, <base href="/ng/"> y <aula-root>
 │   ├── main.ts                                                  # Arranque en dos modos lazy: pantalla completa (bootstrapApplication) o solo Angular Elements
 │   └── styles.css                                               # @import de apps/frontend-next/src/app/globals.css (Tailwind 4, 6 temas, utilidades btn/badge/tone)
@@ -611,6 +727,7 @@ apps/frontend-angular/                                           # Angular Micro
 │   │       │   └── manual.page.spec.ts                          # Prueba del contenedor: carga, vacío y error
 │   │       ├── music/
 │   │       │   ├── collection-detail.page.spec.ts               # Prueba del contenedor: carga, vacío y error
+│   │       │   ├── lyrics-import.service.spec.ts                # el enlace de una letra va primero al extractor de NestJS; si no es una página de texto (415) se usa el extractor general…
 │   │       │   ├── music-hub.page.spec.ts                       # Prueba del contenedor: carga, vacío y error
 │   │       │   ├── music.http-repository.spec.ts                # Prueba con msw: peticiones, errores y mapeo DTO → modelo
 │   │       │   ├── song-player.page.spec.ts                     # Prueba del contenedor: carga, vacío y error
@@ -646,12 +763,20 @@ apps/frontend-angular/                                           # Angular Micro
 │   │           └── wallet.page.spec.ts                          # Prueba del contenedor: carga, vacío y error
 │   ├── unit/                                                    # Jest sin red: fachadas, componentes y funciones puras (espejo de src/app)
 │   │   ├── core/
-│   │   │   └── dictionary/
-│   │   │       └── dictionary.facade.spec.ts                    # Consulta, caché y marcas de aprendizaje
+│   │   │   ├── audio/
+│   │   │   │   ├── server-audio.spec.ts                         # la respuesta de AULA sonaba MUDA → el audio del servidor se mide (RMS) antes de sonar; si está vacío o en silencio
+│   │   │   │   ├── server-speech.spec.ts                        # servidor sin voz a texto (503 SPEECH_ENGINE_MISSING) → respaldo (dictado del navegador o escribir), sin error rojo y con…
+│   │   │   │   └── speech-synthesis.spec.ts                     # la voz del sistema que NO suena (nunca arranca o da error) se notifica con `error` → el llamador cambia al audio del ser…
+│   │   │   ├── dictionary/
+│   │   │   │   └── dictionary.facade.spec.ts                    # Consulta, caché y marcas de aprendizaje
+│   │   │   ├── routing/
+│   │   │   │   └── chunk-reload.spec.ts                         # recarga una sola vez ante un chunk caducado; otros errores no recargan
+│   │   │   └── idle-preloading.strategy.spec.ts                 # precarga en tiempo ocioso, respeta `data: { preload: false }` y «Ahorro de datos»
 │   │   ├── features/
 │   │   │   ├── assistant/
 │   │   │   │   └── assistant.facade.spec.ts                     # Prueba de la fachada: casos de uso y transiciones de estado con signals
 │   │   │   ├── certificates/
+│   │   │   │   ├── certificate-pdf-hash.spec.ts                 # la huella del PDF se calcula en el navegador (Web Crypto) y se compara con la registrada/anclada en Sepolia
 │   │   │   │   └── certificates.facade.spec.ts                  # Prueba de la fachada: casos de uso y transiciones de estado con signals
 │   │   │   ├── dialogues/
 │   │   │   │   └── dialogues.facade.spec.ts                     # Prueba de la fachada: casos de uso y transiciones de estado con signals
@@ -660,7 +785,8 @@ apps/frontend-angular/                                           # Angular Micro
 │   │   │   ├── forums/
 │   │   │   │   └── forums.facade.spec.ts                        # Prueba de la fachada: casos de uso y transiciones de estado con signals
 │   │   │   ├── games/
-│   │   │   │   └── games.facade.spec.ts                         # Prueba de la fachada: casos de uso y transiciones de estado con signals
+│   │   │   │   ├── games.facade.spec.ts                         # Prueba de la fachada: casos de uso y transiciones de estado con signals
+│   │   │   │   └── memory-board.spec.ts                         # como el memo de 50languages — las dos cartas de una pareja muestran la MISMA imagen + su texto
 │   │   │   ├── grammar/
 │   │   │   │   └── grammar.facade.spec.ts                       # Prueba de la fachada: casos de uso y transiciones de estado con signals
 │   │   │   ├── help/
@@ -677,9 +803,15 @@ apps/frontend-angular/                                           # Angular Micro
 │   │   │   │   └── polyglot.facade.spec.ts                      # Prueba de la fachada: casos de uso y transiciones de estado con signals
 │   │   │   ├── practice/
 │   │   │   │   └── practice.facade.spec.ts                      # Prueba de la fachada: casos de uso y transiciones de estado con signals
+│   │   │   ├── reading/
+│   │   │   │   ├── books-preparing.spec.ts                      # libro que el servidor aún descarga ({ preparing }) → la fachada vuelve a preguntar · salir corta el sondeo
+│   │   │   │   ├── books.spec.ts                                # funciones puras del lector, Translator API → servidor, retomar progreso y carga progresiva
+│   │   │   │   ├── dictation.spec.ts                            # comparación palabra por palabra del dictado (sin contar mayúsculas ni puntuación)
+│   │   │   │   └── reading.spec.ts                              # palabras y sincronía (carácter, avance y estimación), IPA palabra a palabra, reproductor frase a frase (repetir, velocid…
 │   │   │   ├── reports/
 │   │   │   │   └── reports.facade.spec.ts                       # Prueba de la fachada: casos de uso y transiciones de estado con signals
 │   │   │   ├── vocabulary/
+│   │   │   │   ├── ipa-lookup.cache.spec.ts                     # textos repetidos = una petición, 503 abre el circuito (sin tormenta de peticiones) y 4xx se recuerda
 │   │   │   │   └── vocabulary.facade.spec.ts                    # Prueba de la fachada: casos de uso y transiciones de estado con signals
 │   │   │   └── web3/
 │   │   │       └── wallet.facade.spec.ts                        # Prueba de la fachada: casos de uso y transiciones de estado con signals
@@ -709,8 +841,9 @@ apps/frontend-angular/                                           # Angular Micro
 │   │   └── .gitkeep                                             # Fuentes self-hosted (sin FOUT)
 │   ├── icons/
 │   │   └── .gitkeep                                             # Favicons y manifest
-│   └── images/
-│       └── .gitkeep                                             # Imágenes optimizadas (WebP) de los temas del poliglota
+│   ├── images/
+│   │   └── .gitkeep                                             # Imágenes optimizadas (WebP) de los temas del poliglota
+│   └── favicon.ico                                              # Recurso estático (imagen)
 ├── tools/                                                       # Herramientas de equipo
 │   └── feature-template/                                        # Plantilla (schematic) que crea una funcionalidad con las cuatro capas vacías
 │       ├── __name__/
@@ -724,6 +857,7 @@ apps/frontend-angular/                                           # Angular Micro
 │       │   │   └── __name__.http-repository.ts                  # Repositorio HTTP
 │       │   ├── presentation/
 │       │   │   ├── components/
+│       │   │   │   └── .gitkeep                                 # Configuración
 │       │   │   └── pages/                                       # Contenedores (páginas)
 │       │   │       └── __name__.page.ts                         # Página
 │       │   └── __name__.routes.ts                               # Rutas lazy y providers
@@ -733,24 +867,36 @@ apps/frontend-angular/                                           # Angular Micro
 │           │   └── __name__.page.spec.ts                        # Prueba
 │           └── unit/
 │               └── __name__.facade.spec.ts                      # Prueba de la fachada
+├── .storybook/                                                  # [Sprint 11.2] Storybook 10 (@storybook/angular · zoneless) — catálogo de shared/ui · pnpm storybook (:6007) · pnpm build-storybook
+│   ├── main.ts                                                  # Historias src/**/*.stories.ts + addons docs y a11y (axe)
+│   ├── decorators.ts                                            # [Sprint 11.2] Providers de las historias: i18n, sesión falsa y HttpClient de prueba (los componentes de shared/ui usan servicios de core)
+│   ├── preview.ts                                               # Decorator de tema (light/dark/sepia/hcontrast/deepfocus) + a11y.test='error'
+│   ├── manager.ts                                               # [Sprint 11.2] Título, marca y panel de accesibilidad abierto por defecto
+│   └── tsconfig.json                                            # Compila app + historias (tsconfig.app.json excluye *.stories.ts)
+├── .editorconfig                                                # Configuración
 ├── .env.example                                                 # Plantilla de variables de entorno (no commitear .env)
+├── .gitignore                                                   # reportes de Jest y Playwright (igual que apps/frontend-next/)
 ├── .postcssrc.json                                              # PostCSS con @tailwindcss/postcss (Tailwind 4)
 ├── .prettierrc.json                                             # Formato compartido (packages/eslint-config)
 ├── angular-setup.md                                             # Comandos para crear el proyecto, instalar dependencias y correr el servidor
-├── angular.json                                                 # Proyecto Angular CLI: build, serve (:9100) y test
+├── angular.json                                                 # Proyecto Angular CLI: build, serve (:9100), test y storybook / build-storybook (Sprint 11.2)
 ├── angular_estructura.md                                        # Esta estructura (copia junto al código, igual que apps/frontend-next/next_estructura.md)
 ├── Dockerfile                                                   # Build estático de Angular servido con Nginx
+├── Dockerfile.dockerignore                                      # ignore propio de este Dockerfile (el contexto es la raíz del monorepo)
 ├── eslint.config.mjs                                            # Reglas de capas (no-restricted-imports) + angular-eslint — ES module como Next.js y NestJS
 ├── jest.config.ts                                               # Jest: jest-fixed-jsdom, roots __tests__ (unit/ e integration/), cobertura mínima y alias de rutas
 ├── jest.setup.ts                                                # Inicializa Angular testing (zoneless), msw y el EventSource falso — mismo nombre que en Next.js
 ├── nginx.conf                                                   # Sirve el build en :9100 con cabeceras de seguridad y caché de assets
 ├── package.json                                                 # Dependencias y scripts (start, build, test, test:unit, test:integration, lint, e2e)
 ├── playwright.config.ts                                         # testDir __tests__ (functional/ y usability/), baseURL del shell Next.js :9000, navegadores y reportes
+├── pnpm-lock.yaml                                               # Configuración
+├── pnpm-workspace.yaml                                          # reemplaza "pnpm.onlyBuiltDependencies" de package.json (pnpm 11 ya no lo lee)
 ├── proxy.conf.json                                              # Desarrollo: /api/* hacia el BFF de Next.js :9000
 ├── README.md                                                    # Resumen del remoto Angular y enlaces a angular_estructura.md y angular-setup.md
 ├── tsconfig.app.json                                            # Compilación de la app
 ├── tsconfig.json                                                # strict:true + alias @core/* @shared/* @features/* @schemas/* @aula/* (paquetes compartidos del monorepo)
-└── tsconfig.spec.json                                           # Compilación de las pruebas
+├── tsconfig.spec.json                                           # Compilación de las pruebas
+└── typedoc.json                                                 # [Sprint 11.2] TypeDoc: documenta src/app (TSDoc) y se publica en el sitio MkDocs único
 ```
 
 ## Mapa Funcionalidad → Carpeta
@@ -871,6 +1017,7 @@ Todos se registran en `src/app/elements.ts` y se comunican con el shell por even
 | msw (Mock Service Worker) | Integración | Intercepta `/api/*` en las pruebas sin servidor real (`__tests__/utils/msw/`) |
 | Playwright | Funcionales + usabilidad | E2E en chromium, firefox y webkit: flujos (`__tests__/functional/`), teclado y responsive (`__tests__/usability/`) |
 | ESLint (`no-restricted-imports`) | Arquitectura | Falla si una capa importa lo que no debe |
+| Storybook 10 (@storybook/angular, zoneless) + addon a11y | Componentes + Usabilidad (a11y) | Una historia por componente de `shared/ui` con axe (`a11y.test='error'`); `pnpm storybook` (:6007) y `pnpm build-storybook` |
 
 ## Validación de Datos
 
@@ -886,6 +1033,7 @@ Todos se registran en `src/app/elements.ts` y se comunican con el shell por even
 | Prettier | Formato compartido (`.prettierrc.json`) |
 | TypeScript `strict: true` | Sin `any` implícito; alias `@core/*`, `@shared/*`, `@features/*` |
 | Husky + lint-staged | Pre-commit: lint y formato antes de cada commit |
+| TypeDoc | Documentación de código TypeScript (TSDoc) de `src/app`, publicada en el sitio MkDocs único del repositorio |
 
 ## Nota — Homogeneización respecto a la matriz
 

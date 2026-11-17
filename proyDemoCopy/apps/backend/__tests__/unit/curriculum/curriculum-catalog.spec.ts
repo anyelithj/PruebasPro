@@ -30,7 +30,7 @@ function makeRepo() {
   return {
     findById: jest.fn(),
     findByNaturalKey: jest.fn().mockResolvedValue(null),
-    search: jest.fn(),
+    search: jest.fn().mockResolvedValue({ data: [], total: 0 }), // [2026-10-28]: regla anti-duplicados del tema (sin elementos previos)
     listRevisions: jest.fn(),
     createWithRevision: jest.fn((item: object, _meta: object) => Promise.resolve({ id: 'new', version: 1, ...item })),
     saveWithRevision: jest.fn(),

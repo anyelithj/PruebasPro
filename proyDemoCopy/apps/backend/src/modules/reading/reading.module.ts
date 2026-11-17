@@ -1,4 +1,7 @@
+import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
+import { LEVEL_CLASSIFIER } from '../dialogues/domain/interfaces/level-classifier.interface';
+import { LevelClassifierClient } from '../dialogues/infrastructure/ai/level-classifier-client.adapter';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { VocabularyModule } from '../vocabulary/vocabulary.module';
 import { CreateReadingTextUseCase } from './application/use-cases/create-reading-text.use-case';
@@ -26,11 +29,13 @@ import { ReadingTextsController } from './presentation/reading-texts.controller'
 @Module({
   imports: [
     TypeOrmModule.forFeature([ReadingText, ReadingSentence, ReadingProgress]),
+    HttpModule, // [2026-11-16 · RF-148]: LevelClassifierClient (FastAPI)
     VocabularyModule, // LANGUAGE_TOOLS: traducción e IPA por lotes (/language-tools/lines)
   ],
   controllers: [ReadingTextsController],
   providers: [
     { provide: READING_DRAFT, useClass: ReadingDraftClient },
+    { provide: LEVEL_CLASSIFIER, useClass: LevelClassifierClient }, // [2026-11-16 · RF-148]: nivel estimado del texto
     ReadingAccess,
     SentenceEnricher,
     ReadingContentWriter,

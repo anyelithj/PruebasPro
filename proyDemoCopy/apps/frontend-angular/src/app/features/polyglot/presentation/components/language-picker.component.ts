@@ -12,7 +12,7 @@ import { DEFAULT_ORDER } from '../../domain/language-order';
   template: `
     <fieldset class="space-y-3">
       <legend class="text-sm font-bold">{{ legend() }}</legend>
-      <p class="text-xs text-muted-foreground">{{ hint() }}</p>
+      <p class="type-meta text-muted-foreground">{{ hint() }}</p>
       <div class="flex flex-wrap gap-2">
         @for (l of all; track l) {
           <label
@@ -39,7 +39,7 @@ import { DEFAULT_ORDER } from '../../domain/language-order';
         @for (l of order(); track l; let i = $index; let last = $last) {
           <li
             cdkDrag
-            class="flex items-center gap-1 rounded-full border border-tone-brand-line bg-tone-brand-soft py-1 pl-2 pr-1 text-sm font-semibold text-tone-brand shadow-sm"
+            class="flex items-center gap-1 rounded-full border border-tone-brand-line bg-tone-brand-soft py-1 pl-2 pr-1 font-semibold text-tone-brand shadow-sm"
           >
             <span cdkDragHandle class="cursor-grab px-1" aria-hidden="true">⋮⋮</span>
             <span class="tabular-nums text-xs opacity-70">{{ i + 1 }}.</span>

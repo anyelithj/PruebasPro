@@ -19,6 +19,7 @@ import {
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { OptionalPhone } from '../application/dtos/optional-phone.decorator'; // [2026-10-24]: decorador compuesto del teléfono
+import { OptionalSocialUrl } from '../application/dtos/optional-social-url.decorator'; // [2026-10-28]: redes sociales (https + dominio de la red)
 import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
 import type { JwtPayload } from '../../../shared/decorators/current-user.decorator';
 import { GetProfileUseCase } from '../application/use-cases/get-profile.use-case';
@@ -67,6 +68,19 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsIn(['es', 'en', 'pt'])
   preferredLanguage?: string;
+
+  // [Redes sociales · 2026-10-28]: opcionales · vacío = borrar · regla única en social-links.vo.ts (https + dominio de cada red) | [Principio]: DRY
+  @OptionalSocialUrl('linkedin')
+  linkedinUrl?: string;
+
+  @OptionalSocialUrl('twitter')
+  twitterUrl?: string;
+
+  @OptionalSocialUrl('spotify')
+  spotifyUrl?: string;
+
+  @OptionalSocialUrl('youtube')
+  youtubeUrl?: string;
 }
 
 // [DTO ChangePassword · 2026-10-23]: misma política de contraseña que registro/reset | [Principio]: DRY (regla única de fortaleza)
@@ -113,7 +127,8 @@ export class ProfileController {
 
   @Patch('me')
   @ApiOperation({
-    summary: 'Update own profile (names, section, bio, timezone, language)',
+    summary:
+      'Update own profile (names, section, bio, social links, timezone, language)',
   })
   async updateMyProfile(
     @CurrentUser() user: JwtPayload,

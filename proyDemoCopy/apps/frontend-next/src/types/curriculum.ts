@@ -137,7 +137,7 @@ export interface KindMeta {
 export const KIND_META: Readonly<Record<CurriculumItemKind, KindMeta>> = {
   vocabulary: { label: "Vocabulario", icon: "🔤", description: "Una palabra con traducción, pronunciación y ejemplos.", skill: { value: "vocabulary", mode: "fixed" } },
   grammar_rule: { label: "Regla gramatical", icon: "📐", description: "Explica una estructura con su fórmula y ejemplos.", skill: { value: "grammar", mode: "fixed" } },
-  example: { label: "Frase de ejemplo", icon: "💬", description: "Una frase en el idioma con su traducción." },
+  example: { label: "Frases", icon: "💬", description: "Una frase en el idioma con su traducción." },
   translation: { label: "Traducción", icon: "🔁", description: "Texto original y su traducción verificada.", skill: { value: "reading", mode: "suggested" } },
   pronunciation: { label: "Pronunciación", icon: "🗣️", description: "Cómo suena una palabra o frase (transcripción IPA).", skill: { value: "pronunciation", mode: "fixed" } },
   common_error: { label: "Error frecuente", icon: "⚠️", description: "Lo que se suele decir mal y cómo corregirlo.", skill: { value: "grammar", mode: "suggested" } },
@@ -160,7 +160,7 @@ export const KIND_LABEL = Object.fromEntries(KINDS.map((k) => [k, KIND_META[k].l
 export const BACK_LABEL: Readonly<Record<CurriculumItemKind, string>> = {
   vocabulary: "Volver a vocabulario",
   grammar_rule: "Volver a regla gramatical",
-  example: "Volver a frase de ejemplo",
+  example: "Volver a frases",
   translation: "Volver a traducción",
   pronunciation: "Volver a pronunciación",
   common_error: "Volver a error frecuente",
@@ -246,16 +246,17 @@ export interface ExampleValue {
   text: string; // Frase en el idioma
   translationEs: string; // Traducción al español
   romanization?: string; // Pinyin / transliteración
+  ipa?: string; // [2026-11-02]: IPA ya conocida (sin barras) → se muestra al instante en vez de calcularla
 }
 export interface GrammarRuleContent { title: string; explanationEs: string; structure?: string; examples: ExampleValue[] }
 // `emoji` / `image` (data URL ≤ 256 px): apoyo visual de la ficha
-export interface VocabularyContent { lemma: string; partOfSpeech?: string; gender?: string; translationEs: string; ipa?: IpaValue; romanization?: string; examples: ExampleValue[]; emoji?: string; image?: string }
+export interface VocabularyContent { lemma: string; article?: string; partOfSpeech?: string; gender?: string; plural?: string; classifier?: string; translationEs: string; ipa?: IpaValue; romanization?: string; examples: ExampleValue[]; emoji?: string; image?: string }
 export type ExampleContent = ExampleValue;
 export interface TranslationContent { source: string; targetEs: string; notes?: string }
 // `ruleEs` + `examples` (2026-10-23): regla fonética y frases que la aplican
 // [2026-10-24]: ficha de FONEMA (p. ej. /ɒ/) → `phoneme` (símbolo), `articulationEs` (cómo se pronuncia), `ruleEs` (cuándo se usa), `words` (palabras de ejemplo) y `examples` (frases)
 export interface PronunciationWord { text: string; ipa?: string; translationEs?: string }
-export interface PronunciationContent { text: string; ipa: IpaValue; romanization?: string; audioRef?: string; phoneme?: string; ruleEs?: string; articulationEs?: string; words?: PronunciationWord[]; examples?: ExampleValue[] }
+export interface PronunciationContent { text: string; ipa: IpaValue; romanization?: string; audioRef?: string; phoneme?: string; ruleEs?: string; articulationEs?: string; mouthMedia?: string; words?: PronunciationWord[]; examples?: ExampleValue[] } // [2026-11-14] mouthMedia: clave de la imagen/video de la boca
 export interface CommonErrorContent { incorrect: string; correct: string; explanationEs: string; ruleKey?: string }
 export type ExerciseType = "multiple_choice" | "true_false" | "fill_blank" | "open_answer";
 export interface ExerciseContent { prompt: string; type: ExerciseType; options?: string[]; answerKey: string[]; explanationEs?: string; rubricKey?: string }
@@ -264,15 +265,17 @@ export interface RubricCriterion { name: string; descriptorEs: string; maxPoints
 export interface RubricContent { title: string; criteria: RubricCriterion[] }
 
 // [Mapa tipo → forma]: `ContentByKind["vocabulary"]` = VocabularyContent | [Patrón]: Type-level Registry
+// [VisualFields · 2026-10-30]: emoji o imagen opcional en TODOS los tipos (espejo del `visual` de Zod en NestJS) | `&` (TS): intersección
+export interface VisualFields { emoji?: string; image?: string }
 export interface ContentByKind {
-  grammar_rule: GrammarRuleContent;
+  grammar_rule: GrammarRuleContent & VisualFields;
   vocabulary: VocabularyContent;
-  example: ExampleContent;
-  translation: TranslationContent;
-  pronunciation: PronunciationContent;
-  common_error: CommonErrorContent;
-  exercise: ExerciseContent;
-  rubric: RubricContent;
+  example: ExampleContent & VisualFields;
+  translation: TranslationContent & VisualFields;
+  pronunciation: PronunciationContent & VisualFields;
+  common_error: CommonErrorContent & VisualFields;
+  exercise: ExerciseContent & VisualFields;
+  rubric: RubricContent & VisualFields;
 }
 
 export const EXERCISE_TYPE_LABEL: Readonly<Record<ExerciseType, string>> = {
@@ -285,10 +288,10 @@ export const EXERCISE_TYPE_LABEL: Readonly<Record<ExerciseType, string>> = {
 // [Contenido vacío por tipo]: el formulario arranca en blanco (los ejemplos van como placeholder) | `{ [K in …]: … }` (TS mapped type) | [Patrón]: Prototype
 export const EMPTY_CONTENT: { readonly [K in CurriculumItemKind]: ContentByKind[K] } = {
   grammar_rule: { title: "", explanationEs: "", structure: "", examples: [] },
-  vocabulary: { lemma: "", partOfSpeech: "", gender: "", translationEs: "", romanization: "", examples: [] },
+  vocabulary: { lemma: "", article: "", partOfSpeech: "", gender: "", translationEs: "", romanization: "", examples: [] },
   example: { text: "", translationEs: "", romanization: "" },
   translation: { source: "", targetEs: "", notes: "" },
-  pronunciation: { text: "", ipa: { value: "", variant: "", source: "" }, romanization: "", phoneme: "", ruleEs: "", articulationEs: "", words: [], examples: [] },
+  pronunciation: { text: "", ipa: { value: "", variant: "", source: "" }, romanization: "", phoneme: "", ruleEs: "", articulationEs: "", mouthMedia: "", words: [], examples: [] },
   common_error: { incorrect: "", correct: "", explanationEs: "", ruleKey: "" },
   exercise: { prompt: "", type: "multiple_choice", options: ["", ""], answerKey: [], explanationEs: "" },
   rubric: { title: "", criteria: [{ name: "", descriptorEs: "", maxPoints: 5, bands: [] }] },
@@ -406,4 +409,45 @@ export interface CertificationPractice {
   exam: string;
   topic: string;
   notice: string;
+}
+
+// ───────── [Artículo de las fichas de vocabulario · 2026-11-02] ─────────
+// [Espejo]: backend/src/modules/curriculum/domain/content/vocabulary-article.ts (NestJS vuelve a validar) | [Paradigma]: Funcional (puro)
+// de/fr/pt/es: obligatorio en sustantivos · en: opcional (a, an, the) · ru/zh: sin artículos → «No aplica»
+export const VOCAB_ARTICLES: Readonly<Record<string, readonly string[]>> = {
+  de: ["der", "die", "das"],
+  fr: ["le", "la", "l'", "les"],
+  pt: ["o", "a", "os", "as"],
+  es: ["el", "la", "los", "las"],
+  en: ["a", "an", "the"],
+  ru: [],
+  zh: [],
+};
+export const ARTICLE_REQUIRED: ReadonlySet<string> = new Set(["de", "fr", "pt", "es"]);
+export const normalizeArticle = (a: unknown): string => (typeof a === "string" ? a.trim().toLowerCase().replace(/’/g, "'") : "");
+// Sin «Tipo de palabra» no se sabe si es sustantivo → no se exige (nunca se adivina)
+export const isNoun = (partOfSpeech: unknown): boolean => typeof partOfSpeech === "string" && /^(sustantivo|nombre|noun)\b/i.test(partOfSpeech.trim());
+
+// [articleInLemma]: la palabra ya trae el artículo escrito («das Obst», «l'eau») → la información existe (fichas antiguas siguen siendo válidas)
+export function articleInLemma(language: string, lemma: unknown): string | null {
+  if (typeof lemma !== "string") return null;
+  const l = lemma.trim().toLowerCase().replace(/’/g, "'");
+  return (VOCAB_ARTICLES[language] ?? []).find((a) => (a.endsWith("'") ? l.startsWith(a) && l.length > a.length : l.startsWith(`${a} `))) ?? null;
+}
+
+// [vocabularyArticleProblem]: null = correcto · texto = motivo (misma regla que el backend)
+export function vocabularyArticleProblem(language: string, c: { lemma?: unknown; article?: unknown; partOfSpeech?: unknown }): string | null {
+  const article = normalizeArticle(c.article);
+  const allowed = VOCAB_ARTICLES[language] ?? [];
+  if (!allowed.length) return article ? "Este idioma no tiene artículos: el artículo no aplica" : null;
+  if (article && !allowed.includes(article)) return `Artículo no válido para este idioma (usa: ${allowed.join(", ")})`;
+  if (!article && ARTICLE_REQUIRED.has(language) && isNoun(c.partOfSpeech) && !articleInLemma(language, c.lemma)) return `Artículo del sustantivo (${allowed.join(", ")})`;
+  return null;
+}
+
+// [withArticle]: «das Obst», «l'eau», «the apple» para mostrar en la ficha | si la palabra ya lo lleva escrito, se muestra tal cual (sin «das das Obst»)
+export function withArticle(language: string, lemma: string, article: unknown): string {
+  const a = normalizeArticle(article);
+  if (!a || articleInLemma(language, lemma)) return lemma;
+  return a.endsWith("'") ? `${a}${lemma}` : `${a} ${lemma}`;
 }

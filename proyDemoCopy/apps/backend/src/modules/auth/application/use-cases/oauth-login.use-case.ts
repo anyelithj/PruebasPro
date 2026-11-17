@@ -40,7 +40,7 @@ export class OAuthLoginUseCase {
     dto: OAuthLoginDto,
     context?: { ipAddress?: string; userAgent?: string },
   ): Promise<AuthResponseDto> {
-    // [Verifica id_token]: Strategy via registry → Google/Microsoft adapter
+    // [Verifica id_token]: Strategy via registry → adapter Google
     const verifier = this.verifiers.get(dto.provider);
     const profile = await verifier.verify(dto.idToken);
 

@@ -49,7 +49,7 @@ async function main(): Promise<void> {
         purchasedAt: new Date(),
         progress: 100,
       });
-      const cert = await issue.execute(user.id, course.id);
+      const cert = await issue.execute(user.id, course.id, { skipExam: true }); // Demo: sin examen final
       console.log(`✓ ${level} · ${cert.code} · ${course.title}`);
     }
   } finally {

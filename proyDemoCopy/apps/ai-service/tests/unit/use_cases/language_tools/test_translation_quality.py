@@ -145,3 +145,9 @@ async def test_lote_como_diccionario_por_frase():
         LinesRequest(lines=["Where do you live?", "Do you like it?"], language="en")
     )
     assert [x.translation for x in out.lines] == ["¿Dónde vives?", "¿Te gusta?"] and llm.calls == 1
+
+
+def test_rechaza_traduccion_a_medias_del_frances() -> None:
+    from src.modules.language_tools.domain.translation_rules import is_acceptable
+    assert not is_acceptable("Qui me fascine", "Qui me fascina", "fr")
+    assert is_acceptable("Qui me fascine", "Que me fascina", "fr")

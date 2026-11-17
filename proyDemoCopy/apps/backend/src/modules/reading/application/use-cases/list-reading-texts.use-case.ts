@@ -10,6 +10,7 @@ export interface ReadingFilter {
   level?: string;
   genre?: string;
   mine?: boolean;
+  kind?: 'reading' | 'dictation'; // [2026-11-16]: sin kind → solo lecturas para el estudiante; Gestión (mine) ve las dos
 }
 
 @Injectable()
@@ -26,10 +27,17 @@ export class ListReadingTextsUseCase {
       ...(f.level ? { level: f.level } : {}),
       ...(f.genre ? { genre: f.genre as ReadingText['genre'] } : {}),
     };
+    const staffList =
+      f.mine && (actor.role === 'TEACHER' || actor.role === 'ADMIN');
+    if (f.kind || !staffList) where.kind = f.kind ?? 'reading';
     const staff = actor.role === 'TEACHER' || actor.role === 'ADMIN';
     if (f.mine && staff) {
       if (actor.role !== 'ADMIN') where.createdBy = actor.id; // El ADMIN gestiona todos
     } else where.status = 'published';
-    return this.texts.find({ where, order: { level: 'ASC', title: 'ASC' }, take: 500 });
+    return this.texts.find({
+      where,
+      order: { level: 'ASC', title: 'ASC' },
+      take: 500,
+    });
   }
 }

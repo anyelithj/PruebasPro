@@ -1,0 +1,20 @@
+// SMACSS · MODULE — process-item: tarjeta resumen de un proceso.
+.process-item {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--petrol);
+  border-radius: var(--radius-sm);
+  padding: var(--pad-item);
+  &__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+}

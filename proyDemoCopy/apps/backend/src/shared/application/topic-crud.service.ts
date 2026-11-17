@@ -1,5 +1,6 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { IsNull, type FindOptionsWhere, type Repository } from 'typeorm';
+import { assertUniqueTitle } from './unique-title'; // [2026-10-28]: regla anti-duplicados compartida (DRY)
 // [TopicCrudService<T> · Sprint 9.3]: crear, listar, ver, editar y archivar temas sobre la entidad de cada módulo — lo usa Dialogues y lo reutilizarán Grammar y Polyglot (Fase 10) | [Patrón]: Generic Service (Template de CRUD) + Soft Delete | [Principio]: DRY + OCP (un módulo nuevo solo aporta su entidad) | [Paradigma]: POO genérica (TypeScript generics)
 
 // [TopicLike]: lo mínimo que comparte cualquier tema (el resto de columnas lo define cada módulo)
@@ -28,6 +29,7 @@ export class TopicCrudService<T extends TopicLike> {
   constructor(
     protected readonly repo: Repository<T>,
     private readonly label = 'Tema',
+    private readonly article: 'un' | 'una' = 'un', // [2026-10-28]: género del sustantivo en los mensajes («una ficha», «un tema»)
   ) {}
 
   async create(
@@ -35,10 +37,16 @@ export class TopicCrudService<T extends TopicLike> {
     input: Partial<T> & { title: string },
   ): Promise<T> {
     const slug = slugify(input.title);
-    if (await this.repo.existsBy({ slug } as FindOptionsWhere<T>))
+    const prev = await this.repo.findOneBy({ slug } as FindOptionsWhere<T>);
+    if (prev && !prev.archivedAt)
       throw new ConflictException(
-        `Ya existe un ${this.label.toLowerCase()} con ese nombre`,
+        `Ya existe ${this.article} ${this.label.toLowerCase()} con ese nombre`,
       );
+    // [Fix 2026-11-11]: un tema eliminado (archivado) conservaba el slug único → «Ya existe…» al volver a crearlo | se libera renombrando el slug del archivado (sesiones/diálogos guardan el id, no el slug)
+    if (prev) {
+      prev.slug = `${slug.slice(0, 50)}~${prev.id.slice(0, 8)}`;
+      await this.repo.save(prev);
+    }
     return this.repo.save(
       this.repo.create({
         ...input,
@@ -73,6 +81,19 @@ export class TopicCrudService<T extends TopicLike> {
 
   async update(id: string, patch: Partial<T>): Promise<T> {
     const t = await this.get(id);
+    // [Fix 2026-10-28 · Sin duplicados]: renombrar a un título que ya tiene otro tema vigente del mismo idioma (null = todos) → 409 | el alta ya lo impide por `slug`
+    const title = (patch as { title?: string }).title;
+    if (title?.trim())
+      await assertUniqueTitle(
+        this.repo,
+        title.trim(),
+        {
+          archivedAt: IsNull(),
+          language: t.language ?? IsNull(),
+        } as FindOptionsWhere<T>,
+        { label: `${this.article} ${this.label.toLowerCase()}`, language: t.language },
+        t.id,
+      );
     const FIXED = new Set(['id', 'slug', 'createdBy']); // El slug no cambia: las sesiones y diálogos guardan el id
     Object.assign(
       t,

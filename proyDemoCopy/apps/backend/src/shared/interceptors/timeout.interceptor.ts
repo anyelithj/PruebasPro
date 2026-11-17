@@ -19,6 +19,8 @@ export const LONG_TIMEOUT_PATTERNS: RegExp[] = [
   // [2026-10-25]: TODO borrador o enriquecimiento con el LLM local (letra de canción, poliglota, gramática…) → antes caían en 30 s y respondían 408
   /\/(draft|enrich)(\/|\?|$)/,
   /\/polyglot\/(concepts\/[^/]+\/terms|topics\/[^/]+\/ipa)/, // IPA de cada término con el LLM local
+  // [2026-10-27]: añadir/corregir un ejemplo de gramática en el editor espera su IPA + traducción (LLM) → caía a los 30 s con 408 aunque el ejemplo sí se guardaba
+  /\/grammar\/(sections\/[^/]+\/examples|examples\/[^/?]+)(\?|$)/,
   /\/music\/lyrics\//, // Letra desde enlace (descarga + limpieza) y borrador con IA
   /\/ai\/feedback\//,
   // [/quiz/ai/generate]: Qwen3:8b / Mistral Nemo en CPU pueden tardar 60-120s en cold start | [Patrón]: Per-Route Policy

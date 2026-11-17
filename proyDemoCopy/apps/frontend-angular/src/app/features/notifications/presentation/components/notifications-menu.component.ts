@@ -30,9 +30,9 @@ import { NOTIFICATIONS_PROVIDERS } from '../../notifications.providers';
         }
       </div>
       @if (facade.inbox.status() === 'error') {
-        <p class="px-4 py-6 text-center text-xs text-tone-danger">{{ t.notificationsError }}</p>
+        <p class="px-4 py-6 text-center type-meta text-tone-danger">{{ t.notificationsError }}</p>
       } @else if (!items.length) {
-        <p class="px-4 py-6 text-center text-xs text-muted-foreground">{{ t.noNotifications }}</p>
+        <p class="px-4 py-6 text-center type-meta text-muted-foreground">{{ t.noNotifications }}</p>
       } @else {
         <ul class="max-h-80 overflow-y-auto">
           @for (n of items; track n.id) {

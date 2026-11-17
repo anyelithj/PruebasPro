@@ -48,8 +48,8 @@ export default async function UserDetailPage(props: { params: Promise<{ id: stri
             {user.lastName.charAt(0)}
           </span>
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{name}</h1>
-            <p className="text-sm text-muted-foreground">{ROLE_LABEL[user.role]}</p>
+            <h1 className="title-page">{name}</h1>
+            <p className="text-muted-foreground">{ROLE_LABEL[user.role]}</p>
           </div>
         </div>
       </header>

@@ -5,6 +5,9 @@ import { listQuizzes } from "@/lib/quiz-api";
 import type { PaginatedQuizzes } from "@/types/quiz";
 import { QuizAdminTable } from "@/components/quiz/QuizAdminTable";
 import { ManagementHeader } from "@/components/portal/ManagementHeader";
+import { CourseExamBanner } from "../../admin/certificados/CourseExamBanner";
+import { isLanguage } from "@/lib/languages";
+import { QuizFilters } from "@/components/quiz/QuizFilters"; // [2026-10-31]: mismo panel en Docente y Admin (DRY)
 
 export const metadata: Metadata = {
   title: "Gestión",
@@ -18,6 +21,10 @@ interface SearchParams {
   page?: string;
   category?: string;
   difficulty?: string;
+  language?: string; // [2026-10-27]: idioma ISO 639-1 elegido en las pestañas
+  search?: string; // [2026-10-30]: Buscar · Estado (mismo panel que Recursos y Actividades)
+  status?: string;
+  curso?: string; // [2026-11-09]: curso recién creado/editado → banner para generar su examen final
 }
 
 function buildQuery(sp: SearchParams, overrides: Record<string, string>): string {
@@ -30,6 +37,7 @@ function buildQuery(sp: SearchParams, overrides: Record<string, string>): string
 
 export default async function TeacherQuizzesPage(props: { searchParams: Promise<SearchParams> }) {
   const sp = await props.searchParams;
+  const activeLanguage = isLanguage(sp.language) ? sp.language : undefined; // [2026-10-27]: validado contra el SSOT (un código raro = «Todos»)
 
   let data: PaginatedQuizzes;
   let error: string | null = null;
@@ -39,7 +47,11 @@ export default async function TeacherQuizzesPage(props: { searchParams: Promise<
       page: sp.page ? parseInt(sp.page, 10) : 1,
       category: sp.category,
       difficulty: sp.difficulty,
+      language: activeLanguage,
       publishedOnly: false,
+      search: sp.search,
+      status: sp.status,
+      kind: "all", // [2026-11-06]: el docente también revisa/edita los exámenes finales y de nivel generados por la IA
     });
   } catch (err) {
     error = err instanceof Error ? err.message : "Error cargando exámenes";
@@ -55,7 +67,7 @@ export default async function TeacherQuizzesPage(props: { searchParams: Promise<
 
       <section className="space-y-6">
         <div className="flex items-start justify-between flex-wrap gap-4">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground">
             {data.total} {data.total === 1 ? "examen" : "exámenes"} en la plataforma.
           </p>
           <div className="flex flex-wrap items-center gap-3">
@@ -67,6 +79,9 @@ export default async function TeacherQuizzesPage(props: { searchParams: Promise<
             </Link>
           </div>
         </div>
+
+        {sp.curso && <CourseExamBanner courseId={sp.curso} />}
+        <QuizFilters sp={sp} pathname="/teacher/quizzes" activeLanguage={activeLanguage} />
 
         {error && (
           <div

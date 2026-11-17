@@ -22,12 +22,12 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
             {/* [Decoración]: círculo borroso | aria-hidden: puramente visual */}
             <span className="pointer-events-none absolute -bottom-40 -right-40 size-[420px] rounded-full bg-white/10" aria-hidden="true" />
             <div className="relative z-10 max-w-md">
-              <h2 className="mb-3 text-3xl font-extrabold tracking-tight lg:text-4xl">{t.asideTitle}</h2>
+              <h2 className="title-page mb-3">{t.asideTitle}</h2>
               <p className="leading-relaxed text-white/85">{t.asideText}</p>
               {/* [Propuesta de valor]: 3 beneficios reales de la plataforma → el panel de marca informa en vez de quedar vacío | `<ul>` semántico: los lectores de pantalla anuncian «lista, 3 elementos» */}
               <ul className="mt-8 space-y-3">
                 {t.asidePoints.map((point) => (
-                  <li key={point} className="flex items-start gap-3 text-sm font-medium text-white/95">
+                  <li key={point} className="flex items-start gap-3 font-medium text-white/95">
                     <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-white/20 ring-1 ring-white/40" aria-hidden="true">
                       <Check className="size-3" strokeWidth={3} />
                     </span>

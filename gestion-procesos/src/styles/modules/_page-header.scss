@@ -1,0 +1,14 @@
+// SMACSS · MODULE — page-header
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space);
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-lg);
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+  }
+}

@@ -41,7 +41,7 @@ export function ChartBars({
         </div>
       </div>
       {xLabel && (
-        <p className="mt-1 text-center text-[11px] font-medium text-muted-foreground">
+        <p className="mt-1 text-center type-meta font-medium text-muted-foreground">
           {xLabel}
         </p>
       )}

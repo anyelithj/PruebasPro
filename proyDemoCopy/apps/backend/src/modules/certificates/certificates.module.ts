@@ -9,12 +9,14 @@ import {
   IssueCertificateUseCase,
 } from './application/use-cases/issue-certificate.use-case';
 import { RevokeCertificateUseCase } from './application/use-cases/revoke-certificate.use-case';
+import { ManageCertificatesUseCase } from './application/use-cases/manage-certificates.use-case';
 import {
   GetCertificatePdfUseCase,
   ListMyCertificatesUseCase,
   VerifyCertificateUseCase,
 } from './application/use-cases/verify-certificate.use-case';
 import { Certificate } from './domain/entities/certificate.entity';
+import { CertificateTemplateRow } from './domain/entities/certificate-template.entity';
 import { CERTIFICATE_RENDERER } from './domain/interfaces/document-renderer.interface';
 import { CertificatePdfRenderer } from './infrastructure/pdf/certificate-pdf.renderer';
 import { CertificatesController } from './presentation/certificates.controller';
@@ -22,7 +24,7 @@ import { CertificatesController } from './presentation/certificates.controller';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Certificate]),
+    TypeOrmModule.forFeature([Certificate, CertificateTemplateRow]),
     CoursesModule, // COURSE_REPOSITORY: progreso del curso y título
     UsersModule, // USER_REPOSITORY: nombre impreso
     Web3Module, // AnchorCertificateHashUseCase + VerifyCertificateHashUseCase
@@ -37,6 +39,7 @@ import { CertificatesController } from './presentation/certificates.controller';
     IssueCertificateUseCase,
     ListMyCertificatesUseCase,
     GetCertificatePdfUseCase,
+    ManageCertificatesUseCase, // [2026-11-09 · RF-32]: bandeja con filtros, detalle, metadatos y solicitud de revocación
     VerifyCertificateUseCase,
     RevokeCertificateUseCase,
   ],

@@ -1,0 +1,22 @@
+import { Meta } from '@storybook/addon-docs/blocks'
+
+<Meta title="Guía/Estilos (SMACSS + BEM)" />
+
+# Estilos: SMACSS + BEM
+
+`src/styles/config.scss` es el punto de entrada y carga las capas en este orden.
+
+| Capa SMACSS | Carpeta                    | Convención                                          | Ejemplo                                       |
+| ----------- | -------------------------- | --------------------------------------------------- | --------------------------------------------- |
+| Base        | `base/`                    | Elementos HTML y variables de Bootstrap, sin clases | `body`, `:focus-visible`                      |
+| Layout      | `layout/`                  | Prefijo `l-`                                        | `l-shell`, `l-auth`, `l-stack`                |
+| Módulos     | `modules/` y `Style*.scss` | BEM `bloque__elemento--modificador`                 | `process-item__meta`, `calendar__item--tarea` |
+| Estado      | `state/`                   | Prefijo `is-`                                       | `is-current`, `is-overdue`                    |
+| Tema        | `theme/`                   | Variables CSS                                       | `--petrol`, `--amber`                         |
+
+## Reglas
+
+1. Una clase de **layout** solo organiza la página; nunca decora.
+2. Un **módulo** no conoce a otros módulos: se compone en el HTML, no en el CSS.
+3. Un **estado** se combina con cualquier módulo (`calendar__cell is-today`).
+4. Los colores y medidas salen de las variables del tema, no se escriben a mano.

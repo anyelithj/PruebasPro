@@ -9,8 +9,10 @@ import { ThemeService } from '@core/theme/theme.service';
 import { PortalSidebarComponent } from '@shared/ui/organisms/portal-sidebar/portal-sidebar.component';
 import { PortalTopbarComponent } from '@shared/ui/organisms/portal-topbar/portal-topbar.component';
 import { ToasterComponent } from '@shared/ui/organisms/toaster/toaster.component';
+import { BusyOverlayComponent } from '@shared/ui/atoms/spinner/busy-overlay.component'; // [2026-11-16]: «Cargando…» global al crear/editar/eliminar
 import { NotificationsMenuComponent } from '@features/notifications/presentation/components/notifications-menu.component'; // La app compone funcionalidades; ellas no se importan entre sí
 import { GuideWidgetElement } from '@features/help/presentation/components/guide-widget.element'; // [Sprint 7.11]: Agente Guía flotante (el mismo <aula-guia-widget> que pinta Next.js)
+import { WordDictionaryComponent } from '@shared/ui/organisms/word-lookup/word-dictionary.component'; // [2026-10-30]: diccionario de palabra en todas las pantallas
 // [AppComponent · raíz standalone]: el MISMO marco del portal de Next.js ((portal)/layout.tsx): sidebar + topbar + contenido → para el usuario es una sola aplicación | [Patrón]: Composite + Shell + Content Projection (la campana entra en el topbar) | [Principio]: SRP (cada pantalla vive en su funcionalidad) + DRY (menú, textos y temas del SSOT de Next.js) | [Paradigma]: Declarativo
 // [A11y]: enlace «saltar al contenido» · <main> con id de destino
 // [Visitante]: sin sesión solo se llega a pantallas públicas (/verificar) → contenido sin sidebar ni topbar (el menú es del portal)
@@ -18,7 +20,7 @@ import { GuideWidgetElement } from '@features/help/presentation/components/guide
 
 @Component({
   selector: 'aula-root',
-  imports: [RouterOutlet, PortalSidebarComponent, PortalTopbarComponent, NotificationsMenuComponent, GuideWidgetElement, ToasterComponent],
+  imports: [RouterOutlet, PortalSidebarComponent, PortalTopbarComponent, NotificationsMenuComponent,  GuideWidgetElement, WordDictionaryComponent, ToasterComponent, BusyOverlayComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <!-- [Loader de navegación · 2026-10-23]: barra superior mientras carga la siguiente pantalla (lazy chunk + resolvers) → el usuario sabe que la app está trabajando -->
@@ -28,7 +30,14 @@ import { GuideWidgetElement } from '@features/help/presentation/components/guide
       </div>
     }
     <a href="#main-content" (click)="skip($event)" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 btn btn-primary btn-sm">{{ i18n.t().common.skipToContent }}</a>
-    @if (session.isAuthenticated()) {
+    @if (embedded) {
+      <!-- [Modo incrustado · 2026-10-27]: dentro de la vista previa de Next.js (Gestión → Actividades → Revisar) solo la pantalla, sin menú, cabecera ni Agente Guía → no parece otra aplicación -->
+      <main id="main-content" tabindex="-1" class="min-h-screen bg-background p-4 outline-none">
+        <router-outlet />
+      </main>
+      <aula-toaster />
+      <aula-busy-overlay />
+    } @else if (session.isAuthenticated()) {
       <!-- [PortalFrame]: rejilla igual a la de Next.js; contraído, la columna pasa de 260px al riel de 72px -->
       <div class="min-h-screen bg-background motion-safe:transition-[grid-template-columns] lg:grid" [class]="menu.collapsed() ? 'lg:grid-cols-[72px_1fr]' : 'lg:grid-cols-[260px_1fr]'">
         <aula-portal-sidebar />
@@ -41,6 +50,8 @@ import { GuideWidgetElement } from '@features/help/presentation/components/guide
       </div>
       <aula-guide-widget />
       <aula-toaster />
+      <aula-busy-overlay />
+      <aula-word-dictionary />
     } @else {
       <main id="main-content" tabindex="-1" class="min-h-screen bg-background px-4 pb-10 outline-none md:px-8">
         <a href="/" class="mx-auto flex max-w-5xl items-center gap-2 pt-6 text-lg font-bold">Aula de Idiomas</a>
@@ -53,6 +64,16 @@ export class AppComponent {
   protected readonly i18n = inject(I18nService);
   protected readonly menu = inject(PortalNavService);
   protected readonly session = inject(SessionService);
+  // [embedded · 2026-10-27]: true si la app corre dentro de un <iframe> (vista previa de Next.js) o con ?embed=1 → sin el marco del portal
+  // `window.self !== window.top` (DOM): estamos incrustados · `try/catch`: acceder a `top` puede lanzar con orígenes distintos (entonces sí está incrustada) | [Patrón]: Feature Detection
+  protected readonly embedded = ((): boolean => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return window.self !== window.top || new URLSearchParams(window.location.search).has('embed');
+    } catch {
+      return true;
+    }
+  })();
   // Instanciar ThemeService aplica y sincroniza el tema compartido con Next.js
   private readonly theme = inject(ThemeService);
   // [navigating]: true entre NavigationStart y su fin (ok, cancelada o con error) | `toSignal` (RxJS → Signals) | [Patrón]: Observer

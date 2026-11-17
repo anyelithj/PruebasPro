@@ -1,10 +1,10 @@
 "use client"; // [Next.js]: Client Component → marcar completa (Optimistic UI) y navegación entre lecciones
-import { useState, useTransition } from "react";
 import Link from "next/link";
 import { youtubeEmbed } from "@/lib/youtube";
 import { useRouter } from "next/navigation";
 import { usePreferences } from "@/components/layout/PreferencesProvider";
-import { completeMaterialAction } from "@/lib/purchase-actions"; // [Server Action]: marca el material como completado
+import { progressDetail, useCourseProgress } from "@/components/courses/CourseProgressProvider"; // [2026-10-28]: progreso compartido con el temario (SSOT)
+import { ProgressBar } from "@/components/courses/ProgressBar";
 import { fmt } from "@aula/shared-i18n";
 import { SyllabusList } from "@/components/courses/SyllabusList";
 import { PdfReader } from "@/components/courses/PdfReader";
@@ -16,68 +16,49 @@ import {
   nextPendingIndex,
   type CourseMaterial,
 } from "@/types/courses";
-// [CourseLesson]: pantalla de lección como openLesson del demo → visor (video/PDF/imagen) + lectura en voz alta del PDF + Anterior · Marcar completa · Siguiente + "Temario del curso" lateral
+// [CourseLesson]: pantalla de lección como openLesson del demo → línea de tiempo de recursos a la izquierda + visor (video/PDF/imagen) + lectura en voz alta del PDF + Anterior · Marcar completa · Siguiente
+// [2026-10-27]: se renderiza DENTRO de la sección «Recursos» de la página, debajo del temario (CourseSyllabus) → encabezados <h3>
 // [Patrón]: Container + Strategy (visor por tipo) + Optimistic UI | [Principio]: SRP + DRY (SyllabusList, lessonHref) | [Paradigma]: Reactivo + Declarativo
+// [Fix 2026-10-28]: el avance ya no vive aquí (antes un `Set` local + % solo de recursos) → useCourseProgress() lo comparte con el temario: misma barra, mismo %, se mueven juntos
 
 export interface CourseLessonProps {
   courseId: string;
   items: CourseMaterial[];
   index: number; // Posición de la lección abierta
-  initialCompleted: string[];
-  canTrack: boolean; // Inscrito/comprado → se registra el progreso y aplica el bloqueo secuencial
   color: string;
   lang: string; // Idioma del curso (ISO 639-1) → voz del lector
+  embeddable?: boolean; // [2026-11-05]: false = el dueño del video de YouTube no permite insertarlo
 }
 
 export function CourseLesson({
   courseId,
   items,
   index,
-  initialCompleted,
-  canTrack,
   color,
   lang,
+  embeddable = true,
 }: CourseLessonProps) {
   const { t } = usePreferences();
   const m = t.courses.materials;
   const router = useRouter();
-  const [done, setDone] = useState<ReadonlySet<string>>(
-    () => new Set(initialCompleted),
-  ); // `Set` (ES2015): pertenencia O(1)
-  const [saving, startSaving] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  // [Progreso compartido]: `done` = recursos vistos · `progress` = % real del curso (recursos + subtemas [+ ruta]) | `error`/`saving` de la Server Action
+  const { doneMaterials: done, progress, canTrack, preview, saving, error, completeMaterial } = useCourseProgress();
 
   const current = items[index];
-  const pct = items.length
-    ? Math.round(
-        (items.filter((x) => done.has(x.id)).length / items.length) * 100,
-      )
-    : 0;
   const nextPending = nextPendingIndex(items, done);
   const prev = items[index - 1];
   const next = items[index + 1];
-  const nextLocked = isLessonLocked(index + 1, nextPending, canTrack);
+  const sequential = canTrack && !preview; // [2026-10-30]: el bloqueo secuencial es para alumnos; en vista previa se navega libremente
+  const nextLocked = isLessonLocked(index + 1, nextPending, sequential);
 
-  // [Marcar completa]: Optimistic UI → marca y confirma con el backend (rollback si falla); `advance` navega a la siguiente | [Patrón]: Optimistic Update
+  // [Marcar completa]: Optimistic UI en el Provider (rollback si falla) | `advance` → navega a la siguiente cuando NestJS confirma | [Patrón]: Optimistic Update
   const markDone = (advance: boolean) => {
-    if (!canTrack || done.has(current.id)) return;
-    setDone((p) => new Set(p).add(current.id));
-    startSaving(async () => {
-      const res = await completeMaterialAction(courseId, current.id);
-      if (!res.ok) {
-        setError(res.message);
-        setDone((p) => {
-          const n = new Set(p);
-          n.delete(current.id);
-          return n;
-        });
-        return;
-      }
-      setDone(new Set(res.data.completedMaterialIds));
-      // `router.push` (Next.js): siguiente lección | `router.refresh`: actualiza progreso del servidor
+    if (!canTrack || done.has(current.id)) {
       if (advance && next) router.push(lessonHref(courseId, next.id));
-      else router.refresh();
-    });
+      return;
+    }
+    // `router.push` (Next.js): siguiente lección | sin avanzar, el Provider hace `router.refresh()`
+    completeMaterial(current.id, advance && next ? () => router.push(lessonHref(courseId, next.id)) : undefined);
   };
 
   // [Enlace de navegación]: deshabilitado = <span aria-disabled> (un <a> sin href no es accesible como botón) | [Principio]: DRY
@@ -144,13 +125,24 @@ export function CourseLesson({
         </div>
       )}
       {/* [2026-10-25]: un enlace de YouTube se reproduce aquí mismo (iframe sin cookies) */}
-      {current.kind === "link" && youtubeEmbed(current.url) && (
+      {current.kind === "link" && youtubeEmbed(current.url) && !embeddable && (
+        // [2026-11-05]: inserción desactivada por el dueño → miniatura + enlace (YouTube no deja reproducirlo dentro de otra web)
+        <a href={current.url!} target="_blank" rel="noopener noreferrer" onClick={() => markDone(false)} className="group relative block aspect-video w-full">
+          {/* eslint-disable-next-line @next/next/no-img-element -- miniatura pública de YouTube */}
+          <img src={`https://i.ytimg.com/vi/${youtubeEmbed(current.url)!.split("/").pop()}/hqdefault.jpg`} alt="" className="size-full object-cover opacity-70 transition-opacity group-hover:opacity-90" />
+          <span className="absolute inset-0 grid place-items-center gap-2 p-4 text-center text-white">
+            <span className="btn btn-primary">▶ Ver en YouTube ↗</span>
+            <span className="type-meta max-w-md rounded bg-black/60 px-2 py-1">El autor de este video no permite reproducirlo fuera de YouTube.</span>
+          </span>
+        </a>
+      )}
+      {current.kind === "link" && youtubeEmbed(current.url) && embeddable && (
         <iframe src={youtubeEmbed(current.url)!} title={current.title} className="aspect-video w-full" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowFullScreen loading="lazy" referrerPolicy="strict-origin-when-cross-origin" />
       )}
       {(current.kind === "document" || (current.kind === "link" && !youtubeEmbed(current.url))) && (
         <div className="grid place-items-center gap-3 bg-card p-8 text-center">
           <span aria-hidden className="text-4xl">{MATERIAL_ICON[current.kind]}</span>
-          <p className="max-w-md break-all text-sm text-muted-foreground">{current.kind === "link" ? current.url : current.originalName}</p>
+          <p className="max-w-md break-all text-muted-foreground">{current.kind === "link" ? current.url : current.originalName}</p>
           <a href={materialFileUrl(courseId, current.id)} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-sm" onClick={() => markDone(false)}>
             {current.kind === "link" ? "Abrir enlace" : "Abrir / descargar"} ↗
           </a>
@@ -168,30 +160,52 @@ export function CourseLesson({
   );
 
   return (
-    // [Layout lección]: contenido + temario de 320px a la derecha (apilado en móvil) | Tailwind arbitrary value
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
+    // [Layout lección · 2026-10-31]: Recursos de 320px a la izquierda + contenido (título, lectura en voz alta y PDF), igual que «Subtemas» | apilado en móvil | `minmax(0,1fr)`: el visor no desborda
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+      {/* [Línea de tiempo de Recursos · 2026-10-31]: a la IZQUIERDA y con el mismo estilo que «Subtemas» | va primero en el DOM: orden de lectura = orden visual | la lección abierta = "En curso" (aria-current="step") */}
+      <nav aria-label={m.syllabus} className="surface h-fit p-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="title-card">{m.syllabus}</h3>
+          <span
+            className="eeg-mono rounded px-2 py-0.5 text-[11px] font-bold"
+            style={{ background: `${color}18`, color }}
+          >
+            {/* [A11y]: «3/5» visible + frase completa solo para lectores de pantalla (`aria-label` en un <span> sin rol se ignora) */}
+            <span aria-hidden>{progress.materials.done}/{progress.materials.total}</span>
+            <span className="sr-only">{progress.materials.done} de {progress.materials.total} recursos completados</span>
+          </span>
+        </div>
+        <SyllabusList
+          courseId={courseId}
+          items={items}
+          done={done}
+          activeIndex={index}
+          openIndex={index}
+          nextPending={nextPending}
+          canTrack={sequential}
+          color={color}
+          timeline
+          labels={{
+            done: m.done,
+            current: m.current,
+            locked: m.lockedStep,
+            pending: m.pending,
+            lockedHint: m.lockedHint,
+            remove: m.remove,
+          }}
+        />
+      </nav>
       <div className="min-w-0 space-y-3">
-        {/* [Lectura en voz alta]: arriba (solo PDF) — texto resaltado con el audio + traducción completa y por selección; el PDF original queda debajo */}
-        {current.kind === "pdf" && (
-          <PdfReader
-            key={`reader-${current.id}`} // [2026-10-25]: clave distinta del visor (mismo padre en PDF → «two children with the same key»)
-            src={materialFileUrl(courseId, current.id)}
-            lang={lang}
-            color={color}
-          />
-        )}
-        {/* [Video / imagen]: el visor sigue arriba */}
-        {current.kind !== "pdf" && viewer}
-
         {/* [Tarjeta de la lección]: título, posición, progreso y navegación */}
         <div className="surface space-y-3 p-4">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div className="min-w-0">
-              <h1 className="truncate text-base font-bold">
+              {/* [2026-10-27]: <h3> (antes <h1>) → la página es el temario del curso; este recurso vive dentro de la sección «Recursos» (<h2>) | [A11y]: jerarquía de encabezados sin saltos */}
+              <h3 className="title-card truncate">
                 <span aria-hidden>{MATERIAL_ICON[current.kind]}</span>{" "}
                 {current.title}
-              </h1>
-              <p className="text-xs text-muted-foreground">
+              </h3>
+              <p className="type-meta text-muted-foreground">
                 {fmt(m.lesson, { n: index + 1, total: items.length })}
               </p>
             </div>
@@ -206,29 +220,8 @@ export function CourseLesson({
               </a>
             )}
           </div>
-          <div>
-            <div className="mb-1 flex justify-between text-[11px] text-muted-foreground">
-              <span>{m.progressLabel}</span>
-              <b className="eeg-mono" style={{ color }}>
-                {pct}%
-              </b>
-            </div>
-            {/* `role="progressbar"` + aria-value* (WAI-ARIA): progreso anunciado por lectores de pantalla */}
-            <div
-              className="h-2 overflow-hidden rounded-full"
-              style={{ background: `${color}22` }}
-              role="progressbar"
-              aria-valuenow={pct}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-label={m.progressLabel}
-            >
-              <div
-                className="h-full transition-[width] duration-500"
-                style={{ width: `${pct}%`, background: color }}
-              />
-            </div>
-          </div>
+          {/* [Progreso del curso]: MISMO valor que la barra del temario (useCourseProgress) | ProgressBar → role="progressbar" + aria-valuenow */}
+          <ProgressBar pct={progress.pct} label={m.progressLabel} color={color} detail={progressDetail(progress)} size="sm" />
           <nav aria-label={m.lessonNav} className="flex flex-wrap gap-2">
             {navLink(prev, m.prev, false)}
             {canTrack && (
@@ -243,53 +236,30 @@ export function CourseLesson({
             )}
             {navLink(next, m.next, true, nextLocked)}
           </nav>
-          {!canTrack && (
-            <p className="text-[11px] text-muted-foreground">
-              {m.adminNoProgress}
+          {preview && (
+            <p className="type-meta text-muted-foreground">
+              Vista previa: tu avance se guarda solo en este navegador; el de los estudiantes se registra en su cuenta.
             </p>
           )}
           {error && (
-            <p role="alert" className="text-xs text-tone-danger">
+            <p role="alert" className="type-meta text-tone-danger">
               {error}
             </p>
           )}
         </div>
 
-        {/* [PDF]: el visor original va debajo de la lectura en voz alta y de la tarjeta */}
-        {current.kind === "pdf" && viewer}
+        {/* [2026-10-30]: la tarjeta con Anterior/Siguiente va ANTES del contenido (antes quedaba lejos, tras todo el texto) | lectura en voz alta y visor debajo */}
+        {current.kind === "pdf" && (
+          <PdfReader
+            key={`reader-${current.id}`} // [2026-10-25]: clave distinta del visor (mismo padre en PDF → «two children with the same key»)
+            src={materialFileUrl(courseId, current.id)}
+            lang={lang}
+            color={color}
+          />
+        )}
+        {viewer}
       </div>
 
-      {/* [Temario del curso lateral]: la lección abierta = "En curso" (aria-current="step") */}
-      <nav aria-label={m.syllabus} className="surface h-fit p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold">{m.syllabus}</h2>
-          <span
-            className="eeg-mono rounded px-2 py-0.5 text-[11px] font-bold"
-            style={{ background: `${color}18`, color }}
-          >
-            {pct}%
-          </span>
-        </div>
-        <SyllabusList
-          courseId={courseId}
-          items={items}
-          done={done}
-          activeIndex={index}
-          openIndex={index}
-          nextPending={nextPending}
-          canTrack={canTrack}
-          color={color}
-          compact
-          labels={{
-            done: m.done,
-            current: m.current,
-            locked: m.lockedStep,
-            pending: m.pending,
-            lockedHint: m.lockedHint,
-            remove: m.remove,
-          }}
-        />
-      </nav>
     </div>
   );
 }

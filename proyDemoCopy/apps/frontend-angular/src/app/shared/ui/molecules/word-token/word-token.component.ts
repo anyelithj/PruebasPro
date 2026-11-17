@@ -27,6 +27,7 @@ export class WordTokenComponent {
   readonly text = input.required<string>();
   readonly language = input('en');
   readonly status = input<WordStatus | null>(null);
+  readonly focused = input(false); // [2026-11-14]: palabra que ilustra la regla → negrita + subrayado (no solo color, WCAG 1.4.1)
   readonly first = input(false); // La primera palabra recibe la parada de tabulación (WordLookupDirective la mueve después)
   readonly open = input(false); // ¿Su ventana está abierta?
   readonly label = input('{w}'); // Plantilla del nombre accesible («Diccionario: «{w}»»)
@@ -41,6 +42,7 @@ export class WordTokenComponent {
   protected readonly cls = computed(() => {
     const base =
       'inline rounded-sm px-0.5 align-baseline transition-colors hover:bg-tone-brand-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+    if (this.focused()) return `${base} font-bold underline decoration-tone-warning decoration-2 underline-offset-4`;
     const s = this.status();
     if (s === 'learning')
       return `${base} bg-tone-brand-soft/60 underline decoration-primary decoration-dotted decoration-2 underline-offset-4`;

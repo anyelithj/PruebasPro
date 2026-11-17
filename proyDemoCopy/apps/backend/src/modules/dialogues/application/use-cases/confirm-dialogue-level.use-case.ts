@@ -28,10 +28,15 @@ export class ConfirmDialogueLevelUseCase {
 
   // [setStatus · 2026-10-24]: publicar / despublicar desde Gestión → Actividades → Diálogos
   // «Publicado» = nivel confirmado (visible en la biblioteca) · «Borrador» = nivel estimado (solo lo ven su autor y el admin) | [Patrón]: State (levelStatus)
-  async setStatus(actor: DialogueActor, id: string, status: 'published' | 'draft'): Promise<Dialogue> {
+  async setStatus(
+    actor: DialogueActor,
+    id: string,
+    status: 'published' | 'draft',
+  ): Promise<Dialogue> {
     if (status === 'published') {
       const d = await this.access.editable(actor, id);
-      if (!d.level) throw new BadRequestException('Primero confirma el nivel del diálogo.');
+      if (!d.level)
+        throw new BadRequestException('Primero confirma el nivel del diálogo.');
       return this.execute(actor, id, d.level); // [DRY]: misma validación de licencia que confirmar el nivel
     }
     const d = await this.access.editable(actor, id);

@@ -1,5 +1,6 @@
 import { HttpService } from '@nestjs/axios';
 import {
+  GatewayTimeoutException,
   Injectable,
   Logger,
   ServiceUnavailableException,
@@ -31,9 +32,13 @@ export interface OllamaGenerateRequest {
     temperature: number;
     top_p?: number;
     num_predict: number;
+    repeat_penalty?: number; // [2026-11-05]: por defecto 1.15 (ver generateOnce)
     // `?` (TS): opcional e INFORMATIVO — OllamaClient calcula la ventana real según el prompt (ver contextFor) para no reservar RAM de más
     num_ctx?: number;
   };
+  // [Fix 2026-10-28]: `?` (TS) opcional → espera máxima de ESTA inferencia (ms); por defecto TIMEOUT_MS (600 s) | los consumidores interactivos
+  // (borradores de Cursos) piden menos para responder antes que el BFF/undici (300 s) | [Principio]: OCP + compatibilidad hacia atrás
+  timeoutMs?: number;
 }
 
 // /api/show → cuantización y tamaño del modelo
@@ -72,8 +77,9 @@ const CHARS_PER_TOKEN = 3; // Estimación conservadora para español/francés co
 // [Escalera por defecto]: modelos multilingües pequeños usados como respaldo si OLLAMA_FALLBACK_MODELS no está definida
 const DEFAULT_FALLBACK_MODELS = 'qwen2.5:1.5b,qwen2.5:0.5b';
 // [Detección de memoria insuficiente]: mensajes reales de llama.cpp/Ollama («failed to allocate CPU_REPACK buffer», «requires more system memory», «out-of-memory»)
+const REPEAT_RE = /token repeat limit/i; // [2026-11-05]: Ollama aborta cuando el modelo repite el mismo token en bucle
 const OOM_RE =
-  /out[ -]of[ -]memory|failed to allocate|requires more system memory|insufficient memory|not enough memory|cannot allocate/i;
+  /out[ -]of[ -]memory|bad_alloc|failed to allocate|requires more system memory|insufficient memory|not enough memory|cannot allocate|resource limitations/i;
 
 // [contextFor]: tokens estimados del prompt + salida pedida + margen, redondeado y acotado a [MIN_CTX, max] | [Paradigma]: Funcional (pura, exportada para pruebas)
 export function contextFor(
@@ -143,6 +149,17 @@ export class OllamaClient {
     try {
       return await this.generateOnce(request.model, request);
     } catch (err) {
+      // [Fix 2026-11-05 · «prediction aborted, token repeat limit reached»]: el modelo entró en bucle (mismo token una y otra vez) → un reintento con más temperatura y penalización
+      if (REPEAT_RE.test(this.detailOf(err))) {
+        try {
+          return await this.generateOnce(request.model, {
+            ...request,
+            options: { ...request.options, temperature: Math.max(request.options.temperature, 0.7), repeat_penalty: 1.3 },
+          });
+        } catch (retryErr) {
+          err = retryErr;
+        }
+      }
       tried.push(request.model);
       lastError = err;
       lastFailure = this.classify(err);
@@ -204,6 +221,7 @@ export class OllamaClient {
           keep_alive: this.keepAlive, // Corto → el modelo se libera pronto tras la última petición (ahorro de RAM)
           // `...` (ES2018): opciones del consumidor con la ventana medida (num_ctx) y la salida acotada a lo que cabe en ella
           options: {
+            repeat_penalty: 1.15, // [2026-11-05]: frena bucles de tokens en modelos pequeños (qwen2.5:3b) con format=json
             ...request.options,
             num_ctx: numCtx,
             num_predict: Math.min(request.options.num_predict, numCtx),
@@ -211,7 +229,7 @@ export class OllamaClient {
           // [Qwen3]: `think:false` evita el bloque <think> (menos tokens y latencia); qwen2.5 no admite el campo
           ...(model.startsWith('qwen3') ? { think: false } : {}),
         },
-        { timeout: this.TIMEOUT_MS },
+        { timeout: request.timeoutMs ?? this.TIMEOUT_MS }, // [Fix 2026-10-28]: Axios aborta la conexión → Ollama cancela la generación (libera CPU)
       ),
     );
     this.logMetrics(model, numCtx, res.data); // [Medición real]: tokens y tiempos informados por Ollama, no estimaciones
@@ -320,6 +338,16 @@ export class OllamaClient {
     );
   }
 
+  // [isTimeout · Fix 2026-10-28]: Axios marca el tiempo agotado con `code` ECONNABORTED/ETIMEDOUT y «timeout of N ms exceeded» | [Paradigma]: Funcional
+  private isTimeout(err: unknown): boolean {
+    const code = (err as { code?: string }).code;
+    return (
+      code === 'ECONNABORTED' ||
+      code === 'ETIMEDOUT' ||
+      /timeout of \d+ms exceeded/i.test(this.detailOf(err))
+    );
+  }
+
   // [classify]: 404 = modelo no instalado · allocate/memory = RAM insuficiente · resto = otro (Ollama apagado, timeout…) | [Paradigma]: Funcional
   private classify(err: unknown): OllamaFailure {
     const status = (err as { response?: { status?: number } }).response?.status;
@@ -353,9 +381,18 @@ export class OllamaClient {
     err: unknown,
     tried: string[] = [model],
     installed: Map<string, number> = new Map(),
-  ): ServiceUnavailableException {
+  ): ServiceUnavailableException | GatewayTimeoutException {
     const failure = this.classify(err);
     const detail = this.detailOf(err);
+    // [Fix 2026-10-28]: tiempo agotado → 504 con mensaje para el docente (antes 503 «Verifica que Ollama esté activo» aunque sí lo estaba, solo iba lento)
+    if (this.isTimeout(err)) {
+      this.logger.error(
+        `Ollama: tiempo agotado (modelo "${model}" en ${this.baseUrl}): ${detail}`,
+      );
+      return new GatewayTimeoutException(
+        `La IA tardó demasiado en responder (${model}). Inténtalo de nuevo en unos minutos o configura un modelo más pequeño.`,
+      );
+    }
     const triedText = tried.map((m) => `"${m}"`).join(', ');
     let hint: string;
     if (failure === 'missing') {
@@ -368,6 +405,9 @@ export class OllamaClient {
         : installed.has(withTag(smaller))
           ? `Memoria RAM insuficiente (probados: ${triedText}). Añade "${smaller}" (ya instalado) a OLLAMA_FALLBACK_MODELS o úsalo como modelo del motor, y cierra aplicaciones.`
           : `Memoria RAM insuficiente (probados: ${triedText}). Instala un modelo más pequeño: ollama pull ${smaller} (se usa solo como respaldo vía OLLAMA_FALLBACK_MODELS) y cierra aplicaciones.`;
+    } else if ((err as { response?: unknown }).response) {
+      // [Fix 2026-10-31]: Ollama SÍ respondió, con un error → se muestra su motivo (antes «Verifica que Ollama esté activo» con el servidor encendido) | `slice` (JS): acota el texto para la interfaz
+      hint = `Ollama respondió con un error: ${detail.slice(0, 200)}`;
     } else {
       hint = `Verifica que Ollama esté activo en ${this.baseUrl}.`;
     }

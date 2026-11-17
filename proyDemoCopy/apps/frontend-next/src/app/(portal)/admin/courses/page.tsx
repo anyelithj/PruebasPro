@@ -1,20 +1,26 @@
 import type { Metadata } from "next"; // [Next.js]: tipo de la Metadata API | `import type` (TS): se borra al compilar
 import { RememberReturn } from "@/components/shared/RememberReturn"; // [2026-10-23 · 4.º pase]: el «Volver» de los formularios regresa a esta pestaña/filtros
 import Link from "next/link";
-import { listCoursesAdmin } from "@/lib/courses-api"; // [Facade]: GET /courses/admin (incluye borradores; el backend exige ADMIN)
+import { listCoursesAdmin } from "@/lib/courses-api"; // [Facade]: GET /courses/admin (incluye borradores; ADMIN ve todos · DOCENTE solo los suyos)
+import { getCurrentUserPayload } from "@/lib/auth"; // [2026-10-27]: rol real → pestañas de Gestión del docente o del admin
+import { toPortalRole } from "@/components/portal/portal-role";
 import { getLocale } from "@/lib/i18n-server";
 import { fmt, getDictionary, INTL_LOCALE, plural } from "@aula/shared-i18n";
 import { ManagementHeader } from "@/components/portal/ManagementHeader";
 import { CourseBadge } from "@/components/courses/CourseBadge";
-import { courseGroupColor, type PaginatedCoursesResponse } from "@/types/courses";
+import { courseGroupColor, type CourseFilterInput, type PaginatedCoursesResponse } from "@/types/courses";
 import { TABLE_PAGE_SIZE } from "@/components/shared/Pagination";
 import { RowActions } from "@/components/admin/RowActions"; // [CRUD por fila]: ver · editar · publicar · eliminar
+import { FilterPanel } from "@/components/admin/FilterPanel"; // [2026-11-11]: panel común
+import { LanguageChips } from "@/components/shared/LanguageChips";
+import { CEFR_LEVELS } from "@/lib/constants";
+import { isLanguage } from "@/lib/languages";
 import { deleteCourseAction, setCoursePublishedAction } from "./actions";
 // [Página /admin/courses]: pestaña "Cursos" de Gestión — listado administrativo + acceso a crear | [Patrón]: Container (RSC) + URL State (página en query) | [Principio]: SRP | [Paradigma]: Declarativo
 
 export const metadata: Metadata = {
   title: "Gestión · Cursos",
-  description: "Gestión de cursos de idiomas (ADMIN).",
+  description: "Gestión de cursos de idiomas (ADMIN: todos · docente: los suyos).",
   robots: { index: false, follow: false }, // Página privada: no indexar | [SEO]
 };
 
@@ -23,15 +29,36 @@ export const dynamic = "force-dynamic"; // Depende de la sesión (cookie) → re
 const PAGE_SIZE = TABLE_PAGE_SIZE; // [2026-10-23 · 4.º pase]: 10 filas por página (antes 20) — SSOT compartido
 
 // `export default async function` (RSC): corre en el servidor, puede usar await
-export default async function AdminCoursesPage(props: { searchParams: Promise<{ page?: string }> }) {
-  const [sp, locale] = await Promise.all([props.searchParams, getLocale()]); // `Promise.all` (ES2015): lecturas en paralelo
+interface SearchParams {
+  page?: string;
+  search?: string;
+  language?: string; // ISO 639-1 de las pestañas de idioma (NestJS lo llama `group` y lo espera en mayúsculas)
+  level?: string;
+  status?: string; // "published" | "draft"
+}
+
+// [query]: filtros activos sin claves vacías → URL limpia | `Object.fromEntries` (ES2019) | Función pura
+const query = (sp: SearchParams, patch: Partial<SearchParams>) => Object.fromEntries(Object.entries({ ...sp, ...patch }).filter(([, v]) => v)) as Record<string, string>;
+
+export default async function AdminCoursesPage(props: { searchParams: Promise<SearchParams> }) {
+  const [sp, locale, user] = await Promise.all([props.searchParams, getLocale(), getCurrentUserPayload()]); // `Promise.all` (ES2015): lecturas en paralelo
+  const role = toPortalRole(user?.role ?? null); // [2026-10-27]: el docente también gestiona cursos (los que creó)
   const t = getDictionary(locale);
   const page = Math.max(1, Number(sp.page) || 1); // Sanea la página (NaN → 1)
+  const activeLanguage = isLanguage(sp.language) ? sp.language : undefined; // Validado contra el SSOT (un código raro = «Todos»)
+  const level = CEFR_LEVELS.find((l) => l === sp.level); // Solo niveles conocidos
 
   let data: PaginatedCoursesResponse; // `let` (ES2015): se asigna en try/catch
   let error: string | null = null;
   try {
-    data = await listCoursesAdmin({ page, limit: PAGE_SIZE });
+    data = await listCoursesAdmin({
+      page,
+      limit: PAGE_SIZE,
+      search: sp.search,
+      group: activeLanguage?.toUpperCase() as CourseFilterInput["group"],
+      category: level as CourseFilterInput["category"],
+      isPublished: sp.status === "published" ? "true" : sp.status === "draft" ? "false" : undefined,
+    });
   } catch (err) {
     // [Degradación elegante]: la pestaña se muestra con el error, sin romper la navegación | [Patrón]: Graceful Degradation
     error = err instanceof Error ? err.message : String(err);
@@ -46,10 +73,10 @@ export default async function AdminCoursesPage(props: { searchParams: Promise<{ 
   return (
     <div className="w-full space-y-5 py-4">
       <RememberReturn memo={["courses", "catalog"]} />
-      <ManagementHeader role="admin" active="courses" />
+      <ManagementHeader role={role} active="courses" />
 
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <p className="text-sm text-muted-foreground">{plural(locale, data.total, t.adminCourses.count)}</p>
+        <p className="text-muted-foreground">{plural(locale, data.total, t.adminCourses.count)}</p>
         <Link
           href="/admin/courses/new"
           className="btn btn-primary"
@@ -58,8 +85,21 @@ export default async function AdminCoursesPage(props: { searchParams: Promise<{ 
         </Link>
       </div>
 
+      {/* [Panel de filtros · 2026-10-30]: MISMO panel que Recursos y Actividades | formulario GET nativo: URL compartible, funciona sin JS */}
+      <FilterPanel
+        label="Filtros de cursos"
+        clearHref="/admin/courses"
+        hidden={{ language: activeLanguage }}
+        search={{ value: sp.search, placeholder: "Tema o palabra clave…" }}
+        selects={[
+          { name: "level", label: "Nivel", value: level, all: "Todos", options: CEFR_LEVELS.map((l) => ({ value: l, label: l })) },
+          { name: "status", label: "Estado", value: sp.status, all: "Todos", options: [{ value: "published", label: t.adminCourses.published }, { value: "draft", label: t.adminCourses.draft }] },
+        ]}
+        chips={<LanguageChips active={activeLanguage} hrefFor={(language) => ({ pathname: "/admin/courses", query: query(sp, { language, page: undefined }) })} names={t.languageNames} allLabel="Todos" label="Idioma" />}
+      />
+
       {error && (
-        <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-destructive">
           {fmt(t.adminCourses.loadError, { error })}
         </p>
       )}
@@ -110,7 +150,7 @@ export default async function AdminCoursesPage(props: { searchParams: Promise<{ 
                     {/* `.bind(null, id)` (JS): Server Action con el id ya aplicado → el cliente solo la invoca | [Patrón]: Partial Application */}
                     <RowActions
                       title={c.title}
-                      viewHref={`/courses/${c.slug || c.id}`}
+                      viewHref={`/courses/${c.slug || c.id}`} // [2026-10-31]: Ver · Editar · Publicar · Eliminar | el detalle del curso
                       editHref={`/admin/courses/${c.id}/edit`}
                       publish={{ isPublished: c.isPublished, toggle: setCoursePublishedAction.bind(null, c.id, !c.isPublished) }}
                       onDelete={deleteCourseAction.bind(null, c.id)}
@@ -130,7 +170,7 @@ export default async function AdminCoursesPage(props: { searchParams: Promise<{ 
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
             <Link
               key={p}
-              href={{ pathname: "/admin/courses", query: { page: String(p) } }}
+              href={{ pathname: "/admin/courses", query: query(sp, { page: String(p) }) }}
               aria-current={p === data.page ? "page" : undefined}
               className={
                 p === data.page

@@ -1,6 +1,9 @@
 import { BackLinkComponent } from '@shared/ui/atoms/back-link/back-link.component';
-import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { catchError, of } from 'rxjs';
+import { DECK_SCENARIO_PREFIX, deckToScenario, GamesRepository, type GameDeck } from '../../domain/games.repository.port';
 import { CEFR_LEVELS, LANGUAGES } from '@aula/shared-schemas';
 import { I18nService } from '@core/i18n/i18n.service';
 import { ButtonComponent } from '@shared/ui/atoms/button/button.component';
@@ -53,19 +56,30 @@ import { ScenarioCardComponent } from '../components/scenario-card.component';
         </label>
         <button aulaButton variant="outline" type="submit" class="justify-self-start">{{ tx.chooseScenario }}</button>
       </form>
+      <!-- [2026-11-11]: role-plays creados por el docente (Gestión → Actividades → Juegos) junto a los escenarios -->
+      @if (deckScenarios().length) {
+        <h2 class="title-section mb-2">{{ tx.themeDecks }}</h2>
+        <ul class="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          @for (s of deckScenarios(); track s.id) {
+            <li><aula-scenario-card [scenario]="s" [roleLabel]="i18n.fmt(tx.agentRole, { role: s.role })" /></li>
+          }
+        </ul>
+      }
       @switch (games.scenarios.status()) {
         @case ('loading') {
           <aula-spinner [label]="i18n.t().common.loading" />
         }
         @case ('error') {
-          <p role="alert" class="text-sm text-tone-danger">{{ games.scenarios.error() }}</p>
+          <p role="alert" class="text-tone-danger">{{ games.scenarios.error() }}</p>
         }
         @case ('empty') {
+          @if (!deckScenarios().length) {
           <p
-            class="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground"
+            class="rounded-xl border border-dashed border-border p-6 text-center text-muted-foreground"
           >
             {{ tx.noScenarios }}
           </p>
+          }
         }
         @case ('success') {
           <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -92,8 +106,18 @@ export default class ScenarioListPage {
   protected readonly levels = CEFR_LEVELS;
   protected readonly language = signal('en');
   protected readonly levelSel = signal(''); // Nivel elegido en el filtro (se inicia con ?level=)
+  private readonly repo = inject(GamesRepository);
+  private readonly decks = toSignal(this.repo.decks().pipe(catchError(() => of([] as GameDeck[]))), { initialValue: [] as GameDeck[] });
+  protected readonly deckScenarios = computed(() =>
+    this.decks()
+      .filter((d) => d.gameType === 'role_play' && d.language === this.language() && (!this.levelSel() || d.level === this.levelSel()))
+      .map(deckToScenario),
+  );
 
   constructor() {
+    // [2026-11-11]: enlace con ?mazo= (hub o Gestión) → directo a ese role-play
+    const mazo = inject(ActivatedRoute).snapshot.queryParamMap.get('mazo');
+    if (mazo) void inject(Router).navigate(['/juegos/role-play', DECK_SCENARIO_PREFIX + mazo], { replaceUrl: true });
     queueMicrotask(() => {
       if (this.lang()) this.language.set(this.lang()!);
       if (this.level()) this.levelSel.set(this.level()!);

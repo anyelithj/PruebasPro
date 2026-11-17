@@ -258,7 +258,7 @@ export default async function EstudianteDashboardPage(props: {
           <PanelHead title="Recomendaciones IA" />
           <div className="flex flex-col gap-3">
             {history.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground">
                 Completa el primer quiz para ver recomendaciones personalizadas del tutor IA.
               </p>
             ) : (

@@ -170,8 +170,8 @@ export function ProgressClient({ history, sessions, error }: ProgressClientProps
     return (
       <div className="w-full space-y-5 py-4">
         <section className="rounded-xl border bg-card p-8 text-center space-y-3">
-          <h2 className="text-xl font-bold">Aún no hay historial</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="title-section">Aún no hay historial</h2>
+          <p className="text-muted-foreground">
             Completa el primer quiz para empezar a ver el progreso.
           </p>
           <Link
@@ -203,8 +203,8 @@ export function ProgressClient({ history, sessions, error }: ProgressClientProps
 
       {/* [Gráfica tendencia accuracy]: últimos 20 quizzes | [Patrón]: Line Chart */}
       <section className="rounded-xl border bg-card p-5 space-y-3">
-        <h2 className="text-lg font-bold">Tendencia de precisión</h2>
-        <p className="text-xs text-muted-foreground">
+        <h2 className="title-section">Tendencia de precisión</h2>
+        <p className="type-meta text-muted-foreground">
           Eje X: fecha de cada examen resuelto · Eje Y: precisión (% de aciertos). Últimos {trend.length} quizzes.
         </p>
         <div className="h-72 w-full">
@@ -240,8 +240,8 @@ export function ProgressClient({ history, sessions, error }: ProgressClientProps
 
       {/* [Distribución accuracy]: bucketing global | [Patrón]: Bar Chart */}
       <section className="rounded-xl border bg-card p-5 space-y-3">
-        <h2 className="text-lg font-bold">Distribución por rango de precisión</h2>
-        <p className="text-xs text-muted-foreground">
+        <h2 className="title-section">Distribución por rango de precisión</h2>
+        <p className="type-meta text-muted-foreground">
           Eje X: rango de precisión · Eje Y: cantidad de quizzes que caen en cada rango.
         </p>
         <div className="h-64 w-full">
@@ -267,7 +267,7 @@ export function ProgressClient({ history, sessions, error }: ProgressClientProps
 
       {/* [Historial reciente]: tabla simple | [Patrón]: Composite */}
       <section className="rounded-xl border bg-card p-5">
-        <h2 className="text-lg font-bold mb-3">Historial reciente</h2>
+        <h2 className="title-section mb-3">Historial reciente</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -326,12 +326,12 @@ export function ProgressClient({ history, sessions, error }: ProgressClientProps
       <section className="grid gap-6 lg:grid-cols-2">
         {/* [Habilidades cognitivas (por dificultad real)] */}
         <div className="rounded-xl border bg-card p-5">
-          <h2 className="text-lg font-bold mb-1">Desempeño por nivel MCER</h2>
-          <p className="text-xs text-muted-foreground mb-4">
+          <h2 className="title-section mb-1">Desempeño por nivel MCER</h2>
+          <p className="type-meta text-muted-foreground mb-4">
             Precisión real según el nivel de dificultad de los exámenes resueltos.
           </p>
           {byDifficulty.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">
+            <p className="py-6 text-center text-muted-foreground">
               Aún no hay datos suficientes.
             </p>
           ) : (
@@ -360,7 +360,7 @@ export function ProgressClient({ history, sessions, error }: ProgressClientProps
                         style={{ width: `${pct}%` }}
                       />
                     </div>
-                    <p className="mt-1 text-[11px] text-muted-foreground">
+                    <p className="mt-1 type-meta text-muted-foreground">
                       {d.correct}/{d.total} preguntas correctas
                     </p>
                   </div>
@@ -372,12 +372,12 @@ export function ProgressClient({ history, sessions, error }: ProgressClientProps
 
         {/* [Distribución por materia (categoría real)] */}
         <div className="rounded-xl border bg-card p-5">
-          <h2 className="text-lg font-bold mb-1">Distribución por competencia</h2>
-          <p className="text-xs text-muted-foreground mb-4">
+          <h2 className="title-section mb-1">Distribución por competencia</h2>
+          <p className="type-meta text-muted-foreground mb-4">
             Precisión global {Math.round(overallAccuracy * 100)}% · desglose por categoría.
           </p>
           {byCategory.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">
+            <p className="py-6 text-center text-muted-foreground">
               Aún no hay datos suficientes.
             </p>
           ) : (
@@ -407,7 +407,7 @@ export function ProgressClient({ history, sessions, error }: ProgressClientProps
       {/* [Recomendaciones IA personalizadas]: derivadas de las materias con menor precisión real | [Patrón]: Data-Driven Recommendation */}
       {recommendations.length > 0 && (
         <section className="rounded-xl border bg-card p-5">
-          <h2 className="text-lg font-bold mb-3">Recomendaciones IA personalizadas</h2>
+          <h2 className="title-section mb-3">Recomendaciones IA personalizadas</h2>
           <div className="flex flex-col gap-3">
             {recommendations.map((r) => (
               <div
@@ -416,7 +416,7 @@ export function ProgressClient({ history, sessions, error }: ProgressClientProps
               >
                 <div>
                   <b className="text-sm">Refuerza {r.label}</b>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="type-meta text-muted-foreground">
                     Precisión actual {Math.round(r.accuracy * 100)}% — practica más
                     prácticas de esta competencia para mejorar.
                   </p>
@@ -440,7 +440,7 @@ export function ProgressClient({ history, sessions, error }: ProgressClientProps
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border bg-card p-4">
-      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="type-meta uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="mt-1 text-2xl font-extrabold tracking-tight">{value}</p>
     </div>
   );

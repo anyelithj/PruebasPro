@@ -4,6 +4,7 @@ import {
   type ICourseRepository,
 } from '../../domain/interfaces/course.repository.interface';
 import { CourseFilterDto } from '../dtos/course-filter.dto';
+import { CourseEngagementUseCase } from './course-engagement.use-case';
 import {
   CourseResponseDto,
   PaginatedCoursesResponseDto,
@@ -14,6 +15,7 @@ import {
 export class ListCoursesUseCase {
   constructor(
     @Inject(COURSE_REPOSITORY) private readonly repo: ICourseRepository,
+    private readonly engagement: CourseEngagementUseCase, // [Caso F]: favorito, reacción y conteos de la página (lote, sin N+1)
   ) {}
 
   async execute(
@@ -37,13 +39,23 @@ export class ListCoursesUseCase {
     });
 
     // [N+1 mitigado]: cargamos enrollments del usuario en batch si hay sesión | [Principio]: KISS
-    const enrollments = userId
-      ? await this.repo.listEnrollmentsByUser(userId)
-      : [];
+    // `Promise.all` (ES2015): inscripciones y engagement en paralelo
+    const [enrollments, views] = await Promise.all([
+      userId ? this.repo.listEnrollmentsByUser(userId) : [],
+      this.engagement.snapshot(
+        userId,
+        data.map((c) => c.id),
+      ),
+    ]);
     const enrollMap = new Map(enrollments.map((e) => [e.courseId, e]));
 
     const dtos = data.map((c) =>
-      CourseResponseDto.fromDomain(c, enrollMap.get(c.id) ?? null),
+      CourseResponseDto.fromDomain(
+        c,
+        enrollMap.get(c.id) ?? null,
+        null,
+        views.get(c.id),
+      ),
     );
     return { data: dtos, total, page, limit };
   }

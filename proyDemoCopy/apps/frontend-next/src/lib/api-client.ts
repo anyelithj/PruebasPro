@@ -17,6 +17,19 @@ import { ApiError, type BackendErrorBody } from "./errors";
 export interface ApiRequestOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
   bearer?: string;
+  // [Fix 2026-10-28 · timeouts]: `?` (TS) opcionales → los llamadores existentes no cambian | [Principio]: OCP + compatibilidad hacia atrás
+  timeoutMs?: number; // Corta la espera con `AbortSignal.timeout` (Web API) ANTES del `headersTimeout` de 300 s de undici (fetch de Node) → 504 claro en vez de 503 a los 5 min
+  timeoutMessage?: string; // Texto para el usuario si se agota (p. ej. «La IA tardó demasiado…»)
+}
+
+// [Timeout por defecto]: mensaje genérico (no sabemos qué operación era) | `const` en mayúsculas: constante de módulo
+const DEFAULT_TIMEOUT_MESSAGE = "El servidor tardó demasiado en responder. Inténtalo de nuevo en unos minutos.";
+
+// [isTimeout · Fix 2026-10-28]: ¿el fallo de `fetch` fue por tiempo? → `TimeoutError`/`AbortError` (AbortSignal) o `UND_ERR_HEADERS_TIMEOUT`/`UND_ERR_BODY_TIMEOUT` (undici, en `err.cause`)
+// [Paradigma]: Funcional (pura) | `?.` (ES2020): `cause` puede no existir
+function isTimeout(err: unknown): boolean {
+  const e = err as { name?: string; cause?: { code?: string; name?: string } } | null;
+  return e?.name === "TimeoutError" || e?.name === "AbortError" || /UND_ERR_(HEADERS|BODY)_TIMEOUT/.test(e?.cause?.code ?? "") || e?.cause?.name === "HeadersTimeoutError";
 }
 
 // [Helper genérico]: parsea envelope { statusCode, data, meta } | [Principio]: SRP
@@ -24,7 +37,7 @@ export async function apiFetch<T>(
   path: string,
   options: ApiRequestOptions = {},
 ): Promise<T> {
-  const { body, bearer, headers, ...rest } = options;
+  const { body, bearer, headers, timeoutMs, timeoutMessage, ...rest } = options;
 
   // [Headers compuestos]: JSON default + Bearer opcional
   const ip = await clientIp();
@@ -41,12 +54,20 @@ export async function apiFetch<T>(
   // respondía 500 «Error inesperado» → ahora es ApiError 503 con un mensaje que dice qué pasa | [Principio]: Fail Fast con error tipado
   let response: Response;
   try {
+    // [Fix 2026-10-28]: `AbortSignal.any` (Web API, Node 20+) combina la señal del llamador (si la hay) con el timeout → cualquiera de las dos aborta
+    const signals = [rest.signal, timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined].filter((x): x is AbortSignal => Boolean(x));
     response = await fetch(apiUrl(path), {
       ...rest,
       headers: composedHeaders,
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      ...(signals.length ? { signal: signals.length > 1 ? AbortSignal.any(signals) : signals[0] } : {}),
     });
   } catch (err) {
+    // [Fix 2026-10-28]: tiempo agotado → 504 Gateway Timeout con mensaje accionable (antes 503 «El servidor no responde» tras 5,2 min de undici)
+    if (isTimeout(err)) {
+      console.error(`[apiFetch] ${path}: tiempo de espera agotado${timeoutMs ? ` (${timeoutMs} ms)` : ""}`);
+      throw new ApiError(504, timeoutMessage ?? DEFAULT_TIMEOUT_MESSAGE);
+    }
     console.error(`[apiFetch] ${path}: backend sin respuesta`, err); // Log de servidor (terminal de Next) para diagnosticar
     throw new ApiError(503, "El servidor no responde. Inténtalo de nuevo en unos segundos.");
   }

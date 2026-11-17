@@ -8,5 +8,5 @@ export abstract class ReadingRepository {
   abstract get(id: string): Observable<ReadingDetail>;
   abstract saveProgress(id: string, progress: ReadingProgress): Observable<ReadingProgress>;
   abstract resetProgress(id: string): Observable<void>;
-  abstract exportUrl(id: string, format: 'pdf' | 'txt', include: ReadonlyArray<'translation' | 'ipa'>): string;
+  abstract exportUrl(id: string, format: 'pdf' | 'docx', include: ReadonlyArray<'translation' | 'ipa'>): string;
 }

@@ -9,21 +9,30 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import {
+  CurrentUser,
+  type JwtPayload,
+} from '../../shared/decorators/current-user.decorator';
 import { Roles } from '../../shared/decorators/roles.decorator';
 import { CefrLevel } from '../../shared/domain/cefr-level.vo';
 import { Language } from '../../shared/domain/language.vo';
 import { Role } from '../users/domain/value-objects/role.vo';
 import {
   AssistantClientService,
-  type ChatResult,
   type KnowledgeStatus,
 } from './assistant-client.service';
+import {
+  TutorConversationService,
+  type TutorTurnResult,
+} from './tutor/tutor-conversation.service';
+import { tutorSse } from './tutor/tutor-sse';
 // [AssistantController · Sprint 5.3]: proxy NestJS → tutor RAG de FastAPI | [Patrón]: Proxy + Thin Controller | [Principio]: SRP | [Paradigma]: POO
+// [2026-10-28]: el chat del tutor pasa por TutorConversationService → cada turno se GUARDA (tutor_conversations/tutor_messages) y FastAPI recibe el historial
 
 // [DTO]: class-validator → el ValidationPipe global rechaza mensajes vacíos o idiomas no soportados
 export class ChatBody {
   @IsString() @MinLength(1) @MaxLength(2000) message!: string;
-  @IsOptional() @IsUUID() sessionId?: string;
+  @IsOptional() @IsUUID() sessionId?: string; // = id de la conversación guardada (GET /ai/assistant/conversations)
   @IsOptional() @IsEnum(Language) language?: Language;
   @IsOptional() @IsEnum(CefrLevel) level?: CefrLevel; // [Sprint 7.8]: nivel MCER → FastAPI gradúa la respuesta
 }
@@ -36,17 +45,21 @@ export const bearer = (auth?: string): string =>
 @ApiBearerAuth()
 @Controller('ai/assistant')
 export class AssistantController {
-  constructor(private readonly assistant: AssistantClientService) {}
+  constructor(
+    private readonly assistant: AssistantClientService,
+    private readonly tutor: TutorConversationService,
+  ) {}
 
   @Post('chat')
   @ApiOperation({
     summary: 'Chat with the language tutor (RAG over approved curriculum)',
   })
   chat(
+    @CurrentUser() user: JwtPayload,
     @Body() body: ChatBody,
     @Headers('authorization') auth: string,
-  ): Promise<ChatResult> {
-    return this.assistant.chat(body, bearer(auth));
+  ): Promise<TutorTurnResult> {
+    return this.tutor.send(user.sub, bearer(auth), body);
   }
 
   // [POST /ai/assistant/chat/stream · Sprint 5.3]: respuesta del tutor token a token (SSE) | `@Res()` (NestJS): respuesta manual → el flujo pasa tal cual, sin envoltorio ni buffer | [Patrón]: Proxy (streaming)
@@ -56,24 +69,27 @@ export class AssistantController {
     summary: 'Chat with the tutor, streamed as Server-Sent Events',
   })
   async chatStream(
+    @CurrentUser() user: JwtPayload,
     @Body() body: ChatBody,
     @Headers('authorization') auth: string,
     @Res() res: Response,
   ): Promise<void> {
     const abort = new AbortController();
-    res.on('close', () => abort.abort()); // Cliente desconectado → cancelar FastAPI
-    const upstream = await this.assistant.chatStream(
-      body,
-      bearer(auth),
-      abort.signal,
-    );
+    res.on('close', () => abort.abort()); // Cliente desconectado → deja de escribir tokens
+    // [2026-10-28]: respuesta calculada y GUARDADA antes de abrir el flujo → un fallo de FastAPI sale como 503/404 real (no un 200 cortado)
+    const result = await this.tutor.send(user.sub, bearer(auth), body);
     res.status(200).set({
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache, no-transform',
       'X-Accel-Buffering': 'no',
     });
     res.flushHeaders();
-    upstream.pipe(res); // `pipe` (Node streams): contrapresión automática
+    const stream = tutorSse(result, abort.signal);
+    // [Fail Soft]: 'error' sin oyente en un Readable se relanza y tumba NestJS → se cierra el SSE con `done`
+    stream.on('error', () => {
+      if (!res.writableEnded) res.end('event: done\ndata: {}\n\n'); // `writableEnded` (Node): evita escribir tras `end()`
+    });
+    stream.pipe(res); // `pipe` (Node streams): contrapresión automática
   }
 
   @Get('knowledge')

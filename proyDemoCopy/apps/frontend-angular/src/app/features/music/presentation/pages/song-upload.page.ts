@@ -1,19 +1,21 @@
 import { ReturnLinkComponent, ReturnToService } from '@core/layout/return-to'; // [2026-10-23]: «Volver» y salida hacia Gestión → Actividades cuando se llega con ?volver=
 import { IconComponent } from '@shared/ui/atoms/icon/icon.component';
+import { DomSanitizer } from '@angular/platform-browser';
 import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   effect,
   inject,
   input,
   signal,
   untracked,
+  viewChild,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { CEFR_LEVELS, LANGUAGES } from '@aula/shared-schemas';
 import { pickLanguage, pickLevel } from '@core/layout/prefill'; // [2026-10-24]: ?idioma=&nivel= desde Gestión → Crear actividad
-import { SessionService } from '@core/auth/session.service';
 import { I18nService } from '@core/i18n/i18n.service';
 import { SpinnerComponent } from '@shared/ui/atoms/spinner/spinner.component';
 import {
@@ -27,7 +29,6 @@ import { MusicFacade } from '../../application/music.facade';
 import {
   MAX_AUDIO_MB,
   publishBlockers,
-  SONG_BLOCKERS,
   type LinePatch,
   type LineTiming,
   type SongBlocker,
@@ -38,6 +39,17 @@ import { LyricsEditorComponent } from '../components/lyrics-editor.component';
 import { SyncEditorComponent } from '../components/sync-editor.component';
 // [SongUploadPage · Presentación · Sprint 9.9 · RF-116/RF-117/RF-119/RF-128]: /musica/subir[/:id] — asistente de tres pasos: datos + licencia + audio → letra con IPA y traducción revisables → sincronización al ritmo (o propuesta automática); envío a revisión y decisión del ADMIN | [Patrón]: Container (smart) + Wizard (pasos) + Facade | [Principio]: SRP (cada paso es un componente) + cumplimiento de derechos de autor (sin licencia no se guarda) + verificación humana | [Paradigma]: Declarativo + Reactivo
 // [A11y]: pasos como lista con aria-current="step" · cada paso con su encabezado · mensajes de estado con aria-live
+// [manualLines · 2026-11-06]: línea i del IPA y de la traducción ↔ línea i de la letra (las vacías de la letra = separadores de estrofa, se saltan como en splitLyrics) | Función pura
+export function manualLines(lyrics: string, ipas: string, translations: string, lines: readonly { id: string }[]): LinePatch[] {
+  const [ip, tx] = [ipas.split(/\r?\n/), translations.split(/\r?\n/)];
+  const paired = lyrics
+    .split(/\r?\n/)
+    .map((l, i) => ({ l: l.trim(), ipa: (ip[i] ?? '').trim(), t: (tx[i] ?? '').trim() }))
+    .filter((p) => p.l);
+  return paired.flatMap((p, i) =>
+    (p.ipa || p.t) && lines[i] ? [{ id: lines[i]!.id, ...(p.ipa && { ipa: p.ipa }), ...(p.t && { translation: p.t }) }] : [],
+  );
+}
 // [2026-10-24]: + letra ORIGINAL con IA al crear (mismo flujo: IPA, traducción, audio y revisión) · reintento de IPA/traducción solo de los versos que faltan · checklist de publicación (los botones se desactivan y explican qué falta, en vez de fallar en el servidor con «Falta subir el audio»)
 
 @Component({
@@ -77,7 +89,7 @@ import { SyncEditorComponent } from '../components/sync-editor.component';
               "
               [attr.aria-current]="step() === $index ? 'step' : null"
               [disabled]="$index > 0 && !id()"
-              (click)="step.set($index)"
+              (click)="goTo($index)"
             >
               <span
                 class="grid size-6 place-items-center rounded-full bg-gradient-brand text-xs text-white"
@@ -88,31 +100,12 @@ import { SyncEditorComponent } from '../components/sync-editor.component';
         }
       </ol>
 
-      <!-- [2026-10-26]: requisitos para publicar arriba, junto a los pasos (antes iban debajo de los botones y confundían) -->
-      @if (song && song.status !== 'published' && blockers().length) {
-        @let ck = wz.checklist;
-        <section class="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-tone-warning-line bg-tone-warning-soft px-3 py-2 text-xs" aria-label="{{ ck.title }}">
-          <strong>{{ ck.title }}:</strong>
-          @for (b of requirements; track b) {
-            @let missing = blockers().includes(b);
-            <span class="inline-flex items-center gap-1" [class.text-tone-warning]="missing">
-              <aula-icon [name]="missing ? 'circle-x' : 'circle-check'" [label]="missing ? ck.todo : ck.done" />
-              @if (missing && stepOf[b] !== null) {
-                <button type="button" class="underline" (click)="step.set(stepOf[b]!)">{{ ck[b] }}</button>
-              } @else {
-                {{ ck[b] }}
-              }
-            </span>
-          }
-        </section>
-      }
-
       @if (id() && music.song.status() === 'loading') {
         <aula-spinner [label]="i18n.t().common.loading" />
       }
 
       @if (song?.status === 'rejected') {
-        <p class="mb-4 rounded-xl bg-tone-danger-soft p-3 text-sm text-tone-danger">
+        <p class="mb-4 rounded-xl bg-tone-danger-soft p-3 text-tone-danger">
           ✕ {{ i18n.fmt(wz.rejected, { note: song!.reviewNote }) }}
         </p>
       }
@@ -120,7 +113,7 @@ import { SyncEditorComponent } from '../components/sync-editor.component';
       @switch (step()) {
         @case (0) {
           <section class="space-y-4" aria-labelledby="step-1">
-            <h2 id="step-1" class="text-lg font-extrabold">{{ wz.steps[0] }}</h2>
+            <h2 id="step-1" class="title-section">{{ wz.steps[0] }}</h2>
             @if (!id()) {
               <div class="grid gap-3 sm:grid-cols-2">
                 <label class="text-xs font-semibold text-muted-foreground">
@@ -142,69 +135,28 @@ import { SyncEditorComponent } from '../components/sync-editor.component';
                     (input)="artist.set($any($event.target).value)"
                   />
                 </label>
-                <label class="text-xs font-semibold text-muted-foreground">
-                  {{ tx.language }}
-                  <select
-                    class="control mt-1 w-full"
-                    [value]="language()"
-                    (change)="language.set($any($event.target).value)"
-                  >
-                    @for (code of languages; track code) {
-                      <option [value]="code">{{ i18n.languageName(code) }}</option>
-                    }
-                  </select>
-                </label>
-                <label class="text-xs font-semibold text-muted-foreground">
-                  {{ tx.level }}
-                  <select
-                    class="control mt-1 w-full"
-                    [value]="level()"
-                    (change)="level.set($any($event.target).value)"
-                  >
-                    @for (l of levels; track l) {
-                      <option [value]="l">{{ l }}</option>
-                    }
-                  </select>
-                </label>
+                <!-- [2026-11-04]: idioma y nivel ya elegidos en Gestión (?idioma=&nivel=) → se muestran fijos, no se vuelven a pedir -->
+                @if (preset()) {
+                  <p class="text-xs font-semibold text-muted-foreground sm:col-span-2">
+                    {{ tx.language }}: <span class="badge bg-tone-brand-soft text-tone-brand">{{ i18n.languageName(language()) }}</span>
+                    · {{ tx.level }}: <span class="badge bg-tone-brand-soft text-tone-brand">{{ level() || wz.levelPending }}</span>
+                  </p>
+                } @else {
+                  <!-- [selected] por opción (no [value] en el <select>): las <option> del @for se crean después y el navegador elegía la primera -->
+                  <label class="text-xs font-semibold text-muted-foreground">
+                    {{ tx.language }}
+                    <select class="control mt-1 w-full" (change)="language.set($any($event.target).value)">
+                      @for (code of languages; track code) {
+                        <option [value]="code" [selected]="code === language()">{{ i18n.languageName(code) }}</option>
+                      }
+                    </select>
+                  </label>
+                  <!-- [2026-11-16 · RF-148]: al CREAR el nivel no se elige: NestJS lo estima de la letra · se cambia al editar -->
+                  <p class="self-end text-xs text-muted-foreground">{{ wz.levelAuto }}</p>
+                }
               </div>
               <aula-license-declaration [(value)]="license" [labels]="i18n.t().media.license" />
-              <!-- [2026-10-24 · Letra con IA]: borrador ORIGINAL por idioma, nivel y tema; se guarda junto con la canción -->
-              <section class="space-y-2 rounded-xl border border-dashed border-border p-3" aria-labelledby="ai-lyrics">
-                <h3 id="ai-lyrics" class="flex items-center gap-2 text-sm font-bold">
-                  <aula-icon name="sparkles" /> {{ wz.aiTitle }}
-                </h3>
-                <p class="text-xs text-muted-foreground">{{ wz.aiHint }}</p>
-                <!-- [2026-10-25]: sin campo «tema» → el título y el autor de arriba ya dicen de qué va la canción -->
-                <!-- [2026-10-26]: con autor = canción real → la IA inventaba otra letra con el mismo título («Dirty Diana») → se pide importar la letra real -->
-                @if (artist().trim()) {
-                  <p class="rounded-lg bg-tone-warning-soft p-2 text-xs text-tone-warning">{{ wz.aiRealSong }}</p>
-                }
-                <button type="button" class="btn btn-outline" [disabled]="title().trim().length < 2 || !!artist().trim() || music.busy()" (click)="generate()">
-                  <aula-icon name="sparkles" /> {{ wz.aiGenerate }}
-                </button>
-                @if (generating()) {
-                  <p class="text-xs text-muted-foreground" aria-live="polite">
-                    <aula-icon name="hourglass" /> {{ wz.aiGenerating }}
-                  </p>
-                }
-                @if (aiLyrics()) {
-                  <p class="rounded-lg bg-tone-warning-soft p-2 text-xs font-semibold text-tone-warning">
-                    <aula-icon name="triangle-alert" /> {{ i18n.t().common.aiReview }}
-                  </p>
-                  <label class="block text-xs font-semibold text-muted-foreground">
-                    {{ wz.aiLyrics }}
-                    <textarea
-                      class="control mt-1 min-h-40 w-full font-mono text-sm"
-                      maxlength="12000"
-                      [attr.lang]="language()"
-                      [value]="aiLyrics()"
-                      (input)="aiLyrics.set($any($event.target).value)"
-                    ></textarea>
-                  </label>
-                  <p class="text-xs text-muted-foreground">{{ wz.aiWillLoad }}</p>
-                }
-              </section>
-              <div class="flex flex-wrap gap-2">
+              <div class="flex flex-wrap justify-end gap-2">
                 <button type="button" class="btn btn-ghost" (click)="cancel()">{{ wz.cancel }}</button>
                 <button
                   type="button"
@@ -216,26 +168,53 @@ import { SyncEditorComponent } from '../components/sync-editor.component';
                 </button>
               </div>
             } @else if (song) {
-              <p class="text-sm">
-                <strong>{{ song.title }}</strong> · {{ i18n.languageName(song.language) }} ·
-                {{ song.level }} · ©
-                {{
-                  i18n.fmt(i18n.t().media.license.shown, {
-                    type: i18n.t().media.license.types[song.license.type],
-                    holder: song.license.holder,
-                  })
-                }}
-              </p>
-              <div class="flex flex-wrap gap-2">
+              <!-- [2026-11-10 · «me debe permitir editar todo»]: datos de la canción editables (título, artista, nivel, IPA y traducción del título, licencia) -->
+              <div class="grid gap-3 sm:grid-cols-2">
+                <label class="text-xs font-semibold text-muted-foreground">
+                  {{ wz.songTitle }}
+                  <input class="control mt-1 w-full" required maxlength="160" [attr.lang]="song.language" [value]="title()" (input)="title.set($any($event.target).value)" />
+                </label>
+                <label class="text-xs font-semibold text-muted-foreground">
+                  {{ wz.artist }}
+                  <input class="control mt-1 w-full" maxlength="160" [value]="artist()" (input)="artist.set($any($event.target).value)" />
+                </label>
+                <label class="text-xs font-semibold text-muted-foreground">
+                  IPA del título
+                  <input class="control mt-1 w-full font-mono" lang="und-fonipa" maxlength="300" placeholder="Se calcula solo si lo dejas vacío" [value]="titleIpa()" (input)="titleIpa.set($any($event.target).value)" />
+                </label>
+                @if (song.language !== 'es') {
+                  <label class="text-xs font-semibold text-muted-foreground">
+                    Traducción del título
+                    <input class="control mt-1 w-full" lang="es" maxlength="300" [value]="titleTranslation()" (input)="titleTranslation.set($any($event.target).value)" />
+                  </label>
+                }
+                <p class="text-xs font-semibold text-muted-foreground">
+                  {{ tx.language }}: <span class="badge bg-tone-brand-soft text-tone-brand">{{ i18n.languageName(song.language) }}</span>
+                </p>
+                <label class="text-xs font-semibold text-muted-foreground">
+                  {{ tx.level }}
+                  <select class="control mt-1 w-full" (change)="level.set($any($event.target).value)">
+                    @if (!level()) {
+                      <option value="" selected disabled>{{ wz.levelPending }}</option>
+                    }
+                    @for (l of levels; track l) {
+                      <option [value]="l" [selected]="l === level()">{{ l }}</option>
+                    }
+                  </select>
+                </label>
+              </div>
+              <aula-license-declaration [(value)]="license" [labels]="i18n.t().media.license" />
+              <div class="flex flex-wrap justify-end gap-2">
                 <button type="button" class="btn btn-ghost" (click)="cancel()">{{ wz.cancel }}</button>
-                <button type="button" class="btn btn-primary" (click)="step.set(1)">{{ wz.next }} →</button>
+                <button type="button" class="btn btn-primary" [disabled]="!canCreate() || music.busy()" (click)="saveDetails()">Guardar</button>
+                <button type="button" class="btn btn-outline" (click)="step.set(1)">{{ wz.next }}</button>
               </div>
             }
           </section>
         }
         @case (1) {
           <section class="space-y-4" aria-labelledby="step-2">
-            <h2 id="step-2" class="text-lg font-extrabold">{{ wz.steps[1] }}</h2>
+            <h2 id="step-2" class="title-section">{{ wz.steps[1] }}</h2>
             @if (song) {
               <aula-audio-uploader
                 [label]="i18n.fmt(wz.audio, { mb: maxMb })"
@@ -244,7 +223,7 @@ import { SyncEditorComponent } from '../components/sync-editor.component';
                 [tooBig]="i18n.fmt(wz.audioTooBig, { mb: maxMb })"
                 [maxMb]="maxMb"
                 [busy]="music.busy()"
-                [done]="!!song.audioKey"
+                [done]="!!song.audioKey || !!song.embedUrl"
                 (upload)="music.uploadAudio(id()!, $event)"
                 [urlLabel]="wz.audioUrl"
                 [urlButton]="wz.audioUrlUpload"
@@ -255,23 +234,45 @@ import { SyncEditorComponent } from '../components/sync-editor.component';
                 (importLyrics)="importLyricsFrom($event)"
               />
               @if (importError()) {
-                <p role="alert" class="text-xs font-semibold text-tone-danger">{{ importError() }}</p>
+                <p role="alert" class="type-meta font-semibold text-tone-danger">{{ importError() }}</p>
+              }
+              <!-- [2026-11-04]: vista previa → el docente oye la canción con el reproductor de YouTube/Spotify… guardado (la misma que verá el estudiante) -->
+              @if (embed(); as src) {
+                <iframe
+                  class="w-full max-w-2xl rounded-xl border border-border"
+                  [class.aspect-video]="!compact(song.embedUrl)"
+                  [style.height.px]="compact(song.embedUrl) ? 160 : null"
+                  [src]="src"
+                  [title]="song.title"
+                  allow="autoplay; encrypted-media; clipboard-write; picture-in-picture; fullscreen"
+                  referrerpolicy="strict-origin-when-cross-origin"
+                ></iframe>
               }
             }
             <aula-lyrics-editor
+              #lyricsEditor
               [lines]="song?.lines ?? []"
               [language]="song?.language ?? 'en'"
               [busy]="music.busy()"
               [labels]="wz"
               [initial]="music.pendingLyrics()"
-              (loadLyrics)="loadLyrics($event.lyrics, $event.auto)"
-              (save)="saveLines($event)"
+              (loadLyrics)="loadLyrics($event.lyrics, $event.auto, $event.translations, $event.ipas)"
+              (save)="saveLyricLines($event)"
             />
             <!-- [2026-10-24]: aviso concreto (todo falló / faltan algunos versos) + reintento SOLO de lo que falta -->
+            <!-- [2026-10-27]: progreso de las tandas (NestJS responde por trozos acotados en tiempo → ya no se corta el BFF) -->
+            @if (music.enrichProgress(); as p) {
+              <p role="status" class="flex items-center gap-2 rounded-xl bg-tone-info-soft p-3 text-tone-info">
+                <aula-icon name="hourglass" class="animate-spin" /> {{ i18n.fmt(wz.enrichProgress, { done: p.done, total: p.total }) }}
+                <span class="ml-auto font-mono text-xs">{{ elapsed(p.since) }}</span>
+              </p>
+            } @else if (enrichDone()) {
+              <p role="status" class="rounded-xl bg-tone-success-soft p-3 text-tone-success">✓ {{ wz.enrichDone }}</p>
+            }
             @if (enrichNotice(); as notice) {
-              <p role="status" class="rounded-xl bg-tone-warning-soft p-3 text-sm text-tone-warning">
+              <p role="status" class="rounded-xl bg-tone-warning-soft p-3 text-tone-warning">
                 <aula-icon name="triangle-alert" />
-                {{ notice === 'failed' ? wz.enrichFailed : i18n.fmt(wz.enrichPartial, { n: pending() }) }}
+                {{ notice === 'unavailable' ? wz.enrichUnavailable : notice === 'failed' ? wz.enrichFailed : i18n.fmt(wz.enrichPartial, { n: pending() }) }}
               </p>
             }
             @if (pending() > 0) {
@@ -282,15 +283,15 @@ import { SyncEditorComponent } from '../components/sync-editor.component';
                 </button>
               </div>
             }
-            <div class="flex flex-wrap gap-2">
-              <button type="button" class="btn btn-ghost" (click)="step.set(0)">← {{ wz.prev }}</button>
-              <button type="button" class="btn btn-primary" (click)="step.set(2)">{{ wz.next }} →</button>
+            <div class="flex flex-wrap justify-end gap-2">
+              <button type="button" class="btn btn-ghost" (click)="step.set(0)">{{ wz.prev }}</button>
+              <button type="button" class="btn btn-primary" [disabled]="music.busy()" (click)="nextFromLyrics()">{{ wz.next }}</button>
             </div>
           </section>
         }
         @case (2) {
           <section class="space-y-4" aria-labelledby="step-3">
-            <h2 id="step-3" class="text-lg font-extrabold">{{ wz.steps[2] }}</h2>
+            <h2 id="step-3" class="title-section">{{ wz.steps[2] }}</h2>
             @if (song?.audioKey) {
               <aula-sync-editor
                 [lines]="song!.lines"
@@ -302,41 +303,34 @@ import { SyncEditorComponent } from '../components/sync-editor.component';
                 (propose)="propose()"
                 (save)="saveLines($event.lines, $event.source)"
               />
+            } @else if (song?.embedUrl) {
+              <!-- [2026-11-05]: con reproductor externo no hay <audio> que marcar → se explica cómo se sincroniza -->
+              <p class="rounded-xl bg-tone-brand-soft p-3 text-sm">{{ wz.embedSync }}</p>
             } @else {
-              <p class="rounded-xl bg-tone-warning-soft p-3 text-sm text-tone-warning">
+              <p class="rounded-xl bg-tone-warning-soft p-3 text-tone-warning">
                 {{ tx.player.noAudio }}
               </p>
             }
-            <div class="flex flex-wrap items-center gap-2 border-t border-border pt-4">
-              <button type="button" class="btn btn-ghost" (click)="step.set(1)">← {{ wz.prev }}</button>
-              <button type="button" class="btn btn-ghost" (click)="cancel()">{{ wz.cancel }}</button>
-              <button type="button" class="btn btn-primary" [disabled]="music.busy()" (click)="finish()">
-                <aula-icon name="save" /> {{ wz.finish }}
-              </button>
-              <!-- Enviar a revisión solo cuando ya no falta nada (antes aparecía bloqueado y confundía) -->
-              @if (song && (song.status === 'draft' || song.status === 'rejected') && !blockers().length) {
-                <button type="button" class="btn btn-outline" [disabled]="music.busy()" (click)="submit()">
-                  <aula-icon name="send" /> {{ wz.submit }}
-                </button>
-              }
-              @if (song && admin() && song.status === 'review' && !blockers().length) {
-                <button type="button" class="btn btn-outline" [disabled]="music.busy()" (click)="decide('published')">✓ {{ tx.publish }}</button>
-                <input class="control h-10 w-56 text-sm" [attr.aria-label]="tx.rejectReason" [placeholder]="tx.rejectReason" (input)="reason.set($any($event.target).value)" />
-                <button type="button" class="btn btn-outline" [disabled]="music.busy() || !reason().trim()" (click)="decide('rejected')">✕ {{ tx.reject }}</button>
-              }
+            <!-- [2026-11-13]: acciones a la derecha (Retirar con icono a la izquierda) · botones sin iconos ni flechas -->
+            <div class="flex flex-wrap items-center justify-end gap-2 border-t border-border pt-4">
               @if (song) {
-                <button type="button" class="btn btn-ghost ml-auto text-tone-danger" [disabled]="music.busy()" (click)="withdraw()">
+                <button type="button" class="btn btn-ghost mr-auto text-tone-danger" [disabled]="music.busy()" (click)="withdraw()">
                   <aula-icon name="trash-2" /> {{ wz.withdraw }}
                 </button>
               }
+              <button type="button" class="btn btn-ghost" (click)="step.set(1)">{{ wz.prev }}</button>
+              <button type="button" class="btn btn-ghost" (click)="cancel()">{{ wz.cancel }}</button>
+              <button type="button" class="btn btn-primary" [disabled]="music.busy()" (click)="finish()">
+                {{ wz.finish }}
+              </button>
             </div>
           </section>
         }
       }
 
-      <p class="mt-4 text-sm font-semibold text-tone-brand" aria-live="polite">{{ notice() }}</p>
+      <p class="mt-4 font-semibold text-tone-brand" aria-live="polite">{{ notice() }}</p>
       @if (music.actionError()) {
-        <p role="alert" class="text-sm text-tone-danger">{{ music.actionError() }}</p>
+        <p role="alert" class="text-tone-danger">{{ music.actionError() }}</p>
       }
     </aula-card-page>
   `,
@@ -344,7 +338,6 @@ import { SyncEditorComponent } from '../components/sync-editor.component';
 export default class SongUploadPage {
   protected readonly i18n = inject(I18nService);
   protected readonly music = inject(MusicFacade);
-  private readonly session = inject(SessionService);
   private readonly router = inject(Router);
   private readonly returnTo = inject(ReturnToService); // [2026-10-23]: conserva ?volver= y regresa a Gestión
   readonly id = input<string>(); // /musica/subir/:id (opcional: sin id = canción nueva)
@@ -356,16 +349,23 @@ export default class SongUploadPage {
   protected readonly step = signal(0);
   protected readonly title = signal('');
   protected readonly artist = signal('');
+  protected readonly titleIpa = signal(''); // [2026-11-10]: glosa del título editable
+  protected readonly titleTranslation = signal('');
   protected readonly language = signal<string>('en');
-  protected readonly level = signal<string>('A2');
+  protected readonly level = signal<string>(''); // [2026-11-16 · RF-148]: '' = se estima de la letra
+  protected readonly preset = computed(() => !!pickLanguage(this.idioma())); // [2026-11-04]: el idioma llegó de Gestión · [2026-11-16]: el nivel ya no se pide al crear
   protected readonly license = signal<LicenseValue>({ ...EMPTY_LICENSE });
   // [enrichNotice · 2026-10-24]: 'failed' = el servicio no respondió · 'partial' = faltan algunos versos · null = sin aviso
-  protected readonly enrichNotice = signal<'failed' | 'partial' | null>(null);
-  protected readonly aiLyrics = signal('');
-  protected readonly generating = signal(false);
-  protected readonly requirements = SONG_BLOCKERS;
-  // [stepOf]: paso del asistente donde se completa cada requisito (la licencia se declara al crear → sin atajo) | `Record` (TS) exhaustivo
-  protected readonly stepOf: Readonly<Record<SongBlocker, number | null>> = { license: null, audio: 1, lyrics: 1 };
+  // [2026-10-27]: + 'unavailable' = el servicio de IA (FastAPI/Ollama) no respondió a nada ≠ error de red (ese llega como `actionError` del BFF)
+  protected readonly enrichNotice = signal<'unavailable' | 'failed' | 'partial' | null>(null);
+  protected readonly enrichDone = signal(false); // [2026-11-05]: «IPA y traducción listos» al terminar
+  // [elapsed · 2026-11-05]: reloj «m:ss» del proceso de traducción → se ve que sigue trabajando | `now` avanza cada segundo solo mientras hay progreso
+  private readonly now = signal(Date.now());
+  private readonly clock = setInterval(() => this.music.enrichProgress() && this.now.set(Date.now()), 1000);
+  protected elapsed(since: number): string {
+    const s = Math.max(0, Math.round((this.now() - since) / 1000));
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  }
   // [blockers]: lo que falta para enviar/publicar (del servidor o deducido) | `computed` (signals): se recalcula al recargar la canción
   protected readonly blockers = computed<SongBlocker[]>(() => {
     const s = this.id() ? this.music.song.data() : null;
@@ -374,20 +374,29 @@ export default class SongUploadPage {
   // [pending]: versos no revisados sin IPA o sin traducción (español no se traduce) → ofrece «Completar IPA y traducción»
   protected readonly pending = computed(() => {
     const s = this.id() ? this.music.song.data() : null;
-    return s ? s.lines.filter((l) => !l.reviewed && (!l.ipa || (s.language !== 'es' && !l.translation))).length : 0;
+    return s ? s.lines.filter((l) => !l.ipa || (s.language !== 'es' && !l.translation)).length : 0; // [2026-11-06]: también versos manuales (= `lacks` de NestJS)
   });
   protected readonly proposal = signal<LineTiming[] | null>(null);
   protected readonly notice = signal('');
-  protected readonly reason = signal('');
   private readonly lyricsImport = inject(LyricsImportService);
+  private readonly sanitizer = inject(DomSanitizer);
+  // [embed · 2026-11-04]: reproductor guardado (solo orígenes permitidos: SongSchema.embedUrl ya los filtra) | `bypassSecurityTrustResourceUrl`: [src] de <iframe>
+  protected readonly embed = computed(() => {
+    const url = this.music.song.data()?.embedUrl;
+    return url ? this.sanitizer.bypassSecurityTrustResourceUrl(url) : null;
+  });
+  // [compact]: Spotify, SoundCloud… son barras de audio (sin vídeo) → alto fijo (= song-player.page)
+  protected compact(url: string | null): boolean {
+    return !!url && /spotify|soundcloud|deezer|apple/.test(url);
+  }
   protected readonly importingLyrics = signal(false); // [2026-10-24]: leyendo la letra de una página pegada en el campo del audio
   protected readonly importError = signal('');
-  protected readonly admin = computed(() => this.session.hasRole('ADMIN'));
   protected readonly canCreate = computed(
     () => this.title().trim().length >= 2 && !licenseProblem(this.license()),
   );
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => clearInterval(this.clock));
     effect(() => {
       const id = this.id();
       if (!id) return;
@@ -397,6 +406,27 @@ export default class SongUploadPage {
     // [2026-10-25]: la canción ya existe → paso 2 «Audio y letra» (los datos ya se guardaron) | solo depende de `id` (no de lo que lea loadSong)
     effect(() => {
       if (this.id()) untracked(() => this.step.set(1));
+    });
+    // [Auto-alineación · 2026-11-06]: audio subido + letra SIN tiempos → al abrir «Sincronización» se pide la alineación (Whisper) y se guarda como «auto»
+    // → en el reproductor la letra sigue a la VOZ (no a la intro instrumental) sin que el docente marque nada | una vez por canción; lo manual nunca se pisa
+    effect(() => {
+      const s = this.id() ? this.music.song.data() : null;
+      if (this.step() !== 2 || !s?.audioKey || !s.lines.length || s.lines.some((l) => l.startS != null) || this.aligned.has(s.id)) return;
+      this.aligned.add(s.id);
+      untracked(() => void this.autoAlign(s.id));
+    });
+    // [2026-11-10]: canción existente → el formulario de datos arranca con lo guardado
+    effect(() => {
+      const s = this.id() ? this.music.song.data() : null;
+      if (!s) return;
+      untracked(() => {
+        this.title.set(s.title);
+        this.artist.set(s.artist);
+        this.level.set(s.level);
+        this.license.set({ ...s.license } as LicenseValue);
+        this.titleIpa.set(s.titleIpa);
+        this.titleTranslation.set(s.titleTranslation);
+      });
     });
     // [Prefill · 2026-10-24]: canción nueva → idioma y nivel elegidos en Gestión
     effect(() => {
@@ -409,21 +439,28 @@ export default class SongUploadPage {
     });
   }
 
+  protected async saveDetails(): Promise<void> {
+    if (!(await this.music.updateSong(this.id()!, {
+      title: this.title().trim(),
+      artist: this.artist().trim(),
+      level: this.level() || undefined, // Sin elegir → se conserva el actual (o se estima de la letra)
+      license: this.license(),
+      titleIpa: this.titleIpa().trim(),
+      titleTranslation: this.titleTranslation().trim(),
+    }))) return;
+    this.notice.set(this.i18n.t().music.wizard.saved);
+  }
+
   protected async create(): Promise<void> {
+    this.music.pendingLyrics.set(''); // [2026-11-06]: una canción nueva no hereda la letra de la anterior
     const song = await this.music.createSong({
       title: this.title().trim(),
       artist: this.artist().trim() || undefined,
       language: this.language(),
-      level: this.level(),
+      level: this.level() || undefined, // [RF-148]: sin nivel → NestJS lo estima al cargar la letra
       license: this.license(),
     });
     if (!song) return;
-    // [2026-10-24 · Letra con IA]: mismo camino que una letra pegada (POST /lines → IPA y traducción); si falla queda en `pendingLyrics` y el paso «Letra» la muestra
-    const lyrics = this.aiLyrics().trim();
-    if (lyrics) {
-      this.music.pendingLyrics.set(lyrics);
-      if (await this.music.loadLyrics(song.id, lyrics, true)) this.music.pendingLyrics.set('');
-    }
     await this.returnTo.go(['/musica/subir', song.id]); // Con id: se habilitan audio, letra y sincronización
   }
 
@@ -433,6 +470,7 @@ export default class SongUploadPage {
     this.importError.set('');
     try {
       const { text } = await this.lyricsImport.fromUrl(url, this.music.song.data()?.language ?? this.language());
+      if (!text.trim()) return; // [2026-11-06]: el vídeo no trae letra → sin aviso; el docente la escribe
       this.music.pendingLyrics.set(text); // El editor de letra la muestra como borrador (`initial`)
       this.notice.set(this.i18n.t().music.wizard.audioLink.lyricsImported);
     } catch (err) {
@@ -442,43 +480,64 @@ export default class SongUploadPage {
     }
   }
 
-  // [generate · 2026-10-24]: pide el borrador a NestJS (Ollama local); propone título y titular de la licencia si están vacíos (el docente confirma)
-  protected async generate(): Promise<void> {
-    this.generating.set(true);
-    const draft = await this.music.draftLyrics({
-      language: this.language(),
-      level: this.level(),
-      topic: this.title().trim(), // [2026-10-26]: solo el título como tema (sin autor: la IA no imita canciones reales)
-      title: this.title().trim() || undefined,
-    });
-    this.generating.set(false);
-    if (!draft) return; // El error ya se ve en `music.actionError`
-    this.aiLyrics.set(draft.lyrics);
-    if (!this.title().trim()) this.title.set(draft.title);
-    if (!this.license().holder.trim())
-      this.license.update((l) => ({ ...l, type: 'own_work', holder: this.i18n.t().music.wizard.aiHolder }));
+  // [nextFromLyrics · 2026-11-10]: la letra que quedó en el área (importada del enlace o escrita) se guarda al avanzar → antes se perdía y publicar decía «Falta la letra»
+  private readonly lyricsEditor = viewChild<LyricsEditorComponent>('lyricsEditor');
+  protected async nextFromLyrics(): Promise<void> {
+    const p = this.lyricsEditor()?.pendingLoad();
+    if (p) await this.loadLyrics(p.lyrics, p.auto, p.translations, p.ipas); // Ya pasa al paso 3 si la letra quedó lista
+    else this.step.set(2);
   }
 
-  protected async loadLyrics(lyrics: string, auto: boolean): Promise<void> {
+  // [goTo · 2026-11-10 · «Wind Of Change» quedó con 0 versos]: saltar de paso con las pestañas también guarda la letra pendiente (el editor desaparece al cambiar de paso)
+  protected async goTo(i: number): Promise<void> {
+    const p = this.step() === 1 && i !== 1 ? this.lyricsEditor()?.pendingLoad() : null;
+    if (p) await this.loadLyrics(p.lyrics, p.auto, p.translations, p.ipas);
+    this.step.set(i);
+  }
+
+  protected async loadLyrics(lyrics: string, auto: boolean, translations = '', ipas = ''): Promise<void> {
+    // [2026-11-06 · Manual]: letra + IPA + traducción escritos a mano → se guardan TAL CUAL, sin IA (antes se rellenaba lo vacío y se pisaba lo manual)
+    // Bug «la crea sin letra ni traducción»: se emparejaba con las líneas viejas de la canción (aún sin recargar) → ahora con las que devuelve el servidor
+    if (!auto) {
+      const lines = await this.music.loadManualLyrics(this.id()!, lyrics);
+      if (!lines) return;
+      this.music.pendingLyrics.set('');
+      const patches = manualLines(lyrics, ipas, translations, lines);
+      if (patches.length && !(await this.music.saveLines(this.id()!, patches))) return;
+      await this.music.loadSong(this.id()!);
+      this.enrichNotice.set(null);
+      this.notice.set(this.i18n.t().music.wizard.saved);
+      this.step.set(2);
+      return;
+    }
     let r = await this.music.loadLyrics(this.id()!, lyrics, auto);
     if (r) this.music.pendingLyrics.set('');
-    // [2026-10-25]: versos sin IPA/traducción (el LLM tardó) → un reintento automático de SOLO esos versos antes de avisar
-    if (auto && r && !r.enriched && r.missing > 0) r = (await this.music.retryEnrich(this.id()!)) ?? r;
+    // [2026-10-25]: versos sin IPA/traducción (el LLM tardó) → un reintento automático de SOLO esos versos antes de avisar (no si la IA está caída: no insistir)
+    if (auto && r && !r.enriched && r.missing > 0 && !r.unavailable) r = (await this.music.retryEnrich(this.id()!)) ?? r;
     this.enrichNotice.set(auto && r ? this.noticeOf(r) : null); // En modo manual no se pidió IPA → no es un fallo
+    this.enrichDone.set(!!(auto && r?.enriched));
     if (r && (!auto || r.enriched)) this.step.set(2); // Letra lista → siguiente paso de la línea de tiempo (antes se quedaba en «Letra»)
   }
 
   // [retryEnrich · 2026-10-24]: vuelve a pedir IPA y traducción solo de los versos que faltan
   protected async retryEnrich(): Promise<void> {
+    this.enrichDone.set(false);
     const r = await this.music.retryEnrich(this.id()!);
     if (r) this.enrichNotice.set(this.noticeOf(r));
+    this.enrichDone.set(!!r?.enriched);
   }
 
   // [noticeOf]: resultado → aviso | Función pura sobre el estado actual (líneas recargadas)
-  private noticeOf(r: { enriched: boolean; missing: number }): 'failed' | 'partial' | null {
+  private noticeOf(r: { enriched: boolean; missing: number; unavailable?: boolean }): 'unavailable' | 'failed' | 'partial' | null {
     if (r.enriched) return null;
+    if (r.unavailable) return 'unavailable';
     const total = this.music.song.data()?.lines.length ?? 0;
     return r.missing > 0 && r.missing < total ? 'partial' : 'failed';
+  }
+
+  // [saveLyricLines · 2026-11-06]: «Guardar» de la tabla → se guarda lo escrito (lo vacío NO se rellena solo: para eso está «Completar IPA y traducción»)
+  protected async saveLyricLines(lines: LinePatch[]): Promise<void> {
+    await this.saveLines(lines);
   }
 
   protected async saveLines(lines: LinePatch[], source?: 'manual' | 'auto'): Promise<void> {
@@ -488,31 +547,32 @@ export default class SongUploadPage {
     }
   }
 
+  private readonly aligned = new Set<string>();
+  private async autoAlign(id: string): Promise<void> {
+    this.notice.set(this.i18n.t().music.wizard.aligning);
+    const p = await this.music.proposeTimings(id);
+    const lines = (p ?? []).filter((t) => t.start != null).map((t) => ({ id: t.id, startS: t.start!, endS: t.end ?? t.start! + 2 }));
+    if (lines.length) await this.saveLines(lines, 'auto');
+    else this.notice.set('');
+  }
+
   protected async propose(): Promise<void> {
     this.proposal.set(await this.music.proposeTimings(this.id()!));
   }
 
-  protected async submit(): Promise<void> {
-    if (await this.music.submitForReview(this.id()!))
-      this.notice.set(this.i18n.t().music.wizard.submitted);
-  }
-
-  protected async decide(decision: 'published' | 'rejected'): Promise<void> {
-    if (await this.music.review(this.id()!, decision, this.reason().trim() || undefined))
-      await this.music.loadSong(this.id()!);
-  }
-
-  // [finish · 2026-10-25]: «Guardar» del último paso → todo ya está en el servidor (borrador) → vuelve a Gestión
+  // [finish · 2026-10-25 → Fix 2026-10-30]: «Guardar» del último paso → todo ya está en el servidor → al BORRADOR para revisar y publicar (página de Next.js: navegación completa), como el resto de actividades
   protected finish(): void {
     this.notice.set(this.i18n.t().music.wizard.finished);
-    this.returnTo.leave('/musica');
+    window.location.assign(`/admin/activities/ver/music/${encodeURIComponent(this.id()!)}`); // `location.assign` (DOM): sale de la SPA Angular
   }
 
   protected cancel(): void {
+    this.music.pendingLyrics.set('');
     this.returnTo.leave('/musica');
   }
 
   protected async withdraw(): Promise<void> {
+    this.music.pendingLyrics.set('');
     if (await this.music.withdraw(this.id()!)) await this.returnTo.leave('/musica');
   }
 }

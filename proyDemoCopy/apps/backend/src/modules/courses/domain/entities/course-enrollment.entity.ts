@@ -10,7 +10,7 @@ import {
   type Relation,
 } from 'typeorm';
 import { Course } from './course.entity';
-// [Entity CourseEnrollment]: matrícula + progreso + reacciones del usuario en un curso | [Patrón]: Aggregate (DDD) | [Principio]: SRP
+// [Entity CourseEnrollment]: matrícula (compra/inscripción) + progreso + cierre académico del usuario en un curso | [Patrón]: Aggregate (DDD) | [Principio]: SRP
 
 @Entity({ name: 'course_enrollments' })
 @Index(['userId', 'courseId'], { unique: true })
@@ -34,15 +34,7 @@ export class CourseEnrollment {
   @Column({ type: 'smallint', default: 0 })
   progress!: number;
 
-  @Column({ type: 'boolean', default: false, name: 'is_favorite' })
-  isFavorite!: boolean;
-
-  // [Reacciones rápidas]: contadores booleanos por usuario | [SSOT]: coincide con frontend ReactionState
-  @Column({ type: 'boolean', default: false, name: 'reaction_like' })
-  reactionLike!: boolean;
-
-  @Column({ type: 'boolean', default: false, name: 'reaction_love' })
-  reactionLove!: boolean;
+  // [Caso F · 2026-11-13]: favorito y reacciones SALEN de la inscripción → tablas course_favorites y course_reactions (migración CourseFavoritesReactions)
 
   // [Acceso]: fecha de compra (pago) o inscripción (gratis) → desbloquea el material | null = sin acceso | [Principio]: SSOT del acceso
   @Column({ type: 'timestamptz', nullable: true, name: 'purchased_at' })
@@ -68,6 +60,22 @@ export class CourseEnrollment {
 
   @Column({ type: 'timestamptz', nullable: true, name: 'completed_at' })
   completedAt!: Date | null;
+
+  // [2026-11-09 · RF-32]: cierre académico aprobado por el docente (requisito del certificado) y nota final corregida (null = la del examen)
+  @Column({ type: 'timestamptz', nullable: true, name: 'closure_approved_at' })
+  closureApprovedAt!: Date | null;
+
+  @Column({ type: 'smallint', nullable: true, name: 'final_grade' })
+  finalGrade!: number | null;
+
+  @Column({ type: 'uuid', nullable: true, name: 'closure_approved_by' })
+  closureApprovedBy!: string | null;
+
+  @Column({ type: 'text', nullable: true, name: 'grade_note' })
+  gradeNote!: string | null;
+
+  @Column({ type: 'uuid', nullable: true, name: 'grade_by' })
+  gradeBy!: string | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

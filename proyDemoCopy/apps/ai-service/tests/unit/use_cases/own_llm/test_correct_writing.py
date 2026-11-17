@@ -100,17 +100,11 @@ def test_chinese_fragments_located_without_word_boundaries():
     assert locate_findings("我很喜欢", [f]) == []  # Con límites de palabra el fragmento no se encontraría
 
 
-def test_eval_gates_and_dataset_record():
-    """run_eval: umbrales; prepare_dataset: el registro usa el MISMO prompt que el servicio."""
-    from tests.evaluation.run_eval import gates, score_sample, summarize
+def test_dataset_record_usa_el_mismo_prompt_del_servicio():
+    """prepare_dataset (corrector de redacciones): el registro usa el MISMO prompt que el servicio."""
     from training.writing_corrector.prepare_dataset import to_record
     from src.modules.own_llm.application.schemas.writing_response import CorrectionDraft
     from src.modules.own_llm.infrastructure.models.writing_corrector_model import build_prompt
-
-    own = summarize([score_sample("She goes.", "she  goes.", 100), score_sample(None, "x", 200)])
-    assert own["json_valid"] == 0.5 and own["exact_match"] == 0.5 and own["p95_ms"] == 200
-    assert gates(own, {"similarity": 0.1}, None) == {"json_valid_ge_98": False, "p95_le_rnf03": True, "better_than_base": True}
-    assert gates(own, None, 4.5)["teacher_score_ge_4"] is True
 
     rec = to_record({"text": "She go.", "language": "en", "level": "A1", "target": CorrectionDraft(corrected_text="She goes.")})
     assert rec["prompt"][1]["content"] == build_prompt("She go.", "en", "A1")

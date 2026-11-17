@@ -59,3 +59,12 @@ export const DEFAULT_VARIANT: Readonly<Record<Language, string>> =
     [Language.ZH]: 'zh-CN',
     [Language.RU]: 'ru-RU',
   });
+
+// [Detectar idioma · 2026-10-27]: «auto» = FastAPI detecta el idioma de origen (Traductor y Corrector de redacciones) | `as const` (TS): tipo literal 'auto'
+// [Principio]: SSOT — los DTO que aceptan «Detectar idioma» validan con LANGUAGES_OR_AUTO (`@IsIn`) en vez de `@IsEnum(Language)`
+export const AUTO_DETECT = 'auto' as const;
+export type LanguageOrAuto = Language | typeof AUTO_DETECT;
+export const LANGUAGES_OR_AUTO: readonly LanguageOrAuto[] = Object.freeze([
+  ...Object.values(Language),
+  AUTO_DETECT,
+]);

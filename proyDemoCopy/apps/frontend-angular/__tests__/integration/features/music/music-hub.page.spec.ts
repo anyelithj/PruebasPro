@@ -34,12 +34,13 @@ describe('MusicHubPage', () => {
     expect(el.textContent).not.toContain('Pendientes de revisión');
   });
 
-  it('ADMIN: subir y cola de revisión con publicar y rechazar', async () => {
+  // [2026-10-26]: subir, revisar y publicar canciones → Gestión → Actividades (tabla) · aquí solo escuchar y crear colecciones
+  it('ADMIN: crea colecciones; subir y la cola de revisión viven en Gestión', async () => {
     api();
     const { el } = await render(MusicHubPage, providers('ADMIN'));
-    expect(el.querySelector('a[href="/musica/subir"]')).not.toBeNull();
-    expect(el.textContent).toContain('Pendiente');
-    expect(getByRole(el, 'button', 'Publicar')).toBeTruthy();
+    expect(getByRole(el, 'button', '＋ Nueva colección')).toBeTruthy();
+    expect(el.querySelector('a[href="/musica/subir"]')).toBeNull();
+    expect(el.textContent).not.toContain('Pendientes de revisión');
   });
 
   it('sin colecciones → mensaje; error → alerta', async () => {

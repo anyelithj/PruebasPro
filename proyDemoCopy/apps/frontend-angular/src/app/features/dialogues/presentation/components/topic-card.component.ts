@@ -29,7 +29,7 @@ import { RouterLink } from '@angular/router';
         </span>
       }
       @if (objectives().length) {
-        <ul class="list-inside list-disc text-sm text-muted-foreground">
+        <ul class="list-inside list-disc text-muted-foreground">
           @for (o of objectives().slice(0, 2); track o) {
             <li>{{ o }}</li>
           }

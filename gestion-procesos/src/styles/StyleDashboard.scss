@@ -1,0 +1,230 @@
+// MODULE — gráficas (Indicadores y Analítica). BEM: bloque__elemento--modificador. Medidas desde los tokens del tema.
+
+// Tarjeta común a todas las gráficas: mismo relleno, borde, título y estado vacío.
+.chart-card {
+  margin: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--pad-card);
+  box-shadow: var(--shadow-card);
+  &__title {
+    margin-bottom: var(--space-sm);
+    font-size: 1rem;
+    font-weight: 700;
+  }
+  &__empty,
+  &__note {
+    margin: 0;
+    color: var(--muted);
+    font-size: var(--fs-sm);
+  }
+  &__note {
+    margin-top: var(--space-sm);
+  }
+  // Tabla opcional dentro de la tarjeta (vista accesible de los datos).
+  details {
+    margin-top: var(--space-sm);
+    font-size: var(--fs-sm);
+  }
+}
+
+// Barras horizontales (categorías con nombre largo).
+.bar-chart {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--space-xs);
+  li {
+    display: grid;
+    grid-template-columns: 7rem 1fr minmax(2rem, auto);
+    gap: var(--space-xs);
+    align-items: center;
+    font-size: var(--fs-sm);
+  }
+  &__label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  &__track {
+    background: #e8eef2;
+    border-radius: 4px;
+    height: 0.75rem;
+    overflow: hidden;
+  }
+  &__bar {
+    display: block;
+    height: 100%;
+    background: var(--petrol);
+    border-radius: 4px;
+  }
+  &__value {
+    text-align: right;
+    font-weight: 700;
+  }
+}
+
+// Columnas verticales («torres»).
+.column-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 12rem;
+  overflow: visible;
+  &__bar {
+    fill: var(--petrol);
+  }
+  &__base {
+    stroke: var(--line);
+  }
+  &__value {
+    font-size: 11px;
+    font-weight: 700;
+    fill: var(--ink);
+  }
+  &__label {
+    font-size: 11px;
+    fill: var(--muted);
+  }
+}
+
+// Dona + leyenda al lado (apilada en pantallas estrechas).
+.donut-chart {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space);
+  &__svg {
+    width: 8.5rem;
+    height: 8.5rem;
+    flex-shrink: 0;
+  }
+  &__track {
+    fill: none;
+    stroke: #e8eef2;
+    stroke-width: 12;
+  }
+  &__total {
+    font-size: 18px;
+    font-weight: 700;
+    fill: var(--ink);
+  }
+  &__caption {
+    font-size: 8px;
+    fill: var(--muted);
+  }
+  &__legend {
+    flex: 1 1 9rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-xs);
+    font-size: var(--fs-sm);
+    li {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: var(--space-xs);
+      align-items: center;
+    }
+  }
+  &__swatch {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 2px;
+  }
+  &__value {
+    font-weight: 700;
+    small {
+      font-weight: 400;
+      color: var(--muted);
+    }
+  }
+}
+
+// Líneas en el tiempo.
+.trend-chart {
+  &__legend {
+    display: flex;
+    gap: var(--space);
+    list-style: none;
+    padding: 0;
+    margin: 0 0 var(--space-xs);
+    font-size: var(--fs-sm);
+    color: var(--muted);
+    span {
+      display: inline-block;
+      width: 0.75rem;
+      height: 0.75rem;
+      border-radius: 2px;
+      vertical-align: -1px;
+    }
+  }
+  &__plot {
+    position: relative;
+  }
+  svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+  &__grid line {
+    stroke: #e8eef2;
+  }
+  &__grid text,
+  &__axis {
+    font-size: 11px;
+    fill: var(--muted);
+  }
+  &__end {
+    font-size: 12px;
+    fill: var(--ink);
+  }
+  &__cross {
+    stroke: #9aa9b4;
+    stroke-dasharray: 3 3;
+  }
+  &__tip {
+    position: absolute;
+    transform: translateX(-50%);
+    pointer-events: none;
+    display: grid;
+    gap: 0.15rem;
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 4px 12px rgba(20, 35, 46, 0.12);
+    font-size: var(--fs-xs);
+    white-space: nowrap;
+    i {
+      display: inline-block;
+      width: 0.6rem;
+      height: 0.6rem;
+      border-radius: 2px;
+    }
+  }
+}
+
+// Barras dentro de la tabla de tendencia (Indicadores).
+.trend-bar {
+  display: inline-block;
+  height: 0.7rem;
+  border-radius: 3px;
+  vertical-align: middle;
+  min-width: 2px;
+  &--a {
+    background: var(--petrol);
+  }
+  &--b {
+    background: #2e7d5b;
+  }
+}
+
+// Tira de datos generales con textos (no solo números): valor más pequeño.
+.summary.summary--compact dd {
+  font-size: 1.25rem;
+}

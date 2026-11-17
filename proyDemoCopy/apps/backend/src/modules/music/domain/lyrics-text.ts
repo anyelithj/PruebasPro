@@ -93,12 +93,15 @@ export function htmlToText(html: string, pre = false): string {
   );
 }
 
+// [SITE_UI · 2026-11-10]: botones de la página de letras que se colaban como versos («Agregar a favoritos», «Imprimir», «Corregir»…)
+const SITE_UI = /^(agregar a (favoritos|playlist)|añadir a (favoritos|playlist)|tamaño de (la )?fuente|acordes|imprimir|corregir|compartir|enviar (letra|correcci[oó]n)|add to (favorites|playlist)|font size|chords|print|share|embed)$/i;
+
 // [tidy]: espacios normalizados, sin etiquetas de sección («[Chorus]», «[Estribillo x2]»), máximo una línea vacía seguida | Función pura
 export function tidy(text: string): string {
   return text
     .split(/\r?\n/)
     .map((l) => l.replace(/[ \t ]+/g, ' ').trim())
-    .filter((l) => !/^\[[^\]]{1,40}\]$/.test(l))
+    .filter((l) => !/^\[[^\]]{1,40}\]$/.test(l) && !SITE_UI.test(l))
     .join('\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim()

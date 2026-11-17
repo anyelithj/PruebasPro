@@ -1,5 +1,5 @@
 import Link from "next/link"; // [Next.js]: navegación cliente con prefetch; las pestañas son enlaces reales (funcionan sin JS)
-import { FileText, Gamepad2, Library, NotebookText, Users, type LucideIcon } from "lucide-react"; // [2026-10-23]: iconos SVG uniformes (mismo set que el menú lateral)
+import { Award, FileText, Gamepad2, Library, NotebookText, Users, type LucideIcon } from "lucide-react"; // [2026-10-23]: iconos SVG uniformes (mismo set que el menú lateral)
 import { cn } from "@/lib/utils";
 import { getServerDictionary } from "@/lib/i18n-server";
 import type { PortalRole } from "./portal-role";
@@ -7,17 +7,17 @@ import type { PortalRole } from "./portal-role";
 // [Tecnología]: React Server Component asíncrono → lee el idioma en el servidor, sin JavaScript en el cliente
 
 // `export type` (TS union literal): pestañas posibles de Gestión
-export type ManagementTab = "users" | "exams" | "courses" | "content" | "activities";
+export type ManagementTab = "users" | "exams" | "courses" | "content" | "activities" | "certificates";
 
 // [TAB_ICON · 2026-10-23]: un icono por pestaña (antes solo texto) | `Readonly<Record<…>>` (TS)
-const TAB_ICON: Readonly<Record<ManagementTab, LucideIcon>> = { users: Users, exams: FileText, courses: Library, content: NotebookText, activities: Gamepad2 };
+const TAB_ICON: Readonly<Record<ManagementTab, LucideIcon>> = { users: Users, exams: FileText, courses: Library, content: NotebookText, activities: Gamepad2, certificates: Award };
 
 interface TabDef {
   key: ManagementTab; // Clave de traducción y de pestaña activa
   href: string; // Ruta de la pestaña (URL state → compartible y navegable con atrás/adelante)
 }
 
-// [Pestañas por rol]: el docente no gestiona usuarios ni cursos (el backend exige ADMIN) | `ReadonlyArray` (TS): inmutable
+// [Pestañas por rol]: el docente no gestiona usuarios (el backend exige ADMIN) | [2026-10-27]: SÍ gestiona cursos (crea y administra los suyos) | `ReadonlyArray` (TS): inmutable
 const TABS_BY_ROLE: Readonly<Record<"admin" | "docente", ReadonlyArray<TabDef>>> = {
   admin: [
     { key: "users", href: "/admin/users?tab=usuarios" },
@@ -25,11 +25,14 @@ const TABS_BY_ROLE: Readonly<Record<"admin" | "docente", ReadonlyArray<TabDef>>>
     { key: "courses", href: "/admin/courses" },
     { key: "content", href: "/admin/curriculum" },
     { key: "activities", href: "/admin/activities" }, // [2026-10-19]: administrar juegos, práctica, música, diálogos y poliglota
+    { key: "certificates", href: "/admin/certificados" }, // [2026-11-06]: exámenes finales de los cursos y certificados emitidos
   ],
   docente: [
     { key: "exams", href: "/teacher/quizzes" },
+    { key: "courses", href: "/admin/courses" }, // [2026-10-27]: el docente crea cursos y gestiona los suyos (backend: @Roles(TEACHER) + policy de propiedad)
     { key: "content", href: "/admin/curriculum" },
     { key: "activities", href: "/admin/activities" },
+    { key: "certificates", href: "/admin/certificados" },
   ],
 };
 
@@ -42,8 +45,8 @@ export async function ManagementHeader({ role, active }: { role: PortalRole; act
   return (
     <>
       <header>
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{t.management.title}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h1 className="title-page">{t.management.title}</h1>
+        <p className="mt-1 text-muted-foreground">
           {isAdmin ? t.management.subtitleAdmin : t.management.subtitleTeacher}
         </p>
       </header>

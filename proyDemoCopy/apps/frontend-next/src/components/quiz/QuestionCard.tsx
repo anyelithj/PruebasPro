@@ -1,5 +1,6 @@
 "use client";
 import { AnswerOption } from "./AnswerOption";
+import { stripMarkup } from "@/lib/strip-markup";
 import type { QuestionPublic } from "@/types/quiz";
 // [QuestionCard]: pregunta + opciones + estado seleccion | [Patron]: Composite | [Principio]: SRP | [Paradigma]: Funcional + JSX
 
@@ -23,9 +24,9 @@ export function QuestionCard({
   const options = isTrueFalse ? ["True", "False"] : question.options ?? [];
 
   return (
-    <article className="rounded-2xl border border-border bg-card p-6 sm:p-8">
-      <h2 className="text-xl sm:text-2xl font-bold leading-snug mb-6">
-        {question.text}
+    <article className="surface p-6 sm:p-8">
+      <h2 className="title-section mb-6">
+        {stripMarkup(question.text)}
       </h2>
 
       {isOpenAnswer ? (

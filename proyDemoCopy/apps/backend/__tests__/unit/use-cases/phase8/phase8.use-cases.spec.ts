@@ -61,10 +61,12 @@ describe('LookupTermUseCase (Cache-Aside)', () => {
     };
     const tools: LanguageToolsPort = {
       lookup: jest.fn(async () => result(model)),
+      detect: jest.fn(),
       word: jest.fn(),
       lines: jest.fn(),
       ipa: jest.fn(), // [Sprint 10.5]: método nuevo del puerto (no se usa aquí)
       translate: jest.fn(), // [2026-10-19]: título de tema (no se usa aquí)
+      nounGrammar: jest.fn(), // [2026-11-03]: regla de vocabulario (no se usa aquí)
     };
     return {
       rows,

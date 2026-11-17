@@ -1,13 +1,12 @@
 import { ActivitySectionsComponent } from '@shared/ui/molecules/pill-nav/pill-nav.component'; // [2026-10-23]: pills de secciones de Actividades
-import { IconComponent } from '@shared/ui/atoms/icon/icon.component';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { CEFR_LEVELS, LANGUAGES } from '@aula/shared-schemas';
+import { CEFR_LEVELS } from '@aula/shared-schemas';
 import { SessionService } from '@core/auth/session.service';
 import { I18nService } from '@core/i18n/i18n.service';
-import { ButtonComponent } from '@shared/ui/atoms/button/button.component';
 import { LevelTintDirective } from '@shared/ui/atoms/level-tint/level-tint.directive';
 import { SpinnerComponent } from '@shared/ui/atoms/spinner/spinner.component';
+import { FilterPanelComponent } from '@shared/ui/molecules/filter-panel/filter-panel.component'; // [2026-11-11]: MISMO panel de filtros que Gestión
 import { CardPageTemplate } from '@shared/ui/templates/card-page.template';
 import { PracticeFacade } from '../../application/practice.facade';
 import { SKILLS } from '../../domain/models/practice';
@@ -16,82 +15,54 @@ import { SKILLS } from '../../domain/models/practice';
 
 @Component({
   selector: 'aula-practice-list-page',
-  imports: [IconComponent, ActivitySectionsComponent, RouterLink, CardPageTemplate, ButtonComponent, SpinnerComponent, LevelTintDirective],
+  imports: [ActivitySectionsComponent, RouterLink, CardPageTemplate, SpinnerComponent, LevelTintDirective, FilterPanelComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @let tx = i18n.t().practice;
     <!-- [2026-10-23 · 4.º pase]: mismo encabezado que Recursos → título «Actividades», la sección en el subtítulo y en la pill activa; sin caja (bare) -->
     <aula-card-page [heading]="i18n.t().common.activitySections.title" [subtitle]="tx.title + ' · ' + tx.subtitle" [bare]="true">
       <aula-activity-sections pageNav />
-      @if (isTeacher()) {
-        <a pageActions aulaButton size="sm" routerLink="/practica/constructor"
-          ><aula-icon name="sparkles" /> {{ tx.builderTitle }}</a
-        >
-      }
-      <form
-        class="mb-5 grid gap-3 sm:grid-cols-4 sm:items-end"
-        role="search"
-        (submit)="$event.preventDefault(); load()"
+      <!-- [2026-11-11]: MISMO panel de filtros que Gestión → Actividades (Buscar · Nivel · Habilidad · Filtrar · Limpiar + idiomas) -->
+      <aula-filter-panel
+        [(search)]="search"
+        [(level)]="level"
+        [language]="language()"
+        (languageChange)="language.set($event); load()"
+        (apply)="load()"
+        (cleared)="skill.set(''); load()"
       >
-        <label class="text-xs font-semibold text-muted-foreground">
-          {{ tx.language }}
-          <select
-            class="control mt-1 w-full"
-            [value]="language()"
-            (change)="language.set($any($event.target).value)"
-          >
-            <option value="">{{ tx.all }}</option>
-            @for (c of languages; track c) {
-              <option [value]="c">{{ i18n.languageName(c) }}</option>
-            }
-          </select>
-        </label>
-        <label class="text-xs font-semibold text-muted-foreground">
-          {{ tx.level }}
-          <select
-            class="control mt-1 w-full"
-            [value]="level()"
-            (change)="level.set($any($event.target).value)"
-          >
-            <option value="">{{ tx.all }}</option>
-            @for (l of levels; track l) {
-              <option [value]="l">{{ l }}</option>
-            }
-          </select>
-        </label>
-        <label class="text-xs font-semibold text-muted-foreground">
+        <label class="filter-field">
           {{ tx.skill }}
-          <select
-            class="control mt-1 w-full"
-            [value]="skill()"
-            (change)="skill.set($any($event.target).value)"
-          >
+          <select class="control" [value]="skill()" (change)="skill.set($any($event.target).value)">
             <option value="">{{ tx.all }}</option>
             @for (s of skills; track s) {
-              <option [value]="s">{{ tx.skills[s] }}</option>
+              <option [value]="s" [selected]="s === skill()">{{ tx.skills[s] }}</option>
             }
           </select>
         </label>
-        <button aulaButton variant="outline" type="submit">{{ tx.filter }}</button>
-      </form>
+      </aula-filter-panel>
 
       @switch (facade.list.status()) {
         @case ('loading') {
           <aula-spinner [label]="i18n.t().common.loading" />
         }
         @case ('error') {
-          <p role="alert" class="text-sm text-tone-danger">{{ facade.list.error() }}</p>
+          <p role="alert" class="text-tone-danger">{{ facade.list.error() }}</p>
         }
         @case ('empty') {
           <p
-            class="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground"
+            class="rounded-xl border border-dashed border-border p-6 text-center text-muted-foreground"
           >
             {{ tx.empty }}
           </p>
         }
         @case ('success') {
+          @if (!shown().length) {
+            <p class="rounded-xl border border-dashed border-border p-6 text-center text-muted-foreground">{{ tx.empty }}</p>
+          }
           <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            @for (a of facade.list.data()!; track a.id) {
+            @for (a of shown(); track a.id) {
+              <!-- búsqueda por título/descripción: en el navegador (la lista ya está cargada) -->
               <li>
                 <a
                   [routerLink]="['/practica', a.id]"
@@ -127,12 +98,16 @@ export default class PracticeListPage {
   protected readonly i18n = inject(I18nService);
   protected readonly facade = inject(PracticeFacade);
   private readonly session = inject(SessionService);
-  protected readonly languages = LANGUAGES;
   protected readonly levels = CEFR_LEVELS;
   protected readonly skills = SKILLS;
   protected readonly language = signal('');
   protected readonly level = signal('');
   protected readonly skill = signal('');
+  protected readonly search = signal('');
+  protected readonly shown = computed(() => {
+    const q = this.search().trim().toLowerCase();
+    return (this.facade.list.data() ?? []).filter((a) => !q || `${a.title} ${a.description ?? ''}`.toLowerCase().includes(q));
+  });
   protected readonly isTeacher = () => this.session.hasRole('TEACHER', 'ADMIN');
 
   constructor() {

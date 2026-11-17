@@ -17,6 +17,7 @@ import {
   extractLyrics,
   plainLyrics,
 } from '../../domain/lyrics-text';
+import { captionsToLyrics, captionTracks, descriptionLyrics, pickTrack, youtubeVideoId } from '../../domain/youtube-lyrics';
 // [UseCase ImportLyricsFromUrl · 2026-10-24 · RF-117]: lee la letra de una página pública (Genius, Letras, AZLyrics, blogs…) para el paso «Letra» del asistente — NO guarda nada: el docente revisa el texto y lo carga con POST /songs/:id/lines
 // [Contenido no HTML]: PDF, imágenes o audio → 415 y el frontend usa el extractor general de Next.js (OCR, Whisper…) | [Patrón]: Use Case (Query) + Port (WebPageFetcher) + Strategy (HTML | texto plano) + Error Translation | [Principio]: SRP + DIP + mensajes accionables | [Paradigma]: POO + funcional
 
@@ -31,7 +32,10 @@ export class ImportLyricsFromUrlUseCase {
     @Inject(WEB_PAGE_FETCHER) private readonly fetcher: WebPageFetcher,
   ) {}
 
-  async execute(url: string): Promise<ExtractedLyrics & { url: string }> {
+  async execute(url: string, language = 'en'): Promise<ExtractedLyrics & { url: string }> {
+    // [2026-11-04]: YouTube → subtítulos del vídeo o su descripción (el audio no se descarga)
+    const videoId = youtubeVideoId(url);
+    if (videoId) return this.fromYoutube(videoId, language);
     const page = await this.fetcher.fetch(url).catch((err: unknown) => {
       throw this.translate(err, url);
     });
@@ -51,6 +55,26 @@ export class ImportLyricsFromUrlUseCase {
     throw new UnsupportedMediaTypeException(
       `El enlace no es una página de texto (${mime || 'tipo desconocido'}).`,
     );
+  }
+
+  // [fromYoutube · 2026-11-04]: página del vídeo → pista de subtítulos (idioma de la canción) → versos | si no hay, la letra de la descripción
+  private async fromYoutube(id: string, language: string): Promise<ExtractedLyrics & { url: string }> {
+    const watch = `https://www.youtube.com/watch?v=${id}&hl=${encodeURIComponent(language)}`;
+    const page = await this.fetcher.fetch(watch).catch((err: unknown) => {
+      throw this.translate(err, watch);
+    });
+    const html = decodeBody(page.body, page.contentType);
+    const { title, text: fromDescription } = descriptionLyrics(html);
+    const track = pickTrack(captionTracks(html), language);
+    if (track) {
+      for (const src of [`${track.baseUrl}&fmt=json3`, track.baseUrl]) {
+        const res = await this.fetcher.fetch(src).catch(() => null);
+        const text = res ? captionsToLyrics(decodeBody(res.body, res.contentType)) : '';
+        if (text.split('\n').length >= 4) return { title, text, holder: '', strategy: 'plain', url: watch };
+      }
+    }
+    // [2026-11-06]: sin subtítulos ni letra en la descripción → texto vacío SIN error (el docente escribe la letra a mano; el aviso sobraba)
+    return { title, text: fromDescription, holder: '', strategy: 'plain', url: watch };
   }
 
   // [translate]: motivo del adaptador → excepción HTTP con QUÉ HACER | [Patrón]: Error Translation

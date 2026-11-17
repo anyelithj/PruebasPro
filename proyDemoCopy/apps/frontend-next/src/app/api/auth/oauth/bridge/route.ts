@@ -6,11 +6,9 @@ import { setAuthCookies, type AuthResponse } from "@/lib/auth";
 import { PORTAL_ROUTES } from "@/lib/constants";
 // [Bridge OAuth]: lee la sesión Auth.js post-callback, intercambia id_token por JWT propio en NestJS y setea cookies httpOnly | [Patrón]: Adapter + Anti-Corruption Layer | [Principio]: SRP
 
-// [Mapeo provider Auth.js → backend]: 'microsoft-entra-id' → 'microsoft'
-function mapProvider(p: string | undefined): "google" | "microsoft" | null {
-  if (p === "google") return "google";
-  if (p === "microsoft-entra-id") return "microsoft";
-  return null;
+// [Mapeo provider Auth.js → backend]: solo Google (Microsoft retirado 2026-11-16) | ternario → `null` = proveedor no soportado
+function mapProvider(p: string | undefined): "google" | null {
+  return p === "google" ? "google" : null;
 }
 
 // [GET]: Auth.js redirige aquí tras OAuth → exchange + cookies + redirect a dashboard
@@ -26,7 +24,7 @@ export async function GET(req: Request): Promise<NextResponse> {
   }
 
   try {
-    // [Exchange]: NestJS verifica id_token (Google/Microsoft JWKS), find-or-create user, emite par JWT propio
+    // [Exchange]: NestJS verifica id_token (Google), find-or-create user, emite par JWT propio
     const backend = await apiFetch<AuthResponse>("/auth/oauth", {
       method: "POST",
       body: { provider: providerKey, idToken },

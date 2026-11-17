@@ -20,8 +20,8 @@ export default async function NewCurriculumItemPage() {
       <BackLink href="/admin/curriculum" memo="content">Volver a recursos</BackLink>
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Crear recurso</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className="title-page">Crear recurso</h1>
+          <p className="mt-1 text-muted-foreground">
             Cuatro pasos: tipo, destinatario, contenido y origen. Se guarda como borrador hasta que se publique.
           </p>
         </div>

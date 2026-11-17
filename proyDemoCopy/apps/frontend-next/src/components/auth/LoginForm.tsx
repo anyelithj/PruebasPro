@@ -1,5 +1,5 @@
 "use client";
-import { useMemo } from "react";
+import { useMemo, useState, type FormEvent } from "react"; // `useState` (React): guarda el reto 2FA entre los dos pasos
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
@@ -19,10 +19,14 @@ import { BRAND } from "@/config/brand";
 
 export function LoginForm() {
   // [useAuth]: estado + dispatch login | [Patrón]: Custom Hook
-  const { login, isLoading, error } = useAuth();
+  const { login, verifyTwoFactor, isLoading, error } = useAuth();
+  // [2FA · 2026-11-16]: `null` = paso 1 (correo + contraseña) · string = paso 2 (código del correo) | [Patrón]: State (máquina de 2 pasos)
+  const [challengeId, setChallengeId] = useState<string | null>(null);
   const { t } = usePreferences();
   const a = t.auth; // Alias de textos de autenticación
-  const magicInvalid = useSearchParams().get("magic") === "invalid";
+  const params = useSearchParams();
+  const magicInvalid = params.get("magic") === "invalid";
+  const sessionExpired = params.get("expired") === "1"; // [2026-10-31]: venimos de una sesión terminada → se explica el motivo
   // `useMemo` (React): el esquema solo se reconstruye al cambiar de idioma | [Patrón]: Factory
   const schema = useMemo(() => makeLoginSchema(a.validation), [a.validation]);
 
@@ -38,17 +42,36 @@ export function LoginForm() {
 
   // [onSubmit]: ya validado por Zod, llama useAuth.login | [Principio]: SRP
   const onSubmit = handleSubmit(async (values) => {
-    await login({ email: values.email, password: values.password });
+    const res = await login({ email: values.email, password: values.password });
+    if (typeof res === "string") setChallengeId(res); // `typeof` (JS): string = challengeId → mostrar el paso del código
   });
+
+  // [Paso 2]: mismo contenedor y estilos; el resto del formulario no se muestra | [Principio]: SRP (TwoFactorStep)
+  if (challengeId) {
+    return (
+      <TwoFactorStep
+        isLoading={isLoading}
+        error={error}
+        onVerify={(code) => verifyTwoFactor(challengeId, code)}
+        onBack={() => setChallengeId(null)}
+      />
+    );
+  }
 
   return (
     <div className="w-full max-w-[420px] space-y-5">
       <header className="mb-2">
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{a.login.title}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <h1 className="title-page">{a.login.title}</h1>
+        <p className="mt-2 text-muted-foreground">
           {fmt(a.login.subtitle, { brand: BRAND.name })}
         </p>
       </header>
+
+      {sessionExpired && !error && (
+        <div role="status" className="rounded-lg border border-tone-warning-line bg-tone-warning-soft px-4 py-3 text-sm text-tone-warning">
+          {a.login.sessionExpired}
+        </div>
+      )}
 
       {magicInvalid && (
         <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -86,7 +109,7 @@ export function LoginForm() {
             {...register("email")}
           />
           {errors.email && (
-            <p id="email-error" role="alert" className="text-xs text-destructive">
+            <p id="email-error" role="alert" className="type-meta text-destructive">
               {errors.email.message}
             </p>
           )}
@@ -103,7 +126,7 @@ export function LoginForm() {
             {...register("password")}
           />
           {errors.password && (
-            <p id="password-error" role="alert" className="text-xs text-destructive">
+            <p id="password-error" role="alert" className="type-meta text-destructive">
               {errors.password.message}
             </p>
           )}
@@ -144,7 +167,7 @@ export function LoginForm() {
       <OAuthButtons />
       <MagicLinkForm />
 
-      <p className="text-center text-sm text-muted-foreground mt-6">
+      <p className="text-center text-muted-foreground mt-6">
         {a.login.noAccount}{" "}
         <Link
           href={AUTH_ROUTES.register}
@@ -153,6 +176,73 @@ export function LoginForm() {
           {a.login.registerLink}
         </Link>
       </p>
+    </div>
+  );
+}
+
+// [TwoFactorStep · 2026-11-16]: formulario del código OTP de 6 dígitos | [Patrón]: Presentational Component | [Accesibilidad]: label + role="alert" + `inputMode="numeric"` (teclado numérico en móvil) + `autoComplete="one-time-code"` (autocompleta el código en iOS/Android)
+function TwoFactorStep({
+  isLoading,
+  error,
+  onVerify,
+  onBack,
+}: {
+  isLoading: boolean;
+  error: string | null;
+  onVerify: (code: string) => Promise<boolean>;
+  onBack: () => void;
+}) {
+  const { t } = usePreferences();
+  const tf = t.auth.twoFactor; // Alias de textos del 2FA
+  const [code, setCode] = useState("");
+  const [formatError, setFormatError] = useState(false);
+
+  // [onSubmit]: valida 6 dígitos en cliente (el servidor vuelve a validar) | `preventDefault` (DOM): evita el envío nativo
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const ok = /^\d{6}$/.test(code);
+    setFormatError(!ok);
+    if (ok) await onVerify(code);
+  };
+  const shownError = formatError ? tf.invalidFormat : error;
+
+  return (
+    <div className="w-full max-w-[420px] space-y-5">
+      <header className="mb-2">
+        <h1 className="title-page">{tf.title}</h1>
+        <p className="mt-2 text-muted-foreground">{tf.intro}</p>
+      </header>
+      {shownError && (
+        <div role="alert" aria-live="polite" className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {shownError}
+        </div>
+      )}
+      <form method="post" onSubmit={onSubmit} noValidate className="space-y-5" aria-label={tf.title}>
+        <div className="space-y-1.5">
+          <Label htmlFor="otp-code">{tf.code}</Label>
+          <Input
+            id="otp-code"
+            name="code"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            pattern="\d{6}"
+            autoFocus
+            placeholder="123456"
+            className="text-center font-mono text-lg tracking-[0.4em]"
+            aria-invalid={!!shownError}
+            value={code}
+            // [Solo dígitos]: `replace` con regex quita lo que no sea número (pegar «123 456» funciona)
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+          />
+        </div>
+        <Button type="submit" disabled={isLoading} className="btn-lg btn-cta w-full">
+          {isLoading ? tf.submitting : tf.submit}
+        </Button>
+      </form>
+      <button type="button" onClick={onBack} className="w-full text-center text-sm font-semibold text-primary hover:text-primary-dark">
+        {tf.back}
+      </button>
     </div>
   );
 }

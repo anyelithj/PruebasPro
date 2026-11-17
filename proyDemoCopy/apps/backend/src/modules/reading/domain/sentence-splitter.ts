@@ -2,6 +2,27 @@
 // [Por qué propio y no Intl.Segmenter]: ICU parte «Mr. Smith» y «z.B. der» sin la lista de supresiones → aquí se controla por idioma y se prueba con Jest
 // [Unicode]: `\p{Lu}` (mayúscula de cualquier alfabeto: latino, cirílico…) y `\p{L}` con la bandera `u` (ES2018)
 
+// [Dictado · 2026-11-16]: tipos de texto y tamaño mínimo de un dictado (≥ 3 párrafos de ≥ 5 frases, como una lectura)
+export const READING_KINDS = ['reading', 'dictation'] as const;
+export type ReadingKind = (typeof READING_KINDS)[number];
+export const DICTATION_MIN_PARAGRAPHS = 3;
+export const DICTATION_MIN_SENTENCES = 5;
+
+// [dictationProblem]: null si el texto sirve como dictado; si no, el motivo en español | [Paradigma]: Funcional (pura)
+export function dictationProblem(
+  paragraphs: readonly string[],
+  language: string,
+): string | null {
+  if (paragraphs.length < DICTATION_MIN_PARAGRAPHS)
+    return `Un dictado necesita al menos ${DICTATION_MIN_PARAGRAPHS} párrafos (tiene ${paragraphs.length}).`;
+  const short = paragraphs.findIndex(
+    (p) => splitSentences(p, language).length < DICTATION_MIN_SENTENCES,
+  );
+  return short === -1
+    ? null
+    : `El párrafo ${short + 1} del dictado necesita al menos ${DICTATION_MIN_SENTENCES} frases.`;
+}
+
 export const MAX_SENTENCES = 400; // Tope por texto (= límite de la tabla del editor y del PDF)
 export const MAX_SENTENCE_CHARS = 600; // Una «frase» más larga se trocea por palabras (TTS y traducción por línea)
 
@@ -13,11 +34,49 @@ export interface SentenceDraft {
 
 // [ABBREVIATIONS]: palabras con punto que NO cierran frase (en, es, fr, de, pt) | `ReadonlySet` (TS): pertenencia O(1) e inmutable
 const ABBREVIATIONS: ReadonlySet<string> = new Set([
-  'mr.', 'mrs.', 'ms.', 'dr.', 'prof.', 'st.', 'jr.', 'sr.', 'vs.', 'etc.', 'e.g.', 'i.e.', 'no.', 'mt.', 'inc.', 'ltd.',
-  'sra.', 'srta.', 'dra.', 'ud.', 'uds.', 'pág.', 'núm.', 'av.', 'aprox.',
-  'm.', 'mme.', 'mlle.', 'p.ex.', 'cf.',
-  'z.b.', 'bzw.', 'usw.', 'hr.', 'fr.', 'nr.', 'ca.', 'd.h.', 'u.a.',
-  'sr.ª', 'dr.ª', 'v.', 'pe.',
+  'mr.',
+  'mrs.',
+  'ms.',
+  'dr.',
+  'prof.',
+  'st.',
+  'jr.',
+  'sr.',
+  'vs.',
+  'etc.',
+  'e.g.',
+  'i.e.',
+  'no.',
+  'mt.',
+  'inc.',
+  'ltd.',
+  'sra.',
+  'srta.',
+  'dra.',
+  'ud.',
+  'uds.',
+  'pág.',
+  'núm.',
+  'av.',
+  'aprox.',
+  'm.',
+  'mme.',
+  'mlle.',
+  'p.ex.',
+  'cf.',
+  'z.b.',
+  'bzw.',
+  'usw.',
+  'hr.',
+  'fr.',
+  'nr.',
+  'ca.',
+  'd.h.',
+  'u.a.',
+  'sr.ª',
+  'dr.ª',
+  'v.',
+  'pe.',
 ]);
 
 // [Fin de frase]: puntuación final + comillas/paréntesis de cierre + espacio, seguida de una mayúscula, dígito o signo de apertura (¿ ¡ « “ —) | lookahead `(?=…)` (ES2018 con `u`)
@@ -34,7 +93,10 @@ function isAbbreviation(token: string, language: string): boolean {
 }
 
 // [chunkLong]: frase demasiado larga → trozos ≤ MAX_SENTENCE_CHARS cortando entre palabras | Función pura
-export function chunkLong(sentence: string, max = MAX_SENTENCE_CHARS): string[] {
+export function chunkLong(
+  sentence: string,
+  max = MAX_SENTENCE_CHARS,
+): string[] {
   if (sentence.length <= max) return [sentence];
   const out: string[] = [];
   let cur = '';
@@ -66,11 +128,24 @@ export function splitParagraphs(text: string, verse = false): string[] {
 }
 
 // [splitSentences]: un párrafo → frases | verso: cada línea es una frase (se lee y se escucha verso a verso)
-export function splitSentences(paragraph: string, language: string, verse = false): string[] {
-  if (verse) return paragraph.split('\n').map((l) => l.trim()).filter(Boolean).flatMap((l) => chunkLong(l));
+export function splitSentences(
+  paragraph: string,
+  language: string,
+  verse = false,
+): string[] {
+  if (verse)
+    return paragraph
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .flatMap((l) => chunkLong(l));
   const text = paragraph.replace(/\s+/g, ' ').trim();
   if (!text) return [];
-  if (language === 'zh') return (text.match(CJK_SENTENCE) ?? []).map((s) => s.trim()).filter(Boolean).flatMap((s) => chunkLong(s));
+  if (language === 'zh')
+    return (text.match(CJK_SENTENCE) ?? [])
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .flatMap((s) => chunkLong(s));
   const out: string[] = [];
   let start = 0;
   // `matchAll` (ES2020): iterador de coincidencias con su índice
@@ -78,7 +153,12 @@ export function splitSentences(paragraph: string, language: string, verse = fals
     const idx = m.index ?? 0;
     const lastToken = text.slice(start, idx).split(' ').pop() ?? '';
     // Solo un punto simple puede ser abreviatura («?» y «!» siempre cierran)
-    if (m[0].startsWith('.') && !m[0].startsWith('..') && isAbbreviation(`${lastToken}.`, language)) continue;
+    if (
+      m[0].startsWith('.') &&
+      !m[0].startsWith('..') &&
+      isAbbreviation(`${lastToken}.`, language)
+    )
+      continue;
     out.push(text.slice(start, idx + m[0].trimEnd().length).trim());
     start = idx + m[0].length;
   }
@@ -88,7 +168,11 @@ export function splitSentences(paragraph: string, language: string, verse = fals
 }
 
 // [buildSentences]: párrafos → frases numeradas (párrafo + posición global), con el tope MAX_SENTENCES | Función pura
-export function buildSentences(paragraphs: readonly string[], language: string, verse = false): SentenceDraft[] {
+export function buildSentences(
+  paragraphs: readonly string[],
+  language: string,
+  verse = false,
+): SentenceDraft[] {
   const out: SentenceDraft[] = [];
   paragraphs.forEach((p, paragraph) => {
     for (const text of splitSentences(p, language, verse)) {

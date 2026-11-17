@@ -1,6 +1,8 @@
 import { BackLink } from "@/components/shared/BackLink"; // [2026-10-23]: enlace «volver» uniforme (icono + texto)
 import { notFound } from "next/navigation";
 import { getQuiz } from "@/lib/quiz-api";
+import { getCurrentUserRole } from "@/lib/auth";
+import { Role } from "@/lib/constants";
 import { QuizForm } from "@/components/quiz/QuizForm"; // [Formulario único]: el mismo del alta, con `initial`
 import { CATEGORY_VALUES } from "@/lib/categories";
 import type { LanguageSkill } from "@/types/quiz";
@@ -18,6 +20,7 @@ export default async function EditQuizPage(props: { params: Promise<{ id: string
     notFound();
   }
 
+  const role = await getCurrentUserRole();
   // [Mapeo preguntas con correctAnswer]: el backend lo devuelve para manager | [Principio]: SSOT
   const questions = (quiz.questions ?? []).map((q) => {
     const withAnswer = q as typeof q & { correctAnswer?: string };
@@ -35,11 +38,16 @@ export default async function EditQuizPage(props: { params: Promise<{ id: string
 
   return (
     <div className="w-full space-y-5 py-4">
-      <BackLink href={`/quiz/${id}`}>Volver al examen</BackLink>
+      {/* [2026-11-13]: igual que «Editar curso» → vuelve DIRECTO al listado de Gestión (antes pasaba por el detalle, que tenía su propio «Volver a exámenes») */}
+      {quiz.kind === "final" && quiz.courseId ? (
+        <BackLink href={`/courses/${encodeURIComponent(quiz.courseId)}`}>Volver al curso</BackLink>
+      ) : (
+        <BackLink href={role === Role.ADMIN ? "/admin/users?tab=examenes" : "/teacher/quizzes"} memo="exams">Volver a exámenes</BackLink>
+      )}
       <header className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Editar examen</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className="title-page">Editar examen</h1>
+          <p className="mt-1 text-muted-foreground">
             Edita metadatos y preguntas. Guardar reemplaza las preguntas existentes.
           </p>
         </div>

@@ -2,6 +2,14 @@ import { apiFetch } from "./api-client";
 import { getCurrentAccessToken } from "./auth";
 import type {
   CreateQuizInput,
+  ExamCatalogItem,
+  ExamManageRow,
+  ExamStatus,
+  IssuedCertificate,
+  CertificateDetail,
+  CertificateTemplate,
+  ExamAttemptRow,
+  IssuedFilters,
   MyHistoryItem,
   PaginatedQuizzes,
   Quiz,
@@ -24,14 +32,22 @@ export async function listQuizzes(params: {
   limit?: number;
   category?: string;
   difficulty?: string;
+  language?: string; // [2026-10-27]: ISO 639-1 → pestañas de idioma (como el catálogo de Cursos)
   // [publishedOnly]: false → incluye borradores (panel docente) | [Principio]: ISP
   publishedOnly?: boolean;
+  search?: string; // [2026-10-30]: filtros de Gestión → Exámenes
+  status?: string;
+  kind?: "practice" | "final" | "level" | "all"; // [2026-11-06]: por defecto el backend lista solo practice
 } = {}): Promise<PaginatedQuizzes> {
   const qs = new URLSearchParams();
   if (params.page) qs.set("page", String(params.page));
   if (params.limit) qs.set("limit", String(params.limit));
   if (params.category) qs.set("category", params.category);
   if (params.difficulty) qs.set("difficulty", params.difficulty);
+  if (params.language) qs.set("language", params.language);
+  if (params.search) qs.set("search", params.search);
+  if (params.status) qs.set("status", params.status);
+  if (params.kind) qs.set("kind", params.kind);
   if (params.publishedOnly !== undefined)
     qs.set("publishedOnly", String(params.publishedOnly));
   const q = qs.toString();
@@ -98,6 +114,66 @@ export async function listStudents(
 
 export async function getQuiz(id: string): Promise<Quiz> {
   return apiFetch<Quiz>(`/quiz/${id}`, { bearer: await withBearer() });
+}
+
+// [Exámenes · 2026-11-06]: estado del examen final de un curso o del examen de nivel (el backend lo genera la primera vez)
+export async function getCourseExam(courseId: string): Promise<ExamStatus> {
+  return apiFetch<ExamStatus>(`/quiz/exams/course/${encodeURIComponent(courseId)}`, { bearer: await withBearer() });
+}
+export async function getLevelExam(language: string, level: string): Promise<ExamStatus> {
+  return apiFetch<ExamStatus>(`/quiz/exams/level?language=${encodeURIComponent(language)}&level=${encodeURIComponent(level)}`, { bearer: await withBearer() });
+}
+
+export async function getExamCatalog(): Promise<ExamCatalogItem[]> {
+  return apiFetch<ExamCatalogItem[]>(`/quiz/exams/catalog`, { bearer: await withBearer() });
+}
+export async function getExamManage(): Promise<ExamManageRow[]> {
+  return apiFetch<ExamManageRow[]>(`/quiz/exams/manage`, { bearer: await withBearer() });
+}
+// [Certificados emitidos · 2026-11-06]: Gestión → Certificados (revocar = solo ADMIN, lo valida NestJS)
+// [2026-11-09]: filtros de la bandeja (texto, estado, curso, fechas) | `URLSearchParams` (Web): codifica cada valor
+export async function getIssuedCertificates(f: IssuedFilters = {}): Promise<IssuedCertificate[]> {
+  const qs = new URLSearchParams(Object.entries(f).filter(([, v]) => v) as [string, string][]);
+  return apiFetch<IssuedCertificate[]>(`/certificates/issued?${qs}`, { bearer: await withBearer() });
+}
+export async function getCertificateDetail(id: string): Promise<CertificateDetail> {
+  return apiFetch<CertificateDetail>(`/certificates/${encodeURIComponent(id)}/detail`, { bearer: await withBearer() });
+}
+export async function issueCertificateManually(email: string, courseId: string, reason: string): Promise<unknown> {
+  return apiFetch(`/certificates/manual`, { method: "POST", body: { email, courseId, reason }, bearer: await withBearer() });
+}
+export async function reissueCertificate(id: string, body: { recipientName?: string; courseTitle?: string; reason: string }): Promise<unknown> {
+  return apiFetch(`/certificates/${encodeURIComponent(id)}/reissue`, { method: "POST", body, bearer: await withBearer() });
+}
+export async function updateCertificateNotes(id: string, adminNotes: string): Promise<unknown> {
+  return apiFetch(`/certificates/${encodeURIComponent(id)}`, { method: "PATCH", body: { adminNotes }, bearer: await withBearer() });
+}
+export async function requestCertificateRevocation(id: string, reason: string): Promise<unknown> {
+  return apiFetch(`/certificates/${encodeURIComponent(id)}/revoke-request`, { method: "POST", body: { reason }, bearer: await withBearer() });
+}
+// [2026-11-09 · RF-32]: intentos por alumno, restablecer (ADMIN) y plantilla del PDF
+export async function getExamAttempts(search = ""): Promise<ExamAttemptRow[]> {
+  return apiFetch<ExamAttemptRow[]>(`/quiz/exams/attempts?${new URLSearchParams(search ? { search } : {})}`, { bearer: await withBearer() });
+}
+export async function resetExamAttempts(quizId: string, userId: string, reason: string): Promise<{ voided: number }> {
+  return apiFetch(`/quiz/exams/${encodeURIComponent(quizId)}/attempts/${encodeURIComponent(userId)}/reset`, { method: "POST", body: { reason }, bearer: await withBearer() });
+}
+// [2026-11-09 · RF-32]: cierre académico (gatillo de la emisión) y nota final del docente → devuelve si se emitió o qué falta
+type IssueOutcome = { certificate: { code: string } | null; pending: string | null };
+export async function approveClosure(userId: string, courseId: string, approve: boolean): Promise<IssueOutcome> {
+  return apiFetch<IssueOutcome>(`/certificates/closure`, { method: "POST", body: { userId, courseId, approve }, bearer: await withBearer() });
+}
+export async function setFinalGrade(userId: string, courseId: string, grade: number | null, note: string): Promise<IssueOutcome> {
+  return apiFetch<IssueOutcome>(`/certificates/grade`, { method: "PATCH", body: { userId, courseId, grade, note }, bearer: await withBearer() });
+}
+export async function getCertificateTemplate(): Promise<CertificateTemplate> {
+  return apiFetch<CertificateTemplate>(`/certificates/template`, { bearer: await withBearer() });
+}
+export async function saveCertificateTemplate(body: { institution: string; signerName?: string; signerTitle?: string; legalText?: string }): Promise<CertificateTemplate> {
+  return apiFetch<CertificateTemplate>(`/certificates/template`, { method: "PUT", body, bearer: await withBearer() });
+}
+export async function revokeCertificate(id: string, reason: string): Promise<unknown> {
+  return apiFetch(`/certificates/${encodeURIComponent(id)}/revoke`, { method: "PATCH", body: { reason }, bearer: await withBearer() });
 }
 
 // [Crear quiz]: POST /quiz | [Patrón]: Facade | [Principio]: SRP

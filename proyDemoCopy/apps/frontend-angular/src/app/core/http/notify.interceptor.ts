@@ -7,7 +7,7 @@ import { I18nService } from '@core/i18n/i18n.service';
 // [Excluidas]: peticiones que no son CRUD (transcribir, IA, juego, pago, exportar…) → no se avisa de lo que el usuario no percibe como «guardar»
 
 export const NOT_CRUD =
-  /\/(speech|auth|events|ai|lookup|attempts|rounds|turn|turns|draft|review|ask|chat|writing-corrections|nonce|verify|checkout-session|end|finish|practice|reindex|ipa|enrich|align|export|tx|orders|payments|flashcards|study-plan|fluency|conversations|sessions|extract-text|import-url)(\/|$|\?)/; // [2026-10-23]: leer texto de un archivo o enlace no guarda nada → sin toast
+  /\/(speech|auth|events|ai|lookup|attempts|rounds|turn|turns|draft|review|ask|chat|writing-corrections|nonce|verify|checkout-session|end|finish|practice|progress|reindex|ipa|enrich|align|export|tx|orders|payments|flashcards|study-plan|fluency|conversations|sessions|extract-text|import-url)(\/|$|\?)/; // [2026-10-23]: leer texto de un archivo o enlace no guarda nada → sin toast | [Fix 2026-10-30]: `progress` → el lector guarda el marcador en cada frase y salía «Registro editado con éxito» sin que el usuario editara nada
 
 export const notifyInterceptor: HttpInterceptorFn = (req, next) => {
   const verb = req.method;

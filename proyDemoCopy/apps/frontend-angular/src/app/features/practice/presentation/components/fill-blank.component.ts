@@ -17,7 +17,9 @@ import { blanksOf } from '../../domain/models/practice';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' }, // Elemento anfitrión en bloque → respeta márgenes y space-y del contenedor
   template: `
-    <p class="text-lg leading-[2.4] font-medium" [attr.lang]="language()">
+    <!-- [2026-11-06]: enunciado + IPA + traducción en UN contenedor gris -->
+    <div class="space-y-1 rounded-xl border border-border bg-muted/40 px-4 py-3">
+    <p class="type-lead leading-[2.4] font-medium" [attr.lang]="language()">
       @for (part of parts(); track $index) {
         <span>{{ part }}</span>
         @if ($index < parts().length - 1) {
@@ -34,6 +36,8 @@ import { blanksOf } from '../../domain/models/practice';
         }
       }
     </p>
+    <ng-content /><!-- [2026-11-02]: IPA + traducción DEBAJO del enunciado -->
+    </div>
   `,
 })
 export class FillBlankComponent {

@@ -13,6 +13,7 @@ export interface SongLyricsDraft {
   lines: number;
   model: string;
   source: 'llm';
+  warning?: string; // [Fix 2026-10-28]: letra parcial → el asistente lo muestra (no se oculta que faltan versos)
 }
 
 @Injectable()
@@ -27,6 +28,7 @@ export class DraftSongLyricsUseCase {
       lines: draft.stanzas.flat().length, // `flat` (ES2019): estrofas → versos
       model: draft.model,
       source: 'llm',
+      ...(draft.warning ? { warning: draft.warning } : {}), // Spread condicional (ES2018)
     };
   }
 }

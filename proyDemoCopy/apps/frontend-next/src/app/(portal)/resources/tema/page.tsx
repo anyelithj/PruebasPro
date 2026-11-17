@@ -39,6 +39,8 @@ export default async function TopicPage(props: { searchParams: Promise<SearchPar
   }
   // [Orden]: vocabulario primero (fichas), luego el resto por tipo | `toSorted` no se usa (compatibilidad) → copia + sort
   const ordered = [...items].sort((a, b) => KINDS.indexOf(a.kind) - KINDS.indexOf(b.kind));
+  const cards = ordered.filter((it) => it.kind === "vocabulary");
+  const rest = ordered.filter((it) => it.kind !== "vocabulary");
 
   return (
     <div className="fade-in w-full space-y-5 py-4">
@@ -53,9 +55,9 @@ export default async function TopicPage(props: { searchParams: Promise<SearchPar
           <KindIcon kind={kind} className="size-8" />
         </span>
         <div className="min-w-0">
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{sp.topic ?? t.title}</h1>
+          <h1 className="title-page">{sp.topic ?? t.title}</h1>
           {sp.topic && sp.language && <TopicTitle topic={sp.topic} language={sp.language} className="mt-1" />}
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-muted-foreground">
             {fmt(t.topicSubtitle, { language: sp.language ? languageLabel(sp.language) : "—", level: sp.level ?? "—", count: plural(locale, items.length, t.count) })}
           </p>
         </div>
@@ -68,36 +70,62 @@ export default async function TopicPage(props: { searchParams: Promise<SearchPar
       </header>
 
       {loadError && (
-        <p role="alert" className="rounded-lg border border-tone-danger-line bg-tone-danger-soft p-4 text-sm text-tone-danger">
+        <p role="alert" className="rounded-lg border border-tone-danger-line bg-tone-danger-soft p-4 text-tone-danger">
           {fmt(t.loadError, { error: loadError })}
         </p>
       )}
 
       {!loadError && ordered.length === 0 ? (
-        <p role="status" className="surface p-10 text-center text-sm text-muted-foreground">
+        <p role="status" className="surface p-10 text-center text-muted-foreground">
           {t.empty}
         </p>
       ) : (
-        // [Fichas]: grid responsivo; cada ficha muestra imagen/emoji, palabra, IPA, traducción, ejemplos y audio
-        <ul className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>
-          {ordered.map((it) => {
-            const meta = KIND_META[it.kind];
-            return (
-              <li key={it.id} className="surface flex flex-col overflow-hidden" style={{ borderTop: "3px solid var(--primary)" }}>
-                <header className="flex items-center justify-between gap-2 border-b border-border bg-muted px-4 py-2">
-                  <span className="badge bg-tone-brand-soft text-tone-brand">
-                    <span aria-hidden>{meta.icon}</span> {meta.label}
-                  </span>
-                  <span className="text-[11px] font-bold">{it.level}</span>
-                </header>
-                {/* `lang` (HTML): el lector de pantalla pronuncia la palabra en su idioma */}
-                <div className="flex-1 p-4" lang={it.language}>
+        <>
+          {/* [Fichas]: SOLO el vocabulario va en tarjetas (imagen/emoji, palabra, IPA, traducción, ejemplos y audio) */}
+          {cards.length > 0 && (
+            <ul className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>
+              {cards.map((it) => {
+                const meta = KIND_META[it.kind];
+                return (
+                  <li key={it.id} className="surface flex flex-col overflow-hidden" style={{ borderTop: "3px solid var(--primary)" }}>
+                    <header className="flex items-center justify-between gap-2 border-b border-border bg-muted px-4 py-2">
+                      <span className="badge bg-tone-brand-soft text-tone-brand">
+                        <span aria-hidden>{meta.icon}</span> {meta.label}
+                      </span>
+                      <span className="text-[11px] font-bold">{it.level}</span>
+                    </header>
+                    {/* `lang` (HTML): el lector de pantalla pronuncia la palabra en su idioma */}
+                    <div className="flex-1 p-4" lang={it.language}>
+                      <ResourcePreview kind={it.kind} content={it.content} language={it.language} />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {/* [2026-11-06 · Sin tarjetas]: reglas de gramática, frases y demás → texto seguido de lectura (uno debajo de otro, separados por una línea) */}
+          {/* [2026-11-09]: ejercicios (cortos) en DOS columnas desde md → sin tanto espacio en blanco; el resto sigue en una */}
+          {rest.length > 0 && rest.every((it) => it.kind === "exercise") ? (
+            <ol className="grid gap-4 md:grid-cols-2">
+              {rest.map((it, i) => (
+                <li key={it.id} className="surface flex gap-3 p-4" lang={it.language}>
+                  <span aria-hidden className="grid size-7 shrink-0 place-items-center rounded-full bg-tone-brand-soft text-sm font-bold text-tone-brand">{i + 1}</span>
+                  <div className="min-w-0 flex-1">
+                    <ResourcePreview kind={it.kind} content={it.content} language={it.language} />
+                  </div>
+                </li>
+              ))}
+            </ol>
+          ) : rest.length > 0 && (
+            <div className="surface divide-y divide-border px-5">
+              {rest.map((it) => (
+                <article key={it.id} className="py-5" lang={it.language}>
                   <ResourcePreview kind={it.kind} content={it.content} language={it.language} />
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+                </article>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

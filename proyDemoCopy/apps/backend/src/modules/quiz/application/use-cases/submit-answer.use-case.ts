@@ -11,6 +11,7 @@ import { SessionStatus } from '../../domain/entities/quiz-session.entity';
 import { DIFFICULTY_MULTIPLIER } from '../../domain/value-objects/difficulty.vo';
 import { INSTRUCTION_LANGUAGE } from '../../domain/value-objects/language.vo';
 import { SubmitAnswerDto } from '../dtos/submit-answer.dto';
+import { expired, isExam } from '../../domain/exam-rules';
 import { QuestionType } from '../../domain/entities/question.entity';
 import { AIClientService } from '../../../ai/ai-client.service';
 import { SaveFeedbackUseCase } from '../../../feedback/application/use-cases/save-feedback.use-case';
@@ -62,6 +63,12 @@ export class SubmitAnswerUseCase {
       throw new BadRequestException(`Quiz ${session.quizId} no longer exists`);
 
     const question = quiz.questions?.find((q) => q.id === dto.questionId);
+    // [2026-11-06 · Exámenes]: solo preguntas sorteadas para este intento y dentro del tiempo total
+    const exam = isExam(quiz.kind);
+    if (exam && session.questionIds && !session.questionIds.includes(dto.questionId))
+      throw new BadRequestException('La pregunta no es de este intento');
+    if (exam && expired(session.startedAt, quiz.timeLimitMinutes, new Date()))
+      throw new BadRequestException('Se acabó el tiempo del examen');
     if (!question) {
       throw new BadRequestException(
         `Question ${dto.questionId} not part of this quiz`,
@@ -115,7 +122,7 @@ export class SubmitAnswerUseCase {
     // [Feedback pedagógico]: solo si respuesta incorrecta | [Patrón]: Fallback Chain | [Principio]: SSOT
     // [Prioridad]: feedback almacenado en la pregunta (definido por autor/IA al crear el examen) → si no existe, se genera vía IA en caliente | [Patrón]: Prefer-Stored
     let feedback: string | null = null;
-    if (!isCorrect) {
+    if (!isCorrect && !exam) {
       const storedFeedback = question.feedback?.trim();
       if (storedFeedback) {
         feedback = storedFeedback;

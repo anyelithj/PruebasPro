@@ -1,0 +1,89 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Guía/Sistema de diseño" />
+
+# Sistema de diseño: Tailwind CSS 4 + `@aula/ui-tokens`
+
+`src/app/globals.css` es la única hoja de estilos: importa Tailwind, los tokens compartidos y define las **utilidades del sistema**
+con `@utility`. Angular importa la misma hoja, así que las clases de esta página se ven igual en los dos frontends.
+
+## Temas
+
+Seis temas definidos en `@aula/ui-tokens/tailwind-preset` (`THEMES`). El tema es una clase en `<html>`; los colores son variables CSS,
+por eso los componentes nunca escriben un color a mano.
+
+| Clase       | Icono | Dónde se ofrece                      |
+| ----------- | ----- | ------------------------------------ |
+| `light`     | ☀     | Portal y páginas públicas (por defecto) |
+| `dark`      | 🌙    | Portal y páginas públicas            |
+| `sepia`     | 📜    | Portal                               |
+| `hcontrast` | ⚡    | Portal                               |
+| `deepfocus` | 🎯    | Portal                               |
+| `vr`        | 🥽    | Portal                               |
+
+Las páginas públicas solo admiten `PUBLIC_THEMES` (Claro y Oscuro); con otro tema guardado se muestran en Claro.
+
+## Utilidades del sistema (en vivo)
+
+<div className="space-y-6 not-prose">
+  <section className="space-y-2">
+    <p className="title-overline">Botones · `btn` + variante + tamaño</p>
+    <div className="flex flex-wrap gap-2">
+      <button type="button" className="btn btn-primary">btn-primary</button>
+      <button type="button" className="btn btn-outline">btn-outline</button>
+      <button type="button" className="btn btn-ghost">btn-ghost</button>
+      <button type="button" className="btn btn-danger">btn-danger</button>
+      <button type="button" className="btn btn-primary btn-sm">btn-sm</button>
+      <button type="button" className="btn btn-primary btn-lg">btn-lg</button>
+    </div>
+  </section>
+
+  <section className="space-y-2">
+    <p className="title-overline">Campos · `control`</p>
+    <label className="type-label block max-w-sm space-y-1">
+      <span>Correo electrónico</span>
+      <input className="control w-full" type="email" placeholder="tu@correo.com" />
+    </label>
+  </section>
+
+  <section className="space-y-2">
+    <p className="title-overline">Chips y etiquetas · `chip` · `badge`</p>
+    <div className="flex flex-wrap items-center gap-2">
+      <a href="#chips" className="chip" aria-current="page">Activo</a>
+      <a href="#chips" className="chip">Inactivo</a>
+      <span className="badge">badge</span>
+    </div>
+  </section>
+
+  <section className="space-y-2">
+    <p className="title-overline">Superficie · `surface`</p>
+    <div className="surface max-w-sm p-4">Tarjeta con borde, fondo y sombra del tema.</div>
+  </section>
+
+  <section className="space-y-2">
+    <p className="title-overline">Escala tipográfica · `title-*` · `type-*`</p>
+    <p className="title-display">title-display</p>
+    <p className="title-page">title-page</p>
+    <p className="title-section">title-section</p>
+    <p className="title-card">title-card</p>
+    <p className="type-lead">type-lead — texto de entrada</p>
+    <p className="type-body">type-body — texto normal</p>
+    <p className="type-meta text-muted-foreground">type-meta — datos secundarios</p>
+    <p className="type-caption">type-caption — pie de foto</p>
+  </section>
+
+  <section className="space-y-2">
+    <p className="title-overline">Marca · `bg-gradient-brand` · `text-gradient-brand`</p>
+    <div className="flex flex-wrap items-center gap-4">
+      <span className="bg-gradient-brand rounded-xl px-4 py-2 font-semibold text-white">bg-gradient-brand</span>
+      <span className="text-gradient-brand text-2xl font-bold">text-gradient-brand</span>
+    </div>
+  </section>
+</div>
+
+## Reglas
+
+1. Un componente usa las **utilidades** (`btn`, `control`, `chip`, `surface`, `title-*`) antes que una lista larga de clases sueltas.
+2. Los colores salen de los tokens (`bg-background`, `text-foreground`, `text-tone-brand`…), nunca hexadecimales en el componente.
+3. Responsive con los breakpoints de Tailwind (`sm`, `md`, `lg`), diseñando primero para móvil.
+4. Las animaciones respetan **movimiento reducido** (`motion.css` de `@aula/ui-tokens`).

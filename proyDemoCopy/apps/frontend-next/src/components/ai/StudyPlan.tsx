@@ -9,16 +9,16 @@ export function StudyPlan({ steps, totalMinutes }: { steps: StudyPlanStep[]; tot
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">
+      <p className="text-muted-foreground">
         {steps.length} actividades · unos <b className="text-foreground">{totalMinutes} minutos</b> en total
       </p>
       <ol className="grid gap-3 md:grid-cols-2">
         {[...byTopic.entries()].map(([topic, items]) => (
-          <li key={topic} className="rounded-xl border border-border bg-card p-4">
-            <h3 className="mb-2 text-sm font-bold">{topic}</h3>
+          <li key={topic} className="surface p-4">
+            <h3 className="title-card mb-2">{topic}</h3>
             <ol className="space-y-1.5">
               {items.map((s) => (
-                <li key={s.order} className="flex items-start gap-2 text-sm">
+                <li key={s.order} className="flex items-start gap-2">
                   <span aria-hidden className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-tone-brand-soft text-[10px] font-bold text-tone-brand">
                     {s.order}
                   </span>

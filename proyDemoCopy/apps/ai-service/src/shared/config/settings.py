@@ -7,6 +7,7 @@
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import Field  # Pydantic v2: límites declarativos (ge/le)
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -35,6 +36,8 @@ class Settings(BaseSettings):
 
     # ===== Redis =====
     redis_url: str = "redis://localhost:6379/0"
+    # [Tarea 1 · RNF-06]: vida de una conversación con estado (guía, soporte, juego) sin actividad; Redis la borra sola
+    conversation_ttl_seconds: int = 86_400
 
     # ===== Voz local (Sprint 4.7) =====
     # Ruta de espeak-ng; vacío → PATH del sistema o C:/Program Files/eSpeak NG (instalación de winget)
@@ -46,7 +49,7 @@ class Settings(BaseSettings):
     whisper_compute_type: str = "int8"
     speech_max_upload_mb: int = 25  # [2026-10-23]: canciones MP3 / videos cortos (antes 10: solo grabaciones de juego)
     speech_pause_threshold_s: float = 0.6  # Silencio entre palabras que cuenta como pausa (configurable, RF-105)
-    alignment_max_upload_mb: int = 20  # [Sprint 9.4]: canción o diálogo completo (≈ 4–5 min en MP3); el audio no se guarda
+    alignment_max_upload_mb: int = 100  # [2026-11-03]: 20 → 100 (vídeos MP4 de canciones) · [Sprint 9.4]: canción o diálogo completo (≈ 4–5 min en MP3); el audio no se guarda
     level_classifier_min_confidence: float = 0.6  # [Sprint 9.5]: por debajo, la rúbrica CEFR del LLM decide el caso dudoso
 
     # ===== Backend NestJS =====
@@ -63,6 +66,8 @@ class Settings(BaseSettings):
     ollama_model: str = "aya-expanse:8b"
     # [keep_alive]: carga bajo demanda; Ollama libera el modelo tras este tiempo de inactividad
     ollama_keep_alive: str = "5m"
+    # [2026-11-05]: modelos más pequeños si el principal no cabe en RAM (= OLLAMA_FALLBACK_MODELS del backend)
+    ollama_fallback_models: str = "qwen2.5:1.5b,qwen2.5:0.5b"
 
     # ===== LLM propio · corrector de redacciones (Sprint 5.6, RF-144) =====
     # Nombre del GGUF registrado en Ollama (training/writing_corrector/Modelfile); si no existe se usa ollama_model
@@ -78,6 +83,10 @@ class Settings(BaseSettings):
     sentence_transformer_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     spacy_model: str = "es_core_news_md"
     faiss_index_path: str = "./data/faiss_index"
+    # [Tarea 9 · RF-57]: RAG del temario | el modelo de embeddings es `sentence_transformer_model` (variable SENTENCE_TRANSFORMER_MODEL)
+    rag_include_drafts: bool = False  # RAG_INCLUDE_DRAFTS=true → también borradores (con menor confianza); por defecto solo «revisado»
+    rag_top_k: int = Field(default=4, ge=3, le=5)  # Fragmentos por respuesta (3–5: caben en el contexto del modelo pequeño)
+    rag_min_score: float = 0.35  # Parecido híbrido mínimo (0..1); por debajo «no hay material» y el modelo debe decirlo
     # [Agente Guía · Sprint 7.9]: similitud coseno mínima para responder con la FAQ SIN LLM, y para usar una sección del manual
     guide_faq_threshold: float = 0.72
     guide_manual_threshold: float = 0.35

@@ -35,7 +35,8 @@ export class GetDialogueSessionUseCase {
       order: { position: 'ASC' },
     });
     // [2026-10-25]: conversaciones guardadas antes del arreglo pueden traer JSON crudo como traducción → se sanea al leer (null = «—»)
-    for (const t of turns) t.translation = sanitizeTranslation(t.text, t.translation);
+    for (const t of turns)
+      t.translation = sanitizeTranslation(t.text, t.translation);
     return { ...session, turns };
   }
 }

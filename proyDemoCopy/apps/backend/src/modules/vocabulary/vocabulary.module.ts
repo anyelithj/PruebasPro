@@ -6,7 +6,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import jwtConfig from '../../shared/config/jwt.config';
 import { CurriculumModule } from '../curriculum/curriculum.module';
 import { ResourceCreatedListener } from './application/listeners/resource-created.listener';
+import { UserWordsIndexListener } from './infrastructure/ai/user-words-index.listener'; // [2026-11-14 · RF-137]: palabras «aprender» → RAG privado
+import { CurriculumGrammarRepairListener } from './application/listeners/curriculum-grammar-repair.listener'; // [2026-11-05]: completa fichas de vocabulario del currículo
 import { CreateVocabularyEntryUseCase } from './application/use-cases/create-vocabulary-entry.use-case';
+import { CompleteGrammarUseCase } from './application/use-cases/complete-grammar.use-case';
 import { DeleteVocabularyEntryUseCase } from './application/use-cases/delete-vocabulary-entry.use-case';
 import {
   GetVocabularyEntryUseCase,
@@ -54,17 +57,20 @@ import { WordStatusController } from './presentation/word-status.controller';
   ],
   providers: [
     { provide: LANGUAGE_TOOLS, useClass: LanguageToolsClient },
+    UserWordsIndexListener,
     LookupTermUseCase,
     GetLookupUseCase,
     TopicTitleUseCase, // [2026-10-19]
     LookupWordUseCase,
     PurgeLookupCacheUseCase,
     CreateVocabularyEntryUseCase,
+    CompleteGrammarUseCase, // [2026-11-03]: regla obligatoria de vocabulario
     ListMyVocabularyUseCase,
     GetVocabularyEntryUseCase,
     UpdateVocabularyEntryUseCase,
     DeleteVocabularyEntryUseCase,
     ResourceCreatedListener,
+    CurriculumGrammarRepairListener,
     // [Sprint 10.2 · RF-137]: «Aprender» / «Aprendido» del diccionario
     MarkWordLearningUseCase,
     ListMarkedWordsUseCase,

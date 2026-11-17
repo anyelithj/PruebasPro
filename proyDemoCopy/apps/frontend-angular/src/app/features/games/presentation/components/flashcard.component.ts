@@ -8,6 +8,7 @@ import {
   untracked,
 } from '@angular/core';
 import { PronunciationButtonComponent } from '@shared/ui/molecules/pronunciation-button/pronunciation-button.component';
+import { IpaTextElement } from '@features/vocabulary/presentation/components/ipa-text.element'; // [2026-10-28]: IPA (+ traducción) calculada con la caché compartida de la ruta
 // [FlashcardComponent · Presentacional · Sprint 8.8]: tarjeta que PIDE RECORDAR antes de mostrar la respuesta (recuperación activa) y luego califica el recuerdo 0–5 para SM-2 | [Patrón]: State Machine (oculta → mostrada → calificada) + Presentational Component | [Principio]: SRP (la repetición espaciada la calcula NestJS) | [Paradigma]: Declarativo + Reactivo
 // [A11y]: la respuesta aparece en una región `aria-live`; los botones de calidad dicen el texto («Difícil»), no solo un número · [Movimiento]: giro 3D desactivado con «reducir movimiento»
 
@@ -15,7 +16,7 @@ export const QUALITY_VALUES = [0, 3, 4, 5] as const; // SM-2: 0 = olvido · 3 = 
 
 @Component({
   selector: 'aula-flashcard',
-  imports: [PronunciationButtonComponent],
+  imports: [PronunciationButtonComponent, IpaTextElement],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' }, // Elemento anfitrión en bloque → respeta márgenes y space-y del contenedor
   template: `
@@ -23,13 +24,15 @@ export const QUALITY_VALUES = [0, 3, 4, 5] as const; // SM-2: 0 = olvido · 3 = 
       <div
         class="flex min-h-48 flex-col items-center justify-center gap-3 rounded-2xl border border-border bg-gradient-soft p-6 text-center"
       >
-        <p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <p class="type-meta font-semibold uppercase tracking-wider text-muted-foreground">
           {{ question() }}
         </p>
         <div class="flex items-center gap-2">
           <p class="text-3xl font-extrabold" [attr.lang]="language()">{{ front() }}</p>
           <aula-pronunciation-button [text]="front()" [language]="language()" />
         </div>
+        <!-- [IPA · 2026-10-28]: solo la transcripción (la traducción es la respuesta → aparece al mostrarla) -->
+        <aula-ipa-text-element class="text-sm" [text]="front()" [language]="language()" ipaOnly="true" withTranslation="false" />
         <div aria-live="polite" class="min-h-12">
           @if (shown()) {
             <p
@@ -39,12 +42,12 @@ export const QUALITY_VALUES = [0, 3, 4, 5] as const; // SM-2: 0 = olvido · 3 = 
               {{ back() || '—' }}
             </p>
             @if (example()) {
-              <p class="mt-1 text-sm italic text-muted-foreground" [attr.lang]="language()">
+              <p class="mt-1 italic text-muted-foreground" [attr.lang]="language()">
                 «{{ example() }}»
               </p>
             }
           } @else {
-            <p class="text-sm text-muted-foreground">{{ recallHint() }}</p>
+            <p class="text-muted-foreground">{{ recallHint() }}</p>
           }
         </div>
       </div>

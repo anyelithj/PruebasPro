@@ -33,6 +33,28 @@ export const linkEmail = ({
     `<p style="font-size:12px;color:#666">${escapeHtml(footer)}</p>`,
 });
 
+// [codeEmail · 2026-11-16 · 2FA]: variante «correo con código» (OTP) de la misma plantilla | [Principio]: DRY (reusa escapeHtml y el tono de linkEmail) | [Paradigma]: Funcional (función pura)
+// `Omit<…>` (TS utility type): mismos campos que LinkEmailInput salvo botón y enlace; `code` los reemplaza
+export const codeEmail = ({
+  to,
+  firstName,
+  subject,
+  intro,
+  code,
+  footer,
+}: Omit<LinkEmailInput, 'button' | 'link'> & {
+  code: string;
+}): MailMessage => ({
+  to,
+  subject,
+  text: `Hola ${firstName},\n\n${intro}\n\n${code}\n\n${footer}`,
+  // [HTML]: código grande y espaciado (fácil de leer y copiar) | estilos en línea: los clientes de correo ignoran <style>
+  html:
+    `<p>Hola ${escapeHtml(firstName)},</p><p>${escapeHtml(intro)}</p>` +
+    `<p style="font-size:28px;font-weight:700;letter-spacing:6px;font-family:monospace">${escapeHtml(code)}</p>` +
+    `<p style="font-size:12px;color:#666">${escapeHtml(footer)}</p>`,
+});
+
 // [escapeHtml]: reemplaza & < > " ' por entidades HTML | `replace` + regex global (ES5) + Lookup Table | `!` (TS): el regex garantiza la clave
 export const escapeHtml = (s: string): string =>
   s.replace(

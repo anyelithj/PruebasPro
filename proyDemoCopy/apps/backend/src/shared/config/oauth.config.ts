@@ -5,8 +5,4 @@ export default registerAs('oauth', () => ({
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID ?? '',
   },
-  microsoft: {
-    clientId: process.env.MICROSOFT_CLIENT_ID ?? '',
-    tenantId: process.env.MICROSOFT_TENANT_ID ?? 'common',
-  },
 }));

@@ -13,12 +13,15 @@ export interface ErrorFinding {
     | 'grammar'
     | 'vocabulary'
     | 'spelling'
+    | 'capitalization' // [2026-10-28]: Mayúsculas («ana» → «Ana»), separada de puntuación como en GrammarMama
     | 'punctuation'
     | 'word_order'
-    | 'style';
+    | 'style'
+    | 'article' // [2026-11-02]: Artículo («teacher» → «a teacher»)
+    | 'transcription'; // [2026-11-13 · Anexo A]: posible error del reconocimiento de voz
   original: string;
   correction: string;
-  explanation_es: string;
+  explanation_es: string; // [2026-10-28]: SIEMPRE en español (FastAPI sustituye la del LLM si llega en otro idioma)
   start: number | null; // Índices [start, end) sobre el texto original (calculados en el servidor)
   end: number | null;
 }
@@ -30,6 +33,8 @@ export interface WritingCorrection {
   fallback_used: boolean; // true → respondió el modelo base porque el propio no estaba o falló
   latency_ms: number;
   flags: string[]; // REQUIERE_REVISION: el contenido de IA nunca se presenta como verificado
+  language?: string; // [2026-10-27]: idioma con el que se corrigió (el detectado si se pidió 'auto')
+  detected_language?: string | null; // [2026-10-27]: solo cuando language='auto'
 }
 export interface WritingScope {
   languages: string[];
@@ -40,6 +45,46 @@ export interface WritingCorrectionInput {
   text: string;
   language: string;
   level: string;
+  context?: string; // [2026-11-11]: pregunta a la que responde el alumno
+}
+
+// ───── [Corrector pedagógico ÚNICO · Anexo A · 2026-11-13]: espejo de corrector_io.py (FastAPI es la fuente de verdad) ─────
+export type TextKind = 'frase' | 'titulo' | 'expresion';
+export type SpeechOrigin = 'voz' | 'escrito';
+export type Verdict = 'correcta' | 'con_errores' | 'no_responde';
+export interface CorrectorInput {
+  pregunta_previa?: string; // Pregunta del avatar o del ejercicio
+  texto: string;
+  idioma: string; // en | es | fr | de | pt | zh | ru
+  nivel: string; // A1–C2
+  tema?: string;
+  tipo_de_texto?: TextKind;
+  origen?: SpeechOrigin;
+}
+export interface SentenceCorrection {
+  frase_corregida: string;
+  veredicto: Verdict;
+  errores: {
+    categoria: string;
+    original: string;
+    sugerencia: string;
+    explicacion: string;
+  }[];
+  traduccion: string;
+  alternativas_traduccion: {
+    tipo: 'literal' | 'natural' | 'cercana';
+    texto: string;
+  }[];
+  comentario: string;
+}
+// [Respuesta]: la corrección + puntuación (100 solo si «correcta») + trazabilidad (modelo, versión del prompt, latencia · RNF-35)
+export interface CorrectorResult {
+  correccion: SentenceCorrection;
+  puntuacion: number;
+  modelo: string;
+  respaldo: boolean;
+  version_prompt: string;
+  latencia_ms: number;
 }
 
 @Injectable()
@@ -85,6 +130,14 @@ export class OwnLlmClientService {
     token: string,
   ): Promise<WritingCorrection> {
     return this.call('post', '/correct', token, input, 150_000);
+  }
+
+  // [correctSentence · Anexo A]: el MISMO JSON alimenta el feedback previo, la puntuación y la respuesta del avatar | 150 s: carga en frío en CPU
+  correctSentence(
+    input: CorrectorInput,
+    token: string,
+  ): Promise<CorrectorResult> {
+    return this.call('post', '/corrector', token, input, 150_000);
   }
 
   scope(token: string): Promise<WritingScope> {

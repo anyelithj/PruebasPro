@@ -16,6 +16,7 @@ export interface CourseSearchCriteria {
   search?: string;
   isProBono?: boolean;
   isPublished?: boolean;
+  createdBy?: string; // [2026-10-27]: «Mis cursos» del docente (gestión) | `?` (TS): ausente = todos
   // [onlyActiveGroups]: restringe a los idiomas vigentes (excluye catálogo legacy)
   onlyActiveGroups?: boolean;
   page?: number;
@@ -29,13 +30,15 @@ export interface PaginatedCourses {
   limit: number;
 }
 
-// [Toggle payload]: estado boolean atómico para favoritos/reacciones
-export type ReactionKind = 'like' | 'love' | 'favorite';
-
 export interface ICourseRepository {
   findAll(criteria: CourseSearchCriteria): Promise<PaginatedCourses>;
   findById(id: string): Promise<Course | null>;
   findBySlug(slug: string): Promise<Course | null>;
+  // [findTitlesInScope · 2026-10-28]: id + título de los cursos del mismo idioma (grupo) y nivel (categoría) → regla anti-duplicados por título normalizado | lectura ligera
+  findTitlesInScope(
+    group: string,
+    category: string,
+  ): Promise<Array<Pick<Course, 'id' | 'title'>>>;
   // [Mutaciones administrativas]: alta/edición/baja/publicación | [Principio]: DIP
   create(course: Partial<Course>): Promise<Course>;
   update(id: string, patch: Partial<Course>): Promise<Course>;

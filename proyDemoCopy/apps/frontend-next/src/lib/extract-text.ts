@@ -1,11 +1,11 @@
 // [Solo servidor]: usa safeFetch (node:*) y librerías de Node → nunca se empaqueta para el navegador
 import { NextResponse } from "next/server";
 import { parse } from "node-html-parser";
-import { getCurrentUserPayload, getFreshAccessToken } from "@/lib/auth";
+import { getFreshAccessToken, getFreshUserPayload } from "@/lib/auth"; // [Fix 2026-10-28]: guards con renovación de sesión (antes getCurrentUserPayload → 401 con el access vencido)
 import { apiUrl } from "@/lib/constants"; // [2026-10-23]: URL de NestJS para la transcripción de audio/video
 import { Role } from "@/lib/constants";
 import { pdfToText, withOcrWorker } from "@/lib/extract-text-pdf"; // [2026-10-24]: PDF (líneas por posición + OCR de escaneos) en su propio módulo de servidor | antes importaba lib/pdf-text (código de navegador)
-import { safeFetch } from "@/lib/safe-fetch";
+import { politeFetch } from "@/lib/safe-fetch"; // [Tarea 9]: anti-SSRF + robots.txt + límite de frecuencia
 // [extractText · 2026-10-23]: texto de un archivo (PDF, Word .docx, texto, imagen con OCR) o de un ENLACE (página web o archivo publicado)
 // [Uso]: letra de canciones (/musica/subir), diálogos por URL y contenido de actividades → un solo extractor para todo el portal
 // [Patrón]: Strategy (extractor por tipo) + Adapter (bytes → texto) | [Principio]: DRY + OCP (formato nuevo = una rama) | [Paradigma]: Funcional + asíncrono
@@ -157,7 +157,7 @@ export async function textFromBytes(data: Buffer, type: string, name: string, la
 
 // [textFromUrl]: descarga con protección SSRF (safeFetch) y extrae según lo que devuelva el enlace (HTML, PDF, imagen…)
 export async function textFromUrl(url: string, language = "en", maxChars = MAX_TEXT): Promise<ExtractedText> {
-  const res = await safeFetch(url);
+  const res = await politeFetch(url);
   const name = new URL(res.url).pathname.split("/").pop() ?? "";
   return textFromBytes(res.body, res.contentType, name, language, maxChars);
 }
@@ -177,14 +177,15 @@ export function toMarkdown(text: string, title = ""): string {
 }
 
 // [requireUser · 2026-10-23]: 401 o null — el traductor lo usan también los estudiantes (subir un documento y traducirlo)
+// [Fix 2026-10-28]: `getFreshUserPayload` renueva el access token vencido con el refresh (el proxy no cubre /api/*) → ya no hay 401 tras 15 min con el formulario abierto
 export async function requireUser(): Promise<NextResponse | null> {
-  return (await getCurrentUserPayload()) ? null : NextResponse.json({ message: "Inicia sesión." }, { status: 401 });
+  return (await getFreshUserPayload()) ? null : NextResponse.json({ message: "Inicia sesión." }, { status: 401 });
 }
 
 // [requireAuthor]: 401/403 o null si puede importar | lo usan /api/media/extract-text y /api/dialogues/import-url
 export async function requireAuthor(): Promise<NextResponse | null> {
-  const user = await getCurrentUserPayload();
-  if (!user) return NextResponse.json({ message: "Inicia sesión." }, { status: 401 });
+  const user = await getFreshUserPayload(); // [Fix 2026-10-28]: renueva la sesión antes de decidir (causa raíz del 401 al importar por URL en Cursos)
+  if (!user) return NextResponse.json({ message: "Tu sesión expiró: vuelve a iniciar sesión para importar." }, { status: 401 });
   if (user.role !== Role.TEACHER && user.role !== Role.ADMIN) return NextResponse.json({ message: "No tienes permiso para importar contenido." }, { status: 403 });
   return null;
 }

@@ -1,9 +1,11 @@
 "use client";
-import { Sparkles } from "lucide-react"; // [2026-10-23]: iconos SVG uniformes (antes emojis)
-import { useRef, useState } from "react";
+import { FileUp, PenLine, Sparkles, Trash2 } from "lucide-react"; // [2026-10-23]: iconos SVG uniformes (antes emojis)
+import { useEffect, useRef, useState } from "react";
+import { CEFR_LEVELS, type CefrLevel } from "@aula/shared-schemas";
 import { usePreferences } from "@/components/layout/PreferencesProvider"; // [i18n]: textos del modal de resultado
 import { ResultDialog, type SaveResult } from "@/components/shared/ResultDialog"; // [Modal de resultado]: éxito / error al guardar
 import { fmt } from "@aula/shared-i18n";
+import { TextImport, type ImportedText } from "@/components/shared/TextImport"; // [2026-11-03]: examen desde un archivo o enlace (mismo importador que Cursos y Recursos)
 import { useRouter } from "next/navigation";
 import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CATEGORIES, CATEGORY_VALUES } from "@/lib/categories";
 import { DIFFICULTY_OPTIONS } from "@/lib/constants";
+import { syllabusLevel, textLevel } from "@/config/curriculum-topics"; // [2026-11-11]: nivel según los temas del catálogo
 import { DEFAULT_LANGUAGE, LANGUAGES, LANGUAGE_VALUES, languageLabel } from "@/lib/languages";
 import type {
   AIProvider,
@@ -23,6 +26,29 @@ import type {
   QuestionType,
   Quiz,
 } from "@/types/quiz";
+// [Nivel MCER · 2026-11-10]: chips A1–C2 (mismo diseño que Manual / Importar / Con IA de Cursos) detectados del título o tema («… A2 …») · la banda de dificultad se deriva
+const BAND: Record<CefrLevel, Difficulty> = { A1: "easy", A2: "easy", B1: "medium", B2: "medium", C1: "hard", C2: "hard" } as Record<CefrLevel, Difficulty>;
+const BAND_DEFAULT: Record<string, CefrLevel> = { easy: "A2", medium: "B1", hard: "C1" };
+export const detectCefr = (...texts: (string | undefined)[]): CefrLevel | null =>
+  (texts.join(" ").toUpperCase().match(/([ABC][12])/)?.[1] as CefrLevel | undefined) ?? null;
+// [levelWord · 2026-11-11]: «Inglés básico» → A1 · «intermedio alto» → B2 (más específico primero) | Función pura
+const LEVEL_WORDS: Array<[RegExp, CefrLevel]> = [[/intermedio[\s-]*alto|upper[\s-]*intermediate/i, "B2"], [/pre[\s-]*intermedio|elemental|elementary/i, "A2"], [/intermedio|intermediate/i, "B1"], [/b[aá]sico|principiante|beginner/i, "A1"], [/avanzado|advanced/i, "C1"], [/maestr[ií]a|proficiency/i, "C2"]];
+const levelWord = (text: string): CefrLevel | null => LEVEL_WORDS.find(([re]) => re.test(text))?.[1] ?? null;
+type ExamKind = "practice" | "final" | "level";
+const KIND_OPTIONS: { value: ExamKind; label: string; hint: string }[] = [
+  { value: "practice", label: "Práctica", hint: "Repaso libre, sin nota oficial ni certificado." },
+  { value: "final", label: "Examen final de curso", hint: "Da el certificado del curso (70 % para aprobar, 3 intentos). Se crea desde el curso." },
+  { value: "level", label: "Examen de nivel MCER", hint: "Certifica un nivel (A1–C2) de un idioma, sin curso. Uno por idioma y nivel." },
+];
+
+// [QUESTION_SOURCES · 2026-11-13]: mismos textos e iconos que el selector del temario de Cursos | [Patrón]: Lookup Table
+type QuestionSource = "manual" | "import" | "ai";
+const QUESTION_SOURCES: ReadonlyArray<{ key: QuestionSource; label: string; Icon: typeof PenLine; hint: string }> = [
+  { key: "manual", label: "Manual", Icon: PenLine, hint: "Escribe tú las preguntas: añade una pregunta, elige su tipo, las opciones y la respuesta correcta." },
+  { key: "import", label: "Importar", Icon: FileUp, hint: "Sube un Word, PDF, imagen (OCR), Excel, audio/video o pega un enlace: la IA hace las preguntas solo con ese contenido." },
+  { key: "ai", label: "Generar con IA", Icon: Sparkles, hint: "Escribe el tema, elige la cantidad y el tipo de preguntas, y la IA las genera para que las revises." },
+];
+
 // [QuizForm]: formulario ÚNICO de alta y edición de examen (con `initial` edita vía PATCH, sin él crea vía POST) | form RHF + Zod | selector de idioma objetivo (explicaciones en español) | sin publicar por defecto | panel preguntas oculto hasta primera pregunta creada/generada | botón "Crear pregunta" + "Generar pregunta con IA" | [Patrón]: Container/Presentational + Composite + Strategy UI | [Principio]: SRP + DRY + DIP | [Paradigma]: Funcional + Reactivo + Declarativo
 
 // [emptyToUndefined]: un <input type=number> vacío llega como "" → `coerce` lo convertía en 0 y fallaba `min(5)` SIN mensaje visible (el examen «no se creaba») | [2026-10-23] | [Paradigma]: Funcional (pura)
@@ -86,6 +112,8 @@ type CreateQuizForm = z.input<typeof createQuizSchema>;
 
 // [Datos iniciales en edición]: `id` + valores del formulario (preguntas con correctAnswer) | [Principio]: SSOT con el esquema
 export type QuizFormInitial = { id: string } & CreateQuizForm;
+// [QuizFormPreset · 2026-11-09]: «Crear examen» desde un curso → datos del curso + temario (subtemas) para la IA; se guarda como examen FINAL del curso
+export type QuizFormPreset = { courseId: string; title: string; description: string; language: Language; topic: string; source: string; cefr?: string }; // [2026-11-10]: cefr = nivel del curso
 
 const QUESTION_TYPES: Array<{ value: QuestionType; label: string }> = [
   { value: "multiple_choice", label: "Opción múltiple" },
@@ -124,7 +152,8 @@ interface AIGenerateResponse {
   fallbackUsed: boolean;
 }
 
-export function QuizForm({ initial }: { initial?: QuizFormInitial }) {
+// `finalCourses` (2026-11-11): cursos SIN examen final → «Examen final de curso» sin ?curso= elige aquí el curso y abre el MISMO flujo (temario, título y nivel del curso)
+export function QuizForm({ initial, preset, finalCourses = [] }: { initial?: QuizFormInitial; preset?: QuizFormPreset; finalCourses?: ReadonlyArray<{ courseId: string; courseTitle: string }> }) {
   const isEdit = Boolean(initial); // Modo edición → PATCH y panel de preguntas abierto
   const router = useRouter();
   const { t } = usePreferences();
@@ -137,8 +166,11 @@ export function QuizForm({ initial }: { initial?: QuizFormInitial }) {
   const [questionsPanelOpen, setQuestionsPanelOpen] = useState(isEdit);
 
   // [Estado UI generador IA]: panel inline contraíble con su propio loading/error | [Patrón]: Local State
-  const [aiPanelOpen, setAiPanelOpen] = useState(false);
-  const [aiTopic, setAiTopic] = useState("");
+  const [aiPanelOpen, setAiPanelOpen] = useState(Boolean(preset)); // Desde un curso: el generador ya abierto con el temario
+  const [aiTopic, setAiTopic] = useState(preset?.topic ?? "");
+  const [aiSource, setAiSource] = useState<ImportedText | null>(
+    preset?.source ? { title: preset.title, text: preset.source, markdown: preset.source, holder: "" } : null,
+  ); // [2026-11-03]: material importado → la IA crea las preguntas a partir de él
   // [Cantidad como string]: permite vaciar el campo al editar; se valida/clampa al generar | [Patrón]: Controlled Raw Input
   const [aiAmount, setAiAmount] = useState("5");
   // [Tipo de pregunta a generar]: opción múltiple, verdadero/falso o respuesta abierta | [Patrón]: Strategy hint
@@ -147,6 +179,11 @@ export function QuizForm({ initial }: { initial?: QuizFormInitial }) {
   const [aiRunning, setAiRunning] = useState(false);
   const [aiNotice, setAiNotice] = useState<string | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [kind, setKind] = useState<ExamKind>(preset ? "final" : "practice");
+  const [cefr, setCefr] = useState<CefrLevel>(
+    detectCefr(preset?.cefr, preset?.title, preset?.topic, initial?.title) ?? BAND_DEFAULT[initial?.difficulty ?? "medium"] ?? "B1",
+  );
+  const cefrTouched = useRef(Boolean(preset?.cefr && detectCefr(preset.cefr))); // Desde un curso: su nivel manda (el tema no lo cambia) · elegido a mano → la detección automática ya no lo cambia
 
   const {
     register,
@@ -160,9 +197,9 @@ export function QuizForm({ initial }: { initial?: QuizFormInitial }) {
     resolver: zodResolver(createQuizSchema),
     // [Edición]: valores del examen; [Alta]: valores por defecto | `??` (ES2020)
     defaultValues: initial ?? {
-      title: "",
-      description: "",
-      language: DEFAULT_LANGUAGE,
+      title: preset?.title ?? "",
+      description: preset?.description ?? "",
+      language: preset?.language ?? DEFAULT_LANGUAGE,
       category: "general",
       difficulty: "medium",
       timePerQuestionSeconds: 30,
@@ -174,6 +211,20 @@ export function QuizForm({ initial }: { initial?: QuizFormInitial }) {
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "questions" });
+  const watchedTitle = watch("title");
+  const watchedLanguage = watch("language");
+  // [Auto MCER]: el nivel sale del título o del tema del examen mientras el docente no lo cambie a mano
+  // [2026-11-11]: además por palabras («básico», «intermedio»…) y por los temas del catálogo (como el formulario de cursos)
+  useEffect(() => {
+    const found =
+      detectCefr(watchedTitle, aiTopic) ??
+      levelWord(`${watchedTitle} ${aiTopic}`) ??
+      syllabusLevel([watchedTitle ?? "", ...aiTopic.split(/[,;\n]/)].map((t) => t.trim()).filter(Boolean), watchedLanguage as Language)?.level ??
+      textLevel(`${watchedTitle ?? ""} ${aiTopic}`, watchedLanguage as Language) ?? // [2026-11-16]: tema del catálogo dentro del título («Examen de presente simple»)
+      null;
+    if (found && !cefrTouched.current) setCefr(found);
+  }, [watchedTitle, aiTopic, watchedLanguage]);
+  useEffect(() => setValue("difficulty", BAND[cefr]), [cefr, setValue]);
   const watchedQuestions = watch("questions");
 
   // [Crea pregunta manual vacía]: hidrata defaults sensatos + hereda tiempo global del examen y abre panel | [Principio]: DRY
@@ -189,6 +240,13 @@ export function QuizForm({ initial }: { initial?: QuizFormInitial }) {
       timeLimitSeconds: globalTime,
     });
     setQuestionsPanelOpen(true);
+  };
+
+  // [Origen de las preguntas · 2026-11-13]: Manual cierra el panel de IA; Importar / Generar con IA lo abren (mismo panel, mismo importador)
+  const [questionSource, setQuestionSource] = useState<QuestionSource>(preset ? "ai" : "manual");
+  const chooseSource = (key: QuestionSource) => {
+    setQuestionSource(key);
+    if ((key === "manual") === aiPanelOpen) openAiPanel(); // `openAiPanel` alterna: solo se llama si el estado debe cambiar
   };
 
   // [Abrir panel IA con Tema autogenerado]: al abrir, si Tema está vacío se prefilla con el título; si no hay título, con la categoría | [Patrón]: Smart Default | [Principio]: DRY
@@ -210,8 +268,11 @@ export function QuizForm({ initial }: { initial?: QuizFormInitial }) {
   const generateAiQuestions = async () => {
     setAiError(null);
     setAiNotice(null);
-    if (!aiTopic.trim()) {
-      setAiError("Indica un tema para generar las preguntas.");
+    // [2026-11-03]: con material importado el tema es opcional (se usa el título del archivo/enlace)
+    if (questionSource === "import" && !aiSource) return setAiError("Primero importa un archivo o pega un enlace."); // [2026-11-16]: «Importar» exige material
+    const topic = aiTopic.trim() || aiSource?.title?.trim() || "";
+    if (topic.length < 2) {
+      setAiError("Indica un tema o importa un archivo o enlace para generar las preguntas.");
       return;
     }
     // [Clamp cantidad]: el campo puede estar vacío o fuera de rango; se normaliza a [1,20] | [Patrón]: Input Sanitization
@@ -227,8 +288,9 @@ export function QuizForm({ initial }: { initial?: QuizFormInitial }) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            topic: aiTopic.trim(),
+            topic: topic.slice(0, 2000),
             amount: batch,
+            ...(questionSource === "import" && aiSource?.markdown.trim() ? { sourceText: aiSource.markdown.trim().slice(0, 6000) } : {}),
             type: aiType,
             language: getValues("language"),
             category: getValues("category"),
@@ -303,6 +365,8 @@ export function QuizForm({ initial }: { initial?: QuizFormInitial }) {
         language: parsed.language,
         timePerQuestionSeconds: parsed.timePerQuestionSeconds,
         isPublished: parsed.isPublished,
+        ...(preset ? { courseId: preset.courseId, cefrLevel: cefr } : {}),
+        ...(!preset && kind === "level" ? { kind: "level" as const, cefrLevel: cefr } : {}),
         questions: parsed.questions.map((q) => ({
           text: q.text,
           type: q.type,
@@ -326,7 +390,8 @@ export function QuizForm({ initial }: { initial?: QuizFormInitial }) {
       }
       const saved = (await res.json()) as Quiz;
       // [Éxito]: modal de confirmación; al cerrarlo se abre el detalle del examen (onCloseResult)
-      savedHref.current = `/quiz/${saved.id ?? initial?.id}`;
+      // [2026-11-10]: examen final creado desde el curso → de vuelta al borrador del curso para publicarlo
+      savedHref.current = preset ? `/courses/${encodeURIComponent(preset.courseId)}` : `/quiz/${saved.id ?? initial?.id}`;
       setResult({ ok: true, message: fmt(t.common.result[isEdit ? "examUpdated" : "examCreated"], { title: parsed.title }) });
     } catch (err) {
       const reason = err instanceof Error ? err.message : "Error al guardar el examen";
@@ -370,7 +435,7 @@ export function QuizForm({ initial }: { initial?: QuizFormInitial }) {
             <Label htmlFor="title">Título *</Label>
             <Input id="title" autoComplete="off" {...register("title")} />
             {errors.title && (
-              <p className="text-xs text-destructive">{errors.title.message}</p>
+              <p className="type-meta text-destructive">{errors.title.message}</p>
             )}
           </div>
 
@@ -384,7 +449,8 @@ export function QuizForm({ initial }: { initial?: QuizFormInitial }) {
             />
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
+          {/* [2026-11-10]: los cuatro select (idioma, competencia, tipo, nivel MCER) en una sola fila */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-1.5">
               <Label htmlFor="language">Idioma objetivo *</Label>
               <select id="language" className={selectClass} {...register("language")}>
@@ -408,16 +474,50 @@ export function QuizForm({ initial }: { initial?: QuizFormInitial }) {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="difficulty">Nivel MCER *</Label>
-              <select id="difficulty" className={selectClass} {...register("difficulty")}>
-                {DIFFICULTY_OPTIONS.map((d) => (
-                  <option key={d.value} value={d.value}>
-                    {d.label}
-                  </option>
+              <Label htmlFor="exam-kind">Tipo de examen *</Label>
+              {isEdit || preset ? (
+                <p id="exam-kind" className="control flex items-center bg-muted/40">{preset ? "Examen final de curso" : "Se mantiene el tipo con el que se creó"}</p>
+              ) : (
+                <select id="exam-kind" className={selectClass} value={kind} onChange={(e) => setKind(e.target.value as ExamKind)} aria-describedby="exam-kind-hint">
+                  {KIND_OPTIONS.map((k) => (
+                    <option key={k.value} value={k.value}>{k.label}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="cefr">Nivel MCER *</Label>
+              <input type="hidden" {...register("difficulty")} />
+              {/* [2026-11-16 · RF-148]: al CREAR bloqueado (lo fija el tema/título o el curso) · solo se cambia al editar | `disabled` (HTML) → no editable ni enfocable */}
+              <select id="cefr" className={selectClass} value={cefr} disabled={!isEdit} onChange={(e) => { cefrTouched.current = true; setCefr(e.target.value as CefrLevel); }} aria-describedby="cefr-hint">
+                {CEFR_LEVELS.map((lv) => (
+                  <option key={lv} value={lv}>{lv}</option>
                 ))}
               </select>
             </div>
           </div>
+          <p id="cefr-hint" className="type-meta -mt-2 text-muted-foreground">{isEdit ? "Puedes cambiar el nivel MCER del examen." : "El nivel MCER se asigna solo según el curso, el tema o el título (por ejemplo «… A2 …»); podrás cambiarlo al editar."}</p>
+
+          {!isEdit && (
+            <p id="exam-kind-hint" className="type-meta -mt-2 text-muted-foreground">
+              {KIND_OPTIONS.find((k) => k.value === kind)?.hint}
+              {kind === "final" && !preset && " Elige su curso: el examen queda guardado y vinculado a ese curso (por IA, importado o a mano)."}
+            </p>
+          )}
+          {/* [2026-11-11 · Examen final = SIEMPRE con su curso]: elegir el curso abre /quiz/create?curso=<id> → mismo flujo que desde el borrador del curso */}
+          {!isEdit && !preset && kind === "final" && (
+            <div className="space-y-1.5">
+              <Label htmlFor="final-course">Curso *</Label>
+              <select id="final-course" className={selectClass} defaultValue="" onChange={(e) => e.target.value && router.push(`/quiz/create?curso=${encodeURIComponent(e.target.value)}`)}>
+                <option value="">{finalCourses.length ? "Elige el curso…" : "Todos los cursos ya tienen examen final"}</option>
+                {finalCourses.map((c) => (
+                  <option key={c.courseId} value={c.courseId}>{c.courseTitle}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
@@ -428,7 +528,7 @@ export function QuizForm({ initial }: { initial?: QuizFormInitial }) {
                 min={0}
                 {...register("timePerQuestionSeconds")}
               />
-              {errors.timePerQuestionSeconds && <p className="text-xs text-destructive">{errors.timePerQuestionSeconds.message}</p>}
+              {errors.timePerQuestionSeconds && <p className="type-meta text-destructive">{errors.timePerQuestionSeconds.message}</p>}
             </div>
             <div className="flex items-end gap-2">
               <input
@@ -448,35 +548,68 @@ export function QuizForm({ initial }: { initial?: QuizFormInitial }) {
         <section className="rounded-lg border bg-card p-5 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-xl font-bold">Preguntas</h2>
-              <p className="text-xs text-muted-foreground">
+              <h2 className="title-section">Preguntas</h2>
+              <p className="type-meta text-muted-foreground">
                 {fields.length === 0
                   ? "Aún no hay preguntas. Crea una manualmente o genera varias con IA."
                   : `${fields.length} pregunta${fields.length === 1 ? "" : "s"} agregada${fields.length === 1 ? "" : "s"}.`}
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button type="button" onClick={addManualQuestion} variant="secondary">
-                + Crear pregunta
-              </Button>
-              <Button
-                type="button"
-                onClick={openAiPanel}
-                className="bg-gradient-brand text-white"
-              >
-                {aiPanelOpen ? "Cerrar IA" : <><Sparkles aria-hidden className="inline size-4 align-[-0.125em]" /> Generar pregunta con IA</>}
-              </Button>
-            </div>
           </div>
+
+          {/* [Origen de las preguntas · 2026-11-13]: MISMO diseño y textos que «¿Cómo quieres crear el temario?» de Cursos (fieldset punteado + radios con aspecto de chip)
+              Solo cambia el aspecto: Manual = «Crear pregunta» · Importar y Generar con IA = el mismo panel de IA con el importador */}
+          <fieldset className="space-y-3 rounded-xl border border-dashed border-tone-brand-line bg-tone-brand-soft p-4">
+            <legend className="px-1 text-sm font-semibold">¿Cómo quieres crear las preguntas?</legend>
+            <div className="flex flex-wrap gap-2">
+              {QUESTION_SOURCES.map(({ key, label, Icon }) => (
+                <label key={key} className="chip has-[:checked]:border-transparent has-[:checked]:bg-gradient-brand has-[:checked]:text-white has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring">
+                  <input type="radio" name="questionSource" value={key} checked={questionSource === key} onChange={() => chooseSource(key)} aria-controls="question-source-panel" className="sr-only" />
+                  <Icon aria-hidden className="inline size-4 align-[-0.125em]" /> {label}
+                </label>
+              ))}
+            </div>
+            <div id="question-source-panel" className="space-y-2">
+              <p className="type-meta text-muted-foreground">{QUESTION_SOURCES.find((x) => x.key === questionSource)?.hint}</p>
+              {questionSource === "manual" && (
+                <button type="button" className="btn btn-outline btn-sm" onClick={addManualQuestion}>
+                  <PenLine aria-hidden className="size-4" /> Crear pregunta
+                </button>
+              )}
+            </div>
+          </fieldset>
 
           {/* [Panel generador IA inline] */}
           {aiPanelOpen && (
             <div className="rounded-lg border bg-background p-4 space-y-3">
+              {/* [Importar · 2026-11-03]: Word, PDF, imagen (OCR), Excel, audio/vídeo o un enlace → las preguntas se generan SOLO a partir de ese material
+                  [2026-11-16]: SOLO en «Importar» (en «Generar con IA» no aparece) */}
+              {questionSource === "import" && (
+              <TextImport
+                label="Crear el examen desde un archivo o enlace (opcional)"
+                hint="Word, PDF, imagen (OCR), Excel, audio/video o un enlace · la IA hace las preguntas solo con ese contenido (usa los primeros 6000 caracteres)."
+                language={getValues("language")}
+                onText={(x) => { setAiSource(x); if (!aiTopic.trim() && x.title) setAiTopic(x.title.slice(0, 200)); }}
+                onClear={() => setAiSource(null)}
+              />
+              )}
+              {questionSource === "import" && aiSource && (
+                <p role="status" className="type-meta text-muted-foreground">
+                  Material listo: «{aiSource.title || "contenido importado"}» ({Math.min(aiSource.markdown.length, 6000).toLocaleString("es-CO")} caracteres). Pulsa «Generar y añadir».
+                </p>
+              )}
+              {/* [2026-11-16]: tema, cantidad, tipo y motor SOLO en «Generar con IA» · «Importar» usa los valores actuales (5, opción múltiple…) */}
+              {questionSource === "ai" && (
+              <>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label htmlFor="aiTopic">Tema</Label>
-                  <Input
+                  {/* [2026-11-10]: área de texto → caben todos los subtemas del curso */}
+                  <textarea
                     id="aiTopic"
+                    className="control min-h-24 w-full resize-y"
+                    rows={4}
+                    maxLength={2000}
                     value={aiTopic}
                     onChange={(e) => setAiTopic(e.target.value)}
                     placeholder="Ej. Presente simple, Vocabulario de viajes, Pedir en un restaurante"
@@ -529,16 +662,18 @@ export function QuizForm({ initial }: { initial?: QuizFormInitial }) {
                   </select>
                 </div>
               </div>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="type-meta text-muted-foreground">
                 Las preguntas se generan en {languageLabel(watch("language"))} según la competencia y el nivel del examen; la explicación y el feedback, en español. Revisa el contenido generado antes de publicar.
               </p>
+              </>
+              )}
               {aiError && (
-                <p role="alert" className="text-xs text-destructive">
+                <p role="alert" className="type-meta text-destructive">
                   {aiError}
                 </p>
               )}
               {aiNotice && (
-                <p role="status" className="text-xs text-tone-brand">
+                <p role="status" className="type-meta text-tone-brand">
                   {aiNotice}
                 </p>
               )}
@@ -555,7 +690,7 @@ export function QuizForm({ initial }: { initial?: QuizFormInitial }) {
         {showQuestionsPanel && fields.length > 0 && (
           <section className="space-y-4">
             {errors.questions && typeof errors.questions.message === "string" && (
-              <p className="text-xs text-destructive">{errors.questions.message}</p>
+              <p className="type-meta text-destructive">{errors.questions.message}</p>
             )}
 
             {fields.map((field, idx) => {
@@ -567,16 +702,20 @@ export function QuizForm({ initial }: { initial?: QuizFormInitial }) {
                   aria-label={`Pregunta ${idx + 1}`}
                 >
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-muted-foreground">
+                    <h3 className="title-card text-muted-foreground">
                       Pregunta #{idx + 1}
                     </h3>
+                    {/* [2026-11-13]: eliminar = solo icono (mismo botón que Actividades y Recursos) */}
                     <Button
                       type="button"
                       variant="ghost"
+                      size="icon-sm"
                       onClick={() => remove(idx)}
                       aria-label={`Eliminar pregunta ${idx + 1}`}
+                      title="Eliminar"
+                      className="text-tone-danger"
                     >
-                      Eliminar
+                      <Trash2 aria-hidden className="size-4" />
                     </Button>
                   </div>
 
@@ -587,7 +726,7 @@ export function QuizForm({ initial }: { initial?: QuizFormInitial }) {
                       {...register(`questions.${idx}.text` as const)}
                     />
                     {errors.questions?.[idx]?.text && (
-                      <p className="text-xs text-destructive">
+                      <p className="type-meta text-destructive">
                         {errors.questions[idx]?.text?.message}
                       </p>
                     )}
@@ -645,7 +784,7 @@ export function QuizForm({ initial }: { initial?: QuizFormInitial }) {
                         />
                       ))}
                       {errors.questions?.[idx]?.options && (
-                        <p className="text-xs text-destructive">
+                        <p className="type-meta text-destructive">
                           {errors.questions[idx]?.options?.message as string}
                         </p>
                       )}
@@ -664,7 +803,7 @@ export function QuizForm({ initial }: { initial?: QuizFormInitial }) {
                       {...register(`questions.${idx}.correctAnswer` as const)}
                     />
                     {errors.questions?.[idx]?.correctAnswer && (
-                      <p className="text-xs text-destructive">
+                      <p className="type-meta text-destructive">
                         {errors.questions[idx]?.correctAnswer?.message}
                       </p>
                     )}
@@ -681,7 +820,7 @@ export function QuizForm({ initial }: { initial?: QuizFormInitial }) {
                       {...register(`questions.${idx}.timeLimitSeconds` as const)}
                     />
                     {errors.questions?.[idx]?.timeLimitSeconds && (
-                      <p className="text-xs text-destructive">{errors.questions[idx]?.timeLimitSeconds?.message}</p>
+                      <p className="type-meta text-destructive">{errors.questions[idx]?.timeLimitSeconds?.message}</p>
                     )}
                   </div>
 
@@ -720,8 +859,8 @@ export function QuizForm({ initial }: { initial?: QuizFormInitial }) {
           <Button type="button" variant="ghost" onClick={() => router.back()}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={isSubmitting || fields.length === 0}>
-            {isSubmitting ? "Guardando..." : isEdit ? "Guardar cambios" : "Crear examen"}
+          <Button type="submit" disabled={isSubmitting || fields.length === 0 || (!isEdit && !preset && kind === "final")}>
+            {isSubmitting ? "Guardando..." : isEdit ? "Guardar" : "Crear examen" /* [2026-11-16]: «Guardar» (antes «Guardar cambios») */}
           </Button>
         </div>
       </form>

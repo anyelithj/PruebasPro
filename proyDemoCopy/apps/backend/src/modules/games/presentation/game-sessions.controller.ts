@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
@@ -41,6 +42,7 @@ import {
   toView,
 } from '../application/use-cases/start-game-session.use-case';
 import { GAME_TYPES, type GameType } from '../domain/game-type';
+import { bankFor } from '../domain/game-content';
 import { GameCatalogUseCase } from '../application/use-cases/game-catalog.use-case';
 // [Controller GameSessions · Sprint 8.5 · RF-98/RF-100/RF-101]: catálogo, iniciar, listar, ver, terminar y abandonar partidas + turno contra el agente | [Patrón]: Thin Controller | [Principio]: SRP + mínimo privilegio (todo por el usuario del token) | [Paradigma]: POO + Decoradores
 
@@ -51,6 +53,7 @@ export class StartGameBody {
   @IsOptional() @IsInt() @Min(1) @Max(3) difficulty?: number;
   @IsOptional() @IsUUID() scenarioId?: string;
   @IsOptional() @IsUUID() deckId?: string; // [2026-10-25]: juego con material propio
+  @IsOptional() @IsString() @MaxLength(200) theme?: string; // [2026-11-11]: tema elegido del banco (vacío = al azar)
 }
 
 export class AgentTurnBody {
@@ -89,6 +92,14 @@ export class GameSessionsController {
   async startOne(@CurrentUser() u: JwtPayload, @Body() body: StartGameBody) {
     await this.catalog.assertPlayable({ id: u.sub, role: u.role }, body.gameType); // [2026-10-24]: juego archivado o en borrador → 403
     return toView(await this.start.execute(u.sub, body));
+  }
+
+  // [2026-11-11 · Elegir tema]: temas del banco del idioma → selector «Tema» de cada juego (además de «Al azar» y los juegos del docente)
+  @Get('themes')
+  @ApiOperation({ summary: 'Temas del banco: categorías de tarjetas y temas de conversación' })
+  themes(@Query('language') language = 'en') {
+    const bank = bankFor(language);
+    return { categories: [...new Set(bank.taboo.map((c) => c.category))], topics: bank.topics };
   }
 
   @Get('sessions/me')

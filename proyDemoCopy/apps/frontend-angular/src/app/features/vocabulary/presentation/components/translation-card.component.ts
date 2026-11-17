@@ -24,17 +24,18 @@ import type { Lookup } from '../../domain/models/vocabulary';
   template: `
     @let tx = t();
     @let r = lookup().result;
-    <article class="space-y-5" aria-live="polite">
-      <header class="flex flex-wrap items-start justify-between gap-3">
-        <div class="min-w-0">
-          <p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+    <!-- [Compacta · Fix 2026-10-31]: palabra y sonido en una línea; IPA y traducción en la MISMA fila desde lg (antes apilados, con mucha altura) | apilados en móvil -->
+    <article class="space-y-2" aria-live="polite">
+      <header class="flex flex-wrap items-center gap-2">
+        <div class="flex min-w-0 flex-wrap items-baseline gap-2">
+          <p class="type-meta font-semibold uppercase tracking-wider text-muted-foreground">
             {{ i18n.languageName(lang()) }}
           </p>
-          <h2 class="break-words text-2xl font-extrabold tracking-tight" [attr.lang]="lang()">
+          <h2 class="title-section break-words" [attr.lang]="lang()">
             {{ lookup().text }}
           </h2>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="ml-auto flex items-center gap-2">
           <aula-pronunciation-button
             [text]="lookup().text"
             [language]="lang()"
@@ -46,49 +47,45 @@ import type { Lookup } from '../../domain/models/vocabulary';
         </div>
       </header>
 
-      <!-- [IPA]: inglés → UK y US lado a lado (la activa con borde de marca); otros idiomas → una sola -->
-      <section [attr.aria-label]="tx.ipa">
-        <h3 class="mb-2 text-sm font-bold">{{ tx.ipa }}</h3>
+      <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <!-- [IPA]: inglés → UK y US (la activa con borde de marca); otros idiomas → una sola -->
         @if (lang() === 'en') {
-          <div class="grid gap-2 sm:grid-cols-2">
-            @for (v of variants(); track v.key) {
-              <div
-                class="rounded-xl border p-3 transition-colors"
-                [class]="
-                  speech.accent() === v.key ? 'border-primary bg-tone-brand-soft' : 'border-border'
-                "
-              >
-                <p class="text-xs font-semibold text-muted-foreground">{{ v.label }}</p>
-                <p class="text-lg">
-                  <aula-ipa-label [ipa]="v.ipa" language="en" [title]="v.label" />
-                </p>
-              </div>
-            }
-          </div>
-        } @else {
-          <p class="text-lg"><aula-ipa-label [ipa]="r.ipa" [language]="lang()" /></p>
-        }
-      </section>
-
-      <section>
-        <h3 class="mb-1 text-sm font-bold">{{ tx.translation }}</h3>
-        @if (aiDown()) {
-          <p role="status" class="text-sm text-tone-warning">{{ tx.aiUnavailable }}</p>
-        } @else {
-          <p class="text-xl font-semibold text-foreground" lang="es">
-            {{ r.translation.translation }}
-          </p>
-          @if (r.translation.alternatives.length) {
-            <p class="mt-1 text-sm text-muted-foreground">
-              {{ tx.alternatives }}:
-              <span lang="es">{{ r.translation.alternatives.join(' · ') }}</span>
-            </p>
+          @for (v of variants(); track v.key) {
+            <section
+              class="rounded-xl border px-3 py-1.5 transition-colors"
+              [class]="speech.accent() === v.key ? 'border-primary bg-tone-brand-soft' : 'border-border'"
+              [attr.aria-label]="v.label"
+            >
+              <h3 class="type-meta font-semibold text-muted-foreground">{{ v.label }}</h3>
+              <p><aula-ipa-label [ipa]="v.ipa" language="en" [title]="v.label" [text]="lookup().text" /></p>
+            </section>
           }
+        } @else {
+          <section class="rounded-xl border border-border px-3 py-1.5" [attr.aria-label]="tx.ipa">
+            <h3 class="type-meta font-semibold text-muted-foreground">{{ tx.ipa }}</h3>
+            <p><aula-ipa-label [ipa]="r.ipa" [language]="lang()" [text]="lookup().text" /></p>
+          </section>
         }
-      </section>
+        <section class="rounded-xl border border-border px-3 py-1.5">
+          <h3 class="type-meta font-semibold text-muted-foreground">{{ tx.translation }}</h3>
+          @if (aiDown()) {
+            <p role="status" class="text-tone-warning">{{ tx.aiUnavailable }}</p>
+          } @else {
+            <p class="font-semibold text-foreground" lang="es">
+              {{ r.translation.translation }}
+            </p>
+            @if (r.translation.alternatives.length) {
+              <p class="type-meta text-muted-foreground">
+                {{ tx.alternatives }}:
+                <span lang="es">{{ r.translation.alternatives.join(' · ') }}</span>
+              </p>
+            }
+          }
+        </section>
+      </div>
 
-      <footer class="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-        <p class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+      <footer class="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-2">
+        <p class="flex flex-wrap items-center gap-2 type-meta text-muted-foreground">
           {{ i18n.fmt(tx.engine, { engine: r.engine || 'espeak-ng' }) }}
           @if (lookup().hits > 0) {
             <aula-badge tone="info">{{ tx.cached }}</aula-badge>
@@ -117,7 +114,7 @@ export class TranslationCardComponent {
   readonly save = output<Lookup>();
 
   protected readonly lang = computed(() => this.lookup().language);
-  // `model === 'unavailable'` o traducción vacía → la IA local no respondió (el IPA sí es válido)
+  // `model === 'unavailable'` o traducción vacía → la IA no respondió (el IPA sí es válido)
   protected readonly aiDown = computed(() => {
     const tr = this.lookup().result.translation;
     return tr.model === 'unavailable' || !tr.translation.trim();

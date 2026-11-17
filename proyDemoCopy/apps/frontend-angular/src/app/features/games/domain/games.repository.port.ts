@@ -19,6 +19,8 @@ import type {
 export abstract class GamesRepository {
   abstract catalog(): Observable<Catalog>;
   abstract decks(): Observable<GameDeck[]>; // [2026-10-26]: juegos con material propio publicados en Gestión
+  abstract deck(id: string): Observable<GameDeck>; // [2026-11-11]: un juego del docente (flashcards y role-play lo pintan en el cliente)
+  abstract themes(language: string): Observable<GameThemes>; // [2026-11-11]: temas del banco → selector «Tema»
   abstract start(input: StartInput): Observable<GameSession>;
   abstract mine(): Observable<GameSession[]>;
   abstract session(id: string): Observable<SessionDetail>;
@@ -52,5 +54,35 @@ export interface GameDeck {
   gameType: string;
   language: string;
   level: string | null;
-  items: unknown[];
+  topic?: string | null; // [2026-11-06]: buscador por tema del hub
+  items: DeckItem[];
+}
+export interface DeckItem {
+  term: string;
+  translation?: string;
+  emoji?: string;
+  image?: string;
+  category?: string;
+  words?: string; // Prohibidas (tabú) o palabras clave (role-play), con comas
+}
+export const DECK_SCENARIO_PREFIX = 'mazo-'; // [2026-11-11]: /juegos/role-play/mazo-<id> = role-play creado por el docente
+// [deckToScenario · 2026-11-11]: role-play del docente → misma forma que un escenario (cada ítem = objetivo con sus palabras clave) | Función pura
+export const deckToScenario = (d: GameDeck) => {
+  const csv = (s?: string) => (s ?? '').split(',').map((w) => w.trim()).filter(Boolean);
+  return {
+    id: DECK_SCENARIO_PREFIX + d.id,
+    title: d.title,
+    language: d.language,
+    level: d.level ?? '',
+    emoji: d.items.find((i) => i.emoji)?.emoji ?? '🎭',
+    role: d.title,
+    opening: '',
+    objectives: d.items.map((i, k) => ({ id: `g${k + 1}`, text: i.term, keywords: csv(i.words).map((w) => w.toLowerCase()) })),
+    vocabulary: [...new Set(d.items.flatMap((i) => csv(i.words)))],
+  };
+};
+// [GameThemes · 2026-11-11]: GET /games/themes — categorías de tarjetas y temas de conversación del banco del idioma
+export interface GameThemes {
+  categories: string[];
+  topics: string[];
 }

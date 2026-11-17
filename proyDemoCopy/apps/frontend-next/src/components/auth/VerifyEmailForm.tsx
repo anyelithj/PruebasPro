@@ -39,7 +39,7 @@ export function VerifyEmailForm({ token }: { token: string }) {
       aria-label="Verificación de email"
     >
       <header className="mb-2">
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Verificar email</h1>
+        <h1 className="title-page">Verificar email</h1>
       </header>
 
       {message && (
@@ -59,7 +59,7 @@ export function VerifyEmailForm({ token }: { token: string }) {
       )}
 
       {status === "error" && (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground">
           Solicita un nuevo enlace desde{" "}
           <Link
             href={AUTH_ROUTES.login}

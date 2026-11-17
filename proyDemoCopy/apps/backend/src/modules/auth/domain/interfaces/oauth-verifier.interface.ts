@@ -11,12 +11,12 @@ export interface VerifiedOAuthProfile {
   firstName?: string;
   lastName?: string;
   name?: string;
-  provider: 'google' | 'microsoft';
+  provider: 'google'; // [2026-11-16]: Microsoft retirado
 }
 
 // [Contrato verifier]: cada provider implementa esta interfaz | [Principio]: ISP
 export interface IOAuthVerifier {
-  readonly provider: 'google' | 'microsoft';
+  readonly provider: 'google';
   verify(idToken: string): Promise<VerifiedOAuthProfile>;
 }
 

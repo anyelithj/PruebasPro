@@ -1,7 +1,7 @@
 import { ReturnLinkComponent, ReturnToService } from '@core/layout/return-to'; // [2026-10-23]: «Volver» y salida hacia Gestión → Actividades cuando se llega con ?volver=
 import { IconComponent } from '@shared/ui/atoms/icon/icon.component';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { LANGUAGES } from '@aula/shared-schemas';
 import { I18nService } from '@core/i18n/i18n.service';
 import { SpinnerComponent } from '@shared/ui/atoms/spinner/spinner.component';
@@ -69,7 +69,7 @@ import { PolyglotTopicPickerComponent } from '../components/polyglot-topic-picke
         @if (current(); as t) {
           <section class="space-y-4" aria-labelledby="pb-topic">
             <header class="flex flex-wrap items-center gap-2">
-              <h2 id="pb-topic" class="text-xl font-extrabold">{{ t.emoji }} {{ t.title }}</h2>
+              <h2 id="pb-topic" class="title-section">{{ t.emoji }} {{ t.title }}</h2>
               <span class="badge" [class]="t.status === 'published' ? 'bg-tone-brand-soft text-tone-brand' : 'bg-tone-warning-soft text-tone-warning'">{{
                 bx.status[t.status]
               }}</span>
@@ -84,7 +84,7 @@ import { PolyglotTopicPickerComponent } from '../components/polyglot-topic-picke
                 <button type="button" class="btn btn-ghost btn-sm text-tone-danger" [disabled]="p.busy()" (click)="archive(t.id)">{{ bx.archive }}</button>
               </span>
             </header>
-            <p class="text-sm" aria-live="polite">
+            <p aria-live="polite">
               @if (p.notice()) {
                 <span class="text-tone-brand">✓ {{ p.notice() }}</span>
               }
@@ -100,18 +100,45 @@ import { PolyglotTopicPickerComponent } from '../components/polyglot-topic-picke
               </div>
             </details>
 
-            <h3 class="text-sm font-bold">{{ bx.concepts }}</h3>
+            <h3 class="title-card">{{ bx.concepts }}</h3>
             @if (p.table.loading()) {
               <aula-spinner [label]="i18n.t().common.loading" />
             }
             <ul class="space-y-3">
               @for (r of p.table.data()?.rows ?? []; track r.concept.id) {
-                <li class="surface p-3">
+                <!-- [2026-11-03]: id → la tabla de Gestión abre esta fila con #concept-<id> · «Editar» por fila (emoji, significado y texto de cada idioma) -->
+                <li class="surface scroll-mt-20 p-3" [id]="'concept-' + r.concept.id" [class.ring-2]="editing() === r.concept.id" [class.ring-ring]="editing() === r.concept.id">
                   <div class="mb-2 flex items-center gap-2">
                     <span class="text-2xl" aria-hidden="true">{{ r.concept.emoji || '•' }}</span>
                     <span class="font-semibold" lang="es">{{ r.concept.gloss }}</span>
-                    <button type="button" class="btn btn-ghost btn-sm ml-auto text-tone-danger" [disabled]="p.busy()" (click)="p.removeConcept(r.concept.id)">{{ bx.remove }}</button>
+                    <button type="button" class="btn btn-outline btn-sm ml-auto" [attr.aria-expanded]="editing() === r.concept.id" [disabled]="p.busy()" (click)="editing.set(editing() === r.concept.id ? null : r.concept.id)">
+                      <aula-icon name="pencil" /> {{ editing() === r.concept.id ? 'Cerrar' : 'Editar' }}
+                    </button>
+                    <button type="button" class="btn btn-ghost btn-sm text-tone-danger" [disabled]="p.busy()" (click)="p.removeConcept(r.concept.id)">{{ bx.remove }}</button>
                   </div>
+                  @if (editing() === r.concept.id) {
+                    <form class="mb-3 space-y-2 rounded-lg border border-border p-3" (submit)="$event.preventDefault(); saveEdit(r, editForm)" #editForm>
+                      <div class="grid gap-2 sm:grid-cols-[6rem_1fr]">
+                        <label class="text-xs font-semibold text-muted-foreground">{{ bx.emoji }}
+                          <input name="emoji" class="control mt-1 w-full text-center" maxlength="16" [value]="r.concept.emoji" />
+                        </label>
+                        <label class="text-xs font-semibold text-muted-foreground">{{ bx.gloss }}
+                          <input name="gloss" class="control mt-1 w-full" maxlength="160" lang="es" [value]="r.concept.gloss" />
+                        </label>
+                      </div>
+                      <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                        @for (l of langs; track l) {
+                          <label class="text-xs font-semibold text-muted-foreground">{{ names()[l] }}
+                            <input [name]="'term-' + l" class="control mt-1 w-full" maxlength="160" [attr.lang]="l" [value]="r.terms[l]?.text ?? ''" />
+                          </label>
+                        }
+                      </div>
+                      <div class="flex justify-end gap-2">
+                        <button type="button" class="btn btn-ghost btn-sm" (click)="editing.set(null)">Cancelar</button>
+                        <button type="submit" class="btn btn-primary btn-sm" [disabled]="p.busy()">Guardar cambios</button>
+                      </div>
+                    </form>
+                  }
                   <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                     @for (l of langs; track l) {
                       <div class="rounded-lg bg-muted p-2">
@@ -161,7 +188,7 @@ import { PolyglotTopicPickerComponent } from '../components/polyglot-topic-picke
             </form>
           </aula-ai-draft-dialog>
         } @else {
-          <p class="text-sm text-muted-foreground">{{ bx.select }}</p>
+          <p class="text-muted-foreground">{{ bx.select }}</p>
         }
       </div>
     </aula-card-page>
@@ -179,6 +206,8 @@ export default class PolyglotBuilderPage {
   protected readonly newCategory = signal<TopicCategory>('vocabulary');
   protected readonly categories = TOPIC_CATEGORIES;
   protected readonly draftOpen = signal(false);
+  protected readonly editing = signal<string | null>(null); // [2026-11-03]: concepto con el formulario «Editar» abierto
+  private readonly fragment = inject(ActivatedRoute).snapshot.fragment; // «concept-<id>» desde la tabla de Gestión
   protected readonly draftKind = signal<'word' | 'phrase'>('word');
   protected readonly draftCount = signal(8);
   protected readonly names = computed(() => Object.fromEntries(LANGUAGES.map((c) => [c, this.i18n.languageName(c)])));
@@ -195,6 +224,14 @@ export default class PolyglotBuilderPage {
     effect(() => {
       const id = this.id();
       if (id) untracked(() => this.p.selectTopic(id));
+    });
+    // [2026-11-03]: llegada desde «Editar» de una fila en Gestión → abre esa fila en edición y la desplaza a la vista (cuando la tabla ya cargó)
+    effect(() => {
+      const rows = this.p.table.data()?.rows ?? [];
+      const target = this.fragment?.replace(/^concept-/, '');
+      if (!target || !rows.some((r) => r.concept.id === target)) return;
+      untracked(() => this.editing.set(target));
+      requestAnimationFrame(() => document.getElementById('concept-' + target)?.scrollIntoView({ block: 'start' }));
     });
   }
 
@@ -233,6 +270,14 @@ export default class PolyglotBuilderPage {
 
   protected review(term: Term, ipa: string): void {
     void this.p.reviewTerm(term.id, ipa.trim() && ipa.trim() !== term.ipa ? { ipa: ipa.trim() } : {});
+  }
+
+  // [saveEdit · 2026-11-03]: solo envía lo que cambió (emoji/significado → PATCH del concepto; términos → upsert)
+  protected async saveEdit(r: TableRow, form: HTMLFormElement): Promise<void> {
+    const data = new FormData(form); // `FormData` (Web API): lee los inputs sin estado duplicado
+    const val = (k: string) => String(data.get(k) ?? '').trim();
+    const terms = this.langs.flatMap((l) => (val('term-' + l) && val('term-' + l) !== (r.terms[l]?.text ?? '') ? [{ language: l, text: val('term-' + l) }] : []));
+    if (await this.p.updateConcept(r.concept.id, { emoji: val('emoji'), gloss: val('gloss') }, terms)) this.editing.set(null);
   }
 
   protected addTerm(r: TableRow, language: string, text: string): void {

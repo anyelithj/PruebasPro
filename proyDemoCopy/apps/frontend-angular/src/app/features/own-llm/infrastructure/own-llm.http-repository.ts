@@ -4,6 +4,9 @@ import { map, type Observable } from 'rxjs';
 import { API_URL } from '@core/http/api-url.token';
 import { OwnLlmRepository } from '../domain/own-llm.repository.port';
 import {
+  CorrectorResultSchema,
+  type CorrectorInput,
+  type CorrectorResult,
   WritingCorrectionSchema,
   WritingScopeSchema,
   type WritingCorrection,
@@ -16,11 +19,22 @@ import {
 @Injectable()
 export class OwnLlmHttpRepository extends OwnLlmRepository {
   private readonly http = inject(HttpClient);
-  private readonly base = `${inject(API_URL)}/ai/own-llm`;
+  private readonly api = inject(API_URL);
+  private readonly base = `${this.api}/ai/own-llm`;
 
   correct(input: WritingInput): Observable<WritingCorrection> {
     // `.pipe(map(...parse))` (RxJS + Zod): DTO → modelo de dominio validado
     return this.http.post<unknown>(`${this.base}/writing-corrections`, input).pipe(map((r) => WritingCorrectionSchema.parse(r)));
+  }
+
+  // [correctSentence · 2026-11-13 · Anexo A]: POST /ai/own-llm/corrections → el MISMO corrector que puntúa el turno del diálogo
+  correctSentence(input: CorrectorInput): Observable<CorrectorResult> {
+    return this.http.post<unknown>(`${this.base}/corrections`, input).pipe(map((r) => CorrectorResultSchema.parse(r)));
+  }
+
+  // [detect · 2026-11-02]: reutiliza POST /vocabulary/lookup/detect (FastAPI, determinista, < 5 ms) → «Detectado: X» sin pulsar «Corregir»
+  detect(text: string): Observable<string> {
+    return this.http.post<{ language: string }>(`${this.api}/vocabulary/lookup/detect`, { text }).pipe(map((r) => r.language));
   }
 
   scope(): Observable<WritingScope> {

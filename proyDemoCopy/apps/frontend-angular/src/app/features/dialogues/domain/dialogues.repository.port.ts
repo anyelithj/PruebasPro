@@ -38,7 +38,7 @@ export abstract class DialoguesRepository {
   abstract listSessions(): Observable<Session[]>;
   abstract getSession(id: string): Observable<SessionDetail>;
   abstract sendTurn(id: string, text: string): Observable<TurnResult>;
-  abstract streamTurn(id: string, text: string): Observable<SseMessage<SseData>>;
+  abstract streamTurn(id: string, text: string, origin?: 'voz' | 'escrito'): Observable<SseMessage<SseData>>; // [Anexo A «origen»]
   abstract endSession(id: string): Observable<Session>;
   abstract deleteSession(id: string): Observable<void>;
   abstract transcribe(audio: Blob, language: string): Observable<string>;

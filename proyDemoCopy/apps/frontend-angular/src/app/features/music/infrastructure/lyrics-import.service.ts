@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { firstValueFrom, map } from 'rxjs';
-import { z } from 'zod';
+import * as z from 'zod'; // [Tree-shaking · Zod 4]: `{ z }` arrastraba Zod entero (~450 kB → aviso de presupuesto)
 import { API_URL } from '@core/http/api-url.token';
 import { ApiError } from '@core/http/error.interceptor';
 import { TextImportService, type ExtractedText } from '@core/media/text-import.service';
@@ -20,7 +20,7 @@ export class LyricsImportService extends TextImportService {
   // `override` (TS 4.3): reemplaza el método del padre; el archivo (fromFile) sigue igual
   override async fromUrl(url: string, language: string): Promise<ExtractedText> {
     try {
-      return await firstValueFrom(this.client.post<unknown>(this.lyricsUrl, { url }).pipe(map((r) => LyricsSchema.parse(r))));
+      return await firstValueFrom(this.client.post<unknown>(this.lyricsUrl, { url, language }).pipe(map((r) => LyricsSchema.parse(r))));
     } catch (err) {
       // 415 = no es HTML/texto → el extractor general sabe leer PDF, imágenes y audio; cualquier otro error trae ya un mensaje accionable
       if (err instanceof ApiError && err.status === 415) return super.fromUrl(url, language); // `ApiError`: el interceptor ya tradujo el HttpErrorResponse

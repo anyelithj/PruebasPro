@@ -60,6 +60,7 @@ export interface TableCell {
   text: string;
   ipa: string;
   ipaUs: string | null;
+  grammar: string; // [2026-11-16]: plural, género, clasificador…
   reviewed: boolean;
   needsNativeReview: boolean;
 }
@@ -79,7 +80,7 @@ export class GetComparisonTableUseCase {
   // [Por qué]: los temas sembrados nacían sin IPA hasta que un docente pulsaba «Obtener IPA» → el alumno veía la tabla sin pronunciación | [Patrón]: Cache-Aside (lectura que completa y persiste)
   async execute(actor: PolyglotActor, topicId: string, languages?: string, token?: string) {
     const topic = await this.access.readable(actor, topicId);
-    const order = languageOrder(languages);
+    const order = languageOrder(languages ?? (topic.languages?.length ? topic.languages.join(',') : undefined)); // [2026-11-11]: sin ?languages → los idiomas del tema
     const concepts = await this.concepts.find({
       where: { topicId: topic.id },
       order: { position: 'ASC', createdAt: 'ASC' },
@@ -107,6 +108,7 @@ export class GetComparisonTableUseCase {
                   text: t.text,
                   ipa: t.ipa,
                   ipaUs: t.ipaUs,
+                  grammar: t.grammar ?? '',
                   reviewed: t.reviewed,
                   needsNativeReview: t.needsNativeReview,
                 }

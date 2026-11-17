@@ -10,7 +10,9 @@ const ROUTES: ReadonlyArray<{ prefix: ApiPrefix; methods: readonly string[]; max
   { prefix: "notifications", methods: ["GET", "PATCH"] }, // SSE de la campana + /me y marcar leídas (bandeja Angular /notificaciones)
   { prefix: "events", methods: ["GET"] }, // SSE con todos los eventos del usuario (progreso de exportaciones)
   { prefix: "reports/export", methods: ["GET", "POST", "DELETE"] }, // Exportación PDF/Excel (<aula-exportar> y /reportes/exportaciones)
-  { prefix: "ai/assistant/chat", methods: ["POST"] }, // Tutor IA: /chat y /chat/stream (Angular /tutor)
+  // Tutor IA (Angular /tutor): /chat y /chat/stream + [2026-10-28] /conversations (listar, leer, renombrar y borrar conversación; editar y borrar mensaje)
+  // `ai/assistant` (no un prefijo más corto): /knowledge/reindex sigue protegido por @Roles(ADMIN) en NestJS | ponytail: estrechar a "ai/assistant/conversations" tras `pnpm api:types`
+  { prefix: "ai/assistant", methods: ["GET", "POST", "PATCH", "DELETE"] },
   { prefix: "ai/own-llm", methods: ["GET", "POST"] }, // Corrector de redacciones: /writing-corrections y /scope (Angular /redaccion)
   { prefix: "ai/feedback/study-plan", methods: ["POST"] }, // Debilidades + plan de estudio (Angular /estudio/*)
   { prefix: "payments", methods: ["GET", "POST", "PATCH"] }, // [Sprint 7.3/7.4]: órdenes, sesión de Stripe, estado, historial y reembolsos (Angular /checkout y /pagos) · el webhook lo llama Stripe directo al backend
@@ -21,13 +23,15 @@ const ROUTES: ReadonlyArray<{ prefix: ApiPrefix; methods: readonly string[]; max
   { prefix: "games", methods: ["GET", "POST", "PATCH", "DELETE"] }, // [Sprints 8.5/8.8–8.11]: partidas, rondas, turno del agente, mazo SM-2, escenarios y fluidez (Angular /juegos)
   { prefix: "speech", methods: ["POST"], maxBytes: 25 * 1024 * 1024 }, // [Sprints 8.6/8.9]: transcripción (multipart, máx. 25 MB = MAX_AUDIO_BYTES de NestJS · 2026-10-23) y métricas de fluidez
   // [Sprints 9.2/9.3/9.14]: canciones, letras, colecciones y prácticas; diálogos, turnos y conversación con el avatar (SSE) · audio con Range/206 y subida ≤ 20 MB (= MAX_SONG_AUDIO_BYTES de NestJS)
-  { prefix: "music", methods: ["GET", "POST", "PATCH", "DELETE"], maxBytes: 20 * 1024 * 1024 },
+  { prefix: "music", methods: ["GET", "POST", "PATCH", "DELETE"], maxBytes: 100 * 1024 * 1024 }, // [2026-11-03]: 20 → 100 MB (MP4 de canciones)
   { prefix: "dialogues", methods: ["GET", "POST", "PATCH", "DELETE"], maxBytes: 20 * 1024 * 1024 },
   // [Sprints 10.2/10.5/10.9/10.13]: diccionario (/vocabulary/words ya entra por «vocabulary»), poliglota y gramática (Angular /poliglota, /gramatica y <aula-word-lookup>)
   { prefix: "polyglot", methods: ["GET", "POST", "PATCH", "DELETE"] },
   { prefix: "grammar", methods: ["GET", "POST", "PATCH", "DELETE"] },
+  { prefix: "pronunciation-media", methods: ["GET", "POST"], maxBytes: 30 * 1024 * 1024 }, // [2026-11-14]: imagen o video de la boca en «Cómo se pronuncia» (= MAX_PRONUNCIATION_MEDIA_BYTES de NestJS) · GET con Range/206
   { prefix: "reading", methods: ["GET", "POST", "PATCH", "DELETE"] }, // [2026-10-25 · Lectura]: textos, frases, marcador y descarga PDF/TXT (Angular /lectura y Gestión → Actividades → Lectura)
-  { prefix: "practice", methods: ["GET", "POST", "PATCH", "DELETE"] }, // [Sprints 8.12/8.14/8.15]: actividades, ítems, intentos con corrección y borrador de IA (Angular /practica)
+  { prefix: "books", methods: ["GET", "POST", "PUT"] }, // [2026-11-16 · Libros · RF-145/146/147]: catálogo Gutendex, capítulos, traducción/IPA bajo demanda y progreso (Angular /lectura/libros) · sin esto el BFF lo rechazaba y no se veía ningún libro
+  { prefix: "practice",methods: ["GET", "POST", "PATCH", "DELETE"] }, // [Sprints 8.12/8.14/8.15]: actividades, ítems, intentos con corrección y borrador de IA (Angular /practica)
   { prefix: "help", methods: ["GET", "POST", "PATCH", "DELETE"] }, // [Sprints 7.10/7.11]: FAQ (pública), manual, Agente Guía (SSE por POST), valoración y borrado de la conversación // [Sprint 7.8]: emitir, listar, PDF (302 a URL firmada) y verificar · /verify es @Public en NestJS (sin cookie no se envía Bearer)
 ];
 

@@ -12,16 +12,16 @@ import { ExampleLineComponent } from './example-line.component';
   host: { class: 'block' },
   template: `
     <section class="overflow-hidden rounded-2xl border bg-card" [class]="borderTone()" [attr.aria-labelledby]="headId()">
-      <h3 [id]="headId()" class="flex items-center gap-2 border-b px-4 py-2.5 text-sm font-extrabold uppercase tracking-wide" [class]="meta().tone">
+      <h3 [id]="headId()" class="title-overline flex items-center gap-2 border-b px-4 py-2.5" [class]="meta().tone">
         <aula-icon [name]="meta().icon" />
         {{ section().title || typeLabel() }}
       </h3>
       <div class="space-y-3 px-4 py-3">
         @if (section().body) {
           @if (section().type === 'formula') {
-            <p class="inline-block rounded-xl bg-muted px-3 py-2 font-mono text-sm font-semibold">{{ section().body }}</p>
+            <p class="inline-block rounded-xl bg-muted px-3 py-2 font-mono font-semibold">{{ section().body }}</p>
           } @else {
-            <p class="text-sm leading-relaxed">{{ section().body }}</p>
+            <p class="leading-relaxed">{{ section().body }}</p>
           }
         }
         @if (section().examples.length) {

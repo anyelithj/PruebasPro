@@ -22,13 +22,16 @@ const NATURAL = /natural|neural|online|google|premium|enhanced|siri/i;
 
 // [SpeakHooks]: eventos de una frase hablada | `error` opcional: si falta, un fallo se notifica como `end` (compatibilidad)
 export interface SpeakHooks {
+  start?: () => void; // [2026-10-31]: la voz empezó a sonar de verdad (una voz en red tarda ~1 s) → el resaltado arranca aquí
   boundary?: (charIndex: number) => void;
   end?: () => void;
   error?: (reason: string) => void;
+  wordTiming?: boolean; // [2026-11-05]: se necesitan eventos `boundary` (resaltado en tiempo real) → se evitan las voces «Google» de Chrome, que no los emiten
 }
 
 // [2026-10-24]: errores de SpeechSynthesis que son cortes voluntarios, no fallos del motor
 const STOPPED: ReadonlySet<string> = new Set(['interrupted', 'canceled']);
+const CANCEL_GAP_MS = 120; // Pausa tras `cancel()` real: por debajo de ~100 ms Chrome/Edge pueden perder las primeras palabras (ajustable si una voz sigue recortando)
 const START_TIMEOUT_MS = 4000; // Una voz en red (Google/Microsoft Online) tarda ~1 s en empezar; 4 s = no va a sonar
 
 // [readAccent]: preferencia guardada o «us» | `RegExp` sobre `document.cookie` (DOM) | [Paradigma]: función pura sobre un string
@@ -89,12 +92,15 @@ export class SpeechSynthesisService {
     const fail = (reason: string) => (hooks.error ? hooks.error(reason) : hooks.end?.());
     if (!this.supported || !text.trim()) return fail('unsupported'); // Sin voz: el llamador sigue su flujo
     const synth = window.speechSynthesis;
-    this.stop();
+    // [Fix 2026-10-30 · «se come palabras»]: `cancel()` justo antes de `speak()` recorta el inicio de la frase siguiente en Chrome/Edge → al encadenar frases (motor ya libre) no se cancela; si había voz sonando, se le da tiempo
+    const busy = synth.speaking || synth.pending;
+    this.release();
+    if (busy) synth.cancel();
     const u = new SpeechSynthesisUtterance(text); // `SpeechSynthesisUtterance` (Web Speech API)
     u.lang = this.voiceLang(language);
     u.rate = rate;
     // [Voz]: la mejor instalada del idioma (natural > misma región > mismo idioma); si no hay, el navegador elige por `lang`
-    u.voice = this.bestVoice(language);
+    u.voice = this.bestVoice(language, hooks.wordTiming);
     // [settle · Guard]: cada frase termina UNA sola vez (Chrome puede disparar `error` y `end`, o el vigilante y el motor a la vez)
     let settled = false;
     let started = false;
@@ -111,9 +117,15 @@ export class SpeechSynthesisService {
       else fail(reason);
     };
     u.onstart = () => {
+      // [2026-11-10 · «suenan los dos audios»]: la voz en red arrancó DESPUÉS de darla por fallida (ya suena el audio del servidor) → se corta
+      if (settled) {
+        if (!this.current) synth.cancel();
+        return;
+      }
       started = true;
       clearTimeout(this.watchdog);
       this.speaking.set(true);
+      hooks.start?.();
     };
     u.onboundary = (e) => e.name !== 'sentence' && hooks.boundary?.(e.charIndex); // No todos los navegadores informan palabras
     u.onend = () => settle(true);
@@ -132,15 +144,30 @@ export class SpeechSynthesisService {
           settle(false, 'no-start');
         }
       }, START_TIMEOUT_MS);
-    }, 0);
+    }, busy ? CANCEL_GAP_MS : 0);
   }
 
   // [bestVoice · 2026-10-20]: puntúa las voces del idioma — natural/neuronal +2, misma región +1 | null = ninguna instalada
-  bestVoice(language: string): SpeechSynthesisVoice | null {
+  // `wordTiming`: las voces «Google …» de Chrome (en red) no disparan `boundary` → el resaltado se desfasaba; con -4 solo se usan si no hay otra
+  // [preferredVoice · 2026-11-14 · RF-146]: voz elegida por el usuario en el selector (nombre) · null = la mejor automática
+  readonly preferredVoice = signal<string | null>(null);
+
+  // [voicesFor]: voces del navegador para un idioma (selector de voz) · vacío = el navegador no tiene voz para ese idioma (o aún carga)
+  voicesFor(language: string): SpeechSynthesisVoice[] {
+    if (!this.supported) return [];
+    const base = this.voiceLang(language).split('-')[0];
+    return window.speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().startsWith(base));
+  }
+
+  bestVoice(language: string, wordTiming = false): SpeechSynthesisVoice | null {
     if (!this.supported) return null;
     const tag = this.voiceLang(language);
     const base = tag.split('-')[0];
-    const score = (v: SpeechSynthesisVoice) => (NATURAL.test(v.name) ? 2 : 0) + (v.lang.replace('_', '-') === tag ? 1 : 0);
+    const chosen = this.preferredVoice();
+    const picked = chosen ? window.speechSynthesis.getVoices().find((v) => v.name === chosen && v.lang.toLowerCase().startsWith(base)) : undefined;
+    if (picked) return picked; // La elección del usuario manda (aunque no emita `boundary`: entonces se resalta la frase)
+    const score = (v: SpeechSynthesisVoice) =>
+      (NATURAL.test(v.name) ? 2 : 0) + (v.lang.replace('_', '-') === tag ? 1 : 0) - (wordTiming && /^google/i.test(v.name) ? 4 : 0);
     return (
       window.speechSynthesis
         .getVoices()
@@ -156,12 +183,17 @@ export class SpeechSynthesisService {
   }
 
   stop(): void {
+    this.release();
+    if (this.supported) window.speechSynthesis.cancel();
+  }
+
+  // [release]: suelta la frase vigente sin tocar el motor de voz | [Principio]: SRP (stop = release + cancel)
+  private release(): void {
     clearTimeout(this.pending); // Frase programada que aún no empezó → ya no se dice
     clearTimeout(this.watchdog);
     this.interrupt?.(); // El llamador recibe su `end` (estado del avatar coherente)
     this.interrupt = null;
     this.current = null;
-    if (this.supported) window.speechSynthesis.cancel();
     this.speaking.set(false);
   }
 }

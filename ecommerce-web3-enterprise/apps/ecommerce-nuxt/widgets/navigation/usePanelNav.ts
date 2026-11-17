@@ -13,10 +13,10 @@ import { nextAppUrl } from "~~/shared/constants/config";
 export const NAV = navData as AdminNav; // JSON tipado con el contrato compartido
 export const COLLAPSED_KEY = "admin-sidebar-collapsed"; // Preferencia del riel (misma clave en Next: PanelFrame.tsx)
 
-// navVisible => misma regla que Next (Strategy por rol): ADMIN todo; ítem "adminOnly" solo ADMIN; grupos "everyone"
-// (Mi cuenta, IA) toda sesión; VENDOR el resto
+// navVisible => misma regla que Next (Strategy por rol): ADMIN todo; ítem "adminOnly" solo ADMIN; grupos o ítems
+// "everyone" toda sesión; VENDOR el resto
 const navVisible = (group: AdminNavGroup, item: AdminNavItem, roles: readonly string[]) =>
-  roles.includes("ADMIN") || (!item.adminOnly && (Boolean(group.everyone) || roles.includes("VENDOR")));
+  roles.includes("ADMIN") || (!item.adminOnly && (Boolean(group.everyone || item.everyone) || roles.includes("VENDOR")));
 
 // panelHome => inicio según el rol (misma regla que Next): ADMIN y VENDOR => portada del panel (cada uno ve SU
 // resumen), el resto => su cuenta
@@ -73,8 +73,9 @@ export function usePanelNav() {
   const storefront = runtime.storefrontUrl as string;
   // itemHref => Nuxt: ruta local con idioma; Next: URL absoluta (otra app, misma sesión por SSO)
   const itemHref = (item: AdminNavItem) => (item.app === "nuxt" ? localePath(item.path) : nextAppUrl(storefront, locale.value, item.path));
+  const crumb = computed(() => active.value?.group.label[locale.value]); // Ubicación compacta: la sección
   const name = computed(() => (user.value ? `${user.value.firstName} ${user.value.lastName}`.trim() : ""));
   const roleLabel = computed(() => roles.value.map((role) => NAV.roles[role]?.[locale.value] ?? role)[0] ?? "");
 
-  return { NAV, locale, groups, active, text, itemHref, collapsed, mobileOpen, toggleCollapsed, user, name, roleLabel, storefront, nextUrl: (path: string) => nextAppUrl(storefront, locale.value, path) };
+  return { NAV, locale, groups, active, crumb, text, itemHref, collapsed, mobileOpen, toggleCollapsed, user, name, roleLabel, storefront, nextUrl: (path: string) => nextAppUrl(storefront, locale.value, path) };
 }

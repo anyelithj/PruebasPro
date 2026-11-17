@@ -1,0 +1,108 @@
+// MODULE — chat y message
+.chat {
+  display: grid;
+  grid-template-columns: 1fr;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface);
+  min-height: 32rem;
+  height: calc(100vh - 7rem);
+  @media (min-width: 768px) {
+    grid-template-columns: 14rem 1fr;
+  }
+  &__sidebar {
+    background: var(--ink);
+    color: #fff;
+    padding: 1rem;
+    overflow-y: auto;
+  }
+  &__channels {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem;
+    display: grid;
+    gap: 0.15rem;
+  }
+  &__channel {
+    display: block;
+    padding: 0.4rem 0.6rem;
+    border-radius: 0.4rem;
+    color: #d6e2ea;
+    text-decoration: none;
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+    &.active {
+      background: var(--amber);
+      color: var(--ink);
+      font-weight: 700;
+    }
+  }
+  &__screen {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    min-height: 0;
+  }
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--line);
+  }
+  &__lang {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  &__messages {
+    overflow-y: auto;
+    padding: 1rem;
+  }
+  &__form {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border-top: 1px solid var(--line);
+  }
+  &__empty {
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    margin: 0;
+    padding: 2rem;
+    text-align: center;
+  }
+}
+.message {
+  max-width: 34rem;
+  margin-bottom: 0.9rem;
+  padding: 0.6rem 0.8rem;
+  background: #eef3f6;
+  border-radius: 0.6rem;
+  &--own {
+    margin-left: auto;
+    background: #dbe9f1;
+  }
+  &__meta {
+    font-size: 0.8rem;
+    color: var(--muted);
+    time {
+      margin-left: 0.4rem;
+    }
+  }
+  &__text {
+    margin: 0.15rem 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  &__translation {
+    margin: 0.25rem 0;
+    padding-left: 0.6rem;
+    border-left: 3px solid var(--amber);
+    font-style: italic;
+  }
+}

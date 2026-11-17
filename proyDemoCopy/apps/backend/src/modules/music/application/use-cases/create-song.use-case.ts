@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
+import { assertUniqueTitle } from '../../../../shared/application/unique-title'; // [2026-10-28]: regla anti-duplicados compartida (DRY)
 import { Song } from '../../domain/entities/song.entity';
 import type { License } from '../../domain/value-objects/license.vo';
 import type { MusicActor } from './get-song.use-case';
@@ -10,7 +11,7 @@ export interface SongInput {
   title: string;
   artist?: string;
   language: string;
-  level: string;
+  level?: string; // [2026-11-16 · RF-148]: opcional → lo estima ReplaceSongLines a partir de la letra
   license: License;
 }
 
@@ -20,10 +21,18 @@ export class CreateSongUseCase {
     @InjectRepository(Song) private readonly songs: Repository<Song>,
   ) {}
 
-  execute(actor: MusicActor, input: SongInput): Promise<Song> {
+  async execute(actor: MusicActor, input: SongInput): Promise<Song> {
+    // [Fix 2026-10-28 · Sin duplicados]: misma canción (título normalizado) en el mismo idioma + nivel y no retirada → 409 | `IsNull()` (TypeORM): WHERE withdrawn_at IS NULL
+    await assertUniqueTitle(
+      this.songs,
+      input.title,
+      { language: input.language, ...(input.level ? { level: input.level } : {}), withdrawnAt: IsNull() },
+      { label: 'una canción', language: input.language, level: input.level },
+    );
     return this.songs.save(
       this.songs.create({
         ...input,
+        level: input.level ?? null,
         artist: input.artist ?? '',
         status: 'draft',
         reviewNote: '',

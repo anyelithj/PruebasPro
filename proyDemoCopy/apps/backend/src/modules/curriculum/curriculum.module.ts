@@ -1,4 +1,8 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
+import jwtConfig from '../../shared/config/jwt.config';
+import { KnowledgeIndexSyncListener } from './infrastructure/ai/knowledge-index-sync.listener';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ChangeReviewStatusCommand } from './application/commands/change-review-status.command';
 import { BulkPublishCommand } from './application/commands/bulk-publish.command';
@@ -45,6 +49,11 @@ import { CompleteLessonCommand } from './application/commands/complete-lesson.co
 import { LessonProgress } from './domain/entities/lesson-progress.entity';
 import { ScanContradictionsCommand } from './application/commands/scan-contradictions.command';
 import { CertificationPracticeQuery } from './application/queries/certification-practice.query';
+import { createObjectStore } from '../../shared/storage/object-store';
+import {
+  PRONUNCIATION_MEDIA_STORE,
+  PronunciationMediaController,
+} from './presentation/pronunciation-media.controller';
 // [CurriculumModule]: Bounded Context "Base de conocimiento curricular" (contenido manual, versionado y trazable) | [Patrón]: Module + DI Container + Composition Root del contexto | [Principio]: DIP + ISP | [Paradigma]: POO + Decoradores
 // [Tecnología]: NestJS Modules + TypeORM (forFeature registra las entidades del contexto)
 
@@ -67,9 +76,13 @@ const curriculumRepositoryProvider = {
       CourseNode, // [Etapa 3]: estructura Curso → Nivel → Módulo → Unidad → Lección
       LessonProgress, // [Línea de tiempo]: lecciones completadas por estudiante
     ]), // Repositorios TypeORM disponibles para inyección
+    JwtModule.register({}), // [Tarea 9]: token de servicio de 2 min para sincronizar el índice RAG
+    ConfigModule.forFeature(jwtConfig),
   ],
-  controllers: [CurriculumController, CourseOutlineController],
+  controllers: [CurriculumController, CourseOutlineController, PronunciationMediaController], // [2026-11-14]: boca en «Cómo se pronuncia»
   providers: [
+    // [Factory]: almacén de objetos con prefijo propio (disco, MinIO o R2 según STORAGE_PROVIDER) | `useFactory` → se crea al arrancar, no al importar
+    { provide: PRONUNCIATION_MEDIA_STORE, useFactory: () => createObjectStore('pronunciation-media') },
     curriculumRepositoryProvider,
     // Lado escritura (Commands)
     CreateCurriculumItemCommand,
@@ -100,6 +113,7 @@ const curriculumRepositoryProvider = {
     FillLessonGapCommand,
     CompleteLessonCommand,
     ScanContradictionsCommand, // [Etapa 4 · Multi-fuente]: comparación determinista entre fuentes
+    KnowledgeIndexSyncListener, // [Tarea 9 · RF-57]: cada cambio del temario actualiza el índice RAG (un solo flujo para manual, archivo y enlace)
     CertificationPracticeQuery, // [Etapa 5 · Certificaciones]: práctica original sobre el mismo pipeline de IA
   ],
   // [Export del puerto]: futuros motores (ejercicios, feedback, repetición espaciada) consultan la base curricular ANTES de llamar al LLM

@@ -41,8 +41,10 @@ export const DIALOGUES_ROUTES: Routes = [
         title: 'Subir diálogo · Aula de Idiomas',
         loadComponent: () => import('./presentation/pages/dialogue-upload.page'),
       },
+      // [2026-11-06]: /dialogos/subir/:id abre directamente el diálogo (/dialogos/:id) · el paso «nivel y audio» vive en /dialogos/editar/:id
+      { path: 'subir/:id', redirectTo: ':id' },
       {
-        path: 'subir/:id',
+        path: 'editar/:id',
         canActivate: [roleGuard('TEACHER', 'ADMIN')],
         title: 'Nivel del diálogo · Aula de Idiomas',
         loadComponent: () => import('./presentation/pages/dialogue-upload.page'),

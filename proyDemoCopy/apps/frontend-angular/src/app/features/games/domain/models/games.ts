@@ -28,6 +28,7 @@ const VocabItemSchema = z.object({
   term: z.string(),
   translation: z.string().optional(),
   emoji: z.string().optional(),
+  image: z.string().regex(/^(https:\/\/|data:image\/(png|jpeg|webp|gif);base64,)/).optional().catch(undefined), // [2026-11-03]: miniatura del mazo (data:image como vocabulario) o https
   category: z.string().optional(),
 });
 export type VocabItem = z.infer<typeof VocabItemSchema>;
@@ -156,6 +157,8 @@ export const DueCardSchema = z.object({
     translation: z.string(),
     language: z.string(),
     example: z.string().nullable().default(null),
+    // [2026-11-03 · Regla obligatoria]: el frente de la tarjeta muestra el sustantivo con artículo/plural/clasificador
+    grammar: z.object({ headword: z.string(), gender: z.string().nullable().optional() }).passthrough().nullable().default(null),
   }),
 });
 export type DueCard = z.infer<typeof DueCardSchema>;
@@ -178,6 +181,7 @@ export const StartInputSchema = z.object({
   difficulty: z.number().int().min(1).max(3).optional(),
   scenarioId: z.string().optional(),
   deckId: z.string().optional(), // [2026-10-25]: juego con material propio (?mazo=)
+  theme: z.string().max(200).optional(), // [2026-11-11]: tema elegido del banco (vacío = al azar)
 });
 export type StartInput = z.infer<typeof StartInputSchema>;
 export interface RoundInput {

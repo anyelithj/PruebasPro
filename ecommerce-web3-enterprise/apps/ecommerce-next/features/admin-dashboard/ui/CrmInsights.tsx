@@ -12,7 +12,7 @@ import { useTranslations } from "next-intl";
 import { z } from "zod";
 import { useAdminGet, useAdminMutation } from "../api/dashboard.api";
 import { AdminResource, useAdminCommand } from "./AdminResource";
-import { DataTable } from "./DataTable";
+import { DataTable, TablePager, useLocalPage } from "./DataTable";
 import { KPICard } from "./KPICard";
 import { SectionHeader } from "./AdminFields";
 import { StatusBadge } from "./OrdersAdmin";
@@ -109,6 +109,7 @@ export function CohortsTab() {
   const [months, setMonths] = useState(12);
   const { data = [], isLoading } = useAdminGet<Array<{ cohort: string; size: number; retention: number[] }>>("crm-cohorts", "/crm/cohort", { months });
   const width = Math.max(1, ...data.map((row) => row.retention.length));
+  const cohorts = useLocalPage(data);
   return (
     <section className="flex flex-col gap-3">
       <SectionHeader
@@ -128,7 +129,7 @@ export function CohortsTab() {
             <caption className="sr-only">{t("cohorts")}</caption>
             <thead><tr><th scope="col" className="p-2 text-left">{t("cohort")}</th><th scope="col" className="p-2 text-right">{t("customers")}</th>{Array.from({ length: width }, (_, i) => <th key={i} scope="col" className="p-2 text-center">M{i}</th>)}</tr></thead>
             <tbody>
-              {data.map((row) => (
+              {cohorts.visible.map((row) => (
                 <tr key={row.cohort} className="border-t">
                   <th scope="row" className="p-2 text-left font-medium">{row.cohort}</th>
                   <td className="p-2 text-right tabular-nums">{row.size}</td>
@@ -140,6 +141,7 @@ export function CohortsTab() {
               ))}
             </tbody>
           </table>
+          <TablePager meta={cohorts.meta} onPage={cohorts.setPage} />
         </div>
       )}
     </section>

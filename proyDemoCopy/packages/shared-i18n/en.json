@@ -2,7 +2,12 @@
   "common": {
     "notifications": "Notifications",
     "close": "Close",
-    "toastTitle": {"success": "Done!", "error": "Could not complete", "warning": "Heads up", "info": "Notice"},
+    "toastTitle": {
+      "success": "Done!",
+      "error": "Could not complete",
+      "warning": "Heads up",
+      "info": "Notice"
+    },
     "saved": "Record saved successfully.",
     "updated": "Record updated successfully.",
     "deleted": "Record deleted.",
@@ -34,10 +39,11 @@
   "nav": {
     "dashboard": "Dashboard",
     "courses": "Courses",
+    "favorites": "My favorites",
     "exams": "Exams",
     "feedback": "AI Feedback",
     "tutor": "AI tutor",
-    "writing": "Writing corrector",
+    "writing": "Spelling checker",
     "studyPlan": "Study plan",
     "progress": "Progress",
     "profile": "My profile",
@@ -45,7 +51,7 @@
     "students": "Students",
     "reports": "Reports",
     "resources": "Resources",
-    "help": "Help",
+    "help": "Support & Guide",
     "jobs": "Background jobs",
     "certificates": "Certificates",
     "activities": "Activities",
@@ -166,7 +172,7 @@
   "landing": {
     "pill": "7 languages · CEFR levels A1–C2",
     "titleA": "Learn languages with ",
-    "titleB": "guided practice and local AI",
+    "titleB": "guided practice and AI",
     "lead": "English, French, German, Spanish, Portuguese, Mandarin Chinese and Russian. Grammar, vocabulary, comprehension, writing and speaking with explained corrections and progress tracking by level.",
     "start": "Start for free →",
     "stats": [
@@ -315,7 +321,7 @@
     "ctaTitle": "Start learning languages with {brand}",
     "ctaText": "Seven languages, six CEFR levels and corrections you can understand.",
     "ctaButton": "Create a free account →",
-    "footerAbout": "A platform to learn languages by CEFR levels, with local AI used only when it adds value.",
+    "footerAbout": "A platform to learn languages by CEFR levels, with AI used only when it adds value.",
     "footerProduct": "Product",
     "footerAccount": "Account",
     "footerContact": "Contact",
@@ -331,7 +337,7 @@
       "C1": "Effective proficiency: complex texts and professional use.",
       "C2": "Mastery: nuance, irony and near-native precision."
     },
-    "aiEyebrow": "Local AI and privacy",
+    "aiEyebrow": "AI and privacy",
     "aiTitle": "AI runs on the platform server, not in the cloud",
     "aiLead": "We use open models with Ollama only when they add value; teacher-approved content comes first.",
     "aiPoints": [
@@ -417,6 +423,7 @@
       "title": "Log in",
       "subtitle": "Access your {brand} account.",
       "formLabel": "Login form",
+      "sessionExpired": "Your session ended. Sign in to continue where you left off.",
       "remember": "Remember me",
       "forgot": "Forgot your password?",
       "submit": "Log in",
@@ -478,6 +485,15 @@
       "error": "The link could not be sent",
       "invalid": "The sign-in link is not valid or was already used. Request a new one."
     },
+    "twoFactor": {
+      "title": "Two-step verification",
+      "intro": "We emailed you a 6-digit code. Enter it to finish signing in.",
+      "code": "Verification code",
+      "submit": "Verify and sign in",
+      "submitting": "Verifying…",
+      "invalidFormat": "Enter the 6 digits of the code",
+      "back": "Back to sign in"
+    },
     "oauth": {
       "connecting": "Connecting…",
       "withProvider": "Log in with {provider}",
@@ -501,17 +517,19 @@
   "management": {
     "title": "Management",
     "subtitleAdmin": "Manage users, exams, courses and learning resources from a single panel.",
-    "subtitleTeacher": "Manage your exams and learning resources.",
+    "subtitleTeacher": "Manage your exams, your courses and learning resources.",
     "tabsLabel": "Management tabs",
     "tabs": {
       "users": "Users",
       "exams": "Exams",
       "courses": "Courses",
       "content": "Resources",
-      "activities": "Activities"
+      "activities": "Activities",
+      "certificates": "Certificates"
     },
     "row": {
       "view": "View",
+      "try": "Try it",
       "edit": "Edit",
       "publish": "Publish",
       "unpublish": "Unpublish",
@@ -524,6 +542,15 @@
     }
   },
   "courses": {
+    "favorites": {
+      "title": "My favorites",
+      "subtitle": "What you saved with ⭐ and the courses you rated 👍 or ❤️. Only you can see them.",
+      "empty": "You haven't saved any courses yet. Press ⭐ Favorite on any course in the catalog.",
+      "browse": "Browse courses",
+      "emptyLike": "You haven't liked any course yet.",
+      "emptyLove": "You haven't loved any course yet.",
+      "tabs": "Filter my courses"
+    },
     "title": "🌐 Language courses",
     "subtitle": "{heading} · CEFR levels A1–C2 — {count}",
     "count": {
@@ -543,7 +570,7 @@
     "loadErrorHint": "Check that the backend is available at /api/v1/courses.",
     "pagination": "Course pagination",
     "materials": {
-      "title": "📚 Course resources",
+      "title": "Additional materials",
       "empty": "This course has no material yet.",
       "openPdf": "Open PDF in a new tab",
       "upload": "Attach material",
@@ -555,7 +582,7 @@
       "lesson": "Lesson {n} of {total}",
       "prev": "← Previous",
       "next": "Next →",
-      "markDone": "Mark as complete",
+      "markDone": "Completed",
       "done": "Completed",
       "current": "In progress",
       "pending": "Pending",
@@ -565,17 +592,20 @@
       "lockedStep": "Locked",
       "lockedHint": "Complete the previous lesson to unlock this one.",
       "back": "← Back to resources",
-      "resources": "Resources",
+      "resources": "Summary",
+      "list": "Materials list",
       "resVideos": "🎞️ Videos",
       "resPdfs": "📄 PDFs",
       "resImages": "🖼️ Images",
       "resDone": "✓ Lessons completed",
-      "start": "▶ Start course",
+      "start": "▶ Start",
       "resume": "▶ Continue lesson",
       "review": "↺ Review from the start",
       "lessonNav": "Lesson navigation",
       "breadcrumb": "Lesson breadcrumb",
       "reader": {
+        "bilingual": "The text is already in two languages ({langs}): full translation is not needed and is locked.",
+        "textLoading": "Preparing the text…",
         "title": "🔊 Read aloud",
         "hint": "Click a sentence to read from there (the spoken word is highlighted). Select a word or paragraph to translate it.",
         "loading": "Extracting the PDF text…",
@@ -583,13 +613,13 @@
         "noText": "This PDF has no selectable text (it is probably a scan).",
         "loadError": "The PDF text could not be read.",
         "noTts": "Your browser does not support read aloud.",
-        "play": "▶ Read",
+        "play": "▶ Play",
         "pause": "⏸ Pause",
         "resume": "▶ Resume",
         "stop": "⏹ Stop",
         "speed": "Speed",
         "noVoice": "No voice is installed for this language; the default one is used.",
-        "translateAll": "🌐 Translate all to {lang}",
+        "translateAll": "🌐 Translate to {lang}",
         "listen": "🔊 Listen",
         "selection": "Selection translation",
         "close": "Close",
@@ -622,15 +652,23 @@
     },
     "actions": {
       "certificate": "◈ Certificate",
+      "finalExam": "◈ Final exam",
       "continue": "▶ Continue",
       "enterFree": "Enroll for free",
       "enrolling": "Enrolling…",
       "buy": "🛒 Buy",
+      "owned": "✓ You own this course",
+      "startLocked": "Buy or enroll to start the course.",
       "inCart": "✓ In cart",
-      "start": "▶ Start",
-      "favorite": "★ Favorite",
-      "like": "👍 Like",
-      "love": "❤ Love"
+      "start": "▶ Start course",
+      "favorite": "Favorite",
+      "like": "Like",
+      "love": "Love",
+      "favoriteHint": "Save to your favorites to find it quickly",
+      "likeHint": "Positive rating: you liked it",
+      "loveHint": "Top rating: you loved it",
+      "reactionsLabel": "Save and rate the course",
+      "countsLive": "{likes} likes and {loves} loves"
     }
   },
   "adminCourses": {
@@ -667,6 +705,7 @@
       "accessFree": "Free",
       "accessPaid": "Paid",
       "pricePaidRequired": "A paid course needs a price greater than 0.",
+      "originalPriceTooLow": "The original price must be greater than or equal to the current price.",
       "description": "Description",
       "descriptionHint": "What the student will learn. The first sentences are used as the summary on the course card.",
       "content": "Course content",
@@ -712,11 +751,11 @@
     "saveError": "The course could not be saved.",
     "ai": {
       "title": "Generate with AI",
-      "hint": "The local AI creates the course CONTENT (introduction, objectives, syllabus with lessons and target audience), a short description and tags from the language and level. Review it before saving.",
+      "hint": "The AI creates the course CONTENT (introduction, objectives, syllabus with lessons and target audience), a short description and tags from the language and level. Review it before saving.",
       "topic": "Focus (optional)",
       "topicPlaceholder": "e.g. English for travel, business conversation",
       "run": "Generate",
-      "running": "Generating… (may take 1–2 min)",
+      "running": "Generating… (may take 1–2 min; it stops after 3 min)",
       "useImported": "Use the imported content as a base",
       "done": "Content generated: review the title, short description, content and tags."
     },
@@ -724,6 +763,19 @@
       "title": "Import course content",
       "done": "Content imported into “Course content” (Markdown). The description was not changed.",
       "doneSuggested": "Content imported into “Course content”. The description was empty, so its first paragraph was suggested: please review it."
+    },
+    "source": {
+      "legend": "How do you want to build the syllabus?",
+      "manual": "Manual",
+      "import": "Import",
+      "ai": "Generate with AI",
+      "manualHint": "Write the syllabus yourself: add topics, reorder them with the arrows and, inside each one, add subtopics (sections) with their explanation.",
+      "manualStart": "Add the first topic",
+      "importHint": "Upload a PDF, Word, Excel, image (OCR) or paste a URL or YouTube video: the document headings become topics and subtopics.",
+      "importLabel": "Import syllabus or content",
+      "importDone": "Imported: {n} topic(s) added to the syllabus. Review them below.",
+      "importAi": "Fill in the course details with AI from the imported content",
+      "importCleared": "File removed: {n} imported topic(s) were taken out (the ones you already edited are kept)."
     }
   },
   "profile": {
@@ -739,6 +791,9 @@
     "phoneInvalid": "Invalid phone: only digits, spaces, dashes and a leading +.",
     "bio": "Biography",
     "bioPlaceholder": "Tell us which languages you are learning and why…",
+    "social": "Social networks",
+    "socialHint": "Optional. Shown in \"Content authorship\" on your courses. Paste the full link (https://…); leave empty to hide it.",
+    "socialInvalid": "Invalid {network} link: use https:// and the {hosts} domain.",
     "timezone": "Time zone",
     "preferredLanguage": "Preferred language",
     "section": "Section / Group",
@@ -796,6 +851,15 @@
     "level": "CEFR level",
     "noLevel": "No level yet",
     "sectionHint": "Group or classroom you belong to (e.g. 11-1). Your teacher uses it to filter students.",
+    "twoFactorTitle": "Two-step verification (2FA)",
+    "twoFactorIntro": "When you sign in with a password we will ask for a one-time code sent to your email.",
+    "twoFactorOn": "On",
+    "twoFactorOff": "Off",
+    "twoFactorEnable": "Enable 2FA",
+    "twoFactorDisable": "Disable 2FA",
+    "twoFactorPassword": "Confirm with your current password",
+    "twoFactorEnabled": "Two-step verification enabled.",
+    "twoFactorDisabled": "Two-step verification disabled.",
     "passwordTitle": "Change password",
     "currentPassword": "Current password",
     "newPassword": "New password",
